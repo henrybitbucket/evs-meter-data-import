@@ -43,8 +43,6 @@ public class JFtpClient {
 		return instance;
 	}
 
-	// constructor
-
 	void open() {
 		try {
 			ftp = new JSch();
