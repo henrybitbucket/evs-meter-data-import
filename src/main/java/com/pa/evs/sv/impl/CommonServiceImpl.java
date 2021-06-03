@@ -264,7 +264,7 @@ public class CommonServiceImpl implements CommonService {
 			if (!root.exists()) {
 				root.mkdirs();
 			}
-			Arrays.asList("", "/IN_CSR", "/ERR_CSR", "/FTP_LOG")
+			Arrays.asList("", "/IN_CSR", "/OUT_CSR", "/ERR_CSR", "/FTP_LOG")
 			.forEach(sf -> {
 				File f = new File(evsDataFolder + sf);
 				if (!f.exists()) {

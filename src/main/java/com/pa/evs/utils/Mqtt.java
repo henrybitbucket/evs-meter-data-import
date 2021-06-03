@@ -35,7 +35,7 @@ public class Mqtt {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(Mqtt.class);
 	private static final String MQTT_PUBLISHER_ID = "be-server";
-	private static final String MQTT_SERVER_ADDRES = "ssl://localhost:7773";//ssl: "ssl://localhost:8883", none-ssl: "tcp://3.1.87.138:8883"
+	private static final String MQTT_SERVER_ADDRES = "ssl://3.1.87.138:8883";//ssl: "ssl://localhost:8883", none-ssl: "tcp://3.1.87.138:8883"
 	
 	private static final Map<String, Lock> LOCKS = new ConcurrentHashMap<>();
 	private static final Map<String, IMqttClient> INSTANCES = new ConcurrentHashMap<>();
