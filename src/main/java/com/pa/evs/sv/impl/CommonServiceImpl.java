@@ -260,6 +260,10 @@ public class CommonServiceImpl implements CommonService {
 		} catch (Exception e) {/**/}
 		
 		try {
+			File root = new File(evsDataFolder);
+			if (!root.exists()) {
+				root.mkdirs();
+			}
 			Arrays.asList("", "/IN_CSR", "/ERR_CSR", "/FTP_LOG")
 			.forEach(sf -> {
 				File f = new File(evsDataFolder + sf);
