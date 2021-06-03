@@ -35,7 +35,7 @@ public class Mqtt {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(Mqtt.class);
 	private static final String MQTT_PUBLISHER_ID = "be-server";
-	private static final String MQTT_SERVER_ADDRES = "tcp://localhost:8883";//ssl: "ssl://localhost:8883", none-ssl: "tcp://3.1.87.138:8883"
+	private static final String MQTT_SERVER_ADDRES = "ssl://localhost:7773";//ssl: "ssl://localhost:8883", none-ssl: "tcp://3.1.87.138:8883"
 	
 	private static final Map<String, Lock> LOCKS = new ConcurrentHashMap<>();
 	private static final Map<String, IMqttClient> INSTANCES = new ConcurrentHashMap<>();
@@ -56,28 +56,29 @@ public class Mqtt {
 		lock.lock();
 		IMqttClient instance = INSTANCES.get(serverAddres);
 		try {
-			
 			if (instance == null) {
 				instance = new MqttClient(serverAddres, MQTT_PUBLISHER_ID + "." + System.currentTimeMillis());
 				INSTANCES.put(serverAddres, instance);
 			}
 			
-			MqttConnectOptions options = new MqttConnectOptions();
-			options.setAutomaticReconnect(true);
-			options.setCleanSession(true);
-			options.setConnectionTimeout(10);
-			if (serverAddres.startsWith("ssl://")) {
-				TrustStrategy acceptingTrustStrategy = new TrustStrategy() {
-					public boolean isTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
-						return true;
-					}
-				};
-				SSLContext sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
-				options.setSocketFactory(sslContext.getSocketFactory());
-			}
-			options.setUserName("admin");
-			options.setPassword("1234567".toCharArray());
 			if (!instance.isConnected()) {
+				
+				MqttConnectOptions options = new MqttConnectOptions();
+				options.setAutomaticReconnect(true);
+				options.setCleanSession(true);
+				options.setConnectionTimeout(10);
+				if (serverAddres.startsWith("ssl://")) {
+					TrustStrategy acceptingTrustStrategy = new TrustStrategy() {
+						public boolean isTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+							return true;
+						}
+					};
+					SSLContext sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
+					options.setSocketFactory(sslContext.getSocketFactory());
+				}
+				options.setUserName("admin");
+				options.setPassword("1234567".toCharArray());
+				
 				instance.connect(options);
 			}
 		} catch (Exception e) {
@@ -95,22 +96,22 @@ public class Mqtt {
 
 	public static void publish(String topic, Payload<?> messages)
 			throws Exception {
-		publish(null, topic, messages, 2, true);
+		publish(null, topic, messages, 1, true);
 	}
 	
 	public static void publish(IMqttClient instance, String topic, Payload<?> messages)
 			throws Exception {
-		publish(instance, topic, messages, 2, true);
+		publish(instance, topic, messages, 1, true);
 	}
 	
 	public static void publish(String topic, Object messages)
 			throws Exception {
-		publish(null, topic, messages, 2, true);
+		publish(null, topic, messages, 1, true);
 	}
 	
 	public static void publish(IMqttClient instance, String topic, Object messages)
 			throws Exception {
-		publish(instance, topic, messages, 2, true);
+		publish(instance, topic, messages, 1, true);
 	}
 	
 	public static void publish(String topic, Object messages, int qos, boolean retained)
@@ -134,7 +135,7 @@ public class Mqtt {
 	        if (instance == null) {
 	        	instance = Mqtt.getInstance();
 	        }
-	        Mqtt.getInstance().publish(topic, mqttMessage);
+	        instance.publish(topic, mqttMessage);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
@@ -191,7 +192,7 @@ public class Mqtt {
 		}
 	}
 	
-	public static void main1(String[] args) throws Exception {
+	public static void main(String[] args) throws Exception {
 
 		Mqtt.subscribe("evs/pa/data", o -> {
 			MqttMessage mqttMessage = (MqttMessage) o;
