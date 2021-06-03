@@ -290,7 +290,7 @@ public class CommonServiceImpl implements CommonService {
 
 		SchedulerHelper.scheduleJob("0 0/1 * * * ? *", () -> {
 			Optional<CARequestLog> opt = caRequestLogRepository.findByUid("server.csr");
-			if (opt.isEmpty() || opt.get().getRequireRefresh() == Boolean.TRUE) {
+			if (!opt.isPresent() || opt.get().getRequireRefresh() == Boolean.TRUE) {
 				CARequestLog server = opt.isEmpty() ? new CARequestLog() : opt.get();
 				Map<String, Object> data = requestCA(caRequestUrl, new ClassPathResource("sv-ca/server.csr"), null);
 				server.setUid((String)data.get("uid"));
