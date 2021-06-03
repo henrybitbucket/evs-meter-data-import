@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -44,6 +45,7 @@ import com.pa.evs.sv.CommonService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.JFtpClient;
 import com.pa.evs.utils.Mqtt;
+import com.pa.evs.utils.ZipUtils;
 
 /**
  * 
@@ -247,9 +249,8 @@ public class CommonServiceImpl implements CommonService {
 		}
 	}
 	
-	@PostConstruct
-	public void init() {
-		
+
+	private void prepareFolder() {
 		if (StringUtils.isBlank(evsDataFolder)) {
 			evsDataFolder = "/home/evs-data";
 		}
@@ -259,29 +260,20 @@ public class CommonServiceImpl implements CommonService {
 		} catch (Exception e) {/**/}
 		
 		try {
-			
-			File f = new File(evsDataFolder);
-			File inF = new File(evsDataFolder + "/IN_CSR");
-			File outF = new File(evsDataFolder + "/OUT_CSR");
-			File errorF = new File(evsDataFolder + "/ERR_CSR");
-			File ftpLogF = new File(evsDataFolder + "/FTP_LOG");
-			if (!f.exists()) {
-				f.mkdir();
-			}
-			if (!inF.exists()) {
-				Files.createDirectory(inF.toPath());
-			}
-			if (!outF.exists()) {
-				Files.createDirectory(outF.toPath());
-			}
-			if (!ftpLogF.exists()) {
-				Files.createDirectory(ftpLogF.toPath());
-			}
-			if (!errorF.exists()) {
-				Files.createDirectory(errorF.toPath());
-			}
-			
+			Arrays.asList("", "/IN_CSR", "/ERR_CSR", "/FTP_LOG")
+			.forEach(sf -> {
+				File f = new File(evsDataFolder + sf);
+				if (!f.exists()) {
+					f.mkdir();
+				}
+			});
 		} catch (Exception e) {/**/}
+	}
+	
+	@PostConstruct
+	public void init() {
+		
+		prepareFolder();
 		
 		try {
 			subscribe();
@@ -311,6 +303,17 @@ public class CommonServiceImpl implements CommonService {
 				caRequestLogRepository.save(server);
 			}
 		}, "Server.csr");
+		
+		SchedulerHelper.scheduleJob("0/1 * * * * ? *", () -> {
+			File[] fs = new File(evsDataFolder).listFiles();
+			for (File f : fs) {
+				if (f.exists() && f.isFile() && f.getName().endsWith(".zip")) {
+					ZipUtils.unzip(f.getAbsolutePath(), evsDataFolder + "/IN_CSR");
+					File out = new File(evsDataFolder + "/OUT_CSR/" + f.getName() + '.' + System.currentTimeMillis());
+					f.renameTo(out);
+				}
+			}
+		}, "UNZIP");
 		
 		SchedulerHelper.scheduleJob("0/1 * * * * ? *", () -> {
 			File f = new File(evsDataFolder + "/IN_CSR");
