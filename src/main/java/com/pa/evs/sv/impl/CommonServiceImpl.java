@@ -322,7 +322,7 @@ public class CommonServiceImpl implements CommonService {
 					try {
 						String uuid = csr.getName().replaceAll("\\.csr$", "");
 						Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
-						CARequestLog caLog = opt.isEmpty() ? new CARequestLog() : opt.get();
+						CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
 						Map<String, Object> data = requestCA(caRequestUrl, new FileSystemResource(csr), uuid);
 						caLog.setUid(uuid);
 						caLog.setCertificate((String)data.get("pemBase64"));
