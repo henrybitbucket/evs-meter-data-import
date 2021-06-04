@@ -37,6 +37,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.dto.Command;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.repository.CARequestLogRepository;
@@ -45,6 +46,7 @@ import com.pa.evs.sv.CommonService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.JFtpClient;
 import com.pa.evs.utils.Mqtt;
+import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
 
 /**
@@ -399,4 +401,5 @@ public class CommonServiceImpl implements CommonService {
 		String json = "{\"header\":{\"mid\":1001,\"uid\":\"BIERWXAABMAB2AEBAA\",\"gid\":\"BIERWXAAA4AFBABABXX\",\"msn\":\"201906000032\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"id\":\"BIERWXAABMAB2AEBAA\",\"type\":\"OBR\",\"data\":\"201906000137\"}}";
 		Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class));
 	}
+
 }

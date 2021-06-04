@@ -17,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.pa.evs.constant.RestPath;
 import com.pa.evs.security.jwt.JwtAuthenticationEntryPoint;
 import com.pa.evs.security.jwt.JwtAuthorizationTokenFilter;
 import com.pa.evs.security.user.JwtUserDetailsService;
@@ -69,7 +70,21 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
 
 				.authorizeRequests()
-				.anyRequest().permitAll();
+				.antMatchers(RestPath.LOGIN).permitAll()
+				.antMatchers(RestPath.LOGIN1).permitAll()
+				.antMatchers("/api//message/**").permitAll()
+				.antMatchers("/v2/api-docs").permitAll()
+				.antMatchers("/v2/api-docs**").permitAll()
+				.antMatchers("/v2/api-docs/**").permitAll()
+				.antMatchers("/api/v2/api-docs").permitAll()
+				.antMatchers("/api/v2/api-docs**").permitAll()
+				.antMatchers("/api/v2/api-docs/**").permitAll()
+				.antMatchers("/swagger-resources/configuration/ui").permitAll()
+				.antMatchers("/swagger-resources/**").permitAll()
+				.antMatchers("/swagger-resources**").permitAll()
+				.antMatchers("/swagger-ui/").permitAll()
+				.antMatchers("/swagger-ui**").permitAll()
+				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
 

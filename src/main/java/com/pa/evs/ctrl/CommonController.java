@@ -6,20 +6,20 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.converter.ExceptionConvertor;
+import com.pa.evs.dto.Command;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.sv.CommonService;
-
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import com.pa.evs.utils.SimpleMap;
 
 @RestController
 public class CommonController {
@@ -48,11 +48,29 @@ public class CommonController {
     @PostMapping("/api/message/publish")//http://localhost:8080/api/message/publish
     public ResponseEntity<?> sendPMessage(
     		HttpServletRequest httpServletRequest,
-    		@RequestBody JSONObject json1
+    		@RequestBody Map<String, Object> json1
     		) throws Exception {
     	
     	String json = "{\"header\":{\"mid\":1001,\"uid\":\"BIERWXAABMAB2AEBAA\",\"gid\":\"BIERWXAAA4AFBABABXX\",\"msn\":\"201906000032\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"id\":\"BIERWXAABMAB2AEBAA\",\"type\":\"OBR\",\"data\":\"201906000137\"}}";
     	commonService.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class));
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/command")//http://localhost:8080/api/command
+    public ResponseEntity<?> sendCommand(
+    		HttpServletRequest httpServletRequest,
+    		@RequestBody Command command
+    		) throws Exception {
+    	
+		try {
+			commonService.publish("evs/pa/" + command.getUid(), SimpleMap.init(
+					"header", SimpleMap.init("uid", command.getUid()).more("mid", 234004).more("gid", "BIERWXAAA4AFBABABXX").more("msn", "201906000032").more("sig", null)
+				).more(
+					"payload", SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd())
+				));
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
 }
