@@ -139,10 +139,18 @@ public class CommonServiceImpl implements CommonService {
 		jftpClient.putFileToPath(file.getAbsolutePath(), evsFtpFolder);
 	}
 	
+	private int validateUidAndMsn(Log log) {
+		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
+		return opt.isPresent() ? 0 : -1;
+	}
 	private void handleMDT(Map<String, Object> data, String type, Log log) throws Exception {
 		
-		//FTP
-		ftpUpload(data);
+		int status = validateUidAndMsn(log);
+		
+		if (status == 0) {
+			//FTP
+			ftpUpload(data);
+		}
 		
 		//Publish
 		data = new HashMap<>();
@@ -152,7 +160,7 @@ public class CommonServiceImpl implements CommonService {
 		header.put("uid", log.getUid());
 		header.put("gid", log.getGid());
 		header.put("msn", log.getMsn());
-		header.put("status", 0);
+		header.put("status", status);
 		publish("evs/pa/" + log.getUid(), data);
 		
 		//save log
@@ -165,6 +173,8 @@ public class CommonServiceImpl implements CommonService {
 	
 	private void handleOBR(String type, Log log) throws Exception {
 		
+		int status = validateUidAndMsn(log);
+		
 		//publish
 		Map<String, Object> data = new HashMap<>();
 		Map<String, Object> header = new HashMap<>();
@@ -173,7 +183,7 @@ public class CommonServiceImpl implements CommonService {
 		header.put("uid", log.getUid());
 		header.put("gid", log.getGid());
 		header.put("msn", log.getMsn());
-		header.put("status", 0);
+		header.put("status", status);
 		publish("evs/pa/" + log.getUid(), data);
 		
 		//save log
@@ -183,28 +193,29 @@ public class CommonServiceImpl implements CommonService {
 		logP.setMqttAddress(evsPAMQTTAddress);
 		logRepository.save(logP);
 		
-		// Send file
-		data = new HashMap<>();
-		header = new HashMap<>();
-		data.put("header", header);
-		header.put("mid", log.getMid());
-		header.put("uid", log.getUid());
-		header.put("gid", log.getGid());
-		header.put("msn", log.getMsn());
-		header.put("sig", log.getSig());
-		Map<String, Object> payload = new HashMap<>();
-		data.put("payload", payload);
-		payload.put("id", log.getUid());
-		payload.put("cmd", "ACT");
-		
-		List<String> svCA = caRequestLogRepository.findCAByUid("server.csr");
-		payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
-		List<String> ca = caRequestLogRepository.findCAByUid(log.getUid());
-		payload.put("p2", ca.isEmpty() ? null : ca.get(0));
-		publish("evs/pa/" + log.getUid(), data);
+		if (status == 0) {
+			// Send file
+			data = new HashMap<>();
+			header = new HashMap<>();
+			data.put("header", header);
+			header.put("mid", log.getMid());
+			header.put("uid", log.getUid());
+			header.put("gid", log.getGid());
+			header.put("msn", log.getMsn());
+			header.put("sig", log.getSig());
+			Map<String, Object> payload = new HashMap<>();
+			data.put("payload", payload);
+			payload.put("id", log.getUid());
+			payload.put("cmd", "ACT");
+			List<String> svCA = caRequestLogRepository.findCAByUid("server.csr");
+			payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
+			List<String> ca = caRequestLogRepository.findCAByUid(log.getUid());
+			payload.put("p2", ca.isEmpty() ? null : ca.get(0));
+			publish("evs/pa/" + log.getUid(), data);
+		}
 		
 		//save log
-		publishData = data;
+		publishData = new HashMap<>(data);
 		publishData.put("type", type);
 		logP = Log.build(publishData, "PUBLISH");
 		logP.setMqttAddress(evsPAMQTTAddress);
