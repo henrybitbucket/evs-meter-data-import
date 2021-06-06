@@ -37,7 +37,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pa.evs.dto.Command;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.repository.CARequestLogRepository;
@@ -46,7 +45,6 @@ import com.pa.evs.sv.CommonService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.JFtpClient;
 import com.pa.evs.utils.Mqtt;
-import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
 
 /**
@@ -103,9 +101,9 @@ public class CommonServiceImpl implements CommonService {
 	
 	@Override
 	public void publish(String topic, Object message) throws Exception {
-		
 		try {
 			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress), topic, message);
+			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
@@ -143,6 +141,9 @@ public class CommonServiceImpl implements CommonService {
 	
 	private int validateUidAndMsn(Log log) {
 		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
+		if (!opt.isPresent()) {
+			LOG.error("Not found binding of msn: {} for uuid: {}", log.getMsn(), log.getUid());
+		}
 		return opt.isPresent() ? 0 : -1;
 	}
 	private void handleMDT(Map<String, Object> data, String type, Log log) throws Exception {
