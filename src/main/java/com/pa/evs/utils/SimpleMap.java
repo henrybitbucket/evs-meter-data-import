@@ -2,18 +2,8 @@ package com.pa.evs.utils;
 
 import java.util.LinkedHashMap;
 
-/**
- * 
- * @author thanh
- *
- * @param <K>
- * @param <V>
- */
 public class SimpleMap<K, V> extends LinkedHashMap<K, V> {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 6432425980803990708L;
 
 	public static <K> SimpleMap<K, Object> init(K k, Object v) {

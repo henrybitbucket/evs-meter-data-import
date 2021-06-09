@@ -45,9 +45,6 @@ import org.slf4j.LoggerFactory;
     // Tell quartz to schedule the job using our trigger
     scheduler.scheduleJob(jobDetail, trigger);
     scheduler.shutdown();
-    
- * @author thanh
- *
  */
 public class SchedulerHelper {	
 	

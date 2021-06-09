@@ -18,6 +18,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 
@@ -57,7 +58,7 @@ public class CommonServiceImpl implements CommonService {
 	
 	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 	
-	private static final int QUALITY_OF_SERVICE = 1;
+	private static final int QUALITY_OF_SERVICE = 0;
 	
 	@Value("${evs.pa.data.folder}")
 	private String evsDataFolder;
@@ -65,9 +66,12 @@ public class CommonServiceImpl implements CommonService {
 	@Value("${evs.pa.ftp.folder}")
 	private String evsFtpFolder;
 	
-	@Value("${evs.pa.subscribe.topic}")
+	@Value("${evs.pa.subscribe.send.topic}")
 	private String evsPASubscribeTopic;
-	
+
+	@Value("${evs.pa.subscribe.resp.topic}")
+	private String evsPARespSubscribeTopic;
+
 	@Value("${evs.pa.mqtt.address}")
 	private String evsPAMQTTAddress;
 	
@@ -99,7 +103,7 @@ public class CommonServiceImpl implements CommonService {
 	@Override
 	public void publish(String topic, Object message) throws Exception {
 		try {
-			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress), topic, message, QUALITY_OF_SERVICE, true);
+			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress), topic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
@@ -185,6 +189,10 @@ public class CommonServiceImpl implements CommonService {
 		header.put("msn", log.getMsn());
 		header.put("status", status);
 		publish("evs/pa/" + log.getUid(), data);
+
+		//wait 5s
+		LOG.debug("sleep 5s");
+		TimeUnit.SECONDS.sleep(5);
 		
 		//save log
 		Map<String, Object> publishData = new HashMap<>(data);
@@ -246,13 +254,41 @@ public class CommonServiceImpl implements CommonService {
 			LOG.error(e.getMessage(), e);
 		}
 	}
+
+	private void handleOnRespSubscribe(final MqttMessage mqttMessage) {
+		try {
+			Map<String, Object> data = MAPPER.readValue(mqttMessage.getPayload(), Map.class);
+			//save log
+			Log log = Log.build(data, "SUBSCRIBE");
+			log.setMqttAddress(evsPAMQTTAddress);
+			logRepository.save(log);
+
+			//TO-DO: need base on mid of response and mapping with request and update status log to know
+			//got response or not
+
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+	}
 	
 	private void subscribe() {
+		//request
 		try {
 			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress), evsPASubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsPASubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
 				EX.submit(() -> handleOnSubscribe(mqttMessage));
+				return null;
+			});
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+		//response
+		try {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress), evsPARespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+				final MqttMessage mqttMessage = (MqttMessage) o;
+				LOG.info(evsPARespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
+				EX.submit(() -> handleOnRespSubscribe(mqttMessage));
 				return null;
 			});
 		} catch (Exception e) {
@@ -293,7 +329,6 @@ public class CommonServiceImpl implements CommonService {
 		try {
 			subscribe();
 			new Timer().schedule(new TimerTask() {
-
 				@Override
 				public void run() {
 					subscribe();

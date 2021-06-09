@@ -125,7 +125,6 @@ public class Mqtt {
 	
 	private static void publish(IMqttClient instance, String topic, byte[] messages, int qos, boolean retained)
 			throws InterruptedException, org.eclipse.paho.client.mqttv3.MqttException {
-
 		try {
 			MqttMessage mqttMessage = new MqttMessage(messages);
 	        mqttMessage.setQos(qos);
@@ -137,6 +136,10 @@ public class Mqtt {
 	        instance.publish(topic, mqttMessage);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
+		} finally {
+			if (instance != null) {
+				instance.disconnect();
+			}
 		}
 	}
 	
@@ -209,7 +212,7 @@ public class Mqtt {
 	
 	public static void main(String[] args) throws Exception {
 
-		Mqtt.subscribe("evs/pa/data", o -> {
+		/*Mqtt.subscribe("evs/pa/data", o -> {
 			MqttMessage mqttMessage = (MqttMessage) o;
 			LOG.info("1 -> " + new String(mqttMessage.getPayload()));
 			return null;
@@ -231,7 +234,10 @@ public class Mqtt {
 			Mqtt.publish("test", new Payload<>("Key1", new ArrayList<>()), 2, true);
 			Mqtt.publish("test2", new Payload<>("Key2", new ArrayList<>()), 2, true);
 			Thread.sleep(1000l);
-		}
+		}*/
+		System.out.println("start");
+		Mqtt.publish("evs/pa/data", "", 0, false);
+		System.out.println("finish");
 
 	}
 }

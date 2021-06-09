@@ -50,8 +50,6 @@ import springfox.documentation.spring.web.plugins.Docket;
 		###
 		http://localhost:8080/swagger-ui/#/
 	</pre>
-
- * @author thanh
  *
  */
 @Configuration

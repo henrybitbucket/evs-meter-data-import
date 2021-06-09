@@ -82,8 +82,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 		</dependency>
  * </pre>
  * 
- * @author thanh.nguyen
- *
  */
 public final class ApiUtils {
 
