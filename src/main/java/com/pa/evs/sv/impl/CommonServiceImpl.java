@@ -47,11 +47,6 @@ import com.pa.evs.utils.JFtpClient;
 import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.ZipUtils;
 
-/**
- * 
- * @author thanh
- *
- */
 @Component
 @SuppressWarnings("unchecked")
 public class CommonServiceImpl implements CommonService {
@@ -61,6 +56,8 @@ public class CommonServiceImpl implements CommonService {
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
 	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
+	
+	private static final int QUALITY_OF_SERVICE = 1;
 	
 	@Value("${evs.pa.data.folder}")
 	private String evsDataFolder;
@@ -102,7 +99,7 @@ public class CommonServiceImpl implements CommonService {
 	@Override
 	public void publish(String topic, Object message) throws Exception {
 		try {
-			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress), topic, message);
+			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress), topic, message, QUALITY_OF_SERVICE, true);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
@@ -252,7 +249,7 @@ public class CommonServiceImpl implements CommonService {
 	
 	private void subscribe() {
 		try {
-			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress), evsPASubscribeTopic, o -> {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress), evsPASubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsPASubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
 				EX.submit(() -> handleOnSubscribe(mqttMessage));
@@ -393,14 +390,14 @@ public class CommonServiceImpl implements CommonService {
 	public static void main(String[] args) throws Exception {
 		/**System.out.println(requestCA("http://54.254.171.4:8880/api/evs-ca-request", new ClassPathResource("sv-ca/server.csr"), null));*/
 		
-		Mqtt.subscribe("evs/pa/BIERWXAABMAB2AEBAA", o -> {
+		Mqtt.subscribe(null, "evs/pa/BIERWXAABMAB2AEBAA", QUALITY_OF_SERVICE, o -> {
 			MqttMessage mqttMessage = (MqttMessage) o;
 			LOG.info("1 -> " + new String(mqttMessage.getPayload()));
 			return null;
 		});
 		
 		String json = "{\"header\":{\"mid\":1001,\"uid\":\"BIERWXAABMAB2AEBAA\",\"gid\":\"BIERWXAAA4AFBABABXX\",\"msn\":\"201906000032\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"id\":\"BIERWXAABMAB2AEBAA\",\"type\":\"OBR\",\"data\":\"201906000137\"}}";
-		Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class));
+		Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, true);
 	}
 
 }

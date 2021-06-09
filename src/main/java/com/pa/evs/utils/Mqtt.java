@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 	    <version>1.2.0</version>
 	</dependency>
 </pre>
- * @author thanh
  *
  */
 public class Mqtt {
@@ -148,6 +147,22 @@ public class Mqtt {
 				instance = Mqtt.getInstance();
 			}
 			instance.subscribe(topic, (s, mqttMessage) -> {
+				for (Function<Object, Object> fn : fns) {
+					fn.apply(mqttMessage);
+				}
+			});	
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+	}
+	
+	@SafeVarargs
+	public static void subscribe(IMqttClient instance, String topic, int qos, Function<Object, Object>... fns) throws Exception {
+		try {
+			if (instance == null) {
+				instance = Mqtt.getInstance();
+			}
+			instance.subscribe(topic, qos, (s, mqttMessage) -> {
 				for (Function<Object, Object> fn : fns) {
 					fn.apply(mqttMessage);
 				}

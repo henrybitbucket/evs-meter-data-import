@@ -1,6 +1,7 @@
 package com.pa.evs.ctrl;
 
 import java.util.Map;
+import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -18,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.Command;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.model.CARequestLog;
+import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.CommonService;
 import com.pa.evs.utils.SimpleMap;
 
@@ -30,6 +33,8 @@ public class CommonController {
 	ExceptionConvertor exceptionCnvertor;
 	
 	@Autowired CommonService commonService;
+	
+	@Autowired CaRequestLogService caRequestLogService;
 	
     @GetMapping("/api/message/publish")//http://localhost:8080/api/message/publish?topic=a&messageKey=1&message=a
     public ResponseEntity<?> sendGMessage(
@@ -63,8 +68,12 @@ public class CommonController {
     		) throws Exception {
     	
 		try {
+			Optional<CARequestLog> ca = caRequestLogService.findByUid(command.getUid());
+			if(!ca.isPresent()) {
+				return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).build());
+			}
 			commonService.publish("evs/pa/" + command.getUid(), SimpleMap.init(
-					"header", SimpleMap.init("uid", command.getUid()).more("mid", 234004).more("gid", "BIERWXAAA4AFBABABXX").more("msn", "201906000032").more("sig", null)
+					"header", SimpleMap.init("uid", command.getUid()).more("mid", 234004).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", null)
 				).more(
 					"payload", SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd())
 				));
