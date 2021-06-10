@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 
+import com.pa.evs.utils.RSAUtil;
+import com.pa.evs.utils.SimpleMap;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,6 +91,9 @@ public class CommonServiceImpl implements CommonService {
 
 	@Value("${portal.pa.ca.request.url}")
 	private String caRequestUrl;
+
+	@Value("${evs.pa.privatekey.path}")
+	private String pkPath;
 	
 	private JFtpClient jftpClient = null;
 	
@@ -210,7 +215,7 @@ public class CommonServiceImpl implements CommonService {
 			header.put("uid", log.getUid());
 			header.put("gid", log.getGid());
 			header.put("msn", log.getMsn());
-			header.put("sig", log.getSig());
+			//header.put("sig", log.getSig());
 			Map<String, Object> payload = new HashMap<>();
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
@@ -219,6 +224,10 @@ public class CommonServiceImpl implements CommonService {
 			payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
 			List<String> ca = caRequestLogRepository.findCAByUid(log.getUid());
 			payload.put("p2", ca.isEmpty() ? null : ca.get(0));
+
+			String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			header.put("sig", sig);
+
 			publish("evs/pa/" + log.getUid(), data);
 		}
 		
@@ -425,14 +434,21 @@ public class CommonServiceImpl implements CommonService {
 	public static void main(String[] args) throws Exception {
 		/**System.out.println(requestCA("http://54.254.171.4:8880/api/evs-ca-request", new ClassPathResource("sv-ca/server.csr"), null));*/
 		
-		Mqtt.subscribe(null, "evs/pa/BIERWXAABMAB2AEBAA", QUALITY_OF_SERVICE, o -> {
+		/*Mqtt.subscribe(null, "evs/pa/BIERWXAABMAB2AEBAA", QUALITY_OF_SERVICE, o -> {
 			MqttMessage mqttMessage = (MqttMessage) o;
 			LOG.info("1 -> " + new String(mqttMessage.getPayload()));
 			return null;
 		});
 		
 		String json = "{\"header\":{\"mid\":1001,\"uid\":\"BIERWXAABMAB2AEBAA\",\"gid\":\"BIERWXAAA4AFBABABXX\",\"msn\":\"201906000032\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"id\":\"BIERWXAABMAB2AEBAA\",\"type\":\"OBR\",\"data\":\"201906000137\"}}";
-		Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, true);
+		Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, true);*/
+		Map<String, Object> map = new HashMap<>();
+		map.put("id", "BIERWXAABMAGSAEAAA");
+		map.put("cmd", "PW1");
+		String payload = new ObjectMapper().writeValueAsString(map);
+		System.out.println(payload);
+		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
+		System.out.println(sig);
 	}
 
 }

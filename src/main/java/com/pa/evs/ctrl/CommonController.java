@@ -5,9 +5,11 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.pa.evs.utils.RSAUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +37,9 @@ public class CommonController {
 	@Autowired CommonService commonService;
 	
 	@Autowired CaRequestLogService caRequestLogService;
+
+	@Value("${evs.pa.privatekey.path}")
+	private String pkPath;
 	
     @GetMapping("/api/message/publish")//http://localhost:8080/api/message/publish?topic=a&messageKey=1&message=a
     public ResponseEntity<?> sendGMessage(
@@ -72,8 +77,10 @@ public class CommonController {
 			if(!ca.isPresent()) {
 				return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).build());
 			}
+			String payload = new ObjectMapper().writeValueAsString(SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd()));
+			String sig = RSAUtil.initSignedRequest(pkPath, payload);
 			commonService.publish("evs/pa/" + command.getUid(), SimpleMap.init(
-					"header", SimpleMap.init("uid", command.getUid()).more("mid", 234004).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", null)
+					"header", SimpleMap.init("uid", command.getUid()).more("mid", 234004).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
 				).more(
 					"payload", SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd())
 				));

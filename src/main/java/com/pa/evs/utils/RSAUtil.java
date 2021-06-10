@@ -1,12 +1,26 @@
 package com.pa.evs.utils;
 
+import org.bouncycastle.jce.PKCS10CertificationRequest;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
+import org.bouncycastle.util.io.pem.PemWriter;
+
 import java.io.ByteArrayInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.Signature;
+import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.interfaces.RSAPrivateCrtKey;
@@ -272,11 +286,39 @@ public class RSAUtil {
 				+ "MEQCICJI8XnvdkfKcD2WsatohMFVaPe5ctVEbVTDNMOPaDr9AiA5pDQAlEIuFjyD\r\n"
 				+ "ulDUqPmt2SKNz1SA1PFfBelT9sES8A==\r\n"
 				+ "-----END CERTIFICATE-----");
-		
+
 		PublicKey plKey = generatePublic(prkey);
-		
+
 		String signature = generateSignature("test message".getBytes(StandardCharsets.UTF_8), prkey);
 		System.out.println(verifySignature("test message".getBytes(StandardCharsets.UTF_8), Base64.getDecoder().decode(signature), plKey));
-		
+
+		/*Base64.Encoder encoder = Base64.getEncoder();
+		PEMReader pemReader = new PEMReader(new FileReader("D://server.key"));
+		Security.addProvider(new BouncyCastleProvider());
+		KeyPair keyPair = (KeyPair) pemReader.readObject();
+		Signature signature = Signature.getInstance("SHA256withECDSA");
+		signature.initSign(keyPair.getPrivate());
+		signature.update("ff".getBytes());
+		String signedRequest = encoder.encodeToString(signature.sign());
+		System.out.println(signedRequest);
+
+		StringWriter output = new StringWriter();
+		PemObject pkPemObject = new PemObject("PUBLIC KEY", keyPair.getPublic().getEncoded());
+		PemWriter pemWriter = new PemWriter(output);
+		pemWriter.writeObject(pkPemObject);
+		pemWriter.close();
+		System.out.println(output.getBuffer());*/
+
+	}
+
+	public static String initSignedRequest(String privateKeyPath, String payload) throws IOException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+		Base64.Encoder encoder = Base64.getEncoder();
+		PEMReader pemReader = new PEMReader(new FileReader(privateKeyPath));
+		Security.addProvider(new BouncyCastleProvider());
+		KeyPair keyPair = (KeyPair) pemReader.readObject();
+		Signature signature = Signature.getInstance("SHA256withECDSA");
+		signature.initSign(keyPair.getPrivate());
+		signature.update(payload.getBytes());
+		return encoder.encodeToString(signature.sign());
 	}
 }

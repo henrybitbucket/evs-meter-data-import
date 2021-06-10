@@ -202,10 +202,11 @@
 		</dependency>
 
 		<dependency>
-			<groupId>bouncycastle</groupId>
-			<artifactId>bcprov-jdk16</artifactId>
-			<version>140</version>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-ext-jdk16</artifactId>
+			<version>1.46</version>
 		</dependency>
+
 	</dependencies>
 
 	<build>
