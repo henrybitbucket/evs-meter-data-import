@@ -1,5 +1,7 @@
 package com.pa.evs.utils;
 
+import com.google.common.io.BaseEncoding;
+import com.pa.evs.sv.impl.CommonServiceImpl;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMReader;
@@ -11,7 +13,6 @@ import java.io.ByteArrayInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -94,6 +95,8 @@ import java.util.Base64;
  */
 public class RSAUtil {
 
+	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(CommonServiceImpl.class);
+
 	static {
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 	}
@@ -162,7 +165,6 @@ public class RSAUtil {
 	            + "By8q5f0Kwtxgo2+YkxGDP5bxDV6P1vd2C7U5/XxaN53Kc0G8zu9UlcwhZcQ5BljH\n"
 	            + "N24cUWZOo+60\n"
 	            + "-----END PRIVATE KEY-----");
-	 * @param keyBytes
 	 * @return
 	 * @throws Exception
 	 */
@@ -203,7 +205,6 @@ public class RSAUtil {
 				+ "MEQCICJI8XnvdkfKcD2WsatohMFVaPe5ctVEbVTDNMOPaDr9AiA5pDQAlEIuFjyD\r\n"
 				+ "ulDUqPmt2SKNz1SA1PFfBelT9sES8A==\r\n"
 				+ "-----END CERTIFICATE-----");
-	 * @param keyBytes
 	 * @return
 	 * @throws Exception
 	 */
@@ -287,10 +288,10 @@ public class RSAUtil {
 				+ "ulDUqPmt2SKNz1SA1PFfBelT9sES8A==\r\n"
 				+ "-----END CERTIFICATE-----");
 
-		PublicKey plKey = generatePublic(prkey);
+		/*PublicKey plKey = generatePublic(prkey);
 
 		String signature = generateSignature("test message".getBytes(StandardCharsets.UTF_8), prkey);
-		System.out.println(verifySignature("test message".getBytes(StandardCharsets.UTF_8), Base64.getDecoder().decode(signature), plKey));
+		System.out.println(verifySignature("test message".getBytes(StandardCharsets.UTF_8), Base64.getDecoder().decode(signature), plKey));*/
 
 		/*Base64.Encoder encoder = Base64.getEncoder();
 		PEMReader pemReader = new PEMReader(new FileReader("D://server.key"));
@@ -309,6 +310,38 @@ public class RSAUtil {
 		pemWriter.close();
 		System.out.println(output.getBuffer());*/
 
+		/*PEMReader pemReader = new PEMReader(new FileReader("D://sv-crt-new.crt"));
+		Security.addProvider(new BouncyCastleProvider());
+		X509CertificateObject cert = (X509CertificateObject) pemReader.readObject();
+		PublicKey pk = cert.getPublicKey();
+		StringWriter output = new StringWriter();
+		PemObject pkPemObject = new PemObject("PUBLIC KEY", pk.getEncoded());
+		PemWriter pemWriter = new PemWriter(output);
+		pemWriter.writeObject(pkPemObject);
+		pemWriter.close();
+		System.out.println(output.getBuffer());*/
+		FileReader fileReader = new FileReader("D://BIERWXAABMAGSAEAAA.csr");
+		PemReader pemReader = new PemReader(fileReader);
+		PKCS10CertificationRequest csr =
+				new PKCS10CertificationRequest(pemReader.readPemObject().getContent());
+		pemReader.close();
+		fileReader.close();
+		StringWriter output = new StringWriter();
+		PemWriter pemWriter = new PemWriter(output);
+
+		PemObject pkPemObject = new PemObject("PUBLIC KEY", csr.getPublicKey().getEncoded());
+		pemWriter.writeObject(pkPemObject);
+		pemWriter.close();
+		System.out.println(output.getBuffer());
+
+		String signhex = "30650231008C8550C80ABA46DE80FEFEB870D35FC6F90AD6437AAA1E42796A540A3EB50BFC07BA16F9DF46CD9BAD5997CF1C73F7CC0230786999AA091FE96B147A236B4D36FEC016E219A4B4BAABFDFEC6C2EE0E88B0031E3AC89AAF569BC2FF794D48AD8900BE";
+		String message = "{\"id\":\"BIERWXAABMAGSAEAAA\",\"type\":\"OBR\",\"data\":201906000032}";
+		Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA");
+		ecdsaVerify.initVerify(csr.getPublicKey());
+		ecdsaVerify.update(message.getBytes("UTF-8"));
+		boolean result1 = ecdsaVerify.verify(BaseEncoding.base16().decode(signhex.toUpperCase()));
+		System.out.println(result1);
+
 	}
 
 	public static String initSignedRequest(String privateKeyPath, String payload) throws IOException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
@@ -320,5 +353,20 @@ public class RSAUtil {
 		signature.initSign(keyPair.getPrivate());
 		signature.update(payload.getBytes());
 		return encoder.encodeToString(signature.sign());
+	}
+
+	public static boolean verifySign(String csrPath, String payload, String signHex) {
+		LOG.debug("VerifySign, csrPath: {}, payload: {}, signHex: {}", csrPath, payload, signHex);
+		try(FileReader fileReader = new FileReader(csrPath);
+			PemReader pemReader = new PemReader(fileReader)) {
+			PKCS10CertificationRequest csr = new PKCS10CertificationRequest(pemReader.readPemObject().getContent());
+			Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA");
+			ecdsaVerify.initVerify(csr.getPublicKey());
+			ecdsaVerify.update(payload.getBytes("UTF-8"));
+			return ecdsaVerify.verify(BaseEncoding.base16().decode(signHex.toUpperCase()));
+		} catch (Exception e) {
+			LOG.error("Verify sign fail: ", e);
+			return false;
+		}
 	}
 }

@@ -1,5 +1,32 @@
 package com.pa.evs.sv.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Log;
+import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.LogRepository;
+import com.pa.evs.sv.CommonService;
+import com.pa.evs.utils.ApiUtils;
+import com.pa.evs.utils.JFtpClient;
+import com.pa.evs.utils.Mqtt;
+import com.pa.evs.utils.RSAUtil;
+import com.pa.evs.utils.ZipUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+
+import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -19,36 +46,6 @@ import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
-import javax.annotation.PostConstruct;
-
-import com.pa.evs.utils.RSAUtil;
-import com.pa.evs.utils.SimpleMap;
-import org.apache.commons.lang3.StringUtils;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.Log;
-import com.pa.evs.repository.CARequestLogRepository;
-import com.pa.evs.repository.LogRepository;
-import com.pa.evs.sv.CommonService;
-import com.pa.evs.utils.ApiUtils;
-import com.pa.evs.utils.JFtpClient;
-import com.pa.evs.utils.Mqtt;
-import com.pa.evs.utils.ZipUtils;
 
 @Component
 @SuppressWarnings("unchecked")
@@ -94,7 +91,10 @@ public class CommonServiceImpl implements CommonService {
 
 	@Value("${evs.pa.privatekey.path}")
 	private String pkPath;
-	
+
+	@Value("${evs.pa.csr.folder}")
+	private String csrFolder;
+
 	private JFtpClient jftpClient = null;
 	
 	@Autowired
@@ -152,10 +152,11 @@ public class CommonServiceImpl implements CommonService {
 		}
 		return opt.isPresent() ? 0 : -1;
 	}
-	private void handleMDT(Map<String, Object> data, String type, Log log) throws Exception {
-		
-		int status = validateUidAndMsn(log);
-		
+	private void handleMDT(Map<String, Object> data, String type, Log log, int status) throws Exception {
+
+		if (status == 0) {
+			status = validateUidAndMsn(log);
+		}
 		if (status == 0) {
 			//FTP
 			ftpUpload(data);
@@ -180,10 +181,12 @@ public class CommonServiceImpl implements CommonService {
 		logRepository.save(logP);
 	}
 	
-	private void handleOBR(String type, Log log) throws Exception {
-		
-		int status = validateUidAndMsn(log);
-		
+	private void handleOBR(String type, Log log, int status) throws Exception {
+
+		if(status == 0) {
+			status = validateUidAndMsn(log);
+		}
+
 		//publish
 		Map<String, Object> data = new HashMap<>();
 		Map<String, Object> header = new HashMap<>();
@@ -220,10 +223,10 @@ public class CommonServiceImpl implements CommonService {
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "ACT");
-			List<String> svCA = caRequestLogRepository.findCAByUid("server.csr");
-			payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
 			List<String> ca = caRequestLogRepository.findCAByUid(log.getUid());
-			payload.put("p2", ca.isEmpty() ? null : ca.get(0));
+			payload.put("p1", ca.isEmpty() ? null : ca.get(0));
+			List<String> svCA = caRequestLogRepository.findCAByUid("server.csr");
+			payload.put("p2", svCA.isEmpty() ? null : svCA.get(0));
 
 			String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
@@ -247,16 +250,24 @@ public class CommonServiceImpl implements CommonService {
 			Log log = Log.build(data, "SUBSCRIBE");
 			log.setMqttAddress(evsPAMQTTAddress);
 			logRepository.save(log);
-			
+
+			Map<String, Object> header = (Map<String, Object>) data.get("header");
 			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 			String type = (String) payload.get("type");
+
+			int status = 0;
+			boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
+					new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
+			if (!verifySign) {
+				status = -1;
+			}
 			
 			if ("MDT".equalsIgnoreCase(type)) {
-				handleMDT(data, type, log);
+				handleMDT(data, type, log, status);
 			}
 			
 			if ("OBR".equalsIgnoreCase(type)) {
-				handleOBR(type, log);
+				handleOBR(type, log, status);
 			}
 			
 		} catch (Exception e) {
@@ -420,7 +431,7 @@ public class CommonServiceImpl implements CommonService {
 		data.add("files", resource);
 		HttpEntity<Object> entity = new HttpEntity<>(data, headers);
 		Map<String, Object> respose = ApiUtils.getRestTemplate().exchange(caRequestUrl, HttpMethod.POST, entity, Map.class).getBody();
-		String pem = (respose.get("cas") + "").replaceAll(".*\"CertificateChain\": \"(-----BEGIN CERTIFICATE-----[\na-zA-Z0-9=\\\\/+]+-----END CERTIFICATE-----).*", "$1").replace("\\n", "\n");
+		String pem = (respose.get("cas") + "").replaceAll(".*\"Certificate\": \"(-----BEGIN CERTIFICATE-----[\na-zA-Z0-9=\\\\/+]+-----END CERTIFICATE-----).*", "$1").replace("\\n", "\n");
 		
 		if (!pem.contains("-----BEGIN CERTIFICATE-----")) {
 			throw new RuntimeException("CA request ERROR " + uuid + "\n" + respose.get("cas"));
@@ -450,5 +461,4 @@ public class CommonServiceImpl implements CommonService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);
 	}
-
 }
