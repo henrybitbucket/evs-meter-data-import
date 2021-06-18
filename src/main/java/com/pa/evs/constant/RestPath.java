@@ -12,4 +12,7 @@ public interface RestPath {
 	String USERS = API + "/users";
 	String USER = API + "/user";
 	String WHOAMI1 = API + "/whoami";
+	
+	String GET_CA_REQUEST_LOG = API + "/ca-request-logs";
+	String CA_REQUEST_LOG = API + "/ca-request-log";
 }
