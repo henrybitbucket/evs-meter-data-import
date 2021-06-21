@@ -1,6 +1,5 @@
 package com.pa.evs.utils;
 
-import com.google.common.io.BaseEncoding;
 import com.pa.evs.sv.impl.CommonServiceImpl;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -334,12 +333,12 @@ public class RSAUtil {
 		pemWriter.close();
 		System.out.println(output.getBuffer());
 
-		String signhex = "30650231008C8550C80ABA46DE80FEFEB870D35FC6F90AD6437AAA1E42796A540A3EB50BFC07BA16F9DF46CD9BAD5997CF1C73F7CC0230786999AA091FE96B147A236B4D36FEC016E219A4B4BAABFDFEC6C2EE0E88B0031E3AC89AAF569BC2FF794D48AD8900BE";
-		String message = "{\"id\":\"BIERWXAABMAGSAEAAA\",\"type\":\"OBR\",\"data\":201906000032}";
+		String sig = "MGUCMQD4ygjt/jUo5JOzhW1xP22CiyFIlfYFO6bvL0iAEJsIR4ZrxklQkUytMO0K7kkAdm0CMBtndtZIIDy3o+1dp0i/AH8gXUlzyL7d7yk79MQlRX00KQZ9xJ3bZYbPvZTedkuegQ==";
+		String message = "{\"id\":\"BIERWXAABMAGSAEAAA\",\"type\":\"MDT\",\"data\":[{\"uid\":\"BIERWXAABMAGSAEAAA\",\"msn\":\"201906000032\",\"kwh\":\"1.1\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"239.6\",\"pf\":\"10.0\",\"dt\":\"2021-06-12T16:29:38\"}]}";
 		Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA");
 		ecdsaVerify.initVerify(csr.getPublicKey());
 		ecdsaVerify.update(message.getBytes("UTF-8"));
-		boolean result1 = ecdsaVerify.verify(BaseEncoding.base16().decode(signhex.toUpperCase()));
+		boolean result1 = ecdsaVerify.verify(Base64.getDecoder().decode(sig));
 		System.out.println(result1);
 
 	}
@@ -355,15 +354,15 @@ public class RSAUtil {
 		return encoder.encodeToString(signature.sign());
 	}
 
-	public static boolean verifySign(String csrPath, String payload, String signHex) {
-		LOG.debug("VerifySign, csrPath: {}, payload: {}, signHex: {}", csrPath, payload, signHex);
+	public static boolean verifySign(String csrPath, String payload, String sig) {
+		LOG.debug("VerifySign, csrPath: {}, payload: {}, signHex: {}", csrPath, payload, sig);
 		try(FileReader fileReader = new FileReader(csrPath);
 			PemReader pemReader = new PemReader(fileReader)) {
 			PKCS10CertificationRequest csr = new PKCS10CertificationRequest(pemReader.readPemObject().getContent());
 			Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA");
 			ecdsaVerify.initVerify(csr.getPublicKey());
 			ecdsaVerify.update(payload.getBytes("UTF-8"));
-			return ecdsaVerify.verify(BaseEncoding.base16().decode(signHex.toUpperCase()));
+			return ecdsaVerify.verify(Base64.getDecoder().decode(sig));
 		} catch (Exception e) {
 			LOG.error("Verify sign fail: ", e);
 			return false;

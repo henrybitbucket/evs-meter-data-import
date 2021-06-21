@@ -1,16 +1,6 @@
 package com.pa.evs.utils;
-import java.io.Serializable;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
 
-import javax.net.ssl.SSLContext;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.ssl.SSLContexts;
 import org.eclipse.paho.client.mqttv3.IMqttClient;
@@ -18,7 +8,15 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.net.ssl.SSLContext;
+import java.io.Serializable;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 
 /**
 <pre>
@@ -136,10 +134,6 @@ public class Mqtt {
 	        instance.publish(topic, mqttMessage);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
-		} finally {
-			if (instance != null) {
-				instance.disconnect();
-			}
 		}
 	}
 	
