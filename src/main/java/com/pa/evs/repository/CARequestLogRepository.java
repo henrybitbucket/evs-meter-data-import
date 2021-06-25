@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,4 +19,8 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	
 	@Query("SELECT certificate FROM CARequestLog WHERE uid = ?1")
 	List<String> findCAByUid(String uid);
+	
+	@Modifying
+	@Query("UPDATE CARequestLog SET msn = ?2 WHERE uid = ?1")
+	void linkMsn(String uuid, String msn);
 }

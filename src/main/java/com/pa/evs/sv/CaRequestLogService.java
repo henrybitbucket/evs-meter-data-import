@@ -1,5 +1,6 @@
 package com.pa.evs.sv;
 
+import java.util.Map;
 import java.util.Optional;
 
 import com.pa.evs.dto.CaRequestLogDto;
@@ -13,4 +14,6 @@ public interface CaRequestLogService {
 	void save(CaRequestLogDto dto);
 
     void search(PaginDto<CaRequestLogDto> pagin);
+
+	void linkMsn(Map<String, Object> map);
 }

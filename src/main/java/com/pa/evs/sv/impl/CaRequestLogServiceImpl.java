@@ -2,6 +2,7 @@ package com.pa.evs.sv.impl;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.persistence.EntityManager;
@@ -9,6 +10,8 @@ import javax.persistence.Query;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.CARequestLog;
@@ -95,5 +98,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         pagin.setResults(query.getResultList());
         
     }
+
+    @Transactional
+	@Override
+	public void linkMsn(Map<String, Object> map) {
+		caRequestLogRepository.linkMsn((String)map.get("uuid"), (String)map.get("msn"));
+	}
 	
 }

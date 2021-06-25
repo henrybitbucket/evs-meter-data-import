@@ -89,4 +89,18 @@ public class CommonController {
 		}
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
+    
+    @PostMapping("/api/link-msn")
+    public ResponseEntity<?> linkMsn(
+    		HttpServletRequest httpServletRequest,
+    		@RequestBody Map<String, Object> map
+    		) throws Exception {
+    	
+		try {
+			caRequestLogService.linkMsn(map);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
 }
