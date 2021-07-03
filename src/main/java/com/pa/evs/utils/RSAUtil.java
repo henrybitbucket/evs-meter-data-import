@@ -1,6 +1,6 @@
 package com.pa.evs.utils;
 
-import com.pa.evs.sv.impl.CommonServiceImpl;
+import com.pa.evs.sv.impl.EVSPAServiceImpl;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMReader;
@@ -94,7 +94,7 @@ import java.util.Base64;
  */
 public class RSAUtil {
 
-	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(CommonServiceImpl.class);
+	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
 
 	static {
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());

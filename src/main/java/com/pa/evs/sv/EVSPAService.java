@@ -1,6 +1,6 @@
 package com.pa.evs.sv;
 
-public interface CommonService {
+public interface EVSPAService {
 
 	void publish(String topic, Object message) throws Exception;
 }

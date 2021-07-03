@@ -1,32 +1,5 @@
 package com.pa.evs.sv.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.Log;
-import com.pa.evs.repository.CARequestLogRepository;
-import com.pa.evs.repository.LogRepository;
-import com.pa.evs.sv.CommonService;
-import com.pa.evs.utils.ApiUtils;
-import com.pa.evs.utils.JFtpClient;
-import com.pa.evs.utils.Mqtt;
-import com.pa.evs.utils.RSAUtil;
-import com.pa.evs.utils.ZipUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-
-import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -47,11 +20,41 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang3.StringUtils;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Log;
+import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.LogRepository;
+import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.MeterService;
+import com.pa.evs.utils.ApiUtils;
+import com.pa.evs.utils.JFtpClient;
+import com.pa.evs.utils.Mqtt;
+import com.pa.evs.utils.RSAUtil;
+import com.pa.evs.utils.ZipUtils;
+
 @Component
 @SuppressWarnings("unchecked")
-public class CommonServiceImpl implements CommonService {
+public class EVSPAServiceImpl implements EVSPAService {
 
-	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(CommonServiceImpl.class);
+	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
 	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
@@ -105,6 +108,9 @@ public class CommonServiceImpl implements CommonService {
 	
 	private static final ExecutorService EX = Executors.newFixedThreadPool(10);
 	
+	@Autowired
+	private MeterService meterService;
+	
 	@Override
 	public void publish(String topic, Object message) throws Exception {
 		try {
@@ -152,6 +158,7 @@ public class CommonServiceImpl implements CommonService {
 		}
 		return opt.isPresent() ? 0 : -1;
 	}
+	
 	private void handleMDT(Map<String, Object> data, String type, Log log, int status) throws Exception {
 
 		if (status == 0) {
@@ -179,6 +186,22 @@ public class CommonServiceImpl implements CommonService {
 		Log logP = Log.build(publishData, "PUBLISH");
 		logP.setMqttAddress(evsPAMQTTAddress);
 		logRepository.save(logP);
+	}
+	
+	private void handleRLSRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
+
+		//Publish
+		data = new HashMap<>();
+		Map<String, Object> header = new HashMap<>();
+		data.put("header", header);
+		header.put("oid", log.getMid());
+		header.put("msn", log.getMsn());
+		Map<String, Object> payload = new HashMap<>();
+		payload.put("id", log.getMsn());
+		payload.put("type", "RLS");
+		payload.put("data", status);
+		data.put("payload", payload);
+		meterService.publish(data);
 	}
 	
 	private void handleOBR(String type, Log log, int status) throws Exception {
@@ -285,6 +308,10 @@ public class CommonServiceImpl implements CommonService {
 
 			//TO-DO: need base on mid of response and mapping with request and update status log to know
 			//got response or not
+			String type = log.getPType();
+			if ("RLS".equalsIgnoreCase(type)) {
+				handleRLSRes(data, type, log, 1);
+			}
 
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);

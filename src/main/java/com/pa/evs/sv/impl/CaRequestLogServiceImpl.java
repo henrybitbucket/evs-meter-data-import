@@ -22,7 +22,7 @@ import com.pa.evs.sv.CaRequestLogService;
 @SuppressWarnings("unchecked")
 public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
-	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(CommonServiceImpl.class);
+	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
