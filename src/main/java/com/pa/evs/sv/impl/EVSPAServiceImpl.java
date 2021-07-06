@@ -3,9 +3,11 @@ package com.pa.evs.sv.impl;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
@@ -37,6 +39,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.metrics.AwsSdkMetrics;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
@@ -48,6 +59,7 @@ import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.JFtpClient;
 import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.RSAUtil;
+import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
 
 @Component
@@ -110,6 +122,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Autowired
 	private MeterService meterService;
+	
+	private AmazonS3Client s3Client = null;
+	
+	@Value("${s3.bucket.name}")
+	private String bucketName;
+	
+	@Value("${s3.access.id}")
+	private String accessID;
+	
+	@Value("${s3.access.key}")
+	private String accessKey;
 	
 	@Override
 	public void publish(String topic, Object message) throws Exception {
@@ -202,6 +225,51 @@ public class EVSPAServiceImpl implements EVSPAService {
 		payload.put("data", status);
 		data.put("payload", payload);
 		meterService.publish(data);
+	}
+	
+	private void handleINFRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
+
+		if (status == 0) {
+			status = validateUidAndMsn(log);
+		}
+		
+		if (status == 0) {
+			//FTP
+			String urlS3 = getS3URL(log.getUid());
+			//Publish
+			data = new HashMap<>();
+			Map<String, Object> header = new HashMap<>();
+			data.put("header", header);
+			header.put("mid", log.getMid());
+			header.put("uid", log.getUid());
+			header.put("gid", log.getGid());
+			header.put("msn", log.getMsn());
+			
+			Map<String, Object> payload = new HashMap<>();
+			data.put("payload", payload);
+			payload.put("id", log.getUid());
+			payload.put("cmd", "OTA");
+			payload.put("p1", SimpleMap.init("ver", "1.0.1").more("hash", "").more("url", urlS3));
+			
+			header.put("sig", RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload)));
+			publish("evs/pa/" + log.getUid(), data);
+			
+			//save log
+			Map<String, Object> publishData = new HashMap<>(data);
+			publishData.put("type", type);
+			Log logP = Log.build(publishData, "PUBLISH");
+			logP.setMqttAddress(evsPAMQTTAddress);
+			logRepository.save(logP);
+		}
+	}
+	
+	private void handleOTARes(Map<String, Object> data, String type, Log log, int status) throws Exception {
+
+		Map<String, Object> savehData = new HashMap<>(data);
+		savehData.put("type", type);
+		Log logP = Log.build(savehData, "PUBLISH");
+		logP.setMqttAddress(evsPAMQTTAddress);
+		logRepository.save(logP);
 	}
 	
 	private void handleOBR(String type, Log log, int status) throws Exception {
@@ -312,7 +380,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if ("RLS".equalsIgnoreCase(type)) {
 				handleRLSRes(data, type, log, 1);
 			}
+			
+			if ("INF".equalsIgnoreCase(type)) {
+				handleINFRes(data, type, log, 0);
+			}
 
+			if ("OTA".equalsIgnoreCase(type)) {
+				handleOTARes(data, type, log, 0);
+			}
+			
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
@@ -445,6 +521,39 @@ public class EVSPAServiceImpl implements EVSPAService {
 				}
 			}
 		}, "REQUEST_CA");
+		
+		try {
+			initS3();
+		} catch (Exception e) {/**/}
+	}
+	
+	private void initS3() {
+		
+		/**
+		 * https://842807477657.signin.aws.amazon.com/console
+		 * henry/P0wer!2
+		 */
+		AWSCredentials credentials = new BasicAWSCredentials(accessID, accessKey);
+		ClientConfiguration clientconfig = new ClientConfiguration();
+        clientconfig.setProtocol(Protocol.HTTPS);
+        clientconfig.setConnectionTimeout(2000);
+        clientconfig.setConnectionMaxIdleMillis(2000);
+        clientconfig.setMaxConnections(3);
+        AwsSdkMetrics.disableMetrics();        
+        s3Client = new AmazonS3Client(credentials, clientconfig);
+        s3Client.setRegion(Region.getRegion(Regions.AP_SOUTHEAST_1));
+	}
+	
+	private String getS3URL(String objectKey) {
+		java.util.Date expiration = new java.util.Date();
+		long expTimeMillis = Instant.now().toEpochMilli();
+		expTimeMillis += 1000 * 60 * 60;
+		expiration.setTime(expTimeMillis);
+
+		// Generate the presigned URL.
+		GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName,
+				objectKey).withMethod(com.amazonaws.HttpMethod.GET).withExpiration(expiration);
+		return s3Client.generatePresignedUrl(generatePresignedUrlRequest).toString();
 	}
 	
 	private static Map<String, Object> requestCA(String caRequestUrl, Resource resource, String uuid) {
