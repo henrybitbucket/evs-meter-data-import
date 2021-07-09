@@ -110,6 +110,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Value("${evs.pa.csr.folder}")
 	private String csrFolder;
 
+	@Value("${evs.pa.firmware.version}")
+	private String firmwareVersion;
+
+	@Value("${evs.pa.firmware.objectkey}")
+	private String firmwareObjectKey;
+
+	@Value("${evs.pa.firmware.hash}")
+	private String firmwareHash;
+
+	@Value("${s3.access.expireTime:15}")
+	private long expireTime;
+
 	private JFtpClient jftpClient = null;
 	
 	@Autowired
@@ -228,14 +240,22 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	private void handleINFRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
+		// chua validate resp signature
+		if (status == 0) {
+			Map<String, Object> payload1 = (Map<String, Object>) data.get("payload");
+			Map<String, Object> data1 = (Map<String, Object>) payload1.get("data");
+			if (firmwareVersion.equals(data1.get("ver"))) {
+				status = -1;
+			}
+		}
 
 		if (status == 0) {
 			status = validateUidAndMsn(log);
 		}
-		
+
 		if (status == 0) {
 			//FTP
-			String urlS3 = getS3URL(log.getUid());
+			String urlS3 = getS3URL(firmwareObjectKey);
 			//Publish
 			data = new HashMap<>();
 			Map<String, Object> header = new HashMap<>();
@@ -249,7 +269,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
-			payload.put("p1", SimpleMap.init("ver", "1.0.1").more("hash", "").more("url", urlS3));
+			payload.put("p1", SimpleMap.init("ver", "1.0.1").more("hash", firmwareHash).more("url", urlS3));
 			
 			header.put("sig", RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload)));
 			publish("evs/pa/" + log.getUid(), data);
@@ -349,6 +369,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			int status = 0;
 			boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
 					new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
+			LOG.debug("handleOnSubscribe, type: {}, verifySign: {}", type, verifySign);
 			if (!verifySign) {
 				status = -1;
 			}
@@ -376,17 +397,27 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 			//TO-DO: need base on mid of response and mapping with request and update status log to know
 			//got response or not
+			Map<String, Object> header = (Map<String, Object>) data.get("header");
+			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 			String type = log.getPType();
+
+			int status = 0;
+			boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
+					new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
+			LOG.debug("HandleOnRespSubscribe, type: {}, verifySign: {}", type, verifySign);
+			if (!verifySign) {
+				status = -1;
+			}
 			if ("RLS".equalsIgnoreCase(type)) {
-				handleRLSRes(data, type, log, 1);
+				handleRLSRes(data, type, log, status);
 			}
 			
 			if ("INF".equalsIgnoreCase(type)) {
-				handleINFRes(data, type, log, 0);
+				handleINFRes(data, type, log, status);
 			}
 
 			if ("OTA".equalsIgnoreCase(type)) {
-				handleOTARes(data, type, log, 0);
+				handleOTARes(data, type, log, status);
 			}
 			
 		} catch (Exception e) {
@@ -547,11 +578,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private String getS3URL(String objectKey) {
 		java.util.Date expiration = new java.util.Date();
 		long expTimeMillis = Instant.now().toEpochMilli();
-		expTimeMillis += 1000 * 60 * 60;
+		expTimeMillis += 1000 * 60 * expireTime;
 		expiration.setTime(expTimeMillis);
 
 		// Generate the presigned URL.
-		GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName,
+		GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName + "/" + firmwareVersion,
 				objectKey).withMethod(com.amazonaws.HttpMethod.GET).withExpiration(expiration);
 		return s3Client.generatePresignedUrl(generatePresignedUrlRequest).toString();
 	}
@@ -587,10 +618,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 			return null;
 		});*/
 		
-		String json = "{\"header\":{\"mid\":1001,\"uid\":\"BIERWXAABMAB2AEBAA\",\"gid\":\"BIERWXAAA4AFBABABXX\",\"msn\":\"201906000032\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"id\":\"BIERWXAABMAB2AEBAA\",\"type\":\"OBR\",\"data\":\"201906000137\"}}";
-		Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
-		Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
-		Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+		//String json = "{\"header\":{\"mid\":1001,\"uid\":\"BIERWXAABMAB2AEBAA\",\"gid\":\"BIERWXAAA4AFBABABXX\",\"msn\":\"201906000032\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"id\":\"BIERWXAABMAB2AEBAA\",\"type\":\"OBR\",\"data\":\"201906000137\"}}";
+		//Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+		//Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+		//qtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
 		/*Map<String, Object> map = new HashMap<>();
 		map.put("id", "BIERWXAABMAGSAEAAA");
 		map.put("cmd", "PW1");
@@ -598,5 +629,26 @@ public class EVSPAServiceImpl implements EVSPAService {
 		System.out.println(payload);
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
+
+		String json = "{\n" +
+				"   \"header\":{\n" +
+				"      \"oid\":234001,\n" +
+				"      \"uid\":\"BIERWXAAA4AFMACLXX\",\n" +
+				"      \"gid\":\"BIERWXAAA4AFBABABXX\",\n" +
+				"      \"msn\":\"201906000032\",\n" +
+				"      \"sig\":\"Base64(ECC_SIGN(payload))\"\n" +
+				"   },\n" +
+				"   \"payload\":{\n" +
+				"      \"id\":\"BIERWXAAA4AFMACLXX\",\n" +
+				"      \"type\":\"INF\",\n" +
+				"      \"data\":{\n" +
+				"        \"ver\":\"1.0.0\",\n" +
+				"        \"rdti\":30,\n" +
+				"        \"pdti\":60,\n" +
+				"        \"pdtm\":32\n" +
+				"      }\n" +
+				"   }\n" +
+				"}";
+		Mqtt.publish("evs/pa/resp", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
 	}
 }
