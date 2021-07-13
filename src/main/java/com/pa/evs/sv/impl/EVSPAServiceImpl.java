@@ -186,6 +186,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 		jftpClient.putFileToPath(file.getAbsolutePath(), evsFtpFolder);
 	}
 	
+
+	@Override
+	public Long nextvalMID() {
+		return logRepository.nextvalMID().longValue();
+	}
+	
 	private int validateUidAndMsn(Log log) {
 		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
 		if (!opt.isPresent()) {
@@ -257,11 +263,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.debug("sleep 15s");
 			TimeUnit.SECONDS.sleep(15);
 			String urlS3 = getS3URL(firmwareObjectKey);
+			if (log.getMid() == null) {
+				log.setMid(logRepository.nextvalMID().longValue());
+			}
 			//Publish
 			data = new HashMap<>();
 			Map<String, Object> header = new HashMap<>();
 			data.put("header", header);
-			header.put("mid", 234004);
+			header.put("mid", log.getMid());
 			header.put("uid", log.getUid());
 			header.put("gid", log.getUid());
 			header.put("msn", log.getMsn());
@@ -560,6 +569,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		try {
 			initS3();
+		} catch (Exception e) {/**/}
+		try {
+			logRepository.createMIDSeq();
+			Number lastValue = logRepository.nextvalMID();
+			if (lastValue.longValue() < 10000l) {
+				logRepository.nextvalMID(10000l);
+			}
 		} catch (Exception e) {/**/}
 	}
 	
