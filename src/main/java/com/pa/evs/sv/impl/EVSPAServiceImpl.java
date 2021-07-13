@@ -1,44 +1,5 @@
 package com.pa.evs.sv.impl;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TimeZone;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
-import javax.annotation.PostConstruct;
-
-import org.apache.commons.lang3.StringUtils;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
@@ -61,6 +22,42 @@ import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+
+import javax.annotation.PostConstruct;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TimeZone;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @SuppressWarnings("unchecked")
@@ -121,6 +118,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Value("${s3.access.expireTime:15}")
 	private long expireTime;
+
+	@Value("${evs.pa.validateSign:true}")
+	private boolean validateSign;
 
 	private JFtpClient jftpClient = null;
 	
@@ -254,22 +254,23 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 
 		if (status == 0) {
-			//FTP
+			LOG.debug("sleep 15s");
+			TimeUnit.SECONDS.sleep(15);
 			String urlS3 = getS3URL(firmwareObjectKey);
 			//Publish
 			data = new HashMap<>();
 			Map<String, Object> header = new HashMap<>();
 			data.put("header", header);
-			header.put("mid", log.getMid());
+			header.put("mid", 234004);
 			header.put("uid", log.getUid());
-			header.put("gid", log.getGid());
+			header.put("gid", log.getUid());
 			header.put("msn", log.getMsn());
 			
 			Map<String, Object> payload = new HashMap<>();
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
-			payload.put("p1", SimpleMap.init("ver", "1.0.1").more("hash", firmwareHash).more("url", urlS3));
+			payload.put("p1", SimpleMap.init("ver", firmwareVersion).more("hash", firmwareHash).more("url", urlS3));
 			
 			header.put("sig", RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload)));
 			publish("evs/pa/" + log.getUid(), data);
@@ -367,11 +368,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 			String type = (String) payload.get("type");
 
 			int status = 0;
-			boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
-					new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
-			LOG.debug("handleOnSubscribe, type: {}, verifySign: {}", type, verifySign);
-			if (!verifySign) {
-				status = -1;
+			if(validateSign) {
+				boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
+						new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
+				LOG.debug("handleOnSubscribe, type: {}, verifySign: {}", type, verifySign);
+				if (!verifySign) {
+					status = -1;
+				}
 			}
 			
 			if ("MDT".equalsIgnoreCase(type)) {
@@ -402,11 +405,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 			String type = log.getPType();
 
 			int status = 0;
-			boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
-					new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
-			LOG.debug("HandleOnRespSubscribe, type: {}, verifySign: {}", type, verifySign);
-			if (!verifySign) {
-				status = -1;
+			if(validateSign) {
+				boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
+						new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
+				LOG.debug("HandleOnRespSubscribe, type: {}, verifySign: {}", type, verifySign);
+				if (!verifySign) {
+					status = -1;
+				}
 			}
 			if ("RLS".equalsIgnoreCase(type)) {
 				handleRLSRes(data, type, log, status);
@@ -584,6 +589,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		// Generate the presigned URL.
 		GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName + "/" + firmwareVersion,
 				objectKey).withMethod(com.amazonaws.HttpMethod.GET).withExpiration(expiration);
+
 		return s3Client.generatePresignedUrl(generatePresignedUrlRequest).toString();
 	}
 	
@@ -597,16 +603,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 		data.add("msn", uuid);
 		data.add("files", resource);
 		HttpEntity<Object> entity = new HttpEntity<>(data, headers);
-		Map<String, Object> respose = ApiUtils.getRestTemplate().exchange(caRequestUrl, HttpMethod.POST, entity, Map.class).getBody();
-		String pem = (respose.get("cas") + "").replaceAll(".*\"Certificate\": \"(-----BEGIN CERTIFICATE-----[\na-zA-Z0-9=\\\\/+]+-----END CERTIFICATE-----).*", "$1").replace("\\n", "\n");
+		Map<String, Object> response = ApiUtils.getRestTemplate().exchange(caRequestUrl, HttpMethod.POST, entity, Map.class).getBody();
+		String pem = (response.get("cas") + "").replaceAll(".*\"Certificate\": \"(-----BEGIN CERTIFICATE-----[\na-zA-Z0-9=\\\\/+]+-----END CERTIFICATE-----).*", "$1").replace("\\n", "\n");
 		
 		if (!pem.contains("-----BEGIN CERTIFICATE-----")) {
-			throw new RuntimeException("CA request ERROR " + uuid + "\n" + respose.get("cas"));
+			throw new RuntimeException("CA request ERROR " + uuid + "\n" + response.get("cas"));
 		}
-		respose.put("pem", pem);
-		respose.put("pemBase64", Base64.getEncoder().encodeToString(pem.getBytes(StandardCharsets.UTF_8)));
-		respose.put("uid", uuid);
-		return respose;
+		response.put("pem", pem);
+		response.put("pemBase64", Base64.getEncoder().encodeToString(pem.getBytes(StandardCharsets.UTF_8)));
+		response.put("uid", uuid);
+		return response;
 	}
 	
 	public static void main(String[] args) throws Exception {
@@ -633,13 +639,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String json = "{\n" +
 				"   \"header\":{\n" +
 				"      \"oid\":234001,\n" +
-				"      \"uid\":\"BIERWXAAA4AFMACLXX\",\n" +
-				"      \"gid\":\"BIERWXAAA4AFBABABXX\",\n" +
+				"      \"uid\":\"BIERWXAABMAGSAEAAA\",\n" +
+				"      \"gid\":\"BIERWXAABMAGSAEAAA\",\n" +
 				"      \"msn\":\"201906000032\",\n" +
 				"      \"sig\":\"Base64(ECC_SIGN(payload))\"\n" +
 				"   },\n" +
 				"   \"payload\":{\n" +
-				"      \"id\":\"BIERWXAAA4AFMACLXX\",\n" +
+				"      \"id\":\"BIERWXAABMAGSAEAAA\",\n" +
 				"      \"type\":\"INF\",\n" +
 				"      \"data\":{\n" +
 				"        \"ver\":\"1.0.0\",\n" +
