@@ -11,4 +11,5 @@ public interface Message {
     String SLACK_CONNECT_ERROR = "Slack connection error";
     String SLACK_BOT_ALREADY = "Slack bot already enable";
     String YES_NO_MESSAGE = "Please say yes or no. Thanks";
+    String FIRMWARE_NOT_FOUND = "Firmware not found!";
 }

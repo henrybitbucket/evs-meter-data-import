@@ -85,6 +85,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/swagger-ui/").permitAll()
 				.antMatchers("/swagger-ui**").permitAll()
 				.antMatchers("/api/link-msn").permitAll()
+				.antMatchers("/api/firm-ware/upload/**").permitAll()
+				.antMatchers("/api/firm-wares**").permitAll()
+				.antMatchers("/api/firm-ware**").permitAll()
 				
 				.anyRequest().authenticated();
 

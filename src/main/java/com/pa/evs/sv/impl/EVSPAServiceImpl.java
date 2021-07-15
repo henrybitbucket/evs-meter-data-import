@@ -1,14 +1,18 @@
 package com.pa.evs.sv.impl;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.http.IdleConnectionReaper;
 import com.amazonaws.metrics.AwsSdkMetrics;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
@@ -36,15 +40,21 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
@@ -145,6 +155,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Value("${s3.access.key}")
 	private String accessKey;
+	
+	@Value("${s3.endpointUrl}")
+	private String endpointUrl;
 	
 	@Override
 	public void publish(String topic, Object message) throws Exception {
@@ -614,6 +627,53 @@ public class EVSPAServiceImpl implements EVSPAService {
 		response.put("uid", uuid);
 		return response;
 	}
+	
+    @Override
+    public boolean upload(String fileName, String version, String hashCode, InputStream in) {
+        if (StringUtils.isBlank(version)) {
+            version = this.firmwareVersion;
+        }
+        if (StringUtils.isBlank(hashCode)) {
+            hashCode = this.firmwareHash;
+        }
+        boolean result=false;
+        Date today = new Date();
+        String keyName = String.format("%s", new SimpleDateFormat("yyyy/MM/dd").format(today));
+        LOG.info("Upload Function. Bucket Name: {}, File Name: {}, Version: {}, KeyName: {}", bucketName, fileName, version, keyName);
+        PutObjectRequest request = null;
+        ObjectMetadata metadata = null;
+        try {
+            if (in != null) {
+                String key = version + "/" + fileName;     
+                metadata = new ObjectMetadata();
+                metadata.setContentType("plain/text");
+                request = new PutObjectRequest(bucketName, key, in, metadata);
+                request.setMetadata(metadata);
+                s3Client.putObject(request);
+
+                LOG.info("{} Finished uploading File Object: {} to {}", DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()), fileName, version);
+                result = true;
+            }
+            else {
+                LOG.info("File: {} does not exists", fileName);
+                result = true;
+            }
+        } catch (AmazonServiceException e) {
+            // The call was transmitted successfully, but Amazon S3 couldn't process
+            // it, so it returned an error response.
+            LOG.error("S3 Service Exception: " + e.getMessage(), e);
+        } catch (Exception e) {
+            LOG.error("Exception in uploading file: " + e.getLocalizedMessage());
+        } finally {
+              IdleConnectionReaper.shutdown();
+              metadata = null;
+              request = null;
+              AwsSdkMetrics.unregisterMetricAdminMBean();
+              LOG.info("Finished S3 Upload");
+        }
+
+        return result;
+    }
 	
 	public static void main(String[] args) throws Exception {
 		/**System.out.println(requestCA("http://54.254.171.4:8880/api/evs-ca-request", new ClassPathResource("sv-ca/server.csr"), null));*/
