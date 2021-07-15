@@ -90,7 +90,7 @@ public class CommonController {
 			String payload = new ObjectMapper().writeValueAsString(SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd()));
 			String sig = RSAUtil.initSignedRequest(pkPath, payload);
 			evsPAService.publish("evs/pa/" + command.getUid(), SimpleMap.init(
-					"header", SimpleMap.init("uid", command.getUid()).more("mid", 234004).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
+					"header", SimpleMap.init("uid", command.getUid()).more("mid", evsPAService.nextvalMID()).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
 				).more(
 					"payload", SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd())
 				));
