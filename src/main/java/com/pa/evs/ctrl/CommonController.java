@@ -96,6 +96,7 @@ public class CommonController {
 				));
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
 		}
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }

@@ -1,5 +1,7 @@
 package com.pa.evs.dto;
 
+import java.util.Map;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,5 +20,7 @@ public class Command {
 	private String uid;
 
 	private String cmd;
+	
+	private Map<String, Integer> data;
 	
 }
