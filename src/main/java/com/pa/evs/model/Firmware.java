@@ -23,7 +23,7 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "firm_ware")
+@Table(name = "firmware_tbl")
 public class Firmware extends BaseEntity{
     
     @Column(name = "version")
@@ -35,9 +35,4 @@ public class Firmware extends BaseEntity{
     @Column(name = "file_name")
     private String fileName;
     
-    @Column(name = "file", columnDefinition="longblob")
-    @Type(type="org.hibernate.type.BinaryType")
-    @Basic(fetch = FetchType.LAZY)
-    @JsonIgnore @Lob
-    private byte[] file;
 }

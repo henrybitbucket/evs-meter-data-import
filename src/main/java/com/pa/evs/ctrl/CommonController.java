@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.utils.RSAUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -83,22 +84,32 @@ public class CommonController {
     		) throws Exception {
     	
 		try {
+
 			Optional<CARequestLog> ca = caRequestLogService.findByUid(command.getUid());
 			if(!ca.isPresent()) {
-				return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).build());
+				return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).build());
 			}
 			String payload = new ObjectMapper().writeValueAsString(SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd()));
 			String sig = RSAUtil.initSignedRequest(pkPath, payload);
+
+            Map<String, Object> data = command.getData();
+            SimpleMap<String, Object> map = SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd());
+            if (CommandEnum.CFG.name().equals(command.getCmd())) {
+                SimpleMap<String, Object> simpleMap = new SimpleMap<>();
+                command.getData().forEach((k,v) -> simpleMap.put(k, Integer.parseInt((String)data.get(k))));
+                map.more("p1", simpleMap);
+            }
+
 			evsPAService.publish("evs/pa/" + command.getUid(), SimpleMap.init(
 					"header", SimpleMap.init("uid", command.getUid()).more("mid", evsPAService.nextvalMID()).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
 				).more(
-					"payload", SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd())
+					"payload", map
 				));
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
-			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+			return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
 		}
-        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+        return ResponseEntity.ok(ResponseDto.builder().success(true).build());
     }
     
     @PostMapping("/api/link-msn")
@@ -123,6 +134,7 @@ public class CommonController {
             @RequestParam(value = "file") final MultipartFile file) throws Exception {
         
         try {
+
             firmwareService.upload(version, hashCode, file);
             evsPAService.upload(file.getOriginalFilename(), version, hashCode, file.getInputStream());
             

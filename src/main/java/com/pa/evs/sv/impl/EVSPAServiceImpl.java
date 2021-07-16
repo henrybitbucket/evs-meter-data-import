@@ -19,6 +19,7 @@ import com.pa.evs.model.Log;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.MeterService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.JFtpClient;
@@ -80,6 +81,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 	
 	private static final int QUALITY_OF_SERVICE = 0;
+
+	@Autowired
+	private LogRepository logRepository;
+
+	@Autowired
+	private CARequestLogRepository caRequestLogRepository;
+
+	@Autowired
+	private FirmwareService firmwareService;
+
+	@Autowired
+	private MeterService meterService;
 	
 	@Value("${evs.pa.data.folder}")
 	private String evsDataFolder;
@@ -117,48 +130,31 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Value("${evs.pa.csr.folder}")
 	private String csrFolder;
 
-	@Value("${evs.pa.firmware.version}")
-	private String firmwareVersion;
-
-	@Value("${evs.pa.firmware.objectkey}")
-	private String firmwareObjectKey;
-
-	@Value("${evs.pa.firmware.hash}")
-	private String firmwareHash;
-
 	@Value("${s3.access.expireTime:15}")
 	private long expireTime;
 
 	@Value("${evs.pa.validateSign:true}")
 	private boolean validateSign;
 
+	@Value("${s3.bucket.name}")
+	private String bucketName;
+
+	@Value("${s3.access.id}")
+	private String accessID;
+
+	@Value("${s3.access.key}")
+	private String accessKey;
+
+	@Value("${s3.endpointUrl}")
+	private String endpointUrl;
+
 	private JFtpClient jftpClient = null;
-	
-	@Autowired
-	private LogRepository logRepository;
-	
-	@Autowired
-	private CARequestLogRepository caRequestLogRepository;
 	
 	private static final ExecutorService EX = Executors.newFixedThreadPool(10);
 	
-	@Autowired
-	private MeterService meterService;
-	
 	private AmazonS3Client s3Client = null;
 	
-	@Value("${s3.bucket.name}")
-	private String bucketName;
-	
-	@Value("${s3.access.id}")
-	private String accessID;
-	
-	@Value("${s3.access.key}")
-	private String accessKey;
-	
-	@Value("${s3.endpointUrl}")
-	private String endpointUrl;
-	
+
 	@Override
 	public void publish(String topic, Object message) throws Exception {
 		try {
@@ -263,7 +259,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (status == 0) {
 			Map<String, Object> payload1 = (Map<String, Object>) data.get("payload");
 			Map<String, Object> data1 = (Map<String, Object>) payload1.get("data");
-			if (firmwareVersion.equals(data1.get("ver"))) {
+			if (firmwareService.getLatestFirmware().getVersion().equals(data1.get("ver"))) {
 				status = -1;
 			}
 		}
@@ -275,7 +271,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (status == 0) {
 			LOG.debug("sleep 15s");
 			TimeUnit.SECONDS.sleep(15);
-			String urlS3 = getS3URL(firmwareObjectKey);
+			String urlS3 = getS3URL(firmwareService.getLatestFirmware().getFileName());
 			if (log.getMid() == null) {
 				log.setMid(logRepository.nextvalMID().longValue());
 			}
@@ -292,7 +288,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
-			payload.put("p1", SimpleMap.init("ver", firmwareVersion).more("hash", firmwareHash).more("url", urlS3));
+			payload.put("p1", SimpleMap.init("ver", firmwareService.getLatestFirmware().getVersion()).more("hash",
+					firmwareService.getLatestFirmware().getHashCode()).more("url", urlS3));
 			
 			header.put("sig", RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload)));
 			publish("evs/pa/" + log.getUid(), data);
@@ -616,7 +613,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		expiration.setTime(expTimeMillis);
 
 		// Generate the presigned URL.
-		GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName + "/" + firmwareVersion,
+		GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName + "/" + firmwareService.getLatestFirmware().getVersion(),
 				objectKey).withMethod(com.amazonaws.HttpMethod.GET).withExpiration(expiration);
 
 		return s3Client.generatePresignedUrl(generatePresignedUrlRequest).toString();
@@ -646,12 +643,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
     @Override
     public boolean upload(String fileName, String version, String hashCode, InputStream in) {
-        if (StringUtils.isBlank(version)) {
-            version = this.firmwareVersion;
-        }
-        if (StringUtils.isBlank(hashCode)) {
-            hashCode = this.firmwareHash;
-        }
         boolean result=false;
         Date today = new Date();
         String keyName = String.format("%s", new SimpleDateFormat("yyyy/MM/dd").format(today));

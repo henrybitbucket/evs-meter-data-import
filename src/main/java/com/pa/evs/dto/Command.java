@@ -21,6 +21,6 @@ public class Command {
 
 	private String cmd;
 	
-	private Map<String, Integer> data;
+	private Map<String, Object> data;
 	
 }

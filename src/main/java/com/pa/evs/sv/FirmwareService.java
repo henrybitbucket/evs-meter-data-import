@@ -1,5 +1,7 @@
 package com.pa.evs.sv;
 import java.io.IOException;
+
+import com.pa.evs.model.Firmware;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,5 +18,7 @@ public interface FirmwareService {
     void deleteFirmware(Long id);
     
     void editFirmware(Long id, String version, String hashCode, MultipartFile file) throws Exception;
+
+    Firmware getLatestFirmware();
 
 }

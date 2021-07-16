@@ -5,12 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,21 +26,44 @@ import com.pa.evs.sv.FirmwareService;
 @Service
 public class FirmwareServiceImpl implements FirmwareService {
 
-    @Autowired FirmwareRepository firmwareRepository;
-    
-    @Autowired EntityManager em;
-    
     private static final Logger LOG = LoggerFactory.getLogger(FirmwareServiceImpl.class);
+
+    @Autowired
+    private FirmwareRepository firmwareRepository;
     
+    @Autowired
+    private EntityManager em;
+
+    private Firmware cache = null;
+
+    @Value("${evs.pa.firmware.version}")
+    private String firmwareVersion;
+
+    @Value("${evs.pa.firmware.objectkey}")
+    private String firmwareObjectKey;
+
+    @Value("${evs.pa.firmware.hash}")
+    private String firmwareHash;
+    
+    @PostConstruct
+    public void init() {
+        cache = firmwareRepository.findTopByOrderByIdDesc();
+        if (cache == null) {
+            cache = new Firmware();
+            cache.setVersion(firmwareVersion);
+            cache.setFileName(firmwareObjectKey);
+            cache.setHashCode(firmwareHash);
+        }
+    }
+
     @Override
     public void upload(String version, String hashCode, MultipartFile file) throws IOException {
         Firmware entity = new Firmware();
-        entity.setFile(file.getBytes());
         entity.setVersion(version);
         entity.setHashCode(hashCode);
         entity.setFileName(file.getOriginalFilename());
-        
         firmwareRepository.save(entity);
+        cache = firmwareRepository.findTopByOrderByIdDesc();
     }
 
     @SuppressWarnings("unchecked")
@@ -49,7 +74,7 @@ public class FirmwareServiceImpl implements FirmwareService {
         
         StringBuilder sqlCommonBuilder = new StringBuilder();
         sqlCommonBuilder.append(" WHERE 1=1 ");
-        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id asc");
+        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id DESC");
         sqlCountBuilder.append(sqlCommonBuilder);
         
         if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -103,10 +128,14 @@ public class FirmwareServiceImpl implements FirmwareService {
         Firmware entity = opt.get();
         entity.setVersion(version);
         entity.setHashCode(hashCode);
-        entity.setFile(file.getBytes());
         entity.setFileName(file.getOriginalFilename());
         
         firmwareRepository.save(entity);
     }
-    
+
+    @Override
+    public Firmware getLatestFirmware() {
+        return cache;
+    }
+
 }
