@@ -84,13 +84,10 @@ public class CommonController {
     		) throws Exception {
     	
 		try {
-
 			Optional<CARequestLog> ca = caRequestLogService.findByUid(command.getUid());
 			if(!ca.isPresent()) {
 				return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).build());
 			}
-			String payload = new ObjectMapper().writeValueAsString(SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd()));
-			String sig = RSAUtil.initSignedRequest(pkPath, payload);
 
             Map<String, Object> data = command.getData();
             SimpleMap<String, Object> map = SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd());
@@ -99,6 +96,7 @@ public class CommonController {
                 command.getData().forEach((k,v) -> simpleMap.put(k, Integer.parseInt((String)data.get(k))));
                 map.more("p1", simpleMap);
             }
+            String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
 
 			evsPAService.publish("evs/pa/" + command.getUid(), SimpleMap.init(
 					"header", SimpleMap.init("uid", command.getUid()).more("mid", evsPAService.nextvalMID()).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
