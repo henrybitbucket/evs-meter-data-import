@@ -1,5 +1,7 @@
 package com.pa.evs.ctrl;
 
+import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -28,10 +30,12 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Log;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.utils.RSAUtil;
+import com.pa.evs.sv.LogService;
 import com.pa.evs.utils.SimpleMap;
 
 @RestController
@@ -47,6 +51,8 @@ public class CommonController {
 	@Autowired CaRequestLogService caRequestLogService;
 	
 	@Autowired FirmwareService firmwareService;
+
+	@Autowired LogService logService;
 
 	@Value("${evs.pa.privatekey.path}")
 	private String pkPath;
@@ -95,6 +101,7 @@ public class CommonController {
                 command.getData().forEach((k,v) -> simpleMap.put(k, Integer.parseInt((String)data.get(k))));
                 map.more("p1", simpleMap);
             }
+
             String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
 
 			evsPAService.publish("evs/pa/" + command.getUid(), SimpleMap.init(
@@ -175,12 +182,12 @@ public class CommonController {
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
-    
+
     @PostMapping("/api/device-csr/upload")
     public ResponseEntity<Object> uploadDeviceCsr(
             HttpServletRequest httpServletRequest,
             @RequestParam(value = "file") final MultipartFile file) throws Exception {
-        
+
         try {
             evsPAService.uploadDeviceCsr(file);
         } catch (Exception e) {
@@ -188,5 +195,16 @@ public class CommonController {
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
-    
+
+
+    @PostMapping("/api/logs")
+    public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, @RequestBody Map<String, String> map) throws Exception {
+        List<Log> list;
+        try {
+            list = logService.getRelatedLogs(map);
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(list).build());
+    }
 }
