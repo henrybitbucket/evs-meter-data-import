@@ -1,13 +1,10 @@
 package com.pa.evs.ctrl;
 
-import java.io.InputStream;
 import java.util.Map;
 import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
-import com.pa.evs.enums.CommandEnum;
-import com.pa.evs.utils.RSAUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,10 +26,12 @@ import com.pa.evs.dto.Command;
 import com.pa.evs.dto.FirmwareDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
+import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SimpleMap;
 
 @RestController
@@ -176,4 +175,18 @@ public class CommonController {
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
+    
+    @PostMapping("/api/device-csr/upload")
+    public ResponseEntity<Object> uploadDeviceCsr(
+            HttpServletRequest httpServletRequest,
+            @RequestParam(value = "file") final MultipartFile file) throws Exception {
+        
+        try {
+            evsPAService.uploadDeviceCsr(file);
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
 }

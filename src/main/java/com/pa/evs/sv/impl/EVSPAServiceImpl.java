@@ -28,6 +28,7 @@ import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,8 +51,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -154,6 +153,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	private AmazonS3Client s3Client = null;
 	
+	@Override
+	public void uploadDeviceCsr(MultipartFile file) {
+		
+		File f = new File(evsDataFolder + "/" + file.getOriginalFilename());
+		try {
+			Files.deleteIfExists(f.toPath());
+			Files.createFile(f.toPath());
+			IOUtils.copy(file.getInputStream(), new FileOutputStream(f));
+		} catch (IOException e) {
+			LOG.error(e.getMessage(), e);
+		}
+	}
 
 	@Override
 	public void publish(String topic, Object message) throws Exception {
@@ -545,13 +556,34 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		SchedulerHelper.scheduleJob("0/1 * * * * ? *", () -> {
 			File f = new File(evsDataFolder + "/IN_CSR");
-			for (File csr : f.listFiles()) {
-				if (csr.isFile() && csr.getName().endsWith(".csr")) {
+			for (File ful : f.listFiles()) {
+				if (ful.isFile() && ful.getName().endsWith(".csv")) {
 					try {
-						String uuid = csr.getName().replaceAll("\\.csr$", "");
+						String[] lines = new String(Files.readAllBytes(ful.toPath()), StandardCharsets.UTF_8).split("\r*\n");
+						for (int i = 1; i < lines.length; i++) {
+							String[] details = lines[i].split(" *, *");
+							if (details.length > 2) {
+								String uuid = details[1];
+								Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
+								CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
+								caLog.setUid(uuid);
+								caLog.setSn(details[0]);
+								caLog.setRequireRefresh(false);
+								caRequestLogRepository.save(caLog);
+							}
+						}
+						Files.delete(ful.toPath());
+					} catch (Exception e) {
+						LOG.error(e.getMessage(), e);
+					}
+					
+				}
+				if (ful.isFile() && ful.getName().endsWith(".csr")) {
+					try {
+						String uuid = ful.getName().replaceAll("\\.csr$", "");
 						Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
 						CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
-						Map<String, Object> data = requestCA(caRequestUrl, new FileSystemResource(csr), uuid);
+						Map<String, Object> data = requestCA(caRequestUrl, new FileSystemResource(ful), uuid);
 						caLog.setUid(uuid);
 						caLog.setCertificate((String)data.get("pemBase64"));
 						caLog.setRaw((String)data.get("cas"));
@@ -559,17 +591,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 						caLog.setEndDate((Long)data.get("endDate"));
 						caLog.setRequireRefresh(false);
 						caRequestLogRepository.save(caLog);
-						File out = new File(csr.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));
+						File out = new File(ful.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));
 						Files.deleteIfExists(out.toPath());
-						csr.renameTo(out);
-						LOG.info("Done request CA {}", csr.getName());
+						ful.renameTo(out);
+						LOG.info("Done request CA {}", ful.getName());
 					} catch (Exception e) {
-						File error = new File(csr.getAbsolutePath().replace("IN_CSR", "ERR_CSR"));
+						File error = new File(ful.getAbsolutePath().replace("IN_CSR", "ERR_CSR"));
 						try {
 							Files.deleteIfExists(error.toPath());
 						} catch (IOException e1) {/**/}
-						csr.renameTo(error);
-						LOG.error("Error request CA {}", csr.getName());
+						ful.renameTo(error);
+						LOG.error("Error request CA {}", ful.getName());
 						LOG.error(e.getMessage(), e);
 					}
 					

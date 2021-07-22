@@ -11,4 +11,6 @@ public interface EVSPAService {
 	Long nextvalMID();
 
     boolean upload(String fileName, String version, String hashCode, InputStream in);
+
+	void uploadDeviceCsr(MultipartFile file);
 }

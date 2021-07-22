@@ -23,6 +23,8 @@ import lombok.Setter;
 public class CARequestLog extends BaseEntity {
 
     private String uid;
+    
+    private String sn;
 	
     private String msn;
 	
@@ -45,6 +47,7 @@ public class CARequestLog extends BaseEntity {
 		
 		return builder()
 				.uid((String)data.get("uid"))
+				.sn((String)data.get("sn"))
 				.msn((String)data.get("msn"))
 				.certificate((String)data.get("pemBase64"))
 				.raw((String)data.get("cas"))

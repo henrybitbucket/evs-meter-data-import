@@ -102,7 +102,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     @Transactional
 	@Override
 	public void linkMsn(Map<String, Object> map) {
-		caRequestLogRepository.linkMsn((String)map.get("uuid"), (String)map.get("msn"));
+    	
+    	if (map.get("sn") != null) {
+    		caRequestLogRepository.linkMsnBySn((String)map.get("sn"), (String)map.get("msn"));
+    	} else if (map.get("uuid") != null) {
+    		caRequestLogRepository.linkMsn((String)map.get("uuid"), (String)map.get("msn"));
+    	}
 	}
-	
 }
