@@ -177,9 +177,7 @@ public class Mqtt {
 	public static void destroy() {
 		INSTANCES.forEach((k,v) -> {
 			try{
-				if(v.isConnected()) {
-					v.disconnect();
-				}
+				v.close();
 			} catch (Exception e) {
 				LOG.error("Error disconnect " + v.getClientId(), e);
 			}
