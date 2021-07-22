@@ -45,6 +45,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -74,11 +75,11 @@ import java.util.concurrent.TimeUnit;
 public class EVSPAServiceImpl implements EVSPAService {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
-	
+
 	private static final ObjectMapper MAPPER = new ObjectMapper();
-	
+
 	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
-	
+
 	private static final int QUALITY_OF_SERVICE = 0;
 
 	@Autowired
@@ -92,13 +93,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Autowired
 	private MeterService meterService;
-	
+
 	@Value("${evs.pa.data.folder}")
 	private String evsDataFolder;
-	
+
 	@Value("${evs.pa.ftp.folder}")
 	private String evsFtpFolder;
-	
+
 	@Value("${evs.pa.subscribe.send.topic}")
 	private String evsPASubscribeTopic;
 
@@ -107,16 +108,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Value("${evs.pa.mqtt.address}")
 	private String evsPAMQTTAddress;
-	
+
 	@Value("${evs.pa.ftp.host}")
 	private String evsFtpHost;
-	
+
 	@Value("${evs.pa.ftp.port}")
 	private Integer evsFtpPort;
-	
+
 	@Value("${evs.pa.ftp.username}")
 	private String evsFtpUsername;
-	
+
 	@Value("${evs.pa.ftp.password}")
 	private String evsFtpPassword;
 
@@ -148,11 +149,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private String endpointUrl;
 
 	private JFtpClient jftpClient = null;
-	
+
 	private static final ExecutorService EX = Executors.newFixedThreadPool(10);
-	
+
 	private AmazonS3Client s3Client = null;
-	
+
 	@Override
 	public void uploadDeviceCsr(MultipartFile file) {
 		
@@ -755,5 +756,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 				"   }\n" +
 				"}";
 		Mqtt.publish("evs/pa/resp", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+	}
+
+	@PreDestroy
+	public void destroy() {
+		LOG.debug("PreDestroy");
+		Mqtt.destroy();
 	}
 }

@@ -173,7 +173,19 @@ public class Mqtt {
 	public static void subscribe(String topic, Function<Object, Object>... fns) throws Exception {
 		subscribe(null, topic, fns);
 	}
-	
+
+	public static void destroy() {
+		INSTANCES.forEach((k,v) -> {
+			try{
+				if(v.isConnected()) {
+					v.disconnect();
+				}
+			} catch (Exception e) {
+				LOG.error("Error disconnect " + v.getClientId(), e);
+			}
+		});
+	}
+
 	public static class Payload<T> implements Serializable {
 
 		/**
