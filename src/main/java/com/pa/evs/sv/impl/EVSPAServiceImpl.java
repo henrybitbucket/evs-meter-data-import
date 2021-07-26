@@ -1,51 +1,6 @@
 package com.pa.evs.sv.impl;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.http.IdleConnectionReaper;
-import com.amazonaws.metrics.AwsSdkMetrics;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.Log;
-import com.pa.evs.repository.CARequestLogRepository;
-import com.pa.evs.repository.LogRepository;
-import com.pa.evs.sv.EVSPAService;
-import com.pa.evs.sv.FirmwareService;
-import com.pa.evs.sv.MeterService;
-import com.pa.evs.utils.ApiUtils;
-import com.pa.evs.utils.JFtpClient;
-import com.pa.evs.utils.Mqtt;
-import com.pa.evs.utils.RSAUtil;
-import com.pa.evs.utils.SimpleMap;
-import com.pa.evs.utils.ZipUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.multipart.MultipartFile;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -70,16 +25,63 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PostConstruct;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.http.IdleConnectionReaper;
+import com.amazonaws.metrics.AwsSdkMetrics;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Log;
+import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.LogRepository;
+import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.FirmwareService;
+import com.pa.evs.sv.MeterService;
+import com.pa.evs.utils.ApiUtils;
+import com.pa.evs.utils.CMD;
+import com.pa.evs.utils.JFtpClient;
+import com.pa.evs.utils.Mqtt;
+import com.pa.evs.utils.RSAUtil;
+import com.pa.evs.utils.SimpleMap;
+import com.pa.evs.utils.ZipUtils;
+
 @Component
 @SuppressWarnings("unchecked")
 public class EVSPAServiceImpl implements EVSPAService {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
-
+	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
-
+	
 	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
-
+	
 	private static final int QUALITY_OF_SERVICE = 0;
 
 	@Autowired
@@ -93,13 +95,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Autowired
 	private MeterService meterService;
-
+	
 	@Value("${evs.pa.data.folder}")
 	private String evsDataFolder;
-
+	
 	@Value("${evs.pa.ftp.folder}")
 	private String evsFtpFolder;
-
+	
 	@Value("${evs.pa.subscribe.send.topic}")
 	private String evsPASubscribeTopic;
 
@@ -108,16 +110,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Value("${evs.pa.mqtt.address}")
 	private String evsPAMQTTAddress;
-
+	
 	@Value("${evs.pa.ftp.host}")
 	private String evsFtpHost;
-
+	
 	@Value("${evs.pa.ftp.port}")
 	private Integer evsFtpPort;
-
+	
 	@Value("${evs.pa.ftp.username}")
 	private String evsFtpUsername;
-
+	
 	@Value("${evs.pa.ftp.password}")
 	private String evsFtpPassword;
 
@@ -149,11 +151,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private String endpointUrl;
 
 	private JFtpClient jftpClient = null;
-
+	
 	private static final ExecutorService EX = Executors.newFixedThreadPool(10);
-
+	
 	private AmazonS3Client s3Client = null;
-
+	
 	@Override
 	public void uploadDeviceCsr(MultipartFile file) {
 		
@@ -622,11 +624,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} catch (Exception e) {/**/}
 	}
 	
+	@SuppressWarnings("deprecation")
 	private void initS3() {
 		
 		/**
 		 * https://842807477657.signin.aws.amazon.com/console
 		 * henry/P0wer!2
+		 * esim
+		 * https://904734893309.signin.aws.amazon.com/console
+		 * password henry/P0wer!23
 		 */
 		AWSCredentials credentials = new BasicAWSCredentials(accessID, accessKey);
 		ClientConfiguration clientconfig = new ClientConfiguration();
@@ -639,17 +645,27 @@ public class EVSPAServiceImpl implements EVSPAService {
         s3Client.setRegion(Region.getRegion(Regions.AP_SOUTHEAST_1));
 	}
 	
-	private String getS3URL(String objectKey) {
+	public String getS3URL(String objectKey) {
 		java.util.Date expiration = new java.util.Date();
 		long expTimeMillis = Instant.now().toEpochMilli();
 		expTimeMillis += 1000 * 60 * expireTime;
 		expiration.setTime(expTimeMillis);
 
 		// Generate the presigned URL.
-		GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName + "/" + firmwareService.getLatestFirmware().getVersion(),
-				objectKey).withMethod(com.amazonaws.HttpMethod.GET).withExpiration(expiration);
-
-		return s3Client.generatePresignedUrl(generatePresignedUrlRequest).toString();
+		// GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName + "/" + firmwareService.getLatestFirmware().getVersion(),
+		// 		objectKey).withMethod(com.amazonaws.HttpMethod.GET).withExpiration(expiration);
+		//return s3Client.generatePresignedUrl(generatePresignedUrlRequest).toString();
+		
+		String bcName = bucketName + "/" + firmwareService.getLatestFirmware().getVersion() + "/" + objectKey;
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		CMD.exec("/usr/local/aws/bin/aws s3 presign s3://" + bcName + " --expires-in " + (1000 * 60 * expireTime), null, bos);
+		String rs = new String(bos.toByteArray(),StandardCharsets.UTF_8);
+		try {
+			bos.close();
+		} catch (IOException e) {
+			LOG.error(e.getMessage(), e);
+		}
+		return rs;
 	}
 	
 	private static Map<String, Object> requestCA(String caRequestUrl, Resource resource, String uuid) {
@@ -756,11 +772,5 @@ public class EVSPAServiceImpl implements EVSPAService {
 				"   }\n" +
 				"}";
 		Mqtt.publish("evs/pa/resp", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
-	}
-
-	@PreDestroy
-	public void destroy() {
-		LOG.debug("PreDestroy");
-		Mqtt.destroy();
 	}
 }

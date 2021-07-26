@@ -1,14 +1,19 @@
 package com.pa.evs.ctrl;
 
-import java.io.InputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -34,8 +39,9 @@ import com.pa.evs.model.Log;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
-import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.sv.LogService;
+import com.pa.evs.utils.CMD;
+import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SimpleMap;
 
 @RestController
@@ -56,6 +62,8 @@ public class CommonController {
 
 	@Value("${evs.pa.privatekey.path}")
 	private String pkPath;
+	
+	private String caFolder;
 	
     @GetMapping("/api/message/publish")//http://localhost:8080/api/message/publish?topic=a&messageKey=1&message=a
     public ResponseEntity<?> sendGMessage(
@@ -207,4 +215,33 @@ public class CommonController {
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(list).build());
     }
+    
+	@PostConstruct
+	public void init() {
+		
+		if (StringUtils.isBlank(caFolder)) {
+			caFolder = "/home/temp_ca";
+		}
+		try {
+			
+			File f = new File(caFolder);
+			if (f.exists()) {
+				f.delete();
+			}
+			f.mkdir();
+			f = new File(caFolder + '/' + "aw-install.sh");
+			if (!f.exists() && f.createNewFile()) {
+				IOUtils.copy(Thread.currentThread().getContextClassLoader().getResourceAsStream("aw-install.sh"), new FileOutputStream(f));
+			}
+		} catch (IOException e) {/**/}
+		
+		if (!CMD.isWindow()) {
+			CMD.exec("cd " + caFolder + " && sh aw-install.sh", null);
+	        try {
+	        	LOG.info("Test get S3 {}", evsPAService.getS3URL("pa-meter-2.bin"));
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
+			}
+		}
+	}
 }
