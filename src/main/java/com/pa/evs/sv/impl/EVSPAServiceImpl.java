@@ -1,49 +1,5 @@
 package com.pa.evs.sv.impl;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TimeZone;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
-import javax.annotation.PostConstruct;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
@@ -71,6 +27,48 @@ import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.annotation.PostConstruct;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TimeZone;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @SuppressWarnings("unchecked")
@@ -84,71 +82,49 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	private static final int QUALITY_OF_SERVICE = 0;
 
-	@Autowired
-	private LogRepository logRepository;
+	@Autowired private LogRepository logRepository;
 
-	@Autowired
-	private CARequestLogRepository caRequestLogRepository;
+	@Autowired private CARequestLogRepository caRequestLogRepository;
 
-	@Autowired
-	private FirmwareService firmwareService;
+	@Autowired private FirmwareService firmwareService;
 
-	@Autowired
-	private MeterService meterService;
+	@Autowired private MeterService meterService;
 	
-	@Value("${evs.pa.data.folder}")
-	private String evsDataFolder;
+	@Value("${evs.pa.data.folder}") private String evsDataFolder;
 	
-	@Value("${evs.pa.ftp.folder}")
-	private String evsFtpFolder;
+	@Value("${evs.pa.ftp.folder}") private String evsFtpFolder;
 	
-	@Value("${evs.pa.subscribe.send.topic}")
-	private String evsPASubscribeTopic;
+	@Value("${evs.pa.subscribe.send.topic}") private String evsPASubscribeTopic;
 
-	@Value("${evs.pa.subscribe.resp.topic}")
-	private String evsPARespSubscribeTopic;
+	@Value("${evs.pa.subscribe.resp.topic}") private String evsPARespSubscribeTopic;
 
-	@Value("${evs.pa.mqtt.address}")
-	private String evsPAMQTTAddress;
+	@Value("${evs.pa.mqtt.address}") private String evsPAMQTTAddress;
 	
-	@Value("${evs.pa.ftp.host}")
-	private String evsFtpHost;
+	@Value("${evs.pa.ftp.host}") private String evsFtpHost;
 	
-	@Value("${evs.pa.ftp.port}")
-	private Integer evsFtpPort;
+	@Value("${evs.pa.ftp.port}") private Integer evsFtpPort;
 	
-	@Value("${evs.pa.ftp.username}")
-	private String evsFtpUsername;
+	@Value("${evs.pa.ftp.username}") private String evsFtpUsername;
 	
-	@Value("${evs.pa.ftp.password}")
-	private String evsFtpPassword;
+	@Value("${evs.pa.ftp.password}") private String evsFtpPassword;
 
-	@Value("${portal.pa.ca.request.url}")
-	private String caRequestUrl;
+	@Value("${portal.pa.ca.request.url}") private String caRequestUrl;
 
-	@Value("${evs.pa.privatekey.path}")
-	private String pkPath;
+	@Value("${evs.pa.privatekey.path}") private String pkPath;
 
-	@Value("${evs.pa.csr.folder}")
-	private String csrFolder;
+	@Value("${evs.pa.master.privatekey.path}") private String masterPkPath;
 
-	@Value("${s3.access.expireTime:15}")
-	private long expireTime;
+	@Value("${evs.pa.csr.folder}") private String csrFolder;
 
-	@Value("${evs.pa.validateSign:true}")
-	private boolean validateSign;
+	@Value("${s3.access.expireTime:15}") private long expireTime;
 
-	@Value("${s3.bucket.name}")
-	private String bucketName;
+	@Value("${evs.pa.validateSign:true}") private boolean validateSign;
 
-	@Value("${s3.access.id}")
-	private String accessID;
+	@Value("${s3.bucket.name}") private String bucketName;
 
-	@Value("${s3.access.key}")
-	private String accessKey;
+	@Value("${s3.access.id}") private String accessID;
 
-	@Value("${s3.endpointUrl}")
-	private String endpointUrl;
+	@Value("${s3.access.key}") private String accessKey;
 
 	private JFtpClient jftpClient = null;
 	
@@ -363,17 +339,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 			header.put("uid", log.getUid());
 			header.put("gid", log.getGid());
 			header.put("msn", log.getMsn());
-			//header.put("sig", log.getSig());
 			Map<String, Object> payload = new HashMap<>();
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "ACT");
-			/*List<String> ca = caRequestLogRepository.findCAByUid(log.getUid());
-			payload.put("p1", ca.isEmpty() ? null : ca.get(0));*/
 			List<String> svCA = caRequestLogRepository.findCAByUid("server.csr");
-			payload.put("p2", svCA.isEmpty() ? null : svCA.get(0));
+			payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
 
-			String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			String sig = RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 
 			publish("evs/pa/" + log.getUid(), data);
