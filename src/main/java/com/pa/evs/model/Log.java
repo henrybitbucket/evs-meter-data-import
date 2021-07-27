@@ -51,6 +51,8 @@ public class Log extends BaseEntity {
 	@Column(name = "mqtt_address")
 	private String mqttAddress;
 	
+	private String topic;
+	
 	@SuppressWarnings("unchecked")
 	public static Log build(Map<String, Object> data, String type) throws Exception {
 		
@@ -69,6 +71,7 @@ public class Log extends BaseEntity {
 				.pId(payload == null ? null : (payload.get("id") + ""))
 				.pType(payload == null ? null : (payload.get("type") + ""))
 				.raw(new ObjectMapper().writeValueAsString(data))
+				.topic((String)data.get("topic"))
 				.build();
 	}
 }

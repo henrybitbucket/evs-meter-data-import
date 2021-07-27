@@ -1,5 +1,6 @@
 package com.pa.evs.sv.impl;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
@@ -7,6 +8,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
 
@@ -64,21 +66,47 @@ public class MeterServiceImpl implements MeterService {
 	
 	private static final ExecutorService EX = Executors.newFixedThreadPool(10);
 	
+	@SuppressWarnings("rawtypes")
 	@Override
-	public void publish(String topic, Object message) throws Exception {
+	public void publish(String topic, Object message, String type) throws Exception {
 		try {
 			Mqtt.publish(Mqtt.getInstance(evsMeterMQTTAddress), topic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
+			
+			//wait 5s
+			LOG.debug("sleep 5s");
+			TimeUnit.SECONDS.sleep(5);
+			
+			//save log
+			Map<String, Object> publishData = new HashMap<>((Map) message);
+			publishData.put("type", type);
+			Log logP = Log.build(publishData, "PUBLISH");
+			logP.setTopic(topic);
+			logP.setMqttAddress(evsMeterMQTTAddress);
+			logRepository.save(logP);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
 	}
 	
+	@SuppressWarnings("rawtypes")
 	@Override
-	public void publish(Object message) throws Exception {
+	public void publish(Object message, String type) throws Exception {
 		try {
 			Mqtt.publish(Mqtt.getInstance(evsMeterMQTTAddress), evsMeterRespSubscribeTopic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + evsMeterRespSubscribeTopic + " -> " + new ObjectMapper().writeValueAsString(message));
+			
+			//wait 5s
+			LOG.debug("sleep 5s");
+			TimeUnit.SECONDS.sleep(5);
+			
+			//save log
+			Map<String, Object> publishData = new HashMap<>((Map) message);
+			publishData.put("type", type);
+			Log logP = Log.build(publishData, "PUBLISH");
+			logP.setTopic(evsMeterRespSubscribeTopic);
+			logP.setMqttAddress(evsMeterMQTTAddress);
+			logRepository.save(logP);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
@@ -103,7 +131,7 @@ public class MeterServiceImpl implements MeterService {
 				"payload", SimpleMap.init("id", log.getUid()).more("cmd", log.getUid())
 			);
 		
-		evsPAService.publish("evs/pa/" + log.getUid(), data);
+		evsPAService.publish("evs/pa/" + log.getUid(), data, "RLS");
 	}
 	
 	private void handleOnSubscribe(final MqttMessage mqttMessage) {

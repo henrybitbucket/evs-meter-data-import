@@ -6,7 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 public interface EVSPAService {
 
-	void publish(String topic, Object message) throws Exception;
+	void publish(String topic, Object message, String type) throws Exception;
 
 	Long nextvalMID();
 

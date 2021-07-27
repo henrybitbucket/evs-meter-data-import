@@ -145,11 +145,24 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
-	public void publish(String topic, Object message) throws Exception {
+	public void publish(String topic, Object message, String type) throws Exception {
 		try {
 			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress), topic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
+			
+			//wait 5s
+			LOG.debug("sleep 5s");
+			TimeUnit.SECONDS.sleep(5);
+			
+			//save log
+			Map<String, Object> publishData = new HashMap<>((Map) message);
+			publishData.put("type", type);
+			Log logP = Log.build(publishData, "PUBLISH");
+			logP.setTopic(topic);
+			logP.setMqttAddress(evsPAMQTTAddress);
+			logRepository.save(logP);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
@@ -218,14 +231,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		header.put("gid", log.getGid());
 		header.put("msn", log.getMsn());
 		header.put("status", status);
-		publish("evs/pa/" + log.getUid(), data);
-		
-		//save log
-		Map<String, Object> publishData = new HashMap<>(data);
-		publishData.put("type", type);
-		Log logP = Log.build(publishData, "PUBLISH");
-		logP.setMqttAddress(evsPAMQTTAddress);
-		logRepository.save(logP);
+		publish("evs/pa/" + log.getUid(), data, type);
 	}
 	
 	private void handleRLSRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
@@ -241,7 +247,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		payload.put("type", "RLS");
 		payload.put("data", status);
 		data.put("payload", payload);
-		meterService.publish(data);
+		meterService.publish(data, "RLS");
 	}
 	
 	private void handleINFRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
@@ -282,24 +288,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 					firmwareService.getLatestFirmware().getHashCode()).more("url", urlS3));
 			
 			header.put("sig", RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload)));
-			publish("evs/pa/" + log.getUid(), data);
-			
-			//save log
-			Map<String, Object> publishData = new HashMap<>(data);
-			publishData.put("type", type);
-			Log logP = Log.build(publishData, "PUBLISH");
-			logP.setMqttAddress(evsPAMQTTAddress);
-			logRepository.save(logP);
+			publish("evs/pa/" + log.getUid(), data, type);
 		}
 	}
 	
 	private void handleOTARes(Map<String, Object> data, String type, Log log, int status) throws Exception {
 
-		Map<String, Object> savehData = new HashMap<>(data);
+		/**Map<String, Object> savehData = new HashMap<>(data);
 		savehData.put("type", type);
 		Log logP = Log.build(savehData, "PUBLISH");
 		logP.setMqttAddress(evsPAMQTTAddress);
-		logRepository.save(logP);
+		logRepository.save(logP);*/
 	}
 	
 	private void handleOBR(String type, Log log, int status) throws Exception {
@@ -317,18 +316,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 		header.put("gid", log.getGid());
 		header.put("msn", log.getMsn());
 		header.put("status", status);
-		publish("evs/pa/" + log.getUid(), data);
+		publish("evs/pa/" + log.getUid(), data, type);
 
 		//wait 5s
 		LOG.debug("sleep 5s");
 		TimeUnit.SECONDS.sleep(5);
-		
-		//save log
-		Map<String, Object> publishData = new HashMap<>(data);
-		publishData.put("type", type);
-		Log logP = Log.build(publishData, "PUBLISH");
-		logP.setMqttAddress(evsPAMQTTAddress);
-		logRepository.save(logP);
 		
 		if (status == 0) {
 			// Send file
@@ -349,15 +341,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			String sig = RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 
-			publish("evs/pa/" + log.getUid(), data);
+			publish("evs/pa/" + log.getUid(), data, type);
 		}
-		
-		//save log
-		publishData = new HashMap<>(data);
-		publishData.put("type", type);
-		logP = Log.build(publishData, "PUBLISH");
-		logP.setMqttAddress(evsPAMQTTAddress);
-		logRepository.save(logP);
 	}
 	
 	private void handleOnSubscribe(final MqttMessage mqttMessage) {
