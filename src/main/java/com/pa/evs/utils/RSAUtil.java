@@ -319,7 +319,12 @@ public class RSAUtil {
 		pemWriter.writeObject(pkPemObject);
 		pemWriter.close();
 		System.out.println(output.getBuffer());*/
-		FileReader fileReader = new FileReader("D://BIERWXAABMAGSAEAAA.csr");
+		String payload = "{\"p1\":\"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNaRENDQWdtZ0F3SUJBZ0lRUHl6L3hsM2k1Mk54WjFWZC9sdjFJREFLQmdncWhrak9QUVFEQWpCZk1Rc3cKQ1FZRFZRUUdFd0pUUnpFTE1Ba0dBMVVFQ2d3Q1VFRXhEakFNQmdOVkJBc01CVUpWTlRBd01Rc3dDUVlEVlFRSQpEQUpPUVRFU01CQUdBMVVFQXd3SlVFRkRRU0JHUmtaR01SSXdFQVlEVlFRSERBbEJiR1Y0WVc1a2NtRXdIaGNOCk1qRXdOakV4TURRd09UQXhXaGNOTWpJd05qRXhNRFV3T1RBeFdqQnRNUXN3Q1FZRFZRUUdFd0pUUnpFTE1Ba0cKQTFVRUNBd0NUa0V4RWpBUUJnTlZCQWNNQ1ZOcGJtZGhjRzl5WlRFTE1Ba0dBMVVFQ2d3Q1VFRXhEakFNQmdOVgpCQXNNQlVKVk5UQXdNU0F3SGdZRFZRUUREQmR6WlhKMlpYSXVhR1JpYzIxaGNuUm9iMjFsTG1OdmJUQjJNQkFHCkJ5cUdTTTQ5QWdFR0JTdUJCQUFpQTJJQUJCTVpncVpySTJSVjN3OWluRnpSYTVnU2lPSTB5b0Z5U1cvYzBvUUgKd0lhWFdjdlU2aWhXUlJsOGlxWlh3RWtYdTgvN2dqV1VuL2lYOXRPOXJXaXVCSXU4eENDTzdrN2FSaDloY3BaZwpoa0tkSjhCSzFFeVVqM0JqcDFZWnI5cDF5Nk44TUhvd0NRWURWUjBUQkFJd0FEQWZCZ05WSFNNRUdEQVdnQlRFCmV1ZVhJQTJTdUVFSlRJd29xTVZoQmhtRUxqQWRCZ05WSFE0RUZnUVVuTElyRncxb2kwWWtGY01Rb2V5UFRxeTUKY1E4d0RnWURWUjBQQVFIL0JBUURBZ1dnTUIwR0ExVWRKUVFXTUJRR0NDc0dBUVVGQndNQkJnZ3JCZ0VGQlFjRApBakFLQmdncWhrak9QUVFEQWdOSkFEQkdBaUVBcEg2NkNRRHlDeVFUYkZnVUhlRThyK0lYelBvYU9HdFNqR2duCm9yQ0lXNXNDSVFDektsbE1GNStiRE9IVlphZTdpYkFlZzlrcXBWR1U1R2lMYlF0emg5RDhFQT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\",\"id\":\"BIERWXAABMADGAFHAA\",\"cmd\":\"ACT\"}";
+		System.out.println("payload: " + payload);
+		String sig = initSignedRequest("D://server_master.key", payload);
+		System.out.println("Sig: " + sig);
+
+		FileReader fileReader = new FileReader("D://master.csr");
 		PemReader pemReader = new PemReader(fileReader);
 		PKCS10CertificationRequest csr =
 				new PKCS10CertificationRequest(pemReader.readPemObject().getContent());
@@ -333,11 +338,10 @@ public class RSAUtil {
 		pemWriter.close();
 		System.out.println(output.getBuffer());
 
-		String sig = "MGUCMQD4ygjt/jUo5JOzhW1xP22CiyFIlfYFO6bvL0iAEJsIR4ZrxklQkUytMO0K7kkAdm0CMBtndtZIIDy3o+1dp0i/AH8gXUlzyL7d7yk79MQlRX00KQZ9xJ3bZYbPvZTedkuegQ==";
-		String message = "{\"id\":\"BIERWXAABMAGSAEAAA\",\"type\":\"MDT\",\"data\":[{\"uid\":\"BIERWXAABMAGSAEAAA\",\"msn\":\"201906000032\",\"kwh\":\"1.1\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"239.6\",\"pf\":\"10.0\",\"dt\":\"2021-06-12T16:29:38\"}]}";
+
 		Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA");
 		ecdsaVerify.initVerify(csr.getPublicKey());
-		ecdsaVerify.update(message.getBytes("UTF-8"));
+		ecdsaVerify.update(payload.getBytes("UTF-8"));
 		boolean result1 = ecdsaVerify.verify(Base64.getDecoder().decode(sig));
 		System.out.println(result1);
 

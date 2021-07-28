@@ -616,7 +616,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		String bcName = bucketName + "/" + firmwareService.getLatestFirmware().getVersion() + "/" + objectKey;
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		CMD.exec("/usr/local/aws/bin/aws s3 presign s3://" + bcName + " --expires-in " + (1000 * 60 * expireTime), null, bos);
+		CMD.exec("/usr/local/aws/bin/aws s3 presign s3://" + bcName + " --expires-in " + (60 * expireTime), null, bos);
 		String rs = new String(bos.toByteArray(), StandardCharsets.UTF_8).replaceAll("[\n\r]", "");
 		try {
 			bos.close();
