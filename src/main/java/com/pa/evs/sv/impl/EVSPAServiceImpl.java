@@ -53,7 +53,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -604,10 +603,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	public String getS3URL(String objectKey) {
-		java.util.Date expiration = new java.util.Date();
-		long expTimeMillis = Instant.now().toEpochMilli();
-		expTimeMillis += 1000 * 60 * expireTime;
-		expiration.setTime(expTimeMillis);
+		//java.util.Date expiration = new java.util.Date();
+		//long expTimeMillis = Instant.now().toEpochMilli();
+		//expTimeMillis += 1000 * 60 * expireTime;
+		//expiration.setTime(expTimeMillis);
 
 		// Generate the presigned URL.
 		// GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName + "/" + firmwareService.getLatestFirmware().getVersion(),
