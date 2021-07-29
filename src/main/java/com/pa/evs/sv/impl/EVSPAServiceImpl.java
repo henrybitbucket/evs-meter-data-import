@@ -200,7 +200,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Override
 	public Long nextvalMID() {
-		return logRepository.nextvalMID().longValue();
+		Number mid = logRepository.nextvalMID().longValue();
+		// TC Module mid (message id) format is uint32, the max number is 4294967295
+		if (mid.longValue() >= 4294967295l) {
+			logRepository.nextvalMID(10000l);
+			mid = logRepository.nextvalMID().longValue();
+		}
+		return mid.longValue();
 	}
 	
 	private int validateUidAndMsn(Log log) {
@@ -268,7 +274,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			TimeUnit.SECONDS.sleep(15);
 			String urlS3 = getS3URL(firmwareService.getLatestFirmware().getFileName());
 			if (log.getMid() == null) {
-				log.setMid(logRepository.nextvalMID().longValue());
+				log.setMid(nextvalMID());
 			}
 			//Publish
 			data = new HashMap<>();
