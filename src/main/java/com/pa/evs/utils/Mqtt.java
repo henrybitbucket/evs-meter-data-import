@@ -31,8 +31,7 @@ import java.util.function.Function;
 public class Mqtt {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(Mqtt.class);
-	private static final String MQTT_PUBLISHER_ID = "be-server";
-	private static final String MQTT_SERVER_ADDRES = "ssl://3.1.87.138:8883";//ssl: "ssl://localhost:8883", none-ssl: "tcp://3.1.87.138:8883"
+	private static final String MQTT_SERVER_ADDRESS = "ssl://3.1.87.138:8883";//ssl: "ssl://localhost:8883", none-ssl: "tcp://3.1.87.138:8883"
 	
 	private static final Map<String, Lock> LOCKS = new ConcurrentHashMap<>();
 	private static final Map<String, IMqttClient> INSTANCES = new ConcurrentHashMap<>();
@@ -40,22 +39,25 @@ public class Mqtt {
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 
 	public static IMqttClient getInstance() {
-		return getInstance(null);
+		return getInstance(null, null);
 	}
 	
-	public static IMqttClient getInstance(String serverAddres) {
+	public static IMqttClient getInstance(String serverAddress, String clientId) {
 		
-		if (serverAddres == null) {
-			serverAddres = MQTT_SERVER_ADDRES;
+		if (serverAddress == null) {
+			serverAddress = MQTT_SERVER_ADDRESS;
+		}
+		if (clientId == null) {
+			clientId = "dev-be-server";
 		}
 		
-		Lock lock = LOCKS.computeIfAbsent(serverAddres, k -> new ReentrantLock());
+		Lock lock = LOCKS.computeIfAbsent(serverAddress, k -> new ReentrantLock());
 		lock.lock();
-		IMqttClient instance = INSTANCES.get(serverAddres);
+		IMqttClient instance = INSTANCES.get(serverAddress);
 		try {
 			if (instance == null) {
-				instance = new MqttClient(serverAddres, MQTT_PUBLISHER_ID + "." + System.currentTimeMillis());
-				INSTANCES.put(serverAddres, instance);
+				instance = new MqttClient(serverAddress, clientId + "." + System.currentTimeMillis());
+				INSTANCES.put(serverAddress, instance);
 			}
 			
 			if (!instance.isConnected()) {
@@ -64,7 +66,7 @@ public class Mqtt {
 				options.setAutomaticReconnect(true);
 				options.setCleanSession(true);
 				options.setConnectionTimeout(10);
-				if (serverAddres.startsWith("ssl://")) {
+				if (serverAddress.startsWith("ssl://")) {
 					TrustStrategy acceptingTrustStrategy = new TrustStrategy() {
 						public boolean isTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
 							return true;
@@ -240,7 +242,7 @@ public class Mqtt {
 			Thread.sleep(1000l);
 		}*/
 		System.out.println("start");
-		Mqtt.publish("evs/pa/data", "", 0, false);
+		Mqtt.publish("dev/evs/pa/data", "", 0, false);
 		System.out.println("finish");
 
 	}

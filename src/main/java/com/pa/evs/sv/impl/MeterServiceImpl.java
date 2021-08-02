@@ -40,20 +40,19 @@ public class MeterServiceImpl implements MeterService {
 	
 	private static final int QUALITY_OF_SERVICE = 0;
 	
-	@Value("${evs.meter.subscribe.send.topic}")
-	private String evsMeterSubscribeTopic;
+	@Value("${evs.meter.subscribe.send.topic}") private String evsMeterSubscribeTopic;
 
-	@Value("${evs.meter.subscribe.resp.topic}")
-	private String evsMeterRespSubscribeTopic;
+	@Value("${evs.meter.subscribe.resp.topic}") private String evsMeterRespSubscribeTopic;
 
-	@Value("${evs.meter.mqtt.address}")
-	private String evsMeterMQTTAddress;
+	@Value("${evs.meter.mqtt.address}") private String evsMeterMQTTAddress;
+
+	@Value("${evs.pa.mqtt.client.id}") private String mqttClientId;
 	
-	@Value("${evs.pa.privatekey.path}")
-	private String pkPath;
+	@Value("${evs.pa.privatekey.path}") private String pkPath;
 
-	@Value("${evs.pa.csr.folder}")
-	private String csrFolder;
+	@Value("${evs.pa.csr.folder}") private String csrFolder;
+
+	@Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 	
 	@Autowired
 	private LogRepository logRepository;
@@ -70,7 +69,7 @@ public class MeterServiceImpl implements MeterService {
 	@Override
 	public void publish(String topic, Object message, String type) throws Exception {
 		try {
-			Mqtt.publish(Mqtt.getInstance(evsMeterMQTTAddress), topic, message, QUALITY_OF_SERVICE, false);
+			Mqtt.publish(Mqtt.getInstance(evsMeterMQTTAddress, mqttClientId), topic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
 			
 			//wait 5s
@@ -93,7 +92,7 @@ public class MeterServiceImpl implements MeterService {
 	@Override
 	public void publish(Object message, String type) throws Exception {
 		try {
-			Mqtt.publish(Mqtt.getInstance(evsMeterMQTTAddress), evsMeterRespSubscribeTopic, message, QUALITY_OF_SERVICE, false);
+			Mqtt.publish(Mqtt.getInstance(evsMeterMQTTAddress, mqttClientId), evsMeterRespSubscribeTopic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + evsMeterRespSubscribeTopic + " -> " + new ObjectMapper().writeValueAsString(message));
 			
 			//wait 5s
@@ -131,7 +130,7 @@ public class MeterServiceImpl implements MeterService {
 				"payload", SimpleMap.init("id", log.getUid()).more("cmd", log.getUid())
 			);
 		
-		evsPAService.publish("evs/pa/" + log.getUid(), data, "RLS");
+		evsPAService.publish(alias + log.getUid(), data, "RLS");
 	}
 	
 	private void handleOnSubscribe(final MqttMessage mqttMessage) {
@@ -170,7 +169,7 @@ public class MeterServiceImpl implements MeterService {
 	private void subscribe() {
 		//request
 		try {
-			Mqtt.subscribe(Mqtt.getInstance(evsMeterMQTTAddress), evsMeterSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+			Mqtt.subscribe(Mqtt.getInstance(evsMeterMQTTAddress, mqttClientId), evsMeterSubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsMeterSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
 				EX.submit(() -> handleOnSubscribe(mqttMessage));
@@ -181,7 +180,7 @@ public class MeterServiceImpl implements MeterService {
 		}
 		//response
 		try {
-			Mqtt.subscribe(Mqtt.getInstance(evsMeterMQTTAddress), evsMeterRespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+			Mqtt.subscribe(Mqtt.getInstance(evsMeterMQTTAddress, mqttClientId), evsMeterRespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsMeterRespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
 				EX.submit(() -> handleOnRespSubscribe(mqttMessage));

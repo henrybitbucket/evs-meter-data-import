@@ -98,6 +98,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Value("${evs.pa.subscribe.resp.topic}") private String evsPARespSubscribeTopic;
 
 	@Value("${evs.pa.mqtt.address}") private String evsPAMQTTAddress;
+
+	@Value("${evs.pa.mqtt.client.id}") private String mqttClientId;
+
+	@Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 	
 	@Value("${evs.pa.ftp.host}") private String evsFtpHost;
 	
@@ -148,7 +152,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Override
 	public void publish(String topic, Object message, String type) throws Exception {
 		try {
-			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress), topic, message, QUALITY_OF_SERVICE, false);
+			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
 			
 			//wait 5s
@@ -236,7 +240,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		header.put("gid", log.getGid());
 		header.put("msn", log.getMsn());
 		header.put("status", status);
-		publish("evs/pa/" + log.getUid(), data, type);
+		publish(alias + log.getUid(), data, type);
 	}
 	
 	private void handleRLSRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
@@ -293,7 +297,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 					firmwareService.getLatestFirmware().getHashCode()).more("url", urlS3));
 			
 			header.put("sig", RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload)));
-			publish("evs/pa/" + log.getUid(), data, type);
+			publish(alias + log.getUid(), data, type);
 		}
 	}
 	
@@ -321,7 +325,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		header.put("gid", log.getGid());
 		header.put("msn", log.getMsn());
 		header.put("status", status);
-		publish("evs/pa/" + log.getUid(), data, type);
+		publish(alias + log.getUid(), data, type);
 
 		//wait 5s
 		LOG.debug("sleep 5s");
@@ -346,7 +350,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			String sig = RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 
-			publish("evs/pa/" + log.getUid(), data, type);
+			publish(alias + log.getUid(), data, type);
 		}
 	}
 	
@@ -429,7 +433,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private void subscribe() {
 		//request
 		try {
-			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress), evsPASubscribeTopic, QUALITY_OF_SERVICE, o -> {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsPASubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsPASubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
 				EX.submit(() -> handleOnSubscribe(mqttMessage));
@@ -440,7 +444,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		//response
 		try {
-			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress), evsPARespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsPARespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsPARespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
 				EX.submit(() -> handleOnRespSubscribe(mqttMessage));
@@ -697,16 +701,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 	public static void main(String[] args) throws Exception {
 		/**System.out.println(requestCA("http://54.254.171.4:8880/api/evs-ca-request", new ClassPathResource("sv-ca/server.csr"), null));*/
 		
-		/*Mqtt.subscribe(null, "evs/pa/data", QUALITY_OF_SERVICE, o -> {
+		/*Mqtt.subscribe(null, "dev/evs/pa/data", QUALITY_OF_SERVICE, o -> {
 			MqttMessage mqttMessage = (MqttMessage) o;
 			LOG.info("1 -> " + new String(mqttMessage.getPayload()));
 			return null;
 		});*/
 		
 		//String json = "{\"header\":{\"mid\":1001,\"uid\":\"BIERWXAABMAB2AEBAA\",\"gid\":\"BIERWXAAA4AFBABABXX\",\"msn\":\"201906000032\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"id\":\"BIERWXAABMAB2AEBAA\",\"type\":\"OBR\",\"data\":\"201906000137\"}}";
-		//Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
-		//Mqtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
-		//qtt.publish("evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+		//Mqtt.publish("dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+		//Mqtt.publish("dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+		//qtt.publish("dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
 		/*Map<String, Object> map = new HashMap<>();
 		map.put("id", "BIERWXAABMAGSAEAAA");
 		map.put("cmd", "PW1");
@@ -734,6 +738,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 				"      }\n" +
 				"   }\n" +
 				"}";
-		Mqtt.publish("evs/pa/resp", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+		Mqtt.publish("dev/evs/pa/resp", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
 	}
 }
