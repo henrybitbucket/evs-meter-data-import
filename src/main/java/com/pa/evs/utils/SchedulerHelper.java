@@ -1,4 +1,4 @@
-package com.pa.evs.sv.impl;
+package com.pa.evs.utils;
 
 import java.util.Map;
 import java.util.TimeZone;
@@ -55,7 +55,6 @@ public class SchedulerHelper {
 	public static void scheduleJob(String cronExpression, Job job, String triggerKey) {
 		try {
 			scheduleJob(QuartzJob.class, cronExpression, job, triggerKey);
-			job.start();	
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 		}
