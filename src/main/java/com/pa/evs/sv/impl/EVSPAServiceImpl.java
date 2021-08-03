@@ -402,11 +402,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 			//TO-DO: need base on mid of response and mapping with request and update status log to know
 			//got response or not
 			Map<String, Object> header = (Map<String, Object>) data.get("header");
-			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 			String type = log.getPType();
 
 			int status = 0;
-			if(validateSign) {
+			if(validateSign && (data.get("payload") != null)) {
+				Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 				boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
 						new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
 				LOG.debug("HandleOnRespSubscribe, type: {}, verifySign: {}", type, verifySign);
