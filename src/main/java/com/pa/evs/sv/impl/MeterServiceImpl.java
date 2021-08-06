@@ -40,9 +40,13 @@ public class MeterServiceImpl implements MeterService {
 	
 	private static final int QUALITY_OF_SERVICE = 0;
 	
-	@Value("${evs.meter.subscribe.send.topic}") private String evsMeterSubscribeTopic;
+	@Value("${evs.pa.subscribe.send.topic}") private String evsMeterSubscribeTopic;
 
-	@Value("${evs.meter.subscribe.resp.topic}") private String evsMeterRespSubscribeTopic;
+	@Value("${evs.pa.subscribe.resp.topic}") private String evsMeterRespSubscribeTopic;
+
+    @Value("${evs.meter.local.subscribe.send.topic}") private String evsMeterLocalSubscribeTopic;
+
+    @Value("${evs.meter.local.subscribe.resp.topic}") private String evsMeterLocalRespSubscribeTopic;
 
 	@Value("${evs.meter.mqtt.address}") private String evsMeterMQTTAddress;
 
@@ -166,6 +170,33 @@ public class MeterServiceImpl implements MeterService {
 		}
 	}
 	
+	   private void handleOnLocalSubscribe(final MqttMessage mqttMessage) {
+	        try {
+	            Map<String, Object> data = MAPPER.readValue(mqttMessage.getPayload(), Map.class);
+
+	            //save log
+	            Log log = Log.build(data, "SUBSCRIBE");
+	            log.setMqttAddress(evsMeterMQTTAddress);
+	            logRepository.save(log);
+
+	        } catch (Exception e) {
+	            LOG.error(e.getMessage(), e);
+	        }
+	    }
+
+	    private void handleOnLocalRespSubscribe(final MqttMessage mqttMessage) {
+	        try {
+	            Map<String, Object> data = MAPPER.readValue(mqttMessage.getPayload(), Map.class);
+	            //save log
+	            Log log = Log.build(data, "SUBSCRIBE");
+	            log.setMqttAddress(evsMeterMQTTAddress);
+	            logRepository.save(log);
+
+	        } catch (Exception e) {
+	            LOG.error(e.getMessage(), e);
+	        }
+	    }
+
 	private void subscribe() {
 		//request
 		try {
@@ -189,6 +220,28 @@ public class MeterServiceImpl implements MeterService {
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
+	      //request
+        try {
+            Mqtt.subscribe(Mqtt.getInstance(evsMeterMQTTAddress, mqttClientId), evsMeterLocalSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+                final MqttMessage mqttMessage = (MqttMessage) o;
+                LOG.info(evsMeterSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
+                EX.submit(() -> handleOnLocalSubscribe(mqttMessage));
+                return null;
+            });
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
+        //response
+        try {
+            Mqtt.subscribe(Mqtt.getInstance(evsMeterMQTTAddress, mqttClientId), evsMeterLocalRespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+                final MqttMessage mqttMessage = (MqttMessage) o;
+                LOG.info(evsMeterRespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
+                EX.submit(() -> handleOnLocalRespSubscribe(mqttMessage));
+                return null;
+            });
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+        }
 	}
 	
 	@PostConstruct
