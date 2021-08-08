@@ -8,4 +8,6 @@ import com.pa.evs.model.Log;
 public interface LogService {
 
     List<Log> getRelatedLogs(Map<String, String> map);
+
+	Object getMeterLog(Map<String, Object> map);
 }

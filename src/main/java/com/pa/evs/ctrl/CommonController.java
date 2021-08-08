@@ -218,6 +218,15 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(list).build());
     }
     
+    @PostMapping("/api/meter/logs")
+    public ResponseEntity<Object> getMeterLogs(HttpServletRequest httpServletRequest, @RequestBody Map<String, Object> map) throws Exception {
+        try {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(logService.getMeterLog(map)).build());
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    }
+    
 	@PostConstruct
 	public void init() {
 		

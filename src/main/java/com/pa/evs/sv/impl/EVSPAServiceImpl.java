@@ -15,11 +15,12 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
+import com.pa.evs.model.MeterLog;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.LogRepository;
+import com.pa.evs.repository.MeterLogRepository;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
-import com.pa.evs.sv.MeterService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.JFtpClient;
@@ -58,6 +59,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -88,7 +90,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Autowired private FirmwareService firmwareService;
 
-	@Autowired private MeterService meterService;
+	// @Autowired private MeterService meterService;
+	
+	@Autowired private MeterLogRepository meterLogRepository;
 	
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
 	
@@ -98,9 +102,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Value("${evs.pa.subscribe.resp.topic}") private String evsPARespSubscribeTopic;
 
-    @Value("${evs.meter.local.subscribe.send.topic}") private String evsMeterLocalSubscribeTopic;
+    @Value("${evs.pa.local.subscribe.send.topic}") private String evsMeterLocalSubscribeTopic;
 
-    @Value("${evs.meter.local.subscribe.resp.topic}") private String evsMeterLocalRespSubscribeTopic;
+    @Value("${evs.pa.local.subscribe.resp.topic}") private String evsMeterLocalRespSubscribeTopic;
 
 	@Value("${evs.pa.mqtt.address}") private static String evsPAMQTTAddress;
 
@@ -176,37 +180,34 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 	}
 	
-//	private void ftpUpload(Map<String, Object> src, String type) throws Exception {
-//
-//		SimpleDateFormat sf = new SimpleDateFormat();
-//		sf.setTimeZone(UTC);
-//		sf.applyPattern("yyyyMMdd");
-//
-//		Map<String, Object> header = (Map<String, Object>) src.get("header");
-//		Map<String, Object> payload = (Map<String, Object>) src.get("payload");
-//		List<Map<String, Object>> data = (List<Map<String, Object>>) payload.get("data");
-//
-//		File file = new File(evsDataFolder + "/FTP_LOG/evsv3ga100_" + header.get("msn") + "_" + sf.format(new Date()) + ".log");
-//		if (!file.exists()) {
-//			Files.createFile(file.toPath());
-//		}
-//
-//		try (FileOutputStream fos = new FileOutputStream(file)) {
-//			for (Map<String, Object> o : data) {
-//				String dt = ((String) o.get("dt")).replace(".000", "") + "Z";
-//				sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-//				Date datetime = sf.parse(dt);
-//				sf.applyPattern("yyyy-MM-dd HH:mm:ss");
-//				dt = sf.format(datetime);
-//				fos.write((dt + "," + o.get("msn") + "," + o.get("kwh") + "," + o.get("kw") + "," + o.get("i") + "," + o.get("v") + "," + o.get("pf") + "\r\n")
-//				.getBytes(StandardCharsets.UTF_8));
-//			}
-//		} finally {/**/}
-//
-////		jftpClient.putFileToPath(file.getAbsolutePath(), evsFtpFolder);
-//		publish(evsPASubscribeTopic, src, type);
-//	}
-	
+	private void ftpUpload(Map<String, Object> src, String type) throws Exception {
+
+		SimpleDateFormat sf = new SimpleDateFormat();
+		sf.setTimeZone(UTC);
+		sf.applyPattern("yyyyMMdd");
+
+		Map<String, Object> payload = (Map<String, Object>) src.get("payload");
+		List<Map<String, Object>> data = (List<Map<String, Object>>) payload.get("data");
+
+		for (Map<String, Object> o : data) {
+			String dt = ((String) o.get("dt")).replace(".000", "") + "Z";
+			sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+			Date datetime = sf.parse(dt);
+			
+			sf.applyPattern("yyyy-MM-dd HH:mm:ss");
+			dt = sf.format(datetime);
+			
+			sf.applyPattern("yyyyMMdd");
+			Map<String, Object> tmp = new HashMap<>(o);
+			tmp.put("uid", payload.get("id"));
+			tmp.put("dt", datetime.getTime());
+			tmp.put("dtd", datetime);
+			tmp.put("dtn", Integer.parseInt(sf.format(datetime)));
+			meterLogRepository.save(MeterLog.build(tmp));
+		}
+		
+		publish(evsMeterLocalSubscribeTopic, src, type);
+	}
 
 	@Override
 	public Long nextvalMID() {
@@ -232,9 +233,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (status == 0) {
 			status = validateUidAndMsn(log);
 		}
+		
+		ftpUpload(data, type);
 		if (status == 0) {
 			//FTP
-		    publish(evsMeterLocalSubscribeTopic, data, type);
+			ftpUpload(data, type);
 		}
 		
 		//Publish
@@ -262,7 +265,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 		payload.put("type", "RLS");
 		payload.put("data", status);
 		data.put("payload", payload);
-		meterService.publish(data, "RLS");
+		//meterService.publish(data, "RLS");
+		publish(evsMeterLocalSubscribeTopic, data, "RLS");
 	}
 	
 	private void handleINFRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
@@ -439,7 +443,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private void subscribe() {
 		//request
 		try {
-			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMeterLocalSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsPASubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsPASubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
 				EX.submit(() -> handleOnSubscribe(mqttMessage));
@@ -450,7 +454,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		//response
 		try {
-			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMeterLocalRespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsPARespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsPARespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
 				EX.submit(() -> handleOnRespSubscribe(mqttMessage));
@@ -725,25 +729,50 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\n" +
-				"   \"header\":{\n" +
-				"      \"oid\":234001,\n" +
-				"      \"uid\":\"BIERWXAABMAGSAEAAA\",\n" +
-				"      \"gid\":\"BIERWXAABMAGSAEAAA\",\n" +
-				"      \"msn\":\"201906000032\",\n" +
-				"      \"sig\":\"Base64(ECC_SIGN(payload))\"\n" +
-				"   },\n" +
-				"   \"payload\":{\n" +
-				"      \"id\":\"BIERWXAABMAGSAEAAA\",\n" +
-				"      \"type\":\"MDT\",\n" +
-				"      \"data\":{\n" +
-				"        \"ver\":\"1.0.0\",\n" +
-				"        \"rdti\":30,\n" +
-				"        \"pdti\":60,\n" +
-				"        \"pdtm\":32\n" +
-				"      }\n" +
-				"   }\n" +
-				"}";
-		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "dev/evs/pa/local/req", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+		String json = "{\r\n"
+				+ "  \"header\": {\r\n"
+				+ "    \"oid\": 234001,\r\n"
+				+ "    \"uid\": \" BIERWXAAA4AFMACLXX \",\r\n"
+				+ "    \"gid\": \" BIERWXAAA4AFMACLXX \",\r\n"
+				+ "    \"msn\": \"201906000032\",\r\n"
+				+ "    \"sig\": \"Base64(ECC_SIGN(payload))\"\r\n"
+				+ "  },\r\n"
+				+ "  \"payload\": {\r\n"
+				+ "    \"id\": \"BIERWXAAA4AFMACLXX\",\r\n"
+				+ "    \"type\": \"MDT\",\r\n"
+				+ "    \"data\": [\r\n"
+				+ "      {\r\n"
+				+ "        \"uid\": \"BIERWXAAA4AFMACLXX\",\r\n"
+				+ "        \"msn\": \"201906000032\",\r\n"
+				+ "        \"kwh\": \"1.2\",\r\n"
+				+ "        \"kw\": \"0.0\",\r\n"
+				+ "        \"i\": \"0.0\",\r\n"
+				+ "        \"v\": \"244.2\",\r\n"
+				+ "        \"pf\": \"1.0000\",\r\n"
+				+ "        \"dt\": \"2021-08-07T13:44:25\"\r\n"
+				+ "      }\r\n"
+				+ "    ]\r\n"
+				+ "  }\r\n"
+				+ "}";
+		
+		SimpleDateFormat sf = new SimpleDateFormat();
+		sf.setTimeZone(UTC);
+		sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+		Date newDate = sf.parse("2021-07-07T13:44:25Z");
+		
+		Calendar c = Calendar.getInstance();
+		c.setTime(newDate);
+		
+		while(true) {
+			sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
+			json = json.replaceAll("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}", sf.format(newDate));
+			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+			c.add(Calendar.MINUTE, 30);
+			newDate = c.getTime();
+			if (newDate.getTime() > System.currentTimeMillis()) {
+				break;
+			}
+			System.out.println(newDate);
+		}
 	}
 }
