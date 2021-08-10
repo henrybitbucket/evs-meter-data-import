@@ -23,7 +23,6 @@ import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.CMD;
-import com.pa.evs.utils.JFtpClient;
 import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SchedulerHelper;
@@ -96,8 +95,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
 	
-	@Value("${evs.pa.ftp.folder}") private String evsFtpFolder;
-	
 	@Value("${evs.pa.subscribe.send.topic}") private String evsPASubscribeTopic;
 
 	@Value("${evs.pa.subscribe.resp.topic}") private String evsPARespSubscribeTopic;
@@ -112,14 +109,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 	
-	@Value("${evs.pa.ftp.host}") private String evsFtpHost;
-	
-	@Value("${evs.pa.ftp.port}") private Integer evsFtpPort;
-	
-	@Value("${evs.pa.ftp.username}") private String evsFtpUsername;
-	
-	@Value("${evs.pa.ftp.password}") private String evsFtpPassword;
-
 	@Value("${portal.pa.ca.request.url}") private String caRequestUrl;
 
 	@Value("${evs.pa.privatekey.path}") private String pkPath;
@@ -138,8 +127,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Value("${s3.access.key}") private String accessKey;
 
-	private JFtpClient jftpClient = null;
-	
 	private static final ExecutorService EX = Executors.newFixedThreadPool(10);
 	
 	private AmazonS3Client s3Client = null;
@@ -439,6 +426,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.error(e.getMessage(), e);
 		}
 	}
+
+	private void handleOnLocalRespSubscribe(final MqttMessage mqttMessage) {
+		//need implement
+	}
 	
 	private void subscribe() {
 		//request
@@ -452,6 +443,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
+
 		//response
 		try {
 			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsPARespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
@@ -463,17 +455,24 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
+
+		try {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMeterLocalRespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+				final MqttMessage mqttMessage = (MqttMessage) o;
+				LOG.info(evsMeterLocalRespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
+				EX.submit(() -> handleOnLocalRespSubscribe(mqttMessage));
+				return null;
+			});
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+
 	}
-	
 
 	private void prepareFolder() {
 		if (StringUtils.isBlank(evsDataFolder)) {
 			evsDataFolder = "/home/evs-data";
 		}
-		
-		try {
-			jftpClient = JFtpClient.getInstance(evsFtpHost, evsFtpPort, evsFtpUsername, evsFtpPassword);
-		} catch (Exception e) {/**/}
 		
 		try {
 			File root = new File(evsDataFolder);
