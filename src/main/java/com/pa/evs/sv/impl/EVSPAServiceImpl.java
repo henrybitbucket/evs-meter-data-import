@@ -103,6 +103,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 
     @Value("${evs.pa.local.subscribe.resp.topic}") private String evsMeterLocalRespSubscribeTopic;
 
+	@Value("${evs.pa.local.data.send.topic}") private String evsMeterLocalDataSendTopic;
+
+	@Value("${evs.pa.local.data.resp.topic}") private String evsMeterLocalDataRespTopic;
+
 	@Value("${evs.pa.mqtt.address}") private static String evsPAMQTTAddress;
 
 	@Value("${evs.pa.mqtt.client.id}") private static String mqttClientId;
@@ -166,8 +170,28 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.error(e.getMessage(), e);
 		}
 	}
+
+	private void publish(String topic, Object message) throws Exception {
+		try {
+			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, message, QUALITY_OF_SERVICE, false);
+			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
+
+			//wait 5s
+			LOG.debug("sleep 5s");
+			TimeUnit.SECONDS.sleep(5);
+
+			//save log
+			Map<String, Object> publishData = new HashMap<>((Map) message);
+			Log logP = Log.build(publishData, "PUBLISH");
+			logP.setTopic(topic);
+			logP.setMqttAddress(evsPAMQTTAddress);
+			logRepository.save(logP);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+	}
 	
-	private void ftpUpload(Map<String, Object> src, String type) throws Exception {
+	private void sendToMeterClient(Map<String, Object> src, String type) throws Exception {
 
 		SimpleDateFormat sf = new SimpleDateFormat();
 		sf.setTimeZone(UTC);
@@ -182,8 +206,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Date datetime = sf.parse(dt);
 			
 			sf.applyPattern("yyyy-MM-dd HH:mm:ss");
-			dt = sf.format(datetime);
-			
+
 			sf.applyPattern("yyyyMMdd");
 			Map<String, Object> tmp = new HashMap<>(o);
 			tmp.put("uid", payload.get("id"));
@@ -193,7 +216,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			meterLogRepository.save(MeterLog.build(tmp));
 		}
 		
-		publish(evsMeterLocalSubscribeTopic, src, type);
+		publish(evsMeterLocalDataSendTopic, src, type);
 	}
 
 	@Override
@@ -221,22 +244,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 			status = validateUidAndMsn(log);
 		}
 		
-		ftpUpload(data, type);
 		if (status == 0) {
-			//FTP
-			ftpUpload(data, type);
+			sendToMeterClient(data, type);
 		}
-		
-		//Publish
-		data = new HashMap<>();
-		Map<String, Object> header = new HashMap<>();
-		data.put("header", header);
-		header.put("oid", log.getMid());
-		header.put("uid", log.getUid());
-		header.put("gid", log.getGid());
-		header.put("msn", log.getMsn());
-		header.put("status", status);
-		publish(alias + log.getUid(), data, type);
+
 	}
 	
 	private void handleRLSRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
@@ -428,7 +439,22 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 
 	private void handleOnLocalRespSubscribe(final MqttMessage mqttMessage) {
-		//need implement
+		try {
+			//need implement
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+
+	}
+
+	private void handleSubscribeOnLocalDataRespTopic(final MqttMessage mqttMessage) {
+		try {
+			Map<String, Object> data = MAPPER.readValue(mqttMessage.getPayload(), Map.class);
+			Map<String, Object> headerData =  (Map<String, Object>) data.get("header");
+			publish(alias + headerData.get("uid"), data);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
 	}
 	
 	private void subscribe() {
@@ -461,6 +487,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsMeterLocalRespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
 				EX.submit(() -> handleOnLocalRespSubscribe(mqttMessage));
+				return null;
+			});
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+
+		try {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMeterLocalDataRespTopic, QUALITY_OF_SERVICE, o -> {
+				final MqttMessage mqttMessage = (MqttMessage) o;
+				LOG.info(evsMeterLocalDataRespTopic + " -> " + new String(mqttMessage.getPayload()));
+				EX.submit(() -> handleSubscribeOnLocalDataRespTopic(mqttMessage));
 				return null;
 			});
 		} catch (Exception e) {
@@ -753,7 +790,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				+ "    ]\r\n"
 				+ "  }\r\n"
 				+ "}";
-		
+
 		SimpleDateFormat sf = new SimpleDateFormat();
 		sf.setTimeZone(UTC);
 		sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -761,7 +798,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		Calendar c = Calendar.getInstance();
 		c.setTime(newDate);
-		
+
 		while(true) {
 			sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
 			json = json.replaceAll("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}\\:[0-9]{2}\\:[0-9]{2}", sf.format(newDate));
