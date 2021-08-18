@@ -104,9 +104,13 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	public void linkMsn(Map<String, Object> map) {
     	
     	if (map.get("sn") != null) {
-    		caRequestLogRepository.linkMsnBySn((String)map.get("sn"), (String)map.get("msn"));
+    		caRequestLogRepository.linkMsnBySn((String)map.get("sn"), (String)map.get("msn"),
+                    CARequestLog.Status.ACTIVATED,
+                    Calendar.getInstance().getTimeInMillis());
     	} else if (map.get("uuid") != null) {
-    		caRequestLogRepository.linkMsn((String)map.get("uuid"), (String)map.get("msn"));
+    		caRequestLogRepository.linkMsn((String)map.get("uuid"), (String)map.get("msn"),
+                    CARequestLog.Status.ACTIVATED,
+                    Calendar.getInstance().getTimeInMillis());
     	}
 	}
 }

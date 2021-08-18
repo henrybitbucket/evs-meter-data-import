@@ -584,6 +584,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 								CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
 								caLog.setUid(uuid);
 								caLog.setSn(details[0]);
+								caLog.setCid(details[2]);
 								caLog.setRequireRefresh(false);
 								caRequestLogRepository.save(caLog);
 							}
@@ -599,12 +600,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 						String uuid = ful.getName().replaceAll("\\.csr$", "");
 						Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
 						CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
-						Map<String, Object> data = requestCA(caRequestUrl, new FileSystemResource(ful), uuid);
+						//Map<String, Object> data = requestCA(caRequestUrl, new FileSystemResource(ful), uuid);
 						caLog.setUid(uuid);
-						caLog.setCertificate((String)data.get("pemBase64"));
-						caLog.setRaw((String)data.get("cas"));
-						caLog.setStartDate((Long)data.get("startDate"));
-						caLog.setEndDate((Long)data.get("endDate"));
+						//caLog.setCertificate((String)data.get("pemBase64"));
+						//caLog.setRaw((String)data.get("cas"));
+						//caLog.setStartDate((Long)data.get("startDate"));
+						//caLog.setEndDate((Long)data.get("endDate"));
+						caLog.setMsn(null);
+						caLog.setStatus(CARequestLog.Status.CREATED);
 						caLog.setRequireRefresh(false);
 						caRequestLogRepository.save(caLog);
 						File out = new File(ful.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));

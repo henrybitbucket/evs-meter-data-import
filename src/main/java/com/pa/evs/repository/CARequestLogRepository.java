@@ -25,10 +25,10 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	List<String> findCAByUid(String uid);
 	
 	@Modifying
-	@Query("UPDATE CARequestLog SET msn = ?2 WHERE uid = ?1")
-	void linkMsn(String uuid, String msn);
+	@Query("UPDATE CARequestLog SET msn = ?2, status = ?3, activateDate = ?4 WHERE uid = ?1")
+	void linkMsn(String uuid, String msn, CARequestLog.Status status, Long activateDate);
 	
 	@Modifying
-	@Query("UPDATE CARequestLog SET msn = ?2 WHERE sn = ?1")
-	void linkMsnBySn(String sn, String msn);
+	@Query("UPDATE CARequestLog SET msn = ?2, status = ?3, activateDate = ?4 WHERE sn = ?1")
+	void linkMsnBySn(String sn, String msn, CARequestLog.Status status, Long activateDate);
 }

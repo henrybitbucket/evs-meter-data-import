@@ -22,17 +22,28 @@ import lombok.Setter;
 @Table(name = "ca_request_log", uniqueConstraints = @UniqueConstraint(columnNames = "uid"))
 public class CARequestLog extends BaseEntity {
 
+	public enum Status {
+		CREATED, ACTIVATED
+	}
+
     private String uid;
     
     private String sn;
+
+	private String cid;
 	
     private String msn;
+
+	private Status status;
 	
     @Column(name = "certificate", length = 20000)
     private String certificate;
     
 	@Column(name = "raw", length = 20000)
     private String raw;
+
+	@Column(name = "activate_date")
+	private Long activateDate;
 	
 	@Column(name = "start_date")
 	private Long startDate;
@@ -48,11 +59,13 @@ public class CARequestLog extends BaseEntity {
 		return builder()
 				.uid((String)data.get("uid"))
 				.sn((String)data.get("sn"))
+				.cid((String)data.get("cid"))
 				.msn((String)data.get("msn"))
 				.certificate((String)data.get("pemBase64"))
 				.raw((String)data.get("cas"))
 				.startDate((Long)data.get("startDate"))
 				.endDate((Long)data.get("endDate"))
+				.activateDate((Long)data.get("activateDate"))
 				.build();
 	}
 }
