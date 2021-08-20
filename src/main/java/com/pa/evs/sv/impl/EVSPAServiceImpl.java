@@ -105,7 +105,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Value("${evs.pa.local.data.send.topic}") private String evsMeterLocalDataSendTopic;
 
-	@Value("${evs.pa.local.data.resp.topic}") private String evsMeterLocalDataRespTopic;
+	//@Value("${evs.pa.local.data.resp.topic}") private String evsMeterLocalDataRespTopic;
 
 	@Value("${evs.pa.mqtt.address}") private static String evsPAMQTTAddress;
 
@@ -247,6 +247,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (status == 0) {
 			sendToMeterClient(data, type);
 		}
+
+		//Publish
+		data = new HashMap<>();
+		Map<String, Object> header = new HashMap<>();
+		data.put("header", header);
+		header.put("oid", log.getMid());
+		header.put("uid", log.getUid());
+		header.put("gid", log.getGid());
+		header.put("msn", log.getMsn());
+		header.put("status", status);
+		publish(alias + log.getUid(), data, type);
 
 	}
 	
@@ -447,7 +458,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	}
 
-	private void handleSubscribeOnLocalDataRespTopic(final MqttMessage mqttMessage) {
+	/*private void handleSubscribeOnLocalDataRespTopic(final MqttMessage mqttMessage) {
 		try {
 			Map<String, Object> data = MAPPER.readValue(mqttMessage.getPayload(), Map.class);
 			Map<String, Object> headerData =  (Map<String, Object>) data.get("header");
@@ -455,7 +466,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
-	}
+	}*/
 	
 	private void subscribe() {
 		//request
@@ -493,7 +504,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.error(e.getMessage(), e);
 		}
 
-		try {
+		/*try {
 			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMeterLocalDataRespTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsMeterLocalDataRespTopic + " -> " + new String(mqttMessage.getPayload()));
@@ -502,7 +513,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			});
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
-		}
+		}*/
 
 	}
 
