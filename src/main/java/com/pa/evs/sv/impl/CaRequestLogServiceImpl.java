@@ -8,7 +8,6 @@ import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.CsvUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -17,7 +16,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -148,7 +146,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                     Calendar.getInstance().getTimeInMillis());
     	}
 	}
-    
+
     @Override
     public File downloadCsv(List<CARequestLog> listInput) throws IOException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");

@@ -90,6 +90,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/api/firm-ware**").permitAll()
 				.antMatchers("/api/device-csr/upload").permitAll()
 				.antMatchers("/api/meter/logs").permitAll()
+				.antMatchers("/api//ca-request-logs").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

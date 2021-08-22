@@ -55,7 +55,7 @@ public class CsvUtils {
         record.add(caRequestLog.getCid());
         record.add(caRequestLog.getActivateDate() != null ? sdf.format(new Date(caRequestLog.getActivateDate())) : "########");
         
-        return postProcessCsv(record);
+        return record;
     }
     
     private static String buildPathFile(String fileName) throws IOException {
@@ -64,15 +64,15 @@ public class CsvUtils {
         return parentFolder + '/' + fileName;
     }
     
-    private static List<String> postProcessCsv(List<String> record) {
-        List<String> escaped = new ArrayList<>(record.size());
-
-        for (String column : record) {
-            escaped.add(StringUtils.trimToEmpty(column));
-        }
-
-        return escaped;
-    }
+//    private static List<String> postProcessCsv(List<String> record) {
+//        List<String> escaped = new ArrayList<>(record.size());
+//
+//        for (String column : record) {
+//            escaped.add(StringUtils.trimToEmpty(column));
+//        }
+//
+//        return escaped;
+//    }
     
     public static <T> File toCsv(List<String> headers, List<T> items, CsvRecordConverter<T> converter, String filePath)
             throws IOException {
