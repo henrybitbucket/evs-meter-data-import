@@ -48,14 +48,14 @@ public class CsvUtils {
     private static List<String> toCSVRecord(int idx, CARequestLog caRequestLog) {
         List<String> record = new ArrayList<>();
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
         
         record.add(caRequestLog.getSn());
         record.add(caRequestLog.getUid());
         record.add(caRequestLog.getCid());
         record.add(caRequestLog.getActivateDate() != null ? sdf.format(new Date(caRequestLog.getActivateDate())) : "########");
         
-        return record;
+        return postProcessCsv(record);
     }
     
     private static String buildPathFile(String fileName) throws IOException {
@@ -64,15 +64,15 @@ public class CsvUtils {
         return parentFolder + '/' + fileName;
     }
     
-//    private static List<String> postProcessCsv(List<String> record) {
-//        List<String> escaped = new ArrayList<>(record.size());
-//
-//        for (String column : record) {
-//            escaped.add(StringUtils.trimToEmpty(column));
-//        }
-//
-//        return escaped;
-//    }
+    private static List<String> postProcessCsv(List<String> record) {
+        List<String> escaped = new ArrayList<>(record.size());
+
+        for (String column : record) {
+            escaped.add(StringUtils.trimToEmpty(column));
+        }
+
+        return escaped;
+    }
     
     public static <T> File toCsv(List<String> headers, List<T> items, CsvRecordConverter<T> converter, String filePath)
             throws IOException {
@@ -85,7 +85,7 @@ public class CsvUtils {
         try (
                 BufferedWriter writer = new BufferedWriter(fileWriter);
                 CSVPrinter csvPrinter = new CSVPrinter(writer, CSVFormat.DEFAULT
-                        .withDelimiter(';')
+                        .withDelimiter(',')
                         .withIgnoreHeaderCase()
                         .withTrim()
                         .withHeader(headersArr));
