@@ -6,6 +6,8 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.CsvUtils;
+
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,20 +80,23 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Long fromDate = (Long) options.get("fromDate");
             Long toDate = (Long) options.get("toDate");
             String status = (String) options.get("status");
+            String query = (String) options.get("query");
             
             sqlCommonBuilder.append(" WHERE ");
             
-            if (options.get("query") != null) {
-                sqlCommonBuilder.append(" uid like '%" + options.get("query") + "%' AND ");
+            if (StringUtils.isNotBlank(query)) {
+                sqlCommonBuilder.append(" uid like '%" + query + "%' AND ");
             }
                 
-            if (status != null) {
+            if (StringUtils.isNotBlank(status)) {
                 if (status.equals("create_date")) {
-                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
+                    sqlCommonBuilder.append(" status = 0");
+                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
                     sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
                 }
                 if (status.equals("activate_date")) {
-                    sqlCommonBuilder.append(" activateDate >= " + fromDate);
+                    sqlCommonBuilder.append(" status = 1");
+                    sqlCommonBuilder.append(" AND activateDate >= " + fromDate);
                     sqlCommonBuilder.append(" AND activateDate <= " + toDate);
                 }
             } else {

@@ -53,7 +53,7 @@ public class CsvUtils {
         record.add(caRequestLog.getSn());
         record.add(caRequestLog.getUid());
         record.add(caRequestLog.getCid());
-        record.add(caRequestLog.getActivateDate() != null ? sdf.format(new Date(caRequestLog.getActivateDate())) : "########");
+        record.add(caRequestLog.getActivateDate() != null ? sdf.format(new Date(caRequestLog.getActivateDate())) : "");
         
         return postProcessCsv(record);
     }
