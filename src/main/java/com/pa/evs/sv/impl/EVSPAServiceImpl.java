@@ -34,7 +34,6 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -67,6 +66,7 @@ import java.util.Optional;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -76,6 +76,8 @@ import java.util.concurrent.TimeUnit;
 public class EVSPAServiceImpl implements EVSPAService {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
+
+	private Map<Long, Long> localMap;
 	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
@@ -89,8 +91,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Autowired private FirmwareService firmwareService;
 
-	// @Autowired private MeterService meterService;
-	
 	@Autowired private MeterLogRepository meterLogRepository;
 	
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
@@ -171,7 +171,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 	}
 
-	private void publish(String topic, Object message) throws Exception {
+	private void publish(String topic, Object message) {
 		try {
 			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
@@ -262,7 +262,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	private void handleRLSRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
-
 		//Publish
 		data = new HashMap<>();
 		Map<String, Object> header = new HashMap<>();
@@ -274,8 +273,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 		payload.put("type", "RLS");
 		payload.put("data", status);
 		data.put("payload", payload);
-		//meterService.publish(data, "RLS");
-		publish(evsMeterLocalSubscribeTopic, data, "RLS");
+		if (localMap.get(log.getMid()) != null) {
+			header.put("oid", localMap.get(log.getMid()));
+			publish(evsMeterLocalRespSubscribeTopic, data, "RLS");
+			localMap.remove(log.getMid());
+		}
 	}
 	
 	private void handleINFRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
@@ -443,31 +445,67 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if ("OTA".equalsIgnoreCase(type)) {
 				handleOTARes(data, type, log, status);
 			}
+
+			if("PW1".equalsIgnoreCase(type) || "PW0".equalsIgnoreCase(type)) {
+				if (localMap.get(log.getMid()) != null) {
+					header.put("oid", localMap.get(log.getMid()));
+					publish(evsMeterLocalRespSubscribeTopic, data, type);
+					localMap.remove(log.getMid());
+				}
+			}
 			
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
 	}
 
-	private void handleOnLocalRespSubscribe(final MqttMessage mqttMessage) {
+	private void handleOnLocalRequestSubscribe(final MqttMessage mqttMessage) {
 		try {
-			//need implement
+			Map<String, Object> data = MAPPER.readValue(mqttMessage.getPayload(), Map.class);
+			//save log
+			Log log = Log.build(data, "SUBSCRIBE");
+			log.setMqttAddress(evsPAMQTTAddress);
+			logRepository.save(log);
+			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
+			String cmd = (String)payload.get("cmd");
+			if("MDT".equals(cmd)) {
+				handleLocalMDTRequest(data);
+			} else {
+				handleLocalCmdRequest(data);
+			}
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
 
 	}
 
-	/*private void handleSubscribeOnLocalDataRespTopic(final MqttMessage mqttMessage) {
-		try {
-			Map<String, Object> data = MAPPER.readValue(mqttMessage.getPayload(), Map.class);
-			Map<String, Object> headerData =  (Map<String, Object>) data.get("header");
-			publish(alias + headerData.get("uid"), data);
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
+	private void handleLocalCmdRequest(Map<String, Object> data) throws Exception {
+		Map<String, Object> header = (Map<String, Object>) data.get("header");
+		Map<String, Object> payload = (Map<String, Object>) data.get("payload");
+		String mid = (String)header.get("mid");
+		String msn = (String)header.get("msn");
+		String cmd = (String)payload.get("cmd");
+		Optional<CARequestLog> caRequestLog = caRequestLogRepository.findByMsn(msn);
+		if (caRequestLog.isPresent()) {
+			Long nextMid = nextvalMID();
+			localMap.put(nextMid, (Long)header.get("mid"));
+			String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			header.put("mid", nextMid);
+			header.put("uid", caRequestLog.get().getUid());
+			header.put("gid", caRequestLog.get().getUid());
+			header.put("sig", sig);
+			publish(alias + caRequestLog.get().getUid(), data);
+		} else {
+			publish(evsMeterLocalRespSubscribeTopic, SimpleMap.init(
+					"header", SimpleMap.init("oid", mid).more("type", cmd).more("status", "-1")
+			));
 		}
-	}*/
-	
+	}
+
+	private void handleLocalMDTRequest(Map<String, Object> data) throws Exception {
+		//need implement
+	}
+
 	private void subscribe() {
 		//request
 		try {
@@ -494,26 +532,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 
 		try {
-			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMeterLocalRespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMeterLocalSubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
-				LOG.info(evsMeterLocalRespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
-				EX.submit(() -> handleOnLocalRespSubscribe(mqttMessage));
+				LOG.info(evsMeterLocalSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
+				EX.submit(() -> handleOnLocalRequestSubscribe(mqttMessage));
 				return null;
 			});
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
-
-		/*try {
-			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMeterLocalDataRespTopic, QUALITY_OF_SERVICE, o -> {
-				final MqttMessage mqttMessage = (MqttMessage) o;
-				LOG.info(evsMeterLocalDataRespTopic + " -> " + new String(mqttMessage.getPayload()));
-				EX.submit(() -> handleSubscribeOnLocalDataRespTopic(mqttMessage));
-				return null;
-			});
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
-		}*/
 
 	}
 
@@ -539,6 +566,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@PostConstruct
 	public void init() {
+
+		localMap = new ConcurrentHashMap<>();
 		
 		prepareFolder();
 		
