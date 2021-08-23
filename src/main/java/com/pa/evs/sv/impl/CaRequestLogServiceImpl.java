@@ -6,7 +6,6 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.CsvUtils;
-import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,7 +70,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM CARequestLog");
         
         StringBuilder sqlCommonBuilder = new StringBuilder();
-        if (CollectionUtils.isEmpty(pagin.getOptions()) || BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
+        if (CollectionUtils.isEmpty(pagin.getOptions())) {
             sqlCommonBuilder.append(" WHERE 1=1 ");
         } else {
             
