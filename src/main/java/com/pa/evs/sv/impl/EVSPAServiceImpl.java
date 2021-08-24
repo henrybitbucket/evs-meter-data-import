@@ -19,8 +19,10 @@ import com.pa.evs.model.MeterLog;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.MeterLogRepository;
+import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
+import com.pa.evs.sv.LogService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.Mqtt;
@@ -28,6 +30,7 @@ import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
+import io.swagger.models.auth.In;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -55,6 +58,7 @@ import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Calendar;
@@ -84,6 +88,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 	
 	private static final int QUALITY_OF_SERVICE = 0;
+
+	@Autowired LogService logService;
+
+	@Autowired CaRequestLogService caRequestLogService;
 
 	@Autowired private LogRepository logRepository;
 
@@ -482,13 +490,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private void handleLocalCmdRequest(Map<String, Object> data) throws Exception {
 		Map<String, Object> header = (Map<String, Object>) data.get("header");
 		Map<String, Object> payload = (Map<String, Object>) data.get("payload");
-		String mid = (String)header.get("mid");
+		Integer mid = (Integer)header.get("mid");
 		String msn = (String)header.get("msn");
 		String cmd = (String)payload.get("cmd");
 		Optional<CARequestLog> caRequestLog = caRequestLogRepository.findByMsn(msn);
 		if (caRequestLog.isPresent()) {
 			Long nextMid = nextvalMID();
-			localMap.put(nextMid, (Long)header.get("mid"));
+			localMap.put(nextMid, mid.longValue());
 			String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("mid", nextMid);
 			header.put("uid", caRequestLog.get().getUid());
@@ -503,7 +511,36 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 
 	private void handleLocalMDTRequest(Map<String, Object> data) throws Exception {
-		//need implement
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Map<String, Object> header = (Map<String, Object>) data.get("header");
+		Map<String, Object> payload = (Map<String, Object>) data.get("payload");
+		Integer mid = (Integer)header.get("mid");
+		String msn = (String)header.get("msn");
+		Optional<CARequestLog> caRequestLog = caRequestLogRepository.findByMsn(msn);
+		if (caRequestLog.isPresent()) {
+
+			String kwh = logService.getKwh(caRequestLog.get().getUid(), payload);
+			Map<String, Object> data1 = new HashMap<>();
+			Map<String, Object> header1 = new HashMap<>();
+			List<Map<String, Object>> dataTag = new ArrayList<>();
+			data.put("header", header1);
+			header1.put("mid", mid);
+			header1.put("msn", msn);
+			Map<String, Object> payload1 = new HashMap<>();
+			data.put("payload", payload1);
+			payload1.put("id", "");
+			payload1.put("type", "MDT");
+			payload1.put("data", dataTag);
+			dataTag.add(SimpleMap.init("uid", "").more("msn", msn).more("kwh", kwh)
+					.more("kw", "0.0").more("i", "0.0").more("v", "244.2").more("pf", "1.00")
+					.more("dt", sdf.format(Calendar.getInstance().getTime())));
+			publish(evsMeterLocalRespSubscribeTopic, data1);
+
+		} else {
+			publish(evsMeterLocalRespSubscribeTopic, SimpleMap.init(
+					"header", SimpleMap.init("oid", mid).more("type", "MDT").more("status", "-1")
+			));
+		}
 	}
 
 	private void subscribe() {
@@ -567,6 +604,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@PostConstruct
 	public void init() {
 
+		LOG.debug("abc");
 		localMap = new ConcurrentHashMap<>();
 		
 		prepareFolder();
@@ -666,6 +704,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 					
 				}
 			}
+
+			//refresh CID
+			caRequestLogService.getCids(true);
+
 		}, "REQUEST_CA");
 		
 		try {
@@ -778,8 +820,6 @@ public class EVSPAServiceImpl implements EVSPAService {
             LOG.error("Exception in uploading file: " + e.getLocalizedMessage());
         } finally {
               IdleConnectionReaper.shutdown();
-              metadata = null;
-              request = null;
               AwsSdkMetrics.unregisterMetricAdminMBean();
               LOG.info("Finished S3 Upload");
         }

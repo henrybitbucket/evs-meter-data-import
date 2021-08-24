@@ -22,5 +22,5 @@ public interface CaRequestLogService {
 
     File downloadCsv(List<CARequestLog> listInput) throws IOException;
 
-    List<String> getCids();
+    List<String> getCids(boolean refresh);
 }

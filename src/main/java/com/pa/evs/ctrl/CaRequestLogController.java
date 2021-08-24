@@ -62,7 +62,7 @@ public class CaRequestLogController {
     
     @GetMapping(RestPath.CA_REQUEST_LOG_GET_CIDS)
     public ResponseEntity<?> getCids(HttpServletRequest httpServletRequest) {
-        List<String> cids = caRequestLogService.getCids();
+        List<String> cids = caRequestLogService.getCids(false);
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(cids).build());
     }
 }

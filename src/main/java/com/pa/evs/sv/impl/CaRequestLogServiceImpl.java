@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import java.io.File;
@@ -31,6 +32,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	EntityManager em;
+
+    private List<String> cacheCids = Collections.EMPTY_LIST;
+
+	@PostConstruct
+    public void init() {
+        LOG.debug("Loading CID into cache");
+        cacheCids = caRequestLogRepository.getCids();
+    }
 
 	@Override
 	public Optional<CARequestLog> findByUid(String uid) {
@@ -170,7 +179,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     }
     
     @Override
-    public List<String> getCids() {
-        return caRequestLogRepository.getCids();
+    public List<String> getCids(boolean refresh) {
+	    if (refresh) {
+	        cacheCids = caRequestLogRepository.getCids();
+        }
+	    return cacheCids;
     }
 }
