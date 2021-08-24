@@ -37,22 +37,18 @@ public class CsvUtils {
     }
 
     public static File writeCaRequestLogCsv(List<CARequestLog> listInput, String fileName) throws IOException{
-
         listInput = listInput.stream().filter(input -> !input.getUid().equals("server.csr")).collect(Collectors.toList());
         List<String> headers = Arrays.asList(
-                "SN", "UUID", "CID",
-                "Activated date");
+                "eSIM", "Profile", "ActivationDate(yyyy-mm-dd)");
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName));
     }
     
     private static List<String> toCSVRecord(int idx, CARequestLog caRequestLog) {
         List<String> record = new ArrayList<>();
 
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-        
-        record.add(caRequestLog.getSn());
-        record.add(caRequestLog.getUid());
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         record.add(caRequestLog.getCid());
+        record.add("METER_SG_TATA_PA_B01");
         record.add(caRequestLog.getActivateDate() != null ? sdf.format(new Date(caRequestLog.getActivateDate())) : "");
         
         return postProcessCsv(record);

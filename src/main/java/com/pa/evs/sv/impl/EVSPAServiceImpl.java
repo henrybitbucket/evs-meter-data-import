@@ -647,7 +647,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 						//caLog.setStartDate((Long)data.get("startDate"));
 						//caLog.setEndDate((Long)data.get("endDate"));
 						caLog.setMsn(null);
-						caLog.setStatus(CARequestLog.Status.CREATED);
+						caLog.setStatus(CARequestLog.Status.ACTIVATED);
 						caLog.setRequireRefresh(false);
 						caRequestLogRepository.save(caLog);
 						File out = new File(ful.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));
