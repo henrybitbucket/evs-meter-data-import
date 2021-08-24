@@ -12,6 +12,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,8 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.List;
 
 @RestController
 public class CaRequestLogController {
@@ -58,5 +58,11 @@ public class CaRequestLogController {
         
         caRequestLogService.save(dto);
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @GetMapping(RestPath.CA_REQUEST_LOG_GET_CIDS)
+    public ResponseEntity<?> getCids(HttpServletRequest httpServletRequest) {
+        List<String> cids = caRequestLogService.getCids();
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(cids).build());
     }
 }

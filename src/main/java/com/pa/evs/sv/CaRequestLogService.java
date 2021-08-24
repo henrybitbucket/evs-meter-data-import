@@ -1,19 +1,14 @@
 package com.pa.evs.sv;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import javax.servlet.http.HttpServletResponse;
-
-import org.springframework.http.ResponseEntity;
-
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.CARequestLog;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 public interface CaRequestLogService {
     
@@ -26,4 +21,6 @@ public interface CaRequestLogService {
     PaginDto<CARequestLog> search(PaginDto<CARequestLog> pagin);
 
     File downloadCsv(List<CARequestLog> listInput) throws IOException;
+
+    List<String> getCids();
 }

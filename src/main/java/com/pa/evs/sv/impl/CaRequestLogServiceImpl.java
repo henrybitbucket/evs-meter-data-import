@@ -81,6 +81,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Long toDate = (Long) options.get("toDate");
             String status = (String) options.get("status");
             String query = (String) options.get("query");
+            List<String> cids = (List<String>) options.get("selectedCids");
             
             sqlCommonBuilder.append(" WHERE ");
             
@@ -89,6 +90,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             }
                 
             if (StringUtils.isNotBlank(status)) {
+                sqlCommonBuilder.append(" ( ");
                 if (status.equals("create_date")) {
                     sqlCommonBuilder.append(" status = 0");
                     sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
@@ -99,11 +101,22 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                     sqlCommonBuilder.append(" AND activateDate >= " + fromDate);
                     sqlCommonBuilder.append(" AND activateDate <= " + toDate);
                 }
+                sqlCommonBuilder.append(" ) ");
             } else {
+                sqlCommonBuilder.append(" (( ");
                 sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
-                sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + " OR");
+                sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + " ) OR ( ");
                 sqlCommonBuilder.append(" activateDate >= " + fromDate);
                 sqlCommonBuilder.append(" AND activateDate <= " + toDate);
+                sqlCommonBuilder.append(" )) ");
+            }
+            
+            if (!CollectionUtils.isEmpty(cids)) {
+                sqlCommonBuilder.append(" AND (cid = '" + cids.get(0) + "'");
+                for (int i = 1; i < cids.size(); i++) {
+                    sqlCommonBuilder.append(" OR cid = '" + cids.get(i) + "'");
+                }
+                sqlCommonBuilder.append(" ) ");
             }
         }
         
@@ -154,5 +167,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         String tag = sdf.format(new Date());
         String fileName = "ca_request_log-" + tag + ".csv";
         return CsvUtils.writeCaRequestLogCsv(listInput, fileName);
+    }
+    
+    @Override
+    public List<String> getCids() {
+        return caRequestLogRepository.getCids();
     }
 }

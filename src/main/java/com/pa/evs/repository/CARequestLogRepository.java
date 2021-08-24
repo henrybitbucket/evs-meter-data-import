@@ -31,4 +31,7 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	@Modifying
 	@Query("UPDATE CARequestLog SET msn = ?2 WHERE sn = ?1")
 	void linkMsnBySn(String sn, String msn);
+	
+	@Query(value = "SELECT DISTINCT cid FROM {h-schema}ca_request_log", nativeQuery = true)
+	List<String> getCids();
 }
