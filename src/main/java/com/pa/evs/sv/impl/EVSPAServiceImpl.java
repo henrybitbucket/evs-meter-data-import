@@ -269,22 +269,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	}
 	
-	private void handleRLSRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
+	private void handleRLSRes(Map<String, Object> data, String type, Log log) throws Exception {
 		//Publish
-		data = new HashMap<>();
-		Map<String, Object> header = new HashMap<>();
-		data.put("header", header);
-		header.put("oid", log.getMid());
-		header.put("msn", log.getMsn());
-		Map<String, Object> payload = new HashMap<>();
-		payload.put("id", log.getMsn());
-		payload.put("type", "RLS");
-		payload.put("data", status);
-		data.put("payload", payload);
-		if (localMap.get(log.getMid()) != null) {
-			header.put("oid", localMap.get(log.getMid()));
-			publish(evsMeterLocalRespSubscribeTopic, data, "RLS");
-			localMap.remove(log.getMid());
+		if (localMap.get(log.getOid()) != null) {
+			Map<String, Object> header = (Map<String, Object>) data.get("header");
+			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
+			header.put("oid", localMap.get(log.getOid()));
+			header.remove("sig");
+			header.remove("uid");
+			payload.put("id", header.get("msn"));
+			publish(evsMeterLocalRespSubscribeTopic, data, type);
+			localMap.remove(log.getOid());
 		}
 	}
 	
@@ -443,7 +438,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				}
 			}
 			if ("RLS".equalsIgnoreCase(type)) {
-				handleRLSRes(data, type, log, status);
+				handleRLSRes(data, type, log);
 			}
 			
 			if ("INF".equalsIgnoreCase(type)) {
@@ -454,14 +449,19 @@ public class EVSPAServiceImpl implements EVSPAService {
 				handleOTARes(data, type, log, status);
 			}
 
-			if("PW1".equalsIgnoreCase(type) || "PW0".equalsIgnoreCase(type)) {
-				if (localMap.get(log.getMid()) != null) {
-					header.put("oid", localMap.get(log.getMid()));
-					publish(evsMeterLocalRespSubscribeTopic, data, type);
-					localMap.remove(log.getMid());
+			if (localMap.get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				header.put("oid", localMap.get(log.getOid()));
+				header.remove("uid");
+				if(data.get("payload") != null) {
+					Map<String, Object> payload = (Map<String, Object>) data.get("payload");
+					if(payload.get("id") != null){
+						payload.put("id", header.get("msn"));
+					}
 				}
+				publish(evsMeterLocalRespSubscribeTopic, data, type);
+				localMap.remove(log.getOid());
 			}
-			
+
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
@@ -497,15 +497,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (caRequestLog.isPresent()) {
 			Long nextMid = nextvalMID();
 			localMap.put(nextMid, mid.longValue());
-			String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("mid", nextMid);
 			header.put("uid", caRequestLog.get().getUid());
 			header.put("gid", caRequestLog.get().getUid());
+			payload.put("id", caRequestLog.get().getUid());
+			String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 			publish(alias + caRequestLog.get().getUid(), data);
 		} else {
 			publish(evsMeterLocalRespSubscribeTopic, SimpleMap.init(
-					"header", SimpleMap.init("oid", mid).more("type", cmd).more("status", "-1")
+					"header", SimpleMap.init("oid", mid).more("type", cmd).more("status", -1)
 			));
 		}
 	}
@@ -538,7 +539,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 		} else {
 			publish(evsMeterLocalRespSubscribeTopic, SimpleMap.init(
-					"header", SimpleMap.init("oid", mid).more("type", "MDT").more("status", "-1")
+					"header", SimpleMap.init("oid", mid).more("type", "MDT").more("status", -1)
 			));
 		}
 	}
@@ -849,33 +850,22 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\r\n"
-				+ "  \"header\": {\r\n"
-				+ "    \"oid\": 234001,\r\n"
-				+ "    \"uid\": \" BIERWXAAA4AFMACLXX \",\r\n"
-				+ "    \"gid\": \" BIERWXAAA4AFMACLXX \",\r\n"
-				+ "    \"msn\": \"201906000032\",\r\n"
-				+ "    \"sig\": \"Base64(ECC_SIGN(payload))\"\r\n"
-				+ "  },\r\n"
-				+ "  \"payload\": {\r\n"
-				+ "    \"id\": \"BIERWXAAA4AFMACLXX\",\r\n"
-				+ "    \"type\": \"MDT\",\r\n"
-				+ "    \"data\": [\r\n"
-				+ "      {\r\n"
-				+ "        \"uid\": \"BIERWXAAA4AFMACLXX\",\r\n"
-				+ "        \"msn\": \"201906000032\",\r\n"
-				+ "        \"kwh\": \"1.2\",\r\n"
-				+ "        \"kw\": \"0.0\",\r\n"
-				+ "        \"i\": \"0.0\",\r\n"
-				+ "        \"v\": \"244.2\",\r\n"
-				+ "        \"pf\": \"1.0000\",\r\n"
-				+ "        \"dt\": \"2021-08-07T13:44:25\"\r\n"
-				+ "      }\r\n"
-				+ "    ]\r\n"
-				+ "  }\r\n"
-				+ "}";
+		String json = "{\n" +
+				"    \"header\": {\n" +
+				"        \"mid\": 888001,\n" +
+				"        \"msn\": \"201906000020\"\n" +
+				"    },\n" +
+				"    \"payload\": {\n" +
+				"        \"id\": \"201906000018\",\n" +
+				"        \"cmd\": \"PW0\",\n" +
+				"        \"p1\": \"0\",\n" +
+				"        \"p2\": \"0\"\n" +
+				"    }\n" +
+				"}";
 
-		SimpleDateFormat sf = new SimpleDateFormat();
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "Meter/Grp30/Req", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+
+		/*SimpleDateFormat sf = new SimpleDateFormat();
 		sf.setTimeZone(UTC);
 		sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 		Date newDate = sf.parse("2021-07-07T13:44:25Z");
@@ -893,6 +883,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 				break;
 			}
 			System.out.println(newDate);
-		}
+		}*/
 	}
 }
