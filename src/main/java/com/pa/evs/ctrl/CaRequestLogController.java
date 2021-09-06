@@ -54,10 +54,13 @@ public class CaRequestLogController {
     }
     
     @PostMapping(RestPath.CA_REQUEST_LOG)
-    public ResponseEntity<?> save(HttpServletRequest httpServletRequest, @RequestBody CaRequestLogDto dto) {
-        
-        caRequestLogService.save(dto);
-        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    public ResponseDto<?> save(HttpServletRequest httpServletRequest, @RequestBody CaRequestLogDto dto) {
+        try {
+            caRequestLogService.save(dto);
+            return ResponseDto.<Object>builder().success(true).build();
+        } catch (Exception e) {
+            return ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build();
+        }
     }
     
     @GetMapping(RestPath.CA_REQUEST_LOG_GET_CIDS)

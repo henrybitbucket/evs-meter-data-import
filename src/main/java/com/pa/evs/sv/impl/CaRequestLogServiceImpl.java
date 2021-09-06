@@ -1,5 +1,6 @@
 package com.pa.evs.sv.impl;
 
+import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.CARequestLog;
@@ -7,6 +8,7 @@ import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.CsvUtils;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -47,7 +49,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	}
 
     @Override
-    public void save(CaRequestLogDto dto) {
+    public void save(CaRequestLogDto dto) throws Exception {
         CARequestLog ca = null;
         Calendar c = Calendar.getInstance();
         
@@ -55,6 +57,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Optional<CARequestLog> opt = caRequestLogRepository.findById(dto.getId());
             if (opt.isPresent()) {
                 ca = opt.get();
+                
+                if (StringUtils.isNotBlank(dto.getMsn()) && BooleanUtils.isTrue(caRequestLogRepository.existsByMsn(dto.getMsn()))) {
+                    throw new Exception(Message.MSN_WAS_ASSIGNED);
+                }
                 ca.setModifyDate(c.getTime());
             } else {
                 ca = new CARequestLog();

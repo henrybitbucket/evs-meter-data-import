@@ -14,7 +14,7 @@ public interface CaRequestLogService {
     
 	Optional<CARequestLog> findByUid(String uid);
 	
-	void save(CaRequestLogDto dto);
+	void save(CaRequestLogDto dto) throws Exception;
 
 	void linkMsn(Map<String, Object> map);
 	

@@ -12,4 +12,5 @@ public interface Message {
     String SLACK_BOT_ALREADY = "Slack bot already enable";
     String YES_NO_MESSAGE = "Please say yes or no. Thanks";
     String FIRMWARE_NOT_FOUND = "Firmware not found!";
+    String MSN_WAS_ASSIGNED = "MSN was assigned for another UID";
 }
