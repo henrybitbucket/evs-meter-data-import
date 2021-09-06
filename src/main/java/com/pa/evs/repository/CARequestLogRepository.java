@@ -35,5 +35,6 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	@Query(value = "SELECT DISTINCT cid FROM {h-schema}ca_request_log", nativeQuery = true)
 	List<String> getCids();
 	
+    @Query(value = "select exists (select * from {h-schema}ca_request_log where upper(msn) = upper(?1))", nativeQuery = true)
     Boolean existsByMsn(String msn);
 }
