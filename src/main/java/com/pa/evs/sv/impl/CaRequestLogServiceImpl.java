@@ -52,13 +52,15 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     public void save(CaRequestLogDto dto) throws Exception {
         CARequestLog ca = null;
         Calendar c = Calendar.getInstance();
-        
+        if (StringUtils.isNotBlank(dto.getMsn())) {
+        	dto.setMsn(dto.getMsn().trim());
+        }
         if (dto.getId() != null) {
             Optional<CARequestLog> opt = caRequestLogRepository.findById(dto.getId());
             if (opt.isPresent()) {
                 ca = opt.get();
                 
-                if (StringUtils.isNotBlank(dto.getMsn()) && BooleanUtils.isTrue(caRequestLogRepository.existsByMsn(dto.getMsn()))) {
+                if (StringUtils.isNotBlank(dto.getMsn()) && !dto.getMsn().equalsIgnoreCase(ca.getMsn()) && BooleanUtils.isTrue(caRequestLogRepository.existsByMsn(dto.getMsn()))) {
                     throw new Exception(Message.MSN_WAS_ASSIGNED);
                 }
                 ca.setModifyDate(c.getTime());
