@@ -94,15 +94,15 @@ public class CommonController {
     
     @PostMapping("/api/command")//http://localhost:8080/api/command
     public ResponseEntity<?> sendCommand(
-    		HttpServletRequest httpServletRequest,
-    		@RequestBody Command command
-    		) throws Exception {
-    	
-		try {
-			Optional<CARequestLog> ca = caRequestLogService.findByUid(command.getUid());
-			if(!ca.isPresent()) {
-				return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).build());
-			}
+            HttpServletRequest httpServletRequest,
+            @RequestBody Command command
+            ) throws Exception {
+        
+        try {
+            Optional<CARequestLog> ca = caRequestLogService.findByUid(command.getUid());
+            if(!ca.isPresent()) {
+                return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).build());
+            }
 
             Map<String, Object> data = command.getData();
             SimpleMap<String, Object> map = SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd());
@@ -114,16 +114,19 @@ public class CommonController {
 
             String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
 
-			evsPAService.publish(alias + command.getUid(), SimpleMap.init(
-					"header", SimpleMap.init("uid", command.getUid()).more("mid", evsPAService.nextvalMID()).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
-				).more(
-					"payload", map
-				), command.getCmd());
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
-			return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
-		}
-        return ResponseEntity.ok(ResponseDto.builder().success(true).build());
+            Object mid = evsPAService.nextvalMID();
+            evsPAService.publish(alias + command.getUid(), SimpleMap.init(
+                    "header", SimpleMap.init("uid", command.getUid()).more("mid", mid).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
+                ).more(
+                    "payload", map
+                ), command.getCmd());
+            
+            Thread.sleep(2000l);
+            return ResponseEntity.ok(ResponseDto.builder().success(true).response(mid).build());
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
     }
     
     @PostMapping("/api/link-msn")
@@ -208,7 +211,7 @@ public class CommonController {
 
 
     @PostMapping("/api/logs")
-    public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, @RequestBody Map<String, String> map) throws Exception {
+    public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, @RequestBody Map<String, Object> map) throws Exception {
         List<Log> list;
         try {
             list = logService.getRelatedLogs(map);

@@ -7,7 +7,7 @@ import java.util.Map;
 
 public interface LogService {
 
-    List<Log> getRelatedLogs(Map<String, String> map);
+    List<Log> getRelatedLogs(Map<String, Object> map);
 
 	Object getMeterLog(Map<String, Object> map);
 

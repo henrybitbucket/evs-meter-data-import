@@ -97,13 +97,17 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Long fromDate = (Long) options.get("fromDate");
             Long toDate = (Long) options.get("toDate");
             String status = (String) options.get("status");
-            String query = (String) options.get("query");
+            String queryUid = (String) options.get("queryUid");
+            String queryMsn = (String) options.get("queryMsn");
             List<String> cids = (List<String>) options.get("selectedCids");
             
             sqlCommonBuilder.append(" WHERE ");
             
-            if (StringUtils.isNotBlank(query)) {
-                sqlCommonBuilder.append(" uid like '%" + query + "%' AND ");
+            if (StringUtils.isNotBlank(queryUid)) {
+                sqlCommonBuilder.append(" uid like '%" + queryUid + "%' AND ");
+            }
+            if (StringUtils.isNotBlank(queryMsn)) {
+                sqlCommonBuilder.append(" msn like '%" + queryMsn + "%' AND ");
             }
                 
             if (StringUtils.isNotBlank(status)) {
@@ -120,12 +124,28 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 }
                 sqlCommonBuilder.append(" ) ");
             } else {
-                sqlCommonBuilder.append(" (( ");
-                sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
-                sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + " ) OR ( ");
-                sqlCommonBuilder.append(" activateDate >= " + fromDate);
-                sqlCommonBuilder.append(" AND activateDate <= " + toDate);
-                sqlCommonBuilder.append(" )) ");
+                if (fromDate != null && toDate == null) {
+                    sqlCommonBuilder.append(" (( ");
+                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
+                    sqlCommonBuilder.append(" OR ");
+                    sqlCommonBuilder.append(" activateDate >= " + fromDate);
+                    sqlCommonBuilder.append(" )) ");
+                } else if (fromDate == null && toDate != null) {
+                    sqlCommonBuilder.append(" (( ");
+                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
+                    sqlCommonBuilder.append(" OR ");
+                    sqlCommonBuilder.append(" activateDate <= " + toDate);
+                    sqlCommonBuilder.append(" )) ");
+                } else if (fromDate != null && toDate != null) {
+                    sqlCommonBuilder.append(" (( ");
+                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
+                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + " ) OR ( ");
+                    sqlCommonBuilder.append(" activateDate >= " + fromDate);
+                    sqlCommonBuilder.append(" AND activateDate <= " + toDate);
+                    sqlCommonBuilder.append(" )) ");
+                } else if (fromDate == null && toDate == null) {
+                    sqlCommonBuilder.append(" 1 = 1 ");
+                }
             }
             
             if (!CollectionUtils.isEmpty(cids)) {

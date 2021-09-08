@@ -29,5 +29,8 @@ public interface LogRepository extends JpaRepository<Log, Long> {
 	
 	@Query(value = "SELECT * FROM {h-schema}log WHERE uid = ?1 AND msn = ?2 and p_type = ?3 ORDER BY id DESC LIMIT 20 OFFSET 0", nativeQuery = true)
 	List<Log> getRelatedLogsWithPtype(final String uid, final String msn, final String ptype);
+	
+	@Query(value = "SELECT * FROM {h-schema}log WHERE uid = ?1 AND msn = ?2 and mid = ?3", nativeQuery = true)
+	List<Log> getRelatedLogsFilterMid(final String uid, final String msn, final Long mid);
 
 }

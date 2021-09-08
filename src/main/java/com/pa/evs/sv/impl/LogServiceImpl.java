@@ -30,13 +30,18 @@ public class LogServiceImpl implements LogService {
     EntityManager em;
     
     @Override
-    public List<Log> getRelatedLogs(Map<String, String> map) {
-        String uid = map.get("uid");
-        String msn = map.get("msn");
-        String ptype = map.get("ptype");
+    public List<Log> getRelatedLogs(Map<String, Object> map) {
+        String uid = (String) map.get("uid");
+        String msn = (String) map.get("msn");
+        String ptype = (String) map.get("ptype");
+        String midString = (String) map.get("mid");
         
         if (StringUtils.isNotBlank(ptype)) {
             return logRepository.getRelatedLogsWithPtype(uid, msn, ptype);
+        }
+        if (StringUtils.isNotBlank(midString)) {
+            Long mid = Long.parseLong(midString);
+            return logRepository.getRelatedLogsFilterMid(uid, msn, mid);
         }
         
         return logRepository.getRelatedLogs(uid, msn);
