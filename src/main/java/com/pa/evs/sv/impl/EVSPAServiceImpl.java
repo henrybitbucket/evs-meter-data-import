@@ -385,6 +385,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			//save log
 			Log log = Log.build(data, "SUBSCRIBE");
 			log.setMqttAddress(evsPAMQTTAddress);
+			log.setTopic(evsPASubscribeTopic);
 			logRepository.save(log);
 
 			Map<String, Object> header = (Map<String, Object>) data.get("header");
@@ -420,6 +421,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			//save log
 			Log log = Log.build(data, "SUBSCRIBE");
 			log.setMqttAddress(evsPAMQTTAddress);
+			log.setTopic(evsPARespSubscribeTopic);
 			logRepository.save(log);
 
 			//TO-DO: need base on mid of response and mapping with request and update status log to know
@@ -473,6 +475,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			//save log
 			Log log = Log.build(data, "SUBSCRIBE");
 			log.setMqttAddress(evsPAMQTTAddress);
+			log.setTopic(evsMeterLocalSubscribeTopic);
 			logRepository.save(log);
 			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 			String cmd = (String)payload.get("cmd");
