@@ -69,9 +69,8 @@ public class Log extends BaseEntity {
 				.sig((String)header.get("sig"))
 				.status(header.get("status") == null ? null : ((Number)(header.get("status"))).longValue())
 				.pId(payload == null ? null : (payload.get("id") + ""))
-				.pType(payload == null ? null : (payload.get("type") + ""))
+				.pType(payload == null ? "" : (payload.get("type") == null ? payload.get("cmd") + "" : payload.get("type") + ""))
 				.raw(new ObjectMapper().writeValueAsString(data))
-				.topic((String)data.get("topic"))
 				.build();
 	}
 }
