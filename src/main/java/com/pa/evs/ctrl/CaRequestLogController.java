@@ -36,7 +36,7 @@ public class CaRequestLogController {
         PaginDto<CARequestLog> result = caRequestLogService.search(pagin);
         
         if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
-            File file = caRequestLogService.downloadCsv(result.getResults());
+            File file = caRequestLogService.downloadCsv(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
             String fileName = file.getName();
             
             try (FileInputStream fis = new FileInputStream(file)) {

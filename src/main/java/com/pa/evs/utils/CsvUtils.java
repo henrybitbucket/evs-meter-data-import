@@ -36,20 +36,20 @@ public class CsvUtils {
         }
     }
 
-    public static File writeCaRequestLogCsv(List<CARequestLog> listInput, String fileName) throws IOException{
+    public static File writeCaRequestLogCsv(List<CARequestLog> listInput, String fileName, Long activateDate) throws IOException{
         listInput = listInput.stream().filter(input -> !input.getUid().equals("server.csr")).collect(Collectors.toList());
         List<String> headers = Arrays.asList(
                 "eSIM", "Profile", "ActivationDate(yyyy-mm-dd)");
-        return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName));
+        return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
     }
     
-    private static List<String> toCSVRecord(int idx, CARequestLog caRequestLog) {
+    private static List<String> toCSVRecord(int idx, CARequestLog caRequestLog, Long activateDate) {
         List<String> record = new ArrayList<>();
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         record.add(caRequestLog.getCid());
         record.add("METER_SG_TATA_PA_B01");
-        record.add(caRequestLog.getActivateDate() != null ? sdf.format(new Date(caRequestLog.getActivateDate())) : "");
+        record.add(sdf.format(new Date(activateDate)));
         
         return postProcessCsv(record);
     }
@@ -70,7 +70,7 @@ public class CsvUtils {
         return escaped;
     }
     
-    public static <T> File toCsv(List<String> headers, List<T> items, CsvRecordConverter<T> converter, String filePath)
+    public static <T> File toCsv(List<String> headers, List<T> items, CsvRecordConverter<T> converter, String filePath, Long activateDate)
             throws IOException {
         String[] headersArr = new String[headers.size()];
         for (int i = 0; i < headers.size(); i++) {
@@ -89,7 +89,7 @@ public class CsvUtils {
             if (!CollectionUtils.isEmpty(items)) {
                 int idx = 0;
                 for (T item : items) {
-                    List<String> record = converter.toCSVRecord(idx, item);
+                    List<String> record = converter.toCSVRecord(idx, item, activateDate);
                     for (int i = 0; i < record.size(); i++) {
                         record.set(i, '\ufeff' + record.get(i));
                     }
@@ -107,6 +107,6 @@ public class CsvUtils {
     
     @FunctionalInterface
     public interface CsvRecordConverter<T> {
-        List<String> toCSVRecord(int idx, T record);
+        List<String> toCSVRecord(int idx, T record, Long activateDate);
     }
 }

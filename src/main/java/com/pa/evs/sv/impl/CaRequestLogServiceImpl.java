@@ -199,11 +199,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	}
 
     @Override
-    public File downloadCsv(List<CARequestLog> listInput) throws IOException {
+    public File downloadCsv(List<CARequestLog> listInput, Long activateDate) throws IOException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         String tag = sdf.format(new Date());
         String fileName = "ca_request_log-" + tag + ".csv";
-        return CsvUtils.writeCaRequestLogCsv(listInput, fileName);
+        return CsvUtils.writeCaRequestLogCsv(listInput, fileName, activateDate);
     }
     
     @Override
