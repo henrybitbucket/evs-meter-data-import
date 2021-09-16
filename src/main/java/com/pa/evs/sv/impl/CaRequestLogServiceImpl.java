@@ -97,14 +97,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Long fromDate = (Long) options.get("fromDate");
             Long toDate = (Long) options.get("toDate");
             String status = (String) options.get("status");
-            String queryUid = (String) options.get("queryUid");
+            String querySn = (String) options.get("querySn");
             String queryMsn = (String) options.get("queryMsn");
             List<String> cids = (List<String>) options.get("selectedCids");
             
             sqlCommonBuilder.append(" WHERE ");
             
-            if (StringUtils.isNotBlank(queryUid)) {
-                sqlCommonBuilder.append(" uid like '%" + queryUid + "%' AND ");
+            if (StringUtils.isNotBlank(querySn)) {
+                sqlCommonBuilder.append(" upper(sn) like '%" + querySn.toUpperCase() + "%' AND ");
             }
             if (StringUtils.isNotBlank(queryMsn)) {
                 sqlCommonBuilder.append(" msn like '%" + queryMsn + "%' AND ");
