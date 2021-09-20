@@ -294,9 +294,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if (data1.get("ver") != null) {
 				log.setVer(data1.get("ver") + "");
 			}
-			if (log.getOid() != null) {
-				LOG.debug(">Test " + log.getOid() + " " + CommonController.MID_TYPE.get(log.getOid()) + " " + CommonController.MID_TYPE);	
-			}
 			if ("TCM_INFO".equalsIgnoreCase(CommonController.MID_TYPE.get(log.getOid()))) {
 				LOG.debug("GET TCM_INFO: " + log.getOid() + " " + log.getMsn());
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
