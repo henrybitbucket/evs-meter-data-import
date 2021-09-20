@@ -3,6 +3,7 @@ package com.pa.evs.ctrl;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -68,7 +69,7 @@ public class CommonController {
 	
 	private String caFolder;
 	
-	public static final Map<Object, String> MID_TYPE = new ConcurrentHashMap<>();
+	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
     @GetMapping("/api/message/publish")//http://localhost:8080/api/message/publish?topic=a&messageKey=1&message=a
     public ResponseEntity<?> sendGMessage(
