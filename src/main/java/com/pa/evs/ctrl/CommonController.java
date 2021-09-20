@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
@@ -67,6 +68,8 @@ public class CommonController {
 	
 	private String caFolder;
 	
+	public static final Map<Object, String> MID_TYPE = new ConcurrentHashMap<>();
+	
     @GetMapping("/api/message/publish")//http://localhost:8080/api/message/publish?topic=a&messageKey=1&message=a
     public ResponseEntity<?> sendGMessage(
     		HttpServletRequest httpServletRequest,
@@ -115,6 +118,10 @@ public class CommonController {
             String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
 
             Object mid = evsPAService.nextvalMID();
+            if ("TCM_INFO".equalsIgnoreCase(command.getType())) {
+            	LOG.debug("sendCommand TCM_INFO: " + mid + " " + ca.get().getMsn());
+            	MID_TYPE.put(mid, command.getType());
+            }
             evsPAService.publish(alias + command.getUid(), SimpleMap.init(
                     "header", SimpleMap.init("uid", command.getUid()).more("mid", mid).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
                 ).more(

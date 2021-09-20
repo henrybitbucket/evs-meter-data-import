@@ -54,6 +54,9 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "require_refresh")
 	private Boolean requireRefresh;
 	
+	@Column
+	private String ver;
+	
 	public static CARequestLog build(Map<String, Object> data) throws Exception {
 		
 		return builder()

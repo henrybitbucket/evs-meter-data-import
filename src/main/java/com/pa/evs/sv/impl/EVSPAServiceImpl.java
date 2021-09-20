@@ -13,6 +13,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.MeterLog;
@@ -30,7 +31,6 @@ import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
-import io.swagger.models.auth.In;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -291,6 +291,19 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if (firmwareService.getLatestFirmware().getVersion().equals(data1.get("ver"))) {
 				status = -1;
 			}
+			if (data1.get("ver") != null) {
+				log.setVer(data1.get("ver") + "");
+			}
+			if ("TCM_INFO".equalsIgnoreCase(CommonController.MID_TYPE.get(log.getMid()))) {
+				LOG.debug("GET TCM_INFO: " + log.getMid() + " " + log.getMsn());
+				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
+				if (opt.isPresent()) {
+					opt.get().setVer(log.getVer());
+					caRequestLogRepository.save(opt.get());
+				}
+				CommonController.MID_TYPE.remove(log.getMid());
+				return;
+			}
 		}
 
 		if (status == 0) {
@@ -386,6 +399,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Log log = Log.build(data, "SUBSCRIBE");
 			log.setMqttAddress(evsPAMQTTAddress);
 			log.setTopic(evsPASubscribeTopic);
+			LOG.debug(">Subscribe " + log.getMid() + " " + log.getMsn() + " " + log.getPType() + " " + evsPASubscribeTopic);
 			logRepository.save(log);
 
 			Map<String, Object> header = (Map<String, Object>) data.get("header");
@@ -422,6 +436,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Log log = Log.build(data, "SUBSCRIBE");
 			log.setMqttAddress(evsPAMQTTAddress);
 			log.setTopic(evsPARespSubscribeTopic);
+			LOG.debug(">Subscribe " + log.getMid() + " " + log.getMsn() + " " + log.getPType() + " " + evsPARespSubscribeTopic);
 			logRepository.save(log);
 
 			//TO-DO: need base on mid of response and mapping with request and update status log to know
@@ -476,6 +491,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Log log = Log.build(data, "SUBSCRIBE");
 			log.setMqttAddress(evsPAMQTTAddress);
 			log.setTopic(evsMeterLocalSubscribeTopic);
+			LOG.debug(">Subscribe " + log.getMid() + " " + log.getMsn() + " " + log.getPType() + " " + evsMeterLocalSubscribeTopic);
 			logRepository.save(log);
 			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 			String cmd = (String)payload.get("cmd");

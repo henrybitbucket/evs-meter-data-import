@@ -53,6 +53,8 @@ public class Log extends BaseEntity {
 	
 	private String topic;
 	
+	private String ver;
+	
 	@SuppressWarnings("unchecked")
 	public static Log build(Map<String, Object> data, String type) throws Exception {
 		
