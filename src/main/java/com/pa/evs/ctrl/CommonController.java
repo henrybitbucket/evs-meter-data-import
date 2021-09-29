@@ -147,6 +147,7 @@ public class CommonController {
 			caRequestLogService.linkMsn(map);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build());
 		}
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }

@@ -191,6 +191,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	public void linkMsn(Map<String, Object> map) {
     	
     	if (map.get("sn") != null) {
+            if (BooleanUtils.isTrue(caRequestLogRepository.existsByMsn((String)map.get("msn")))) {
+                throw new RuntimeException("Invalid MSN, MSN is being linked !");
+            }
     		caRequestLogRepository.linkMsnBySn((String)map.get("sn"), (String)map.get("msn"));
     	} else if (map.get("uuid") != null) {
     		caRequestLogRepository.linkMsn((String)map.get("uuid"), (String)map.get("msn"));
