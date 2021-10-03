@@ -48,7 +48,7 @@ public class CsvUtils {
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         record.add(caRequestLog.getCid());
-        record.add("METER_SG_TATA_PA_B01");
+        record.add(StringUtils.isBlank(caRequestLog.getProfile()) ? "METER_SG_TATA_PA_B01" : caRequestLog.getProfile());
         record.add(sdf.format(new Date(activateDate)));
         
         return postProcessCsv(record);

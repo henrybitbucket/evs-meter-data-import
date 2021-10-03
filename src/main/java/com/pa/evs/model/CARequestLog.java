@@ -5,6 +5,7 @@ import java.util.Map;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
 import lombok.AllArgsConstructor;
@@ -56,6 +57,9 @@ public class CARequestLog extends BaseEntity {
 	
 	@Column
 	private String ver;
+	
+	@Transient
+	private String profile;
 	
 	public static CARequestLog build(Map<String, Object> data) throws Exception {
 		

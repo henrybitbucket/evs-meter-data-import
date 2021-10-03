@@ -36,6 +36,7 @@ public class CaRequestLogController {
         PaginDto<CARequestLog> result = caRequestLogService.search(pagin);
         
         if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
+        	result.getResults().forEach(o -> o.setProfile((String)pagin.getOptions().get("profile")));
             File file = caRequestLogService.downloadCsv(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
             String fileName = file.getName();
             

@@ -99,6 +99,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             String status = (String) options.get("status");
             String querySn = (String) options.get("querySn");
             String queryMsn = (String) options.get("queryMsn");
+            String querySnOrCid = (String) options.get("querySnOrCid");
             List<String> cids = (List<String>) options.get("selectedCids");
             
             sqlCommonBuilder.append(" WHERE ");
@@ -108,6 +109,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             }
             if (StringUtils.isNotBlank(queryMsn)) {
                 sqlCommonBuilder.append(" msn like '%" + queryMsn + "%' AND ");
+            }
+            if (StringUtils.isNotBlank(querySnOrCid)) {
+                sqlCommonBuilder.append(" (lower(sn) like '%" + querySnOrCid.toLowerCase().trim() + "%' or lower(cid) like '%" + querySnOrCid.toLowerCase().trim() + "%') AND ");
             }
                 
             if (StringUtils.isNotBlank(status)) {
