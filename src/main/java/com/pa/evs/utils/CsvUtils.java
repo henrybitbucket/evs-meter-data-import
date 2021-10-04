@@ -74,7 +74,7 @@ public class CsvUtils {
             throws IOException {
         String[] headersArr = new String[headers.size()];
         for (int i = 0; i < headers.size(); i++) {
-            headersArr[i] = '\ufeff' + headers.get(i);
+			headersArr[i] = /* '\ufeff' + */headers.get(i);
         }
         File f = new File(filePath);
         Writer fileWriter = new FileWriter(f);
@@ -91,7 +91,7 @@ public class CsvUtils {
                 for (T item : items) {
                     List<String> record = converter.toCSVRecord(idx, item, activateDate);
                     for (int i = 0; i < record.size(); i++) {
-                        record.set(i, '\ufeff' + record.get(i));
+						record.set(i, /* '\ufeff' + */record.get(i));
                     }
                     csvPrinter.printRecord(record);
                     idx++;
