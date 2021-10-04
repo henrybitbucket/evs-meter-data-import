@@ -107,9 +107,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (StringUtils.isNotBlank(querySn)) {
                 sqlCommonBuilder.append(" upper(sn) like '%" + querySn.toUpperCase() + "%' AND ");
             }
-            if (Boolean.parseBoolean(options.get("cidIsNotNull") + "")) {
-                sqlCommonBuilder.append(" cid is not null AND ");
-            }
             if (StringUtils.isNotBlank(queryMsn)) {
                 sqlCommonBuilder.append(" msn like '%" + queryMsn + "%' AND ");
             }
@@ -162,6 +159,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 }
                 sqlCommonBuilder.append(" ) ");
             }
+        }
+        
+        if (Boolean.parseBoolean(pagin.getOptions().get("cidIsNotNull") + "")) {
+            sqlCommonBuilder.append(" AND cid is not null AND cid <> '' ");
         }
         
         sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id asc");
