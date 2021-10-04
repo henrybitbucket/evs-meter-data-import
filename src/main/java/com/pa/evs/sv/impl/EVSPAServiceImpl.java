@@ -726,11 +726,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 				}
 			}
 
-			//refresh CID
-			caRequestLogService.getCids(true);
-
 		}, "REQUEST_CA");
 		
+		SchedulerHelper.scheduleJob("0/5 * * * * ? *", () -> {
+			//refresh CID
+			try {
+				caRequestLogService.getCids(true);
+			} catch (Exception e) {
+				//
+			}
+			
+		}, "REFRESH_CID");
 		try {
 			initS3();
 		} catch (Exception e) {/**/}
