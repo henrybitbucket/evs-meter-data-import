@@ -4,6 +4,9 @@ import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
@@ -16,9 +19,9 @@ import lombok.Setter;
 
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Getter
 @Setter
-@Builder
 @Entity
 @Table(name = "ca_request_log", uniqueConstraints = @UniqueConstraint(columnNames = "uid"))
 public class CARequestLog extends BaseEntity {
@@ -57,6 +60,20 @@ public class CARequestLog extends BaseEntity {
 	
 	@Column
 	private String ver;
+	
+	@Builder.Default
+	@Column(name = "group_id")
+	private Long groupId = 1L;
+
+	@Column(name = "address")
+	private String address;
+	
+	@Column(name = "coupled_datetime")
+	private Long coupledDatetime;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "installer")
+	private Users installer;
 	
 	@Transient
 	private String profile;

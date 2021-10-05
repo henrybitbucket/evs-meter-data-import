@@ -238,6 +238,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		roleMap.put("SUB_ADMIN", "SubAdmin");
 		roleMap.put("STAFF", "Staff");
 		roleMap.put("SUPER_ADMIN", "Super Admin");
+		roleMap.put("INSTALLER", "Installer");
 		
 		List<String> existsRoles = roleRepository.findByNameIn(roleMap.keySet())
 				.stream().map(r -> r.getName()).collect(Collectors.toList());
