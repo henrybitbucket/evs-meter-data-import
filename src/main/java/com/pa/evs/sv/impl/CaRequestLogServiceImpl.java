@@ -5,6 +5,7 @@ import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Users;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.security.user.JwtUser;
@@ -224,15 +225,17 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         			if (map.get("groupId") instanceof Number) {
         				ca.setGroupId(((Number)map.get("groupId")).longValue());
         			}
-        			if (map.get("coupledDatetime") instanceof Number) {
-        				ca.setCoupledDatetime(((Number)map.get("coupledDatetime")).longValue());
-        			}
+    				ca.setCoupledDatetime(System.currentTimeMillis());
         			ca.setAddress((String)map.get("address"));
         			if (map.get("request") instanceof HttpServletRequest) {
         				ResponseDto<JwtUser> us = authenticationService.getUser((HttpServletRequest) map.get("request"));
         				if (us != null && us.getResponse() != null) {
         					LOG.info("link to user: " + us.getResponse().getUsername());
-        					ca.setInstaller(userRepository.findByUsername(us.getResponse().getUsername()));
+        					Users user = userRepository.findByUsername(us.getResponse().getUsername());
+        					if (user == null) {
+        						user = userRepository.findByEmail(us.getResponse().getUsername());
+        					}
+        					ca.setInstaller(user);
         				}
         			}
         			caRequestLogRepository.save(ca);
