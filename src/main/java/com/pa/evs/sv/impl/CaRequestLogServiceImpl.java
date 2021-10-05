@@ -3,14 +3,20 @@ package com.pa.evs.sv.impl;
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.UserRepository;
+import com.pa.evs.security.user.JwtUser;
+import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.CsvUtils;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -18,6 +24,8 @@ import org.springframework.util.CollectionUtils;
 import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
+import javax.servlet.http.HttpServletRequest;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -31,6 +39,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
+	
+    @Autowired
+    private AuthenticationService authenticationService;
+    
+    @Autowired
+    private UserRepository userRepository;
 	
 	@Autowired
 	EntityManager em;
@@ -203,6 +217,30 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 throw new RuntimeException("Invalid MSN, MSN is being linked !");
             }
     		caRequestLogRepository.linkMsnBySn((String)map.get("sn"), (String)map.get("msn"));
+    		try {
+    			Optional<CARequestLog> opt = caRequestLogRepository.findBySn((String)map.get("sn"));
+        		if (opt.isPresent()) {
+        			CARequestLog ca = opt.get();
+        			if (map.get("groupId") instanceof Number) {
+        				ca.setGroupId(((Number)map.get("groupId")).longValue());
+        			}
+        			if (map.get("coupledDatetime") instanceof Number) {
+        				ca.setCoupledDatetime(((Number)map.get("coupledDatetime")).longValue());
+        			}
+        			ca.setAddress((String)map.get("address"));
+        			if (map.get("request") instanceof HttpServletRequest) {
+        				ResponseDto<JwtUser> us = authenticationService.getUser((HttpServletRequest) map.get("request"));
+        				if (us != null && us.getResponse() != null) {
+        					LOG.info("link to user: " + us.getResponse().getUsername());
+        					ca.setInstaller(userRepository.findByUsername(us.getResponse().getUsername()));
+        				}
+        			}
+        			caRequestLogRepository.save(ca);
+        		}
+			} catch (Exception e) {
+				LOG.error("link error " + e.getMessage(), e);
+			}
+    		
     	} else if (map.get("uuid") != null) {
     		caRequestLogRepository.linkMsn((String)map.get("uuid"), (String)map.get("msn"));
     	}

@@ -140,10 +140,12 @@ public class CommonController {
     @PostMapping("/api/link-msn")
     public ResponseEntity<?> linkMsn(
     		HttpServletRequest httpServletRequest,
-    		@RequestBody Map<String, Object> map
+    		@RequestBody Map<String, Object> map,
+    		HttpServletRequest request
     		) throws Exception {
     	
 		try {
+			map.put("request", request);
 			caRequestLogService.linkMsn(map);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
