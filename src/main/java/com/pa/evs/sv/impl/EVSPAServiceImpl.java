@@ -14,6 +14,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.ctrl.CommonController;
+import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.MeterLog;
@@ -82,6 +83,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
 
 	private Map<Long, Long> localMap;
+	private Map<Long, Long> onboardingMap;
 	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
@@ -256,6 +258,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			sendToMeterClient(data, type);
 		}
 
+		updateLastSubscribe(log);
+
 		//Publish
 		data = new HashMap<>();
 		Map<String, Object> header = new HashMap<>();
@@ -352,6 +356,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if(status == 0) {
 			status = validateUidAndMsn(log);
 		}
+		updateLastSubscribe(log);
 
 		//publish
 		Map<String, Object> data = new HashMap<>();
@@ -388,6 +393,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			header.put("sig", sig);
 
 			publish(alias + log.getUid(), data, type);
+			//put mid to check receive response or not
+			onboardingMap.put(log.getMid(), log.getMid());
 		}
 	}
 	
@@ -477,10 +484,29 @@ public class EVSPAServiceImpl implements EVSPAService {
 				}
 				publish(evsMeterLocalRespSubscribeTopic, data, type);
 				localMap.remove(log.getOid());
+			} else if (onboardingMap.get(log.getRmid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				if (log.getStatus() == 0) {
+					Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+					if (opt.isPresent()) {
+						opt.get().setOnboardingDatetime(Calendar.getInstance().getTimeInMillis());
+						caRequestLogRepository.save(opt.get());
+					}
+				} else {
+					LOG.debug("Onboarding process fail, MID = {}", log.getRmid());
+				}
 			}
+			updateLastSubscribe(log);
 
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
+		}
+	}
+
+	private void updateLastSubscribe(Log log) {
+		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+		if (opt.isPresent()) {
+			opt.get().setLastSubscribeDatetime(Calendar.getInstance().getTimeInMillis());
+			caRequestLogRepository.save(opt.get());
 		}
 	}
 
@@ -626,6 +652,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 		LOG.debug("abc");
 		localMap = new ConcurrentHashMap<>();
+		onboardingMap = new ConcurrentHashMap<>();
 		
 		prepareFolder();
 		
@@ -705,8 +732,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 						//caLog.setStartDate((Long)data.get("startDate"));
 						//caLog.setEndDate((Long)data.get("endDate"));
 						caLog.setMsn(null);
-						caLog.setStatus(CARequestLog.Status.ACTIVATED);
-						caLog.setActivateDate(Calendar.getInstance().getTimeInMillis());
+						caLog.setStatus(DeviceStatus.NOT_COUPLED);
+						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
 						caLog.setRequireRefresh(false);
 						caRequestLogRepository.save(caLog);
 						File out = new File(ful.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));

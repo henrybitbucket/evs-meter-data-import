@@ -5,6 +5,7 @@ import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Group;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.UserRepository;
@@ -12,12 +13,9 @@ import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.CsvUtils;
-
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -26,11 +24,16 @@ import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.servlet.http.HttpServletRequest;
-
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Component
 @SuppressWarnings("unchecked")
@@ -40,6 +43,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
+
+	@Autowired
+    private GroupRepository groupRepository;
 	
     @Autowired
     private AuthenticationService authenticationService;
@@ -223,7 +229,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         		if (opt.isPresent()) {
         			CARequestLog ca = opt.get();
         			if (map.get("groupId") instanceof Number) {
-        				ca.setGroupId(((Number)map.get("groupId")).longValue());
+        			    Optional<Group> group = groupRepository.findById(((Number)map.get("groupId")).longValue());
+                        ca.setGroup(group.get());
         			}
     				ca.setCoupledDatetime(System.currentTimeMillis());
         			ca.setAddress((String)map.get("address"));

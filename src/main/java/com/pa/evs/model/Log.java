@@ -30,6 +30,8 @@ public class Log extends BaseEntity {
     private String uid;
     
     private Long oid;
+
+    private Long rmid;
 	
     private String gid;
 	
@@ -66,6 +68,7 @@ public class Log extends BaseEntity {
 				.mid(header.get("mid") == null ? null : ((Number)(header.get("mid"))).longValue())
 				.uid((String)header.get("uid"))
 				.oid(header.get("oid") == null ? null : ((Number)(header.get("oid"))).longValue())
+				.rmid(header.get("rmid") == null ? null : ((Number)(header.get("rmid"))).longValue())
 				.gid((String)header.get("gid"))
 				.msn((String)header.get("msn"))
 				.sig((String)header.get("sig"))
