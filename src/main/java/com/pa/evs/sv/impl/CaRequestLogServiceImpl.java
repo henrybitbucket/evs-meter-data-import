@@ -4,6 +4,7 @@ import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.Users;
@@ -232,6 +233,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         			    Optional<Group> group = groupRepository.findById(((Number)map.get("groupId")).longValue());
                         ca.setGroup(group.get());
         			}
+        			ca.setStatus(DeviceStatus.COUPLED);
     				ca.setCoupledDatetime(System.currentTimeMillis());
         			ca.setAddress((String)map.get("address"));
         			if (map.get("request") instanceof HttpServletRequest) {
