@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.Command;
 import com.pa.evs.dto.FirmwareDto;
+import com.pa.evs.dto.GroupDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
@@ -41,6 +42,7 @@ import com.pa.evs.model.Log;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
+import com.pa.evs.sv.GroupService;
 import com.pa.evs.sv.LogService;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.RSAUtil;
@@ -61,6 +63,8 @@ public class CommonController {
 	@Autowired FirmwareService firmwareService;
 
 	@Autowired LogService logService;
+	
+	@Autowired GroupService groupService;
 
 	@Value("${evs.pa.privatekey.path}")
 	private String pkPath;
@@ -222,14 +226,13 @@ public class CommonController {
 
 
     @PostMapping("/api/logs")
-    public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, @RequestBody Map<String, Object> map) throws Exception {
-        List<Log> list;
+    public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, @RequestBody PaginDto<Log> pagin) throws Exception {
         try {
-            list = logService.getRelatedLogs(map);
+            logService.getRelatedLogs(pagin);
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
-        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(list).build());
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     
     @PostMapping("/api/meter/logs")
@@ -239,6 +242,36 @@ public class CommonController {
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
+    }
+
+    @PostMapping("/api/device-groups")
+    public ResponseEntity<Object> getDeviceGroups(HttpServletRequest httpServletRequest, @RequestBody PaginDto<GroupDto> pagin) throws Exception {
+        try {
+            groupService.getGroupDevies(pagin);
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+    }
+    
+    @PostMapping("/api/device-group")
+    public ResponseEntity<Object> addGroupDevice(HttpServletRequest httpServletRequest, @RequestBody GroupDto dto) throws Exception {
+        try {
+            groupService.addGroupDevice(dto);
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @DeleteMapping("/api/device-group/{id}")
+    public ResponseEntity<Object> deleteGroupDevice(HttpServletRequest httpServletRequest, @PathVariable final Long id) throws Exception {
+        try {
+            groupService.deleteGroupDevice(id);
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
 	@PostConstruct

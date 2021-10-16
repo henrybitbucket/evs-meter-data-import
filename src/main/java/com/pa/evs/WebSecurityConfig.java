@@ -91,6 +91,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/api/device-csr/upload").permitAll()
 				.antMatchers("/api/meter/logs").permitAll()
 				.antMatchers("/api//ca-request-logs").permitAll()
+				.antMatchers("/api/device-groups").permitAll()
+				.antMatchers("/api/device-group**").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

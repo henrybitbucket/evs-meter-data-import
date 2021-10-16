@@ -1,5 +1,6 @@
 package com.pa.evs.sv.impl;
 
+import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.MeterLog;
 import com.pa.evs.repository.LogRepository;
@@ -11,11 +12,9 @@ import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class LogServiceImpl implements LogService {
@@ -29,22 +28,65 @@ public class LogServiceImpl implements LogService {
     @Autowired
     EntityManager em;
     
+    @SuppressWarnings("unchecked")
     @Override
-    public List<Log> getRelatedLogs(Map<String, Object> map) {
+    public PaginDto<Log> getRelatedLogs(PaginDto<Log> pagin) throws ParseException {
+        
+        Map<String, Object> map = pagin.getOptions();
+        
         String uid = (String) map.get("uid");
         String msn = (String) map.get("msn");
         String ptype = (String) map.get("ptype");
         String midString = (String) map.get("mid");
+        Long fromDate = (Long) map.get("fromDate");
+        Long toDate = (Long) map.get("toDate");
+        
+        StringBuilder sqlBuilder = new StringBuilder("FROM Log");
+        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Log");
+        
+        StringBuilder sqlCommonBuilder = new StringBuilder();
+        sqlCommonBuilder.append(" WHERE uid = '" + uid + "' AND msn = '" + msn + "'");
         
         if (StringUtils.isNotBlank(ptype)) {
-            return logRepository.getRelatedLogsWithPtype(uid, msn, ptype);
+            sqlCommonBuilder.append(" AND upper(ptype) like '%" + ptype.toUpperCase() + "%'");
         }
         if (StringUtils.isNotBlank(midString)) {
-            Long mid = Long.parseLong(midString);
-            return logRepository.getRelatedLogsFilterMid(uid, msn, mid);
+            sqlCommonBuilder.append(" AND (mid = " + midString + " OR oid = " + midString + " OR rmid = " + midString + ")");
+        }
+        if (fromDate != null) {
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
+        }
+        if (toDate != null) {
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
         }
         
-        return logRepository.getRelatedLogs(uid, msn);
+        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id asc");
+        sqlCountBuilder.append(sqlCommonBuilder);
+        
+        if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+            pagin.setOffset(0);
+        }
+        
+        if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+            pagin.setLimit(100);
+        }
+        
+        Query queryCount = em.createQuery(sqlCountBuilder.toString());
+        
+        Long count = ((Number)queryCount.getSingleResult()).longValue();
+        pagin.setTotalRows(count);
+        pagin.setResults(new ArrayList<>());
+        if (count == 0l) {
+            return pagin;
+        }
+        
+        Query query = em.createQuery(sqlBuilder.toString());
+        query.setFirstResult(pagin.getOffset());
+        query.setMaxResults(pagin.getLimit());
+        
+        pagin.setResults(query.getResultList());
+        return pagin;
+        
     }
     
     @Override

@@ -9,6 +9,7 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.GroupRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
