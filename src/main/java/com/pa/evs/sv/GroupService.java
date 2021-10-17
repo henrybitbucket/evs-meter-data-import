@@ -8,7 +8,7 @@ import com.pa.evs.dto.PaginDto;
 
 public interface GroupService {
     
-    void addGroupDevice(GroupDto dto) throws IOException;
+    void addGroupDevice(GroupDto dto) throws IOException, Exception;
 
     void getGroupDevies(PaginDto<GroupDto> dto);
 

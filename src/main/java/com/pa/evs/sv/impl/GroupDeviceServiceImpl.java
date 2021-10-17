@@ -27,11 +27,21 @@ public class GroupDeviceServiceImpl implements GroupService {
     @Autowired GroupRepository groupRepository;
 
     @Override
-    public void addGroupDevice(GroupDto dto) throws IOException {
-        Group entity = new Group();
-        entity.setName(dto.getName());
-        entity.setRemark(dto.getRemark());
-        groupRepository.save(entity);
+    public void addGroupDevice(GroupDto dto) throws Exception {
+        if (dto.getId() == null) {
+            Group entity = new Group();
+            entity.setName(dto.getName());
+            entity.setRemark(dto.getRemark());
+            groupRepository.save(entity);
+        } else {
+            Optional<Group> opt = groupRepository.findById(dto.getId());
+            if (!opt.isPresent()) {
+                throw new Exception(String.format("No group with id %d found!", dto.getId()));
+            }
+            Group group = opt.get();
+            group.setRemark(dto.getRemark());
+            groupRepository.save(group);
+        }
     }
 
     @SuppressWarnings("unchecked")

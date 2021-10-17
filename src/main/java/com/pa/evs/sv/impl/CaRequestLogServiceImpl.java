@@ -102,6 +102,25 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         ca.setRaw(dto.getRaw());
         ca.setStartDate(dto.getStartDate());
         ca.setEndDate(dto.getEndDate());
+        ca.setAddress(dto.getAddress());
+        
+        if (dto.getInstaller() != null) {
+            Optional<Users> installer = userRepository.findById(dto.getInstaller().longValue());
+            if (installer.isPresent()) {
+                ca.setInstaller(installer.get());
+            }
+        } else {
+            ca.setInstaller(null);
+        }
+        if (dto.getGroup() != null) {
+            Optional<Group> group = groupRepository.findById(dto.getGroup().longValue());
+            if (group.isPresent()) {
+                ca.setGroup(group.get());
+            }
+        } else {
+            ca.setGroup(null);
+        }
+        
         caRequestLogRepository.save(ca);
         
     }
@@ -212,7 +231,23 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         query.setFirstResult(pagin.getOffset());
         query.setMaxResults(pagin.getLimit());
         
-        pagin.setResults(query.getResultList());
+        List<CARequestLog> list = query.getResultList();
+        
+        list.forEach(li -> {
+            Users user = li.getInstaller();
+            Users installer = new Users();
+            Group group = li.getGroup();
+            Group newGroup = new Group();
+            
+            if (user != null) {
+                installer.setUserId(user.getUserId());
+                installer.setUsername(user.getUsername());
+            }
+            
+            li.setInstaller(installer);
+        });
+        
+        pagin.setResults(list);
         return pagin;
         
     }

@@ -76,6 +76,12 @@ public class CARequestLog extends BaseEntity {
 
 	@Column(name = "last_subscribe_datetime")
 	private Long lastSubscribeDatetime;
+	
+	@Column(name = "activation_date")
+    private Long activationDate;
+	
+	@Column(name = "deactivation_date")
+    private Long deactivationDate;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "installer")

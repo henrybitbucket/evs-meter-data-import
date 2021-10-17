@@ -30,4 +30,10 @@ public class CaRequestLogDto {
     private Long endDate;
     
     private Boolean requireRefresh;
+    
+    private Integer installer;
+    
+    private Integer group;
+    
+    private String address;
 }

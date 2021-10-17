@@ -9,6 +9,8 @@ import lombok.Setter;
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
@@ -16,6 +18,7 @@ import javax.persistence.Table;
 @Builder
 @Entity
 @Table(name = "group")
+@JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
 public class Group extends BaseEntity {
 
     private String name;
