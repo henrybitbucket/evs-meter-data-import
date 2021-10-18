@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
@@ -23,4 +24,6 @@ public interface CaRequestLogService {
     File downloadCsv(List<CARequestLog> listInput, Long activateDate) throws IOException;
 
     List<String> getCids(boolean refresh);
+
+    void setActivationDate(Long activationDate, Set<Long> ids);
 }

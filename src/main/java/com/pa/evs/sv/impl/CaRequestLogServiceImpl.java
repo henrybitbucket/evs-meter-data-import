@@ -36,6 +36,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 @SuppressWarnings("unchecked")
@@ -309,5 +310,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	        cacheCids = caRequestLogRepository.getCids();
         }
 	    return cacheCids;
+    }
+
+    @Override
+    public void setActivationDate(Long activationDate, Set<Long> ids) {
+        caRequestLogRepository.setActivationDate(activationDate, ids);
     }
 }

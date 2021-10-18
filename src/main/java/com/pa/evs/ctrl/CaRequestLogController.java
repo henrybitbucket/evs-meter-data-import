@@ -23,6 +23,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 @RestController
 public class CaRequestLogController {
@@ -50,6 +53,9 @@ public class CaRequestLogController {
             } finally {
                 FileUtils.deleteDirectory(file.getParentFile());
             }
+            //set Activation date
+            Set<Long> ids = result.getResults().stream().map(CARequestLog::getId).collect(Collectors.toSet());
+            caRequestLogService.setActivationDate((Long) pagin.getOptions().get("activateDate"), ids);
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }

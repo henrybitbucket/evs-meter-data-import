@@ -2,6 +2,7 @@ package com.pa.evs.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -39,4 +40,9 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	
     @Query(value = "select exists (select * from {h-schema}ca_request_log where upper(msn) = upper(?1))", nativeQuery = true)
     Boolean existsByMsn(String msn);
+
+	@Modifying
+	@Query("UPDATE CARequestLog set activationDate = ?1 WHERE id in ?2")
+	void setActivationDate(Long activationDate,Set<Long> ids);
+	
 }
