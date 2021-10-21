@@ -494,6 +494,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				} else {
 					LOG.debug("Onboarding process fail, MID = {}", log.getRmid());
 				}
+				onboardingMap.remove(log.getRmid());
 			}
 			updateLastSubscribe(log);
 
