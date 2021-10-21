@@ -505,6 +505,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private void updateLastSubscribe(Log log) {
 		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 		if (opt.isPresent()) {
+			opt.get().setStatus(DeviceStatus.ONLINE);
 			opt.get().setLastSubscribeDatetime(Calendar.getInstance().getTimeInMillis());
 			caRequestLogRepository.save(opt.get());
 		}
@@ -650,7 +651,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@PostConstruct
 	public void init() {
 
-		LOG.debug("abc");
+		LOG.debug("Init EVSPAServiceImpl ... ");
 		localMap = new ConcurrentHashMap<>();
 		onboardingMap = new ConcurrentHashMap<>();
 		

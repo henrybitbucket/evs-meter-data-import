@@ -44,5 +44,9 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	@Modifying
 	@Query("UPDATE CARequestLog set activationDate = ?1 WHERE id in ?2")
 	void setActivationDate(Long activationDate,Set<Long> ids);
-	
+
+	@Modifying
+	@Query(value = "UPDATE {h-schema}ca_request_log set status = 'OFFLINE'", nativeQuery = true)
+	void checkDevicesOffline();
+
 }

@@ -316,4 +316,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     public void setActivationDate(Long activationDate, Set<Long> ids) {
         caRequestLogRepository.setActivationDate(activationDate, ids);
     }
+
+    @Override
+    public void checkDevicesOffline() {
+        caRequestLogRepository.checkDevicesOffline();
+    }
 }

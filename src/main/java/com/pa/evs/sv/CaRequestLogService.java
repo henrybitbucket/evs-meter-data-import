@@ -26,4 +26,6 @@ public interface CaRequestLogService {
     List<String> getCids(boolean refresh);
 
     void setActivationDate(Long activationDate, Set<Long> ids);
+
+    void checkDevicesOffline();
 }
