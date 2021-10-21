@@ -48,7 +48,7 @@ public class LogServiceImpl implements LogService {
         sqlCommonBuilder.append(" WHERE uid = '" + uid + "' AND msn = '" + msn + "'");
         
         if (StringUtils.isNotBlank(ptype)) {
-            sqlCommonBuilder.append(" AND upper(ptype) like '%" + ptype.toUpperCase() + "%'");
+            sqlCommonBuilder.append(" AND upper(pType) like '%" + ptype.toUpperCase() + "%'");
         }
         if (StringUtils.isNotBlank(midString)) {
             sqlCommonBuilder.append(" AND (mid = " + midString + " OR oid = " + midString + " OR rmid = " + midString + ")");
@@ -60,7 +60,7 @@ public class LogServiceImpl implements LogService {
             sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
         }
         
-        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id asc");
+        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY createDate DESC");
         sqlCountBuilder.append(sqlCommonBuilder);
         
         if (pagin.getOffset() == null || pagin.getOffset() < 0) {
