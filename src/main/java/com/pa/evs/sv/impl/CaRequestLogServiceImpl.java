@@ -132,10 +132,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM CARequestLog");
         
         StringBuilder sqlCommonBuilder = new StringBuilder();
-        if (CollectionUtils.isEmpty(pagin.getOptions())) {
+        if (CollectionUtils.isEmpty(pagin.getOptions()) || (
+                pagin.getOptions().size() == 1 
+                && BooleanUtils.isTrue(BooleanUtils.toBoolean((String) pagin.getOptions().get("queryAllDate")))
+            )) {
             sqlCommonBuilder.append(" WHERE 1=1 ");
         } else {
-            
             Map<String, Object> options = pagin.getOptions();
             Long fromDate = (Long) options.get("fromDate");
             Long toDate = (Long) options.get("toDate");
@@ -144,8 +146,83 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             String queryMsn = (String) options.get("queryMsn");
             String querySnOrCid = (String) options.get("querySnOrCid");
             List<String> cids = (List<String>) options.get("selectedCids");
+            String queryUuid = (String) options.get("queryUuid");
+            String queryEsimId = (String) options.get("queryEsimId");
+            Integer queryGroup = StringUtils.isNotBlank((String) options.get("queryGroup")) ? Integer.valueOf((String) options.get("queryGroup")) : null;
+            Boolean enrollmentDate = BooleanUtils.toBoolean((String) options.get("queryEnrollmentDate"));
+            Boolean coupledDate = BooleanUtils.toBoolean((String) options.get("queryCoupledDate"));
+            Boolean activationDate = BooleanUtils.toBoolean((String) options.get("queryActivationDate"));
+            Boolean deactivationDate = BooleanUtils.toBoolean((String) options.get("queryDeactivationDate"));
+            Boolean allDate = BooleanUtils.toBoolean((String) options.get("queryAllDate"));
             
-            sqlCommonBuilder.append(" WHERE ");
+            sqlCommonBuilder.append(" WHERE     ");
+            
+            if (BooleanUtils.isTrue(allDate)) {
+                if (fromDate != null && toDate == null) {
+                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate + "AND");
+                }
+                if (fromDate == null && toDate != null) {
+                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + "AND");
+                }
+                if (fromDate != null && toDate != null) {
+                    sqlCommonBuilder.append(" ( EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
+                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + ") AND ");
+                }
+            } else {
+                sqlCommonBuilder.append(" ( ");
+                if (BooleanUtils.isTrue(enrollmentDate)) {
+                    if (fromDate != null && toDate == null) {
+                        sqlCommonBuilder.append(" enrollmentDatetime >= " + fromDate + "OR");
+                    }
+                    if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" enrollmentDatetime <= " + toDate + "OR");
+                    }
+                    if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" ( enrollmentDatetime >= " + fromDate);
+                        sqlCommonBuilder.append(" AND enrollmentDatetime <= " + toDate + ") OR");
+                    }
+                }
+                if (BooleanUtils.isTrue(coupledDate)) {
+                    if (fromDate != null && toDate == null) {
+                        sqlCommonBuilder.append(" coupledDatetime >= " + fromDate + "OR");
+                    }
+                    if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" coupledDatetime <= " + toDate + "OR");
+                    }
+                    if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" ( coupledDatetime >= " + fromDate);
+                        sqlCommonBuilder.append(" AND coupledDatetime <= " + toDate + ") OR");
+                    }          
+                                }
+                if (BooleanUtils.isTrue(activationDate)) {
+                    if (fromDate != null && toDate == null) {
+                        sqlCommonBuilder.append(" activationDate >= " + fromDate + "OR");
+                    }
+                    if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" activationDate <= " + toDate + "OR");
+                    }
+                    if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" ( activationDate >= " + fromDate);
+                        sqlCommonBuilder.append(" AND activationDate <= " + toDate + ") OR");
+                    }
+                }
+                if (BooleanUtils.isTrue(deactivationDate)) {
+                    if (fromDate != null && toDate == null) {
+                        sqlCommonBuilder.append(" deactivationDate >= " + fromDate + "OR");
+                    }
+                    if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" deactivationDate <= " + toDate + "OR");
+                    }
+                    if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" ( deactivationDate >= " + fromDate);
+                        sqlCommonBuilder.append(" AND deactivationDate <= " + toDate + ") OR");
+                    }
+                }
+                sqlCommonBuilder.delete(sqlCommonBuilder.length() - 2, sqlCommonBuilder.length());
+                if (sqlCommonBuilder.length() >= 30) {
+                    sqlCommonBuilder.append(" ) AND ");
+                }
+            }
             
             if (StringUtils.isNotBlank(querySn)) {
                 sqlCommonBuilder.append(" upper(sn) like '%" + querySn.toUpperCase() + "%' AND ");
@@ -158,41 +235,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             }
                 
             if (StringUtils.isNotBlank(status)) {
-                sqlCommonBuilder.append(" ( ");
-                if (status.equals("create_date")) {
-                    sqlCommonBuilder.append(" status = 0");
-                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
-                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
-                }
-                if (status.equals("activate_date")) {
-                    sqlCommonBuilder.append(" status = 1");
-                    sqlCommonBuilder.append(" AND activateDate >= " + fromDate);
-                    sqlCommonBuilder.append(" AND activateDate <= " + toDate);
-                }
-                sqlCommonBuilder.append(" ) ");
-            } else {
-                if (fromDate != null && toDate == null) {
-                    sqlCommonBuilder.append(" (( ");
-                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
-                    sqlCommonBuilder.append(" OR ");
-                    sqlCommonBuilder.append(" activateDate >= " + fromDate);
-                    sqlCommonBuilder.append(" )) ");
-                } else if (fromDate == null && toDate != null) {
-                    sqlCommonBuilder.append(" (( ");
-                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
-                    sqlCommonBuilder.append(" OR ");
-                    sqlCommonBuilder.append(" activateDate <= " + toDate);
-                    sqlCommonBuilder.append(" )) ");
-                } else if (fromDate != null && toDate != null) {
-                    sqlCommonBuilder.append(" (( ");
-                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
-                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + " ) OR ( ");
-                    sqlCommonBuilder.append(" activateDate >= " + fromDate);
-                    sqlCommonBuilder.append(" AND activateDate <= " + toDate);
-                    sqlCommonBuilder.append(" )) ");
-                } else if (fromDate == null && toDate == null) {
-                    sqlCommonBuilder.append(" 1 = 1 ");
-                }
+                sqlCommonBuilder.append(" status = '" + status + "' AND ");
             }
             
             if (!CollectionUtils.isEmpty(cids)) {
@@ -202,10 +245,24 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 }
                 sqlCommonBuilder.append(" ) ");
             }
+            if (StringUtils.isNotBlank(queryUuid)) {
+                sqlCommonBuilder.append(" upper(uid) like '%" + queryUuid.toUpperCase() + "%' AND ");
+            }
+            if (StringUtils.isNotBlank(queryEsimId)) {
+                sqlCommonBuilder.append(" upper(cid) like '%" + queryEsimId.toUpperCase() + "%' AND ");
+            }
+            if (queryGroup != null) {
+                sqlCommonBuilder.append(" group = " + queryGroup + " AND ");
+            }
+            sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
         }
         
         if (Boolean.parseBoolean(pagin.getOptions().get("cidIsNotNull") + "")) {
-            sqlCommonBuilder.append(" AND cid is not null AND cid <> '' ");
+            sqlCommonBuilder.append(" cid is not null AND cid <> '' ");
+        }
+        
+        if (sqlCommonBuilder.length() < 10) {
+            sqlCommonBuilder.append(" 1 = 1 ");
         }
         
         sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id asc");
@@ -237,8 +294,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         list.forEach(li -> {
             Users user = li.getInstaller();
             Users installer = new Users();
-            Group group = li.getGroup();
-            Group newGroup = new Group();
             
             if (user != null) {
                 installer.setUserId(user.getUserId());

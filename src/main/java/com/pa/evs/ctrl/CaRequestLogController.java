@@ -9,6 +9,7 @@ import com.pa.evs.sv.CaRequestLogService;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -54,8 +55,10 @@ public class CaRequestLogController {
                 FileUtils.deleteDirectory(file.getParentFile());
             }
             //set Activation date
-            Set<Long> ids = result.getResults().stream().map(CARequestLog::getId).collect(Collectors.toSet());
-            caRequestLogService.setActivationDate((Long) pagin.getOptions().get("activateDate"), ids);
+            if (pagin.getOptions().get("activateDate") != null) {
+                Set<Long> ids = result.getResults().stream().map(CARequestLog::getId).collect(Collectors.toSet());
+                caRequestLogService.setActivationDate((Long) pagin.getOptions().get("activateDate"), ids);
+            }
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
