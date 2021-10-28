@@ -57,6 +57,9 @@ public class Log extends BaseEntity {
 	
 	private String ver;
 	
+	@Column(name = "rep_status")
+	private Long repStatus;
+	
 	@SuppressWarnings("unchecked")
 	public static Log build(Map<String, Object> data, String type) throws Exception {
 		
@@ -76,6 +79,7 @@ public class Log extends BaseEntity {
 				.pId(payload == null ? null : (payload.get("id") + ""))
 				.pType(payload == null ? "" : (payload.get("type") == null ? payload.get("cmd") + "" : payload.get("type") + ""))
 				.raw(new ObjectMapper().writeValueAsString(data))
+				.repStatus("publish".equalsIgnoreCase(type) ? -999l : null) //-999l PUBLISH status waiting
 				.build();
 	}
 }

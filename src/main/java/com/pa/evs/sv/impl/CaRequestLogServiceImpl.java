@@ -376,4 +376,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     public void checkDevicesOffline() {
         caRequestLogRepository.checkDevicesOffline();
     }
+
+	@Override
+	public Number countAlarms() {
+		return caRequestLogRepository.countAlarms();
+	}
 }
