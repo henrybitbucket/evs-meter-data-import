@@ -28,4 +28,6 @@ public interface CaRequestLogService {
     void setActivationDate(Long activationDate, Set<Long> ids);
 
     void checkDevicesOffline();
+    
+    Number countAlarms();
 }

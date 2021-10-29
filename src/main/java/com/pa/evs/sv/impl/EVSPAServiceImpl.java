@@ -408,6 +408,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			log.setTopic(evsPASubscribeTopic);
 			LOG.debug(">Subscribe " + log.getMid() + " " + log.getMsn() + " " + log.getPType() + " " + evsPASubscribeTopic);
 			logRepository.save(log);
+			updatePublishStatus(log);
 
 			Map<String, Object> header = (Map<String, Object>) data.get("header");
 			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
@@ -445,6 +446,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			log.setTopic(evsPARespSubscribeTopic);
 			LOG.debug(">Subscribe " + log.getMid() + " " + log.getMsn() + " " + log.getPType() + " " + evsPARespSubscribeTopic);
 			logRepository.save(log);
+			updatePublishStatus(log);
 
 			//TO-DO: need base on mid of response and mapping with request and update status log to know
 			//got response or not
@@ -521,6 +523,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			log.setTopic(evsMeterLocalSubscribeTopic);
 			LOG.debug(">Subscribe " + log.getMid() + " " + log.getMsn() + " " + log.getPType() + " " + evsMeterLocalSubscribeTopic);
 			logRepository.save(log);
+			updatePublishStatus(log);
+			
 			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 			String cmd = (String)payload.get("cmd");
 			if("MDT".equals(cmd)) {
@@ -881,6 +885,18 @@ public class EVSPAServiceImpl implements EVSPAService {
         }
 
         return result;
+    }
+    
+    void updatePublishStatus(Log log) {
+    	try {
+    		Long status = log.getStatus();
+        	if (status != null) {
+        		Long mId = log.getOid();
+        		logRepository.updateStatus(status, mId);
+        	}
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
     }
 	
 	public static void main(String[] args) throws Exception {

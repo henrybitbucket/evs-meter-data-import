@@ -16,4 +16,6 @@ public interface RestPath {
 	String GET_CA_REQUEST_LOG = API + "/ca-request-logs";
 	String CA_REQUEST_LOG = API + "/ca-request-log";
 	String CA_REQUEST_LOG_GET_CIDS = API + "/ca-request-log/cids";
+	
+	String CA_COUNT_ALARMS = API + "/count-alarms";
 }

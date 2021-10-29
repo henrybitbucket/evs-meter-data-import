@@ -6,6 +6,8 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.utils.SimpleMap;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -77,5 +79,11 @@ public class CaRequestLogController {
     public ResponseEntity<?> getCids(HttpServletRequest httpServletRequest) {
         List<String> cids = caRequestLogService.getCids(false);
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(cids).build());
+    }
+    
+    @GetMapping(RestPath.CA_COUNT_ALARMS)
+    public ResponseEntity<?> countAlarms(HttpServletRequest httpServletRequest) {
+        Number countAlarms = caRequestLogService.countAlarms();
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(SimpleMap.init("countAlarms", countAlarms)).build());
     }
 }
