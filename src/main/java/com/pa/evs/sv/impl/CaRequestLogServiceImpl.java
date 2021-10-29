@@ -258,7 +258,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         }
         
         if (Boolean.parseBoolean(pagin.getOptions().get("cidIsNotNull") + "")) {
-            sqlCommonBuilder.append(" AND cid is not null AND cid <> '' ");
+            if (StringUtils.isNotBlank((String) pagin.getOptions().get("querySnOrCid"))) {
+                sqlCommonBuilder.append(" AND ");
+            }
+            sqlCommonBuilder.append(" cid is not null AND cid <> '' ");
         }
         
         if (sqlCommonBuilder.length() < 10) {
