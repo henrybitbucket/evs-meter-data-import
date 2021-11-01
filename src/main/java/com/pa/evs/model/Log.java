@@ -79,7 +79,7 @@ public class Log extends BaseEntity {
 				.pId(payload == null ? null : (payload.get("id") + ""))
 				.pType(payload == null ? "" : (payload.get("type") == null ? payload.get("cmd") + "" : payload.get("type") + ""))
 				.raw(new ObjectMapper().writeValueAsString(data))
-				.repStatus("publish".equalsIgnoreCase(type) ? -999l : null) //-999l PUBLISH status waiting
+				.repStatus((header.get("mid") != null && "publish".equalsIgnoreCase(type)) ? -999l : null) //-999l PUBLISH status waiting
 				.build();
 	}
 }
