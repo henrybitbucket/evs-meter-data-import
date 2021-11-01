@@ -25,5 +25,28 @@ public class PAEVSScheduledJobs {
         caRequestLogService.checkDevicesOffline();
         LOG.debug("end CheckDevicesOfflineThe at: {}", dateFormat.format(new Date()));
     }
-
+    
+    @Scheduled(fixedRate = 5*60*1000)
+    public void checkDatabase() {
+        try {
+            LOG.debug("start checking database at: {}", dateFormat.format(new Date()));
+            caRequestLogService.checkDatabase();
+            LOG.debug("end checking database at: {}", dateFormat.format(new Date()));
+        } catch (Exception e) {
+            //
+        }
+        
+    }
+    
+    @Scheduled(fixedRate = 5*60*1000)
+    public void checkServerCertificate() {
+        try {
+            LOG.debug("start checking server certificate at: {}", dateFormat.format(new Date()));
+            caRequestLogService.checkServerCertificate();
+            LOG.debug("end checking server certificate at: {}", dateFormat.format(new Date()));
+        } catch (Exception e) {
+            //
+        }
+        
+    }
 }

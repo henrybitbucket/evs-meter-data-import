@@ -15,12 +15,16 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.ScreenMonitorKey;
+import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.MeterLog;
+import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.MeterLogRepository;
+import com.pa.evs.repository.ScreenMonitoringRepository;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
@@ -102,6 +106,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired private FirmwareService firmwareService;
 
 	@Autowired private MeterLogRepository meterLogRepository;
+	
+	@Autowired private ScreenMonitoringRepository screenMonitoringRepository;
 	
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
 	
@@ -769,10 +775,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 				//
 			}
 			
-		}, "REFRESH_CID");
+		}, "REFRESH_CID");		
+		
 		try {
 			initS3();
 		} catch (Exception e) {/**/}
+		
 		try {
 			logRepository.createMIDSeq();
 			Number lastValue = logRepository.nextvalMID();
@@ -780,7 +788,50 @@ public class EVSPAServiceImpl implements EVSPAService {
 				logRepository.nextvalMID(10000l);
 			}
 		} catch (Exception e) {/**/}
+		
+		try {
+            caRequestLogService.getCids(true);
+        } catch (Exception e) {
+            //
+        }
+		
+		Optional<ScreenMonitoring> optSystem = screenMonitoringRepository.findByKey(ScreenMonitorKey.SYSTEM_START);
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
+		try {
+		    checkAndSaveScreenMonitoring(optSystem, sdf.format(new Date()), ScreenMonitorStatus.OK, ScreenMonitorKey.SYSTEM_START);
+		} catch (Exception e) {
+		    checkAndSaveScreenMonitoring(optSystem, sdf.format(new Date()), ScreenMonitorStatus.NOT_OK, ScreenMonitorKey.SYSTEM_START);
+		}
+		
+		Optional<CARequestLog> optCaServer = caRequestLogRepository.findByUid("server.csr");
+		Optional<ScreenMonitoring> optServer = screenMonitoringRepository.findByKey(ScreenMonitorKey.SERVER_CERTIFICATE);
+		try {
+		    Long expiredDate = optCaServer.get().getEndDate();
+		    if (expiredDate > System.currentTimeMillis()) {
+		        checkAndSaveScreenMonitoring(optServer, sdf.format(new Date(expiredDate)), ScreenMonitorStatus.OK, ScreenMonitorKey.SERVER_CERTIFICATE);
+		    } else {
+		        checkAndSaveScreenMonitoring(optServer, sdf.format(new Date(expiredDate)), ScreenMonitorStatus.EXPIRED, ScreenMonitorKey.SERVER_CERTIFICATE);
+		    }
+        } catch (Exception e) {
+            checkAndSaveScreenMonitoring(optServer, "N/A", ScreenMonitorStatus.NOT_OK, ScreenMonitorKey.SERVER_CERTIFICATE);
+        }
 	}
+	
+	private void checkAndSaveScreenMonitoring (Optional<ScreenMonitoring> smOpt, String value, ScreenMonitorStatus status, ScreenMonitorKey key) {
+        if (smOpt.isPresent()) {
+            ScreenMonitoring sm = smOpt.get();
+            sm.setStatus(status);
+            sm.setValue(value);
+            screenMonitoringRepository.save(sm);
+        } else {
+            ScreenMonitoring sm = new ScreenMonitoring();
+            sm.setKey(key);
+            sm.setStatus(status);
+            sm.setValue(value);
+            screenMonitoringRepository.save(sm);
+        }
+    }
 	
 	@SuppressWarnings("deprecation")
 	private void initS3() {

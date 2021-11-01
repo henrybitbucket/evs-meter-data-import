@@ -5,11 +5,15 @@ import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.ScreenMonitorKey;
+import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
+import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.GroupRepository;
+import com.pa.evs.repository.ScreenMonitoringRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
@@ -30,9 +34,11 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -58,6 +64,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	EntityManager em;
+
+	@Autowired
+	private ScreenMonitoringRepository screenMonitoringRepository;
 
     private List<String> cacheCids = Collections.EMPTY_LIST;
 
@@ -384,4 +393,74 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	public Number countAlarms() {
 		return caRequestLogRepository.countAlarms();
 	}
+
+    @Override
+    public Map<String, Integer> getCountDevices() {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        Integer totalDevices = caRequestLogRepository.findAll().size();
+        result.put("totalDevices", totalDevices);
+        Arrays.asList(DeviceStatus.values()).forEach(status -> {
+            Integer count = caRequestLogRepository.getCountDevicesByStatus(status);
+            result.put(status.name(), count);
+        });
+        return result;
+    }
+
+    @Override
+    public void checkDatabase() {
+        Optional<ScreenMonitoring> opt = screenMonitoringRepository.findByKey(ScreenMonitorKey.DB_CHECK);
+        Long dbSize = caRequestLogRepository.getDatabaseSize();
+        if (dbSize != null) {
+            dbSize = dbSize / (1024 * 1024);
+        }
+        try {
+            caRequestLogRepository.checkDatabase();
+            if (dbSize != null) {
+                checkAndSaveScreenMonitoring(opt, dbSize.toString(), ScreenMonitorStatus.OK, ScreenMonitorKey.DB_CHECK);
+            } else {
+                checkAndSaveScreenMonitoring(opt, "N/A", ScreenMonitorStatus.OK, ScreenMonitorKey.DB_CHECK);
+            }
+        } catch (Exception e) {
+            checkAndSaveScreenMonitoring(opt, "N/A", ScreenMonitorStatus.NOT_OK, ScreenMonitorKey.DB_CHECK);
+        }
+    }
+
+    private void checkAndSaveScreenMonitoring (Optional<ScreenMonitoring> smOpt, String value, ScreenMonitorStatus status, ScreenMonitorKey key) {
+        if (smOpt.isPresent()) {
+            ScreenMonitoring sm = smOpt.get();
+            sm.setStatus(status);
+            sm.setValue(value);
+            screenMonitoringRepository.save(sm);
+        } else {
+            ScreenMonitoring sm = new ScreenMonitoring();
+            sm.setKey(ScreenMonitorKey.DB_CHECK);
+            sm.setStatus(status);
+            sm.setValue(value);
+            screenMonitoringRepository.save(sm);
+        }
+    }
+
+    @Override
+    public List<ScreenMonitoring> getDashboard() {
+        List<ScreenMonitoring> result = screenMonitoringRepository.findAll();
+        return result;
+    }
+
+    @Override
+    public void checkServerCertificate() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Optional<CARequestLog> optCaServer = caRequestLogRepository.findByUid("server.csr");
+        Optional<ScreenMonitoring> optServer = screenMonitoringRepository.findByKey(ScreenMonitorKey.SERVER_CERTIFICATE);
+        try {
+            Long expiredDate = optCaServer.get().getEndDate();
+            if (expiredDate > System.currentTimeMillis()) {
+                checkAndSaveScreenMonitoring(optServer, sdf.format(new Date(expiredDate)), ScreenMonitorStatus.OK, ScreenMonitorKey.SERVER_CERTIFICATE);
+            } else {
+                checkAndSaveScreenMonitoring(optServer, sdf.format(new Date(expiredDate)), ScreenMonitorStatus.EXPIRED, ScreenMonitorKey.SERVER_CERTIFICATE);
+            }
+        } catch (Exception e) {
+            checkAndSaveScreenMonitoring(optServer, "N/A", ScreenMonitorStatus.NOT_OK, ScreenMonitorKey.SERVER_CERTIFICATE);
+        }
+
+    }
 }

@@ -5,13 +5,13 @@ import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.SimpleMap;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -26,8 +26,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @RestController
@@ -80,10 +80,22 @@ public class CaRequestLogController {
         List<String> cids = caRequestLogService.getCids(false);
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(cids).build());
     }
-    
+
     @GetMapping(RestPath.CA_COUNT_ALARMS)
     public ResponseEntity<?> countAlarms(HttpServletRequest httpServletRequest) {
         Number countAlarms = caRequestLogService.countAlarms();
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(SimpleMap.init("countAlarms", countAlarms)).build());
+    }
+
+    @GetMapping(RestPath.CA_REQUEST_LOG_GET_COUNT_DEVICES)
+    public ResponseEntity<?> getCountDevices(HttpServletRequest httpServletRequest) {
+        Map<String, Integer> result = caRequestLogService.getCountDevices();
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(result).build());
+    }
+
+    @GetMapping(RestPath.GET_DASHBOARD)
+    public ResponseEntity<?> getDashboard(HttpServletRequest httpServletRequest) {
+        List<ScreenMonitoring> result = caRequestLogService.getDashboard();
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(result).build());
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.model.CARequestLog;
 
 @Transactional
@@ -48,8 +49,17 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	@Modifying
 	@Query(value = "update {h-schema}ca_request_log set status = 'OFFLINE' where msn is not null and sn is not null and (EXTRACT(EPOCH FROM (SELECT NOW())) * 1000 - COALESCE(last_subscribe_datetime, 0)) > (COALESCE(interval, 60) * 60 * 1000)", nativeQuery = true)
 	void checkDevicesOffline();
-	
+
 	@Query(value = "select count(id) from {h-schema}log where rep_status = -999 and type = 'PUBLISH'", nativeQuery = true)
 	Number countAlarms();
+
+	@Query("SELECT COUNT(*) FROM CARequestLog WHERE status = ?1")
+    Integer getCountDevicesByStatus(DeviceStatus status);
+
+    @Query(value = "SELECT now()", nativeQuery = true)
+    void checkDatabase();
+
+    @Query(value = "SELECT pg_database_size('pa_evs_db')", nativeQuery = true)
+    Long getDatabaseSize();
 
 }

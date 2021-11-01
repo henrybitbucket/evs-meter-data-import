@@ -10,6 +10,7 @@ import java.util.Set;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.ScreenMonitoring;
 
 public interface CaRequestLogService {
     
@@ -28,6 +29,14 @@ public interface CaRequestLogService {
     void setActivationDate(Long activationDate, Set<Long> ids);
 
     void checkDevicesOffline();
-    
+
     Number countAlarms();
+
+    Map<String, Integer> getCountDevices();
+
+    void checkDatabase();
+
+    List<ScreenMonitoring> getDashboard();
+
+    void checkServerCertificate();
 }
