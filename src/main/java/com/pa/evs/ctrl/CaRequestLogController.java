@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
 
 @RestController
 public class CaRequestLogController {
+
+	private Date lastReboot = new Date();
 
     @Autowired
     CaRequestLogService caRequestLogService;
@@ -80,11 +83,15 @@ public class CaRequestLogController {
         List<String> cids = caRequestLogService.getCids(false);
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(cids).build());
     }
-
-    @GetMapping(RestPath.CA_COUNT_ALARMS)
-    public ResponseEntity<?> countAlarms(HttpServletRequest httpServletRequest) {
+    
+    @GetMapping(RestPath.CA_CAL_DASHBOARD)
+    public ResponseEntity<?> calDashboard(HttpServletRequest httpServletRequest) {
         Number countAlarms = caRequestLogService.countAlarms();
-        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(SimpleMap.init("countAlarms", countAlarms)).build());
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(
+        		SimpleMap.init("countAlarms", countAlarms)
+        		.more("critical", 0)
+        		.more("lastReboot", lastReboot.getTime())
+        		).build());
     }
 
     @GetMapping(RestPath.CA_REQUEST_LOG_GET_COUNT_DEVICES)
