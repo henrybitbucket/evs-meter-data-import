@@ -60,6 +60,9 @@ public class Log extends BaseEntity {
 	@Column(name = "rep_status")
 	private Long repStatus;
 	
+	@Column(name = "mark_view")
+	private Integer markView;
+	
 	@SuppressWarnings("unchecked")
 	public static Log build(Map<String, Object> data, String type) throws Exception {
 		

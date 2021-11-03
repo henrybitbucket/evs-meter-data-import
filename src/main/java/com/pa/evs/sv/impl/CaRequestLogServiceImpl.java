@@ -385,6 +385,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	public Number countAlarms() {
 		return caRequestLogRepository.countAlarms();
 	}
+	
+	@Override
+	public void markViewAll() {
+		caRequestLogRepository.markViewAll();
+	}
 
     @Override
     public Map<String, Integer> getCountDevices() {

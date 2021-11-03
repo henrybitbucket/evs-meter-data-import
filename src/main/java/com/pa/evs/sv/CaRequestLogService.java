@@ -39,4 +39,6 @@ public interface CaRequestLogService {
     List<ScreenMonitoring> getDashboard();
 
     void checkServerCertificate();
+
+	void markViewAll();
 }

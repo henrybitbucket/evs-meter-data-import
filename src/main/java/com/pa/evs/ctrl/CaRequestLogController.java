@@ -102,6 +102,12 @@ public class CaRequestLogController {
         		.more("lastReboot", lastReboot.getTime())
         		).build());
     }
+    
+    @PostMapping(RestPath.CA_ALARM_MARK_VIEW_ALL)
+    public ResponseEntity<?> markViewAll(HttpServletRequest httpServletRequest) {
+        caRequestLogService.markViewAll();
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
 
     @GetMapping(RestPath.CA_REQUEST_LOG_GET_COUNT_DEVICES)
     public ResponseEntity<?> getCountDevices(HttpServletRequest httpServletRequest) {
