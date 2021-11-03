@@ -41,7 +41,7 @@ public class LogServiceImpl implements LogService {
         Long fromDate = (Long) map.get("fromDate");
         Long toDate = (Long) map.get("toDate");
         
-        Number repstatus = (Number) map.get("repstatus");
+        Number repStatus = (Number) map.get("repStatus");
         
         StringBuilder sqlBuilder = new StringBuilder("FROM Log");
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Log");
@@ -67,8 +67,12 @@ public class LogServiceImpl implements LogService {
         if (toDate != null) {
             sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
         }
-        if (repstatus != null) {
-        	sqlCommonBuilder.append(" AND repStatus = " + repstatus + "");
+        if (repStatus != null) {
+        	sqlCommonBuilder.append(" AND repStatus = " + repStatus + " ");
+        	if (repStatus.intValue() == -999) {
+        		sqlCommonBuilder.append(" and mid is not null and type = 'PUBLISH' and mark_view <> 1 ");	
+        	}
+        	
         }
         
         sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY createDate DESC");
