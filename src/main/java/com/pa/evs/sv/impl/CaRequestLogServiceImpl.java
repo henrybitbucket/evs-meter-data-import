@@ -23,6 +23,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
@@ -136,6 +137,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PaginDto<CARequestLog> search(PaginDto<CARequestLog> pagin) {
         StringBuilder sqlBuilder = new StringBuilder("FROM CARequestLog");
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM CARequestLog");
@@ -248,11 +250,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             }
             
             if (!CollectionUtils.isEmpty(cids)) {
-                sqlCommonBuilder.append(" AND (cid = '" + cids.get(0) + "'");
+                sqlCommonBuilder.append(" (cid = '" + cids.get(0) + "'");
                 for (int i = 1; i < cids.size(); i++) {
                     sqlCommonBuilder.append(" OR cid = '" + cids.get(i) + "'");
                 }
-                sqlCommonBuilder.append(" ) ");
+                sqlCommonBuilder.append(" ) AND ");
             }
             if (StringUtils.isNotBlank(queryUuid)) {
                 sqlCommonBuilder.append(" upper(uid) like '%" + queryUuid.toUpperCase() + "%' AND ");
@@ -303,18 +305,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         
         List<CARequestLog> list = query.getResultList();
         
-        list.forEach(li -> {
-            Users user = li.getInstaller();
-            Users installer = new Users();
-            
-            if (user != null) {
-                installer.setUserId(user.getUserId());
-                installer.setUsername(user.getUsername());
-            }
-            
-            li.setInstaller(installer);
-        });
-        
         pagin.setResults(list);
         return pagin;
         
@@ -364,6 +354,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	}
 
     @Override
+    @Transactional(readOnly = true)
     public File downloadCsv(List<CARequestLog> listInput, Long activateDate) throws IOException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         String tag = sdf.format(new Date());
@@ -380,6 +371,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void setActivationDate(Long activationDate, Set<Long> ids) {
         caRequestLogRepository.setActivationDate(activationDate, ids);
     }

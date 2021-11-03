@@ -6,6 +6,7 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.ScreenMonitoring;
+import com.pa.evs.model.Users;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.SimpleMap;
 
@@ -43,7 +44,6 @@ public class CaRequestLogController {
     public ResponseEntity<?> getGantryAccess(HttpServletResponse response, @RequestBody PaginDto<CARequestLog> pagin) throws IOException {
         
         PaginDto<CARequestLog> result = caRequestLogService.search(pagin);
-        
         if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
         	result.getResults().forEach(o -> o.setProfile((String)pagin.getOptions().get("profile")));
             File file = caRequestLogService.downloadCsv(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
@@ -65,6 +65,15 @@ public class CaRequestLogController {
                 caRequestLogService.setActivationDate((Long) pagin.getOptions().get("activateDate"), ids);
             }
         }
+        result.getResults().forEach(li -> {
+            Users user = li.getInstaller();
+            Users installer = new Users();
+            if (user != null) {
+                installer.setUserId(user.getUserId());
+                installer.setUsername(user.getUsername());
+                li.setInstaller(installer);
+            }
+        });
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     

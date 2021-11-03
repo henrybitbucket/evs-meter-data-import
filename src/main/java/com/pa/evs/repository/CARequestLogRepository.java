@@ -43,8 +43,8 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
     Boolean existsByMsn(String msn);
 
 	@Modifying
-	@Query("UPDATE CARequestLog set activationDate = ?1 WHERE id in ?2")
-	void setActivationDate(Long activationDate,Set<Long> ids);
+	@Query(value = "update {h-schema}ca_request_log set activation_date = ?1 WHERE id in (?2)", nativeQuery = true)
+	void setActivationDate(Long activationDate, Set<Long> ids);
 
 	@Modifying
 	@Query(value = "update {h-schema}ca_request_log set status = 'OFFLINE' where msn is not null and sn is not null and (EXTRACT(EPOCH FROM (SELECT NOW())) * 1000 - COALESCE(last_subscribe_datetime, 0)) > (COALESCE(interval, 60) * 60 * 1000)", nativeQuery = true)
