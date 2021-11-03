@@ -70,7 +70,7 @@ public class LogServiceImpl implements LogService {
         if (repStatus != null) {
         	sqlCommonBuilder.append(" AND repStatus = " + repStatus + " ");
         	if (repStatus.intValue() == -999) {
-        		sqlCommonBuilder.append(" and mid is not null and type = 'PUBLISH' and mark_view <> 1 ");	
+        		sqlCommonBuilder.append(" and mid is not null and type = 'PUBLISH' and (mark_view is null or mark_view <> 1) ");	
         	}
         	
         }
