@@ -68,9 +68,11 @@ public class LogServiceImpl implements LogService {
             sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
         }
         if (repStatus != null) {
-        	sqlCommonBuilder.append(" AND repStatus = " + repStatus + " ");
         	if (repStatus.intValue() == -999) {
-        		sqlCommonBuilder.append(" and mid is not null and type = 'PUBLISH' and topic <> 'evs/pa/local/data/send' and (markView is null or markView <> 1) ");	
+        		sqlCommonBuilder.append(" AND (repStatus = " + repStatus + " OR (repStatus is not null and repStatus <> 0)) ");
+        		sqlCommonBuilder.append(" AND mid is not null and type = 'PUBLISH' and topic <> 'evs/pa/local/data/send' and (markView is null or markView <> 1) ");	
+        	} else {
+        		sqlCommonBuilder.append(" AND repStatus = " + repStatus + " ");
         	}
         	
         }
