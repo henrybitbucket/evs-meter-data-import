@@ -84,6 +84,12 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "deactivation_date")
     private Long deactivationDate;
 
+	@Column(name = "is_ota")
+	private boolean isOta = false;
+
+	@Column(name = "last_ota_date")
+	private Long lastOtaDate;
+
 	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.ALL})
 	@JoinColumn(name = "installer")
 	private Users installer;

@@ -3,6 +3,7 @@ package com.pa.evs.ctrl;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Calendar;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +70,9 @@ public class CommonController {
 	@Value("${evs.pa.privatekey.path}")
 	private String pkPath;
 
+    @Value("${evs.pa.ota.timeout:30}")
+	private long otaTimeout;
+
     @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 	
 	private String caFolder;
@@ -127,6 +131,15 @@ public class CommonController {
             	LOG.debug("sendCommand TCM_INFO: " + mid + " " + ca.get().getMsn());
             	MID_TYPE.put(mid, command.getType());
             }
+
+            //check OTA is in progress ot NOT
+            if (!"TCM_INFO".equalsIgnoreCase(command.getType()) && "INF".equalsIgnoreCase(command.getCmd())) {
+                long timeDiff = Calendar.getInstance().getTimeInMillis() - (ca.get().getLastOtaDate() == null ? Calendar.getInstance().getTimeInMillis() : ca.get().getLastOtaDate());
+                if (timeDiff <= otaTimeout * 60 * 1000 && ca.get().isOta()) {
+                    return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message("OTA is in processing. This request is skipped").build());
+                }
+            }
+
             evsPAService.publish(alias + command.getUid(), SimpleMap.init(
                     "header", SimpleMap.init("uid", command.getUid()).more("mid", mid).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
                 ).more(

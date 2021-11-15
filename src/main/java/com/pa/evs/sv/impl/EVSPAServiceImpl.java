@@ -345,6 +345,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 			
 			header.put("sig", RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload)));
 			publish(alias + log.getUid(), data, type);
+
+			//update last OTA time
+			Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+			if (opt.isPresent()) {
+				opt.get().setIsOta(true);
+				opt.get().setLastOtaDate(Calendar.getInstance().getTimeInMillis());
+				caRequestLogRepository.save(opt.get());
+			}
+
 		}
 	}
 	
@@ -493,14 +502,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 				publish(evsMeterLocalRespSubscribeTopic, data, type);
 				localMap.remove(log.getOid());
 			} else if (onboardingMap.get(log.getRmid()) != null && !"RLS".equalsIgnoreCase(type)) {
-				if (log.getStatus() == 0) {
-					Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
-					if (opt.isPresent()) {
-						opt.get().setOnboardingDatetime(Calendar.getInstance().getTimeInMillis());
-						caRequestLogRepository.save(opt.get());
+				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+				if (opt.isPresent()) {
+					opt.get().setIsOta(false);
+					opt.get().setLastOtaDate(Calendar.getInstance().getTimeInMillis());
+					if (log.getStatus() == 0) {
+						opt.ifPresent(caRequestLog -> caRequestLog.setOnboardingDatetime(Calendar.getInstance().getTimeInMillis()));
+					} else {
+						LOG.debug("Onboarding process fail, MID = {}", log.getRmid());
 					}
-				} else {
-					LOG.debug("Onboarding process fail, MID = {}", log.getRmid());
+					caRequestLogRepository.save(opt.get());
 				}
 				onboardingMap.remove(log.getRmid());
 			}
