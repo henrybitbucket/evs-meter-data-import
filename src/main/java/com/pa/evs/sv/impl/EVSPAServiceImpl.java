@@ -88,6 +88,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	private Map<Long, Long> localMap;
 	private Map<Long, Long> onboardingMap;
+	private Map<Long, Long> otaMap;
 	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
@@ -353,6 +354,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				opt.get().setLastOtaDate(Calendar.getInstance().getTimeInMillis());
 				caRequestLogRepository.save(opt.get());
 			}
+			otaMap.put(log.getMid(), Calendar.getInstance().getTimeInMillis());
 
 		}
 	}
@@ -409,7 +411,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 			publish(alias + log.getUid(), data, type);
 			//put mid to check receive response or not
-			onboardingMap.put(log.getMid(), log.getMid());
+			onboardingMap.put(log.getMid(), Calendar.getInstance().getTimeInMillis());
 		}
 	}
 	
@@ -501,19 +503,24 @@ public class EVSPAServiceImpl implements EVSPAService {
 				}
 				publish(evsMeterLocalRespSubscribeTopic, data, type);
 				localMap.remove(log.getOid());
-			} else if (onboardingMap.get(log.getRmid()) != null && !"RLS".equalsIgnoreCase(type)) {
+			} else if (log.getRmid() != null && onboardingMap.get(log.getRmid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				if (log.getStatus() == 0) {
+					Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+					if (opt.isPresent()) {
+						opt.get().setOnboardingDatetime(Calendar.getInstance().getTimeInMillis());
+						caRequestLogRepository.save(opt.get());
+					}
+				} else {
+					LOG.debug("Onboarding process fail, MID = {}", log.getRmid());
+				}
+				onboardingMap.remove(log.getRmid());
+			} else if (otaMap.get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 				if (opt.isPresent()) {
 					opt.get().setIsOta(false);
 					opt.get().setLastOtaDate(Calendar.getInstance().getTimeInMillis());
-					if (log.getStatus() == 0) {
-						opt.ifPresent(caRequestLog -> caRequestLog.setOnboardingDatetime(Calendar.getInstance().getTimeInMillis()));
-					} else {
-						LOG.debug("Onboarding process fail, MID = {}", log.getRmid());
-					}
-					caRequestLogRepository.save(opt.get());
 				}
-				onboardingMap.remove(log.getRmid());
+				otaMap.remove(log.getOid());
 			}
 			updateLastSubscribe(log);
 
@@ -676,6 +683,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		LOG.debug("Init EVSPAServiceImpl ... ");
 		localMap = new ConcurrentHashMap<>();
 		onboardingMap = new ConcurrentHashMap<>();
+		otaMap = new ConcurrentHashMap<>();
 		
 		prepareFolder();
 		

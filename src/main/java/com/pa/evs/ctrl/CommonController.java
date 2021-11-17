@@ -70,7 +70,7 @@ public class CommonController {
 	@Value("${evs.pa.privatekey.path}")
 	private String pkPath;
 
-    @Value("${evs.pa.ota.timeout:30}")
+    @Value("${evs.pa.mqtt.timeout:30}")
 	private long otaTimeout;
 
     @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
@@ -135,7 +135,7 @@ public class CommonController {
             //check OTA is in progress ot NOT
             if (!"TCM_INFO".equalsIgnoreCase(command.getType()) && "INF".equalsIgnoreCase(command.getCmd())) {
                 long timeDiff = Calendar.getInstance().getTimeInMillis() - (ca.get().getLastOtaDate() == null ? Calendar.getInstance().getTimeInMillis() : ca.get().getLastOtaDate());
-                if (timeDiff <= otaTimeout * 60 * 1000 && ca.get().isOta()) {
+                if (timeDiff <= otaTimeout * 60 * 1000 && ca.get().getIsOta() != null && ca.get().getIsOta()) {
                     return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message("OTA is in processing. This request is skipped").build());
                 }
             }

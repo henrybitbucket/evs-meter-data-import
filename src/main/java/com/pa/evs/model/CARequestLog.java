@@ -85,7 +85,7 @@ public class CARequestLog extends BaseEntity {
     private Long deactivationDate;
 
 	@Column(name = "is_ota")
-	private boolean isOta = false;
+	private Boolean isOta;
 
 	@Column(name = "last_ota_date")
 	private Long lastOtaDate;
