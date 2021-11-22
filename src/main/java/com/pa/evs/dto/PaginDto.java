@@ -1,5 +1,6 @@
 package com.pa.evs.dto;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +11,7 @@ public class PaginDto<T> {
 
 	private Integer limit;
 
-	private List<T> results;
+	private List<T> results = new ArrayList<>();
 
 	private Integer pageNumber;
 
@@ -91,6 +92,22 @@ public class PaginDto<T> {
 
 	public void setOptions(Map<String, Object> options) {
 		this.options = options;
+	}
+	
+	public void setOffset(String offset) {
+		try {
+			this.offset = Integer.parseInt(offset);
+		} catch (Exception e) {
+			this.offset = 0;
+		}
+	}
+	
+	public void setLimit(String limit) {
+		try {
+			this.limit = Integer.parseInt(limit);
+		} catch (Exception e) {
+			this.limit = 10;
+		}
 	}
 
 }

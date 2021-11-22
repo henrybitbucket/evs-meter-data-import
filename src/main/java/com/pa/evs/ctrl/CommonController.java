@@ -5,10 +5,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
@@ -286,6 +284,39 @@ public class CommonController {
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
+    
+    @GetMapping("/api/ping")
+    public ResponseEntity<Object> ping(HttpServletRequest httpServletRequest,
+    		@RequestParam(required = true) String type,
+    		@RequestParam(required = false) String uuid,
+    		@RequestParam(required = false) String msn,
+    		@RequestParam(required = false) Long mid,
+    		@RequestParam(required = false) String topic,
+    		@RequestParam(required = false) String hide
+    		) throws Exception {
+        try {
+            if ("ping".equalsIgnoreCase(type)) {
+            	if (StringUtils.isBlank(uuid)) {
+            		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message("uuid is required").build());
+            	}
+            	evsPAService.ping(uuid, hide);
+            } else if ("ftpRes".equalsIgnoreCase(type)) {
+            	evsPAService.ftpRes(msn, mid, topic);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+	@GetMapping("/api/pis")
+	public Object searchPi(HttpServletRequest request) {
+		PaginDto<?> pagin = new PaginDto<>();
+		pagin.setOffset(request.getParameter("offset"));
+		pagin.setLimit(request.getParameter("limit"));
+		evsPAService.searchPi(pagin);
+		return pagin;
+	}
     
 	@PostConstruct
 	public void init() {

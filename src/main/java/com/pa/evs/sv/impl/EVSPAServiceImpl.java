@@ -1,58 +1,5 @@
 package com.pa.evs.sv.impl;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.http.IdleConnectionReaper;
-import com.amazonaws.metrics.AwsSdkMetrics;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pa.evs.ctrl.CommonController;
-import com.pa.evs.enums.DeviceStatus;
-import com.pa.evs.enums.ScreenMonitorKey;
-import com.pa.evs.enums.ScreenMonitorStatus;
-import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.Log;
-import com.pa.evs.model.MeterLog;
-import com.pa.evs.model.ScreenMonitoring;
-import com.pa.evs.repository.CARequestLogRepository;
-import com.pa.evs.repository.LogRepository;
-import com.pa.evs.repository.MeterLogRepository;
-import com.pa.evs.repository.ScreenMonitoringRepository;
-import com.pa.evs.sv.CaRequestLogService;
-import com.pa.evs.sv.EVSPAService;
-import com.pa.evs.sv.FirmwareService;
-import com.pa.evs.sv.LogService;
-import com.pa.evs.utils.ApiUtils;
-import com.pa.evs.utils.CMD;
-import com.pa.evs.utils.Mqtt;
-import com.pa.evs.utils.RSAUtil;
-import com.pa.evs.utils.SchedulerHelper;
-import com.pa.evs.utils.SimpleMap;
-import com.pa.evs.utils.ZipUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Component;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.multipart.MultipartFile;
-
-import javax.annotation.PostConstruct;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -80,6 +27,66 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PostConstruct;
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.http.IdleConnectionReaper;
+import com.amazonaws.metrics.AwsSdkMetrics;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.ctrl.CommonController;
+import com.pa.evs.dto.PaginDto;
+import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.ScreenMonitorKey;
+import com.pa.evs.enums.ScreenMonitorStatus;
+import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Log;
+import com.pa.evs.model.MeterLog;
+import com.pa.evs.model.Pi;
+import com.pa.evs.model.ScreenMonitoring;
+import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.LogRepository;
+import com.pa.evs.repository.MeterLogRepository;
+import com.pa.evs.repository.PiRepository;
+import com.pa.evs.repository.ScreenMonitoringRepository;
+import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.FirmwareService;
+import com.pa.evs.sv.LogService;
+import com.pa.evs.utils.ApiUtils;
+import com.pa.evs.utils.CMD;
+import com.pa.evs.utils.Mqtt;
+import com.pa.evs.utils.RSAUtil;
+import com.pa.evs.utils.SchedulerHelper;
+import com.pa.evs.utils.SimpleMap;
+import com.pa.evs.utils.ZipUtils;
+
 @Component
 @SuppressWarnings("unchecked")
 public class EVSPAServiceImpl implements EVSPAService {
@@ -97,13 +104,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private static final int QUALITY_OF_SERVICE = 0;
 
 	@Autowired LogService logService;
+	
+	@Autowired EntityManager em;
 
 	@Autowired CaRequestLogService caRequestLogService;
 
 	@Autowired private LogRepository logRepository;
 
 	@Autowired private CARequestLogRepository caRequestLogRepository;
-
+	
+	@Autowired private PiRepository piRepository;
+	
 	@Autowired private FirmwareService firmwareService;
 
 	@Autowired private MeterLogRepository meterLogRepository;
@@ -1024,5 +1035,54 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 			System.out.println(newDate);
 		}*/
+	}
+
+	@Override
+	public void ping(String uuid, String hide) {
+		
+		if (StringUtils.isBlank(uuid)) {
+			return;
+		}
+		Pi pi = piRepository.findByUuid(uuid).orElse(Pi.builder().uuid(uuid).build());
+		if ("true".equalsIgnoreCase(hide)) {
+			if (pi.getId() != null) {
+				pi.setHide(true);
+				piRepository.save(pi);
+			}
+			return;
+		}
+		pi.setLastPing(System.currentTimeMillis());
+		pi.setHide(false);
+		piRepository.save(pi);
+	}
+
+	@Override
+	public void ftpRes(String msn, Long mid, String topic) {
+		List<Log> logs = logRepository.findByMsnAndMid(msn, mid);
+		logs.forEach(log -> {
+			if (log.getTopic().equalsIgnoreCase(topic)) {
+				log.setFtpResStatus(1l);
+				logRepository.save(log);
+			}
+		});
+	}
+	
+	@SuppressWarnings("rawtypes")
+	@Override
+	public void searchPi(PaginDto pagin) {
+		StringBuilder sqlBuilder = new StringBuilder(" ");
+		StringBuilder sqlCountBuilder = new StringBuilder(" SELECT count(*) ");
+		StringBuilder cmBuilder = new StringBuilder(" FROM Pi WHERE 1=1 and (hide is null or hide <> true)");
+		sqlBuilder.append(cmBuilder).append(" ORDER BY createDate DESC ");
+		sqlCountBuilder.append(cmBuilder);
+		
+		Long count = ((Number)em.createQuery(sqlCountBuilder.toString()).getSingleResult()).longValue();
+		
+		Query query = em.createQuery(sqlBuilder.toString());
+		query.setFirstResult(pagin.getOffset());
+		query.setMaxResults(pagin.getLimit());
+		pagin.getResults().clear();
+		pagin.setResults(query.getResultList());
+		pagin.setTotalRows(count);
 	}
 }

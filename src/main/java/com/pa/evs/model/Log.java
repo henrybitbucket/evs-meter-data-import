@@ -63,6 +63,9 @@ public class Log extends BaseEntity {
 	@Column(name = "mark_view")
 	private Integer markView;
 	
+	@Column(name = "ftp_res_status")
+	private Long ftpResStatus;
+	
 	@SuppressWarnings("unchecked")
 	public static Log build(Map<String, Object> data, String type) throws Exception {
 		

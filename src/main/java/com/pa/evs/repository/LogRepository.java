@@ -1,5 +1,7 @@
 package com.pa.evs.repository;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -24,5 +26,7 @@ public interface LogRepository extends JpaRepository<Log, Long> {
 	@Modifying
 	@Query(value = "UPDATE {h-schema}log set rep_status = ?1 where mid = ?2 and type = 'PUBLISH'", nativeQuery = true)
 	void updateStatus(Long status, Long mId);
+	
+	List<Log> findByMsnAndMid(String msn, Long mId);
 
 }
