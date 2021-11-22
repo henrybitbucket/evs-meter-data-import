@@ -153,6 +153,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Value("${evs.pa.validateSign:true}") private boolean validateSign;
 
+	@Value("${evs.pa.fakeS3Url:false}") private boolean fakeS3Url;
+
 	@Value("${s3.bucket.name}") private String bucketName;
 
 	@Value("${s3.access.id}") private String accessID;
@@ -276,7 +278,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			sendToMeterClient(data, type);
 		}
 
-		updateLastSubscribe(log);
+		updateLastMDTSubscribe(log);
 
 		//Publish
 		data = new HashMap<>();
@@ -514,9 +516,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 				}
 				publish(evsMeterLocalRespSubscribeTopic, data, type);
 				localMap.remove(log.getOid());
-			} else if (log.getRmid() != null && onboardingMap.get(log.getRmid()) != null && !"RLS".equalsIgnoreCase(type)) {
+			} else if (onboardingMap.get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 				if (log.getStatus() == 0) {
-					Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 					if (opt.isPresent()) {
 						opt.get().setOnboardingDatetime(Calendar.getInstance().getTimeInMillis());
 						caRequestLogRepository.save(opt.get());
@@ -524,7 +526,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				} else {
 					LOG.debug("Onboarding process fail, MID = {}", log.getRmid());
 				}
-				onboardingMap.remove(log.getRmid());
+				onboardingMap.remove(log.getOid());
 			} else if (otaMap.get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 				if (opt.isPresent()) {
@@ -545,6 +547,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (opt.isPresent()) {
 			opt.get().setStatus(DeviceStatus.ONLINE);
 			opt.get().setLastSubscribeDatetime(Calendar.getInstance().getTimeInMillis());
+			caRequestLogRepository.save(opt.get());
+		}
+	}
+
+	private void updateLastMDTSubscribe(Log log) {
+		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+		if (opt.isPresent()) {
+			opt.get().setStatus(DeviceStatus.ONLINE);
+			opt.get().setLastSubscribeDatetime(Calendar.getInstance().getTimeInMillis());
+			opt.get().setLastMdtDate(Calendar.getInstance().getTimeInMillis());
 			caRequestLogRepository.save(opt.get());
 		}
 	}
@@ -885,16 +897,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	public String getS3URL(String objectKey) {
-		//java.util.Date expiration = new java.util.Date();
-		//long expTimeMillis = Instant.now().toEpochMilli();
-		//expTimeMillis += 1000 * 60 * expireTime;
-		//expiration.setTime(expTimeMillis);
-
-		// Generate the presigned URL.
-		// GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName + "/" + firmwareService.getLatestFirmware().getVersion(),
-		// 		objectKey).withMethod(com.amazonaws.HttpMethod.GET).withExpiration(expiration);
-		//return s3Client.generatePresignedUrl(generatePresignedUrlRequest).toString();
-		
+		if (fakeS3Url) {
+			LOG.debug("Using fake s3 url");
+			return "http://gridhutautomation.com/pa-meter-2.bin";
+		}
 		String bcName = bucketName + "/" + firmwareService.getLatestFirmware().getVersion() + "/" + objectKey;
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		CMD.exec("/usr/local/aws/bin/aws s3 presign s3://" + bcName + " --expires-in " + (60 * expireTime), null, bos);

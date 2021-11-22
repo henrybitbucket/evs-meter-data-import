@@ -90,6 +90,9 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "last_ota_date")
 	private Long lastOtaDate;
 
+	@Column(name = "last_mtd_date")
+	private Long lastMdtDate;
+
 	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.ALL})
 	@JoinColumn(name = "installer")
 	private Users installer;
