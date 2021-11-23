@@ -61,7 +61,11 @@ public class CARequestLog extends BaseEntity {
 
 	@Builder.Default
 	@Column
-	private Long interval = 30L;
+	private Long interval = 720L; //publish time
+
+	@Builder.Default
+	@Column
+	private Long readInterval = 30L; // read interval time
 	
 	@Column(name = "address")
 	private String address;

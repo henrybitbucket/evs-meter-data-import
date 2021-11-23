@@ -11,6 +11,7 @@ import java.util.Optional;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 
+import com.pa.evs.LocalMapStorage;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -74,6 +75,8 @@ public class CommonController {
     @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 	
 	private String caFolder;
+
+    @Autowired LocalMapStorage localMap;
 	
 	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
@@ -114,17 +117,18 @@ public class CommonController {
                 return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).build());
             }
 
+            Long mid = evsPAService.nextvalMID();
             Map<String, Object> data = command.getData();
             SimpleMap<String, Object> map = SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd());
             if (CommandEnum.CFG.name().equals(command.getCmd())) {
                 SimpleMap<String, Object> simpleMap = new SimpleMap<>();
                 command.getData().forEach((k,v) -> simpleMap.put(k, Integer.parseInt((String)data.get(k))));
                 map.more("p1", simpleMap);
+                localMap.getCfgMap().put(mid, command.getData());
             }
 
             String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
 
-            Object mid = evsPAService.nextvalMID();
             if ("TCM_INFO".equalsIgnoreCase(command.getType())) {
             	LOG.debug("sendCommand TCM_INFO: " + mid + " " + ca.get().getMsn());
             	MID_TYPE.put(mid, command.getType());

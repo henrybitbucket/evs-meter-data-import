@@ -31,6 +31,7 @@ import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
+import com.pa.evs.LocalMapStorage;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -93,15 +94,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
 
-	private Map<Long, Long> localMap;
-	private Map<Long, Long> onboardingMap;
-	private Map<Long, Long> otaMap;
-	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
 	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 	
 	private static final int QUALITY_OF_SERVICE = 0;
+
+	@Autowired LocalMapStorage localMap;
 
 	@Autowired LogService logService;
 	
@@ -295,15 +294,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	private void handleRLSRes(Map<String, Object> data, String type, Log log) throws Exception {
 		//Publish
-		if (localMap.get(log.getOid()) != null) {
+		if (localMap.getLocalMap().get(log.getOid()) != null) {
 			Map<String, Object> header = (Map<String, Object>) data.get("header");
 			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
-			header.put("oid", localMap.get(log.getOid()));
+			header.put("oid", localMap.getLocalMap().get(log.getOid()));
 			header.remove("sig");
 			header.remove("uid");
 			payload.put("id", header.get("msn"));
 			publish(evsMeterLocalRespSubscribeTopic, data, type);
-			localMap.remove(log.getOid());
+			localMap.getLocalMap().remove(log.getOid());
 		}
 	}
 	
@@ -316,15 +315,21 @@ public class EVSPAServiceImpl implements EVSPAService {
 				status = -1;
 			}
 			if (data1.get("ver") != null) {
-				log.setVer(data1.get("ver") + "");
+				LOG.debug("handleINFRes saving resp");
+				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+				if (opt.isPresent()) {
+					opt.get().setVer(data1.get("ver") + "");
+					if (data1.get("rdti") != null) {
+						opt.get().setReadInterval(Long.parseLong(data1.get("rdti") + ""));
+					}
+					if (data1.get("pdti") != null) {
+						opt.get().setInterval(Long.parseLong(data1.get("pdti") + ""));
+					}
+					caRequestLogRepository.save(opt.get());
+				}
 			}
 			if ("TCM_INFO".equalsIgnoreCase(CommonController.MID_TYPE.get(log.getOid()))) {
 				LOG.debug("GET TCM_INFO: " + log.getOid() + " " + log.getMsn());
-				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
-				if (opt.isPresent()) {
-					opt.get().setVer(log.getVer());
-					caRequestLogRepository.save(opt.get());
-				}
 				CommonController.MID_TYPE.remove(log.getOid());
 				return;
 			}
@@ -367,7 +372,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				opt.get().setLastOtaDate(Calendar.getInstance().getTimeInMillis());
 				caRequestLogRepository.save(opt.get());
 			}
-			otaMap.put(log.getMid(), Calendar.getInstance().getTimeInMillis());
+			localMap.getOtaMap().put(log.getMid(), Calendar.getInstance().getTimeInMillis());
 
 		}
 	}
@@ -424,7 +429,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 			publish(alias + log.getUid(), data, type);
 			//put mid to check receive response or not
-			onboardingMap.put(log.getMid(), Calendar.getInstance().getTimeInMillis());
+			localMap.getOnboardingMap().put(log.getMid(), Calendar.getInstance().getTimeInMillis());
 		}
 	}
 	
@@ -505,8 +510,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 				handleOTARes(data, type, log, status);
 			}
 
-			if (localMap.get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
-				header.put("oid", localMap.get(log.getOid()));
+			if (localMap.getLocalMap().get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				LOG.debug("Handle LocalMap resp .... ");
+				header.put("oid", localMap.getLocalMap().get(log.getOid()));
 				header.remove("uid");
 				if(data.get("payload") != null) {
 					Map<String, Object> payload = (Map<String, Object>) data.get("payload");
@@ -515,8 +521,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 					}
 				}
 				publish(evsMeterLocalRespSubscribeTopic, data, type);
-				localMap.remove(log.getOid());
-			} else if (onboardingMap.get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				localMap.getLocalMap().remove(log.getOid());
+			} else if (localMap.getOnboardingMap().get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				LOG.debug("Handle OnboardingMap resp .... ");
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 				if (log.getStatus() == 0) {
 					if (opt.isPresent()) {
@@ -526,14 +533,29 @@ public class EVSPAServiceImpl implements EVSPAService {
 				} else {
 					LOG.debug("Onboarding process fail, MID = {}", log.getRmid());
 				}
-				onboardingMap.remove(log.getOid());
-			} else if (otaMap.get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				localMap.getOnboardingMap().remove(log.getOid());
+			} else if (localMap.getOtaMap().get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				LOG.debug("Handle OtaMap resp .... ");
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 				if (opt.isPresent()) {
 					opt.get().setIsOta(false);
 					opt.get().setLastOtaDate(Calendar.getInstance().getTimeInMillis());
+					caRequestLogRepository.save(opt.get());
 				}
-				otaMap.remove(log.getOid());
+				localMap.getOtaMap().remove(log.getOid());
+			} else if (localMap.getCfgMap().get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
+				LOG.debug("Handle CfgMap resp .... ");
+				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+				if (log.getStatus() == 0) {
+					if (localMap.getCfgMap().get(log.getOid()).get("rdti") != null) {
+						opt.get().setReadInterval(Long.parseLong(localMap.getCfgMap().get(log.getOid()).get("rdti") + ""));
+					}
+					if (localMap.getCfgMap().get(log.getOid()).get("pdti") != null) {
+						opt.get().setInterval(Long.parseLong(localMap.getCfgMap().get(log.getOid()).get("pdti") + ""));
+					}
+					caRequestLogRepository.save(opt.get());
+				}
+				localMap.getCfgMap().remove(log.getOid());
 			}
 			updateLastSubscribe(log);
 
@@ -594,7 +616,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		Optional<CARequestLog> caRequestLog = caRequestLogRepository.findByMsn(msn);
 		if (caRequestLog.isPresent()) {
 			Long nextMid = nextvalMID();
-			localMap.put(nextMid, mid.longValue());
+			localMap.getLocalMap().put(nextMid, mid.longValue());
 			header.put("mid", nextMid);
 			header.put("uid", caRequestLog.get().getUid());
 			header.put("gid", caRequestLog.get().getUid());
@@ -704,10 +726,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 	public void init() {
 
 		LOG.debug("Init EVSPAServiceImpl ... ");
-		localMap = new ConcurrentHashMap<>();
-		onboardingMap = new ConcurrentHashMap<>();
-		otaMap = new ConcurrentHashMap<>();
-		
 		prepareFolder();
 		
 		try {
