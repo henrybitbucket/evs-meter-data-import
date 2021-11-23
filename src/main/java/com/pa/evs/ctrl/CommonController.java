@@ -295,7 +295,7 @@ public class CommonController {
     		@RequestParam(required = false) String uuid,
     		@RequestParam(required = false) String msn,
     		@RequestParam(required = false) Long mid,
-    		@RequestParam(required = false) String topic,
+    		@RequestParam(required = false) String status,
     		@RequestParam(required = false) String hide
     		) throws Exception {
         try {
@@ -305,7 +305,7 @@ public class CommonController {
             	}
             	evsPAService.ping(uuid, hide);
             } else if ("ftpRes".equalsIgnoreCase(type)) {
-            	evsPAService.ftpRes(msn, mid, topic);
+            	evsPAService.ftpRes(msn, mid, uuid, status);
             }
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
@@ -320,6 +320,15 @@ public class CommonController {
 		pagin.setLimit(request.getParameter("limit"));
 		evsPAService.searchPi(pagin);
 		return pagin;
+	}
+	
+	@GetMapping("/api/pi/logs")
+	public Object searchPiLog(
+			@RequestParam(required = true) String msn,
+    		@RequestParam(required = true) Long mid,
+    		@RequestParam(required = false) Long piId
+			) {
+		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(evsPAService.searchPiLog(piId, msn, mid)).success(true).build());
 	}
     
 	@PostConstruct

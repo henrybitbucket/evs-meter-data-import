@@ -27,4 +27,6 @@ public class Pi extends BaseEntity {
     private Long lastPing;
     
     private Boolean hide;
+    
+    private String email;
 }

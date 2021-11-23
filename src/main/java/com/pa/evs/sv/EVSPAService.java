@@ -1,10 +1,13 @@
 package com.pa.evs.sv;
 
 import java.io.InputStream;
+import java.util.List;
 
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.PiLogDto;
+import com.pa.evs.model.PiLog;
 
 public interface EVSPAService {
 
@@ -22,5 +25,7 @@ public interface EVSPAService {
 
 	void searchPi(PaginDto<?> pagin);
 
-	void ftpRes(String msn, Long mid, String topic);
+	List<PiLogDto> searchPiLog(Long piId, String msn, Long mid);
+
+	void ftpRes(String msn, Long mid, String piUuid, String status);
 }

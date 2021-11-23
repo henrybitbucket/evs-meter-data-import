@@ -22,7 +22,6 @@ import java.util.Optional;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +30,6 @@ import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
-import com.pa.evs.LocalMapStorage;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -61,8 +59,10 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.LocalMapStorage;
 import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.PiLogDto;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
@@ -70,10 +70,12 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.MeterLog;
 import com.pa.evs.model.Pi;
+import com.pa.evs.model.PiLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.MeterLogRepository;
+import com.pa.evs.repository.PiLogRepository;
 import com.pa.evs.repository.PiRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
 import com.pa.evs.sv.CaRequestLogService;
@@ -85,6 +87,7 @@ import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SchedulerHelper;
+import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
 
@@ -113,6 +116,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired private CARequestLogRepository caRequestLogRepository;
 	
 	@Autowired private PiRepository piRepository;
+	
+	@Autowired private PiLogRepository piLogRepository;
 	
 	@Autowired private FirmwareService firmwareService;
 
@@ -226,6 +231,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		sf.setTimeZone(UTC);
 		sf.applyPattern("yyyyMMdd");
 
+		Map<String, Object> header = (Map<String, Object>) src.get("header");
 		Map<String, Object> payload = (Map<String, Object>) src.get("payload");
 		List<Map<String, Object>> data = (List<Map<String, Object>>) payload.get("data");
 
@@ -246,6 +252,24 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		
 		publish(evsMeterLocalDataSendTopic, src, type);
+		try {
+			logMDTSent((String)header.get("msn"), (Long)header.get("mid"));
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+	}
+	
+	private void logMDTSent(String msn, Long mid) {
+		piRepository.findExists()
+		.forEach(pi -> {
+			PiLog piLog = new PiLog();
+			piLog.setPi(pi);
+			piLog.setMsn(msn);
+			piLog.setMid(mid);
+			piLog.setType("MDT");
+			piLog.setFtpResStatus("NEW");
+			piLogRepository.save(piLog);
+		});
 	}
 
 	@Override
@@ -1075,19 +1099,23 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 			return;
 		}
-		pi.setLastPing(System.currentTimeMillis());
+		
 		pi.setHide(false);
+		String email = SecurityUtils.getEmail();
+		if (email != null) {
+			pi.setEmail(email);
+		} else {
+			pi.setLastPing(System.currentTimeMillis());
+		}
 		piRepository.save(pi);
 	}
 
 	@Override
-	public void ftpRes(String msn, Long mid, String topic) {
-		List<Log> logs = logRepository.findByMsnAndMid(msn, mid);
+	public void ftpRes(String msn, Long mid, String piUuid, String status) {
+		List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiUuid(msn, mid, piUuid);
 		logs.forEach(log -> {
-			if (log.getTopic().equalsIgnoreCase(topic)) {
-				log.setFtpResStatus(1l);
-				logRepository.save(log);
-			}
+			log.setFtpResStatus(status);
+			piLogRepository.save(log);
 		});
 	}
 	
@@ -1096,7 +1124,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	public void searchPi(PaginDto pagin) {
 		StringBuilder sqlBuilder = new StringBuilder(" ");
 		StringBuilder sqlCountBuilder = new StringBuilder(" SELECT count(*) ");
-		StringBuilder cmBuilder = new StringBuilder(" FROM Pi WHERE 1=1 and (hide is null or hide <> true)");
+		StringBuilder cmBuilder = new StringBuilder(" FROM Pi WHERE email is not null and (hide is null or hide <> true)");
 		sqlBuilder.append(cmBuilder).append(" ORDER BY createDate DESC ");
 		sqlCountBuilder.append(cmBuilder);
 		
@@ -1108,5 +1136,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 		pagin.getResults().clear();
 		pagin.setResults(query.getResultList());
 		pagin.setTotalRows(count);
+	}
+	
+	@Override
+	public List<PiLogDto> searchPiLog(Long piId, String msn, Long mid) {
+		List<PiLogDto> rp = new ArrayList<>();
+		List<PiLog> data;
+		if (piId == null) {
+			data = piLogRepository.findByMsnAndMid(msn, mid);
+		} else {
+			data = piLogRepository.findByMsnAndMidAndPiId(msn, mid, piId);
+		}
+		data.forEach(d -> rp.add(PiLogDto.builder().type(d.getType()).ftpResStatus(d.getFtpResStatus()).msn(d.getMsn()).mid(d.getMid()).piUuid(d.getPi().getUuid()).build()));
+		return rp;
 	}
 }
