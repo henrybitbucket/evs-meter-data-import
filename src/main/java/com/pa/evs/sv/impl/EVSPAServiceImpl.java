@@ -1112,6 +1112,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Override
 	public void ftpRes(String msn, Long mid, String piUuid, String status) {
+		//logMDTSent(msn, mid);
 		List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiUuid(msn, mid, piUuid);
 		logs.forEach(log -> {
 			log.setFtpResStatus(status);

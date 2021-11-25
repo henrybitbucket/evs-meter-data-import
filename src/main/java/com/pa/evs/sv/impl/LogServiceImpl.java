@@ -1,26 +1,37 @@
 package com.pa.evs.sv.impl;
 
-import com.pa.evs.dto.PaginDto;
-import com.pa.evs.model.Log;
-import com.pa.evs.model.MeterLog;
-import com.pa.evs.repository.LogRepository;
-import com.pa.evs.repository.MeterLogRepository;
-import com.pa.evs.sv.LogService;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import com.pa.evs.dto.PaginDto;
+import com.pa.evs.model.Log;
+import com.pa.evs.model.MeterLog;
+import com.pa.evs.model.PiLog;
+import com.pa.evs.repository.LogRepository;
+import com.pa.evs.repository.MeterLogRepository;
+import com.pa.evs.repository.PiLogRepository;
+import com.pa.evs.sv.LogService;
 
 @Service
 public class LogServiceImpl implements LogService {
 
     @Autowired
     LogRepository logRepository;
+    
+    @Autowired
+    PiLogRepository piLogRepository;
 
     @Autowired
     MeterLogRepository meterLogRepository;
@@ -40,44 +51,52 @@ public class LogServiceImpl implements LogService {
         String midString = (String) map.get("mid");
         Long fromDate = (Long) map.get("fromDate");
         Long toDate = (Long) map.get("toDate");
+        Object piId = (Object) map.get("piId");
+        
         
         Number repStatus = (Number) map.get("repStatus");
         
-        StringBuilder sqlBuilder = new StringBuilder("FROM Log");
-        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Log");
+        StringBuilder sqlBuilder = new StringBuilder(piId != null ? " Select l, pl " : " Select l ");
         
-        StringBuilder sqlCommonBuilder = new StringBuilder();
+        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(l.id) ");
+        
+        StringBuilder sqlCommonBuilder = new StringBuilder("FROM Log l");
+        
+        if (piId != null) {
+        	sqlCommonBuilder.append(" JOIN PiLog pl on (pl.pi.id = " + piId + " and l.msn = pl.msn and l.mid = pl.mid and l.type = 'PUBLISH') ");
+        }
+        
         sqlCommonBuilder.append(" WHERE 1=1 ");
-        
+
         if (uid != null) {
-        	sqlCommonBuilder.append(" AND uid = '" + uid + "' ");
+        	sqlCommonBuilder.append(" AND l.uid = '" + uid + "' ");
         }
         if (msn != null) {
-        	sqlCommonBuilder.append(" AND msn = '" + msn + "'");
+        	sqlCommonBuilder.append(" AND l.msn = '" + msn + "'");
         }        
         if (StringUtils.isNotBlank(ptype)) {
-            sqlCommonBuilder.append(" AND upper(pType) like '%" + ptype.toUpperCase() + "%'");
+            sqlCommonBuilder.append(" AND upper(l.pType) like '%" + ptype.toUpperCase() + "%'");
         }
         if (StringUtils.isNotBlank(midString)) {
-            sqlCommonBuilder.append(" AND (mid = " + midString + " OR oid = " + midString + " OR rmid = " + midString + ")");
+            sqlCommonBuilder.append(" AND (l.mid = " + midString + " OR l.oid = " + midString + " OR l.rmid = " + midString + ")");
         }
         if (fromDate != null) {
-            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM l.createDate) * 1000 >= " + fromDate);
         }
         if (toDate != null) {
-            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM l.createDate) * 1000 <= " + toDate);
         }
         if (repStatus != null) {
         	if (repStatus.intValue() == -999) {
-        		sqlCommonBuilder.append(" AND (repStatus = " + repStatus + " OR (repStatus is not null and repStatus <> 0)) ");
-        		sqlCommonBuilder.append(" AND mid is not null and type = 'PUBLISH' and topic <> 'evs/pa/local/data/send' and (markView is null or markView <> 1) ");	
+        		sqlCommonBuilder.append(" AND (l.repStatus = " + repStatus + " OR (l.repStatus is not null and l.repStatus <> 0)) ");
+        		sqlCommonBuilder.append(" AND l.mid is not null and l.type = 'PUBLISH' and l.topic <> 'evs/pa/local/data/send' and (l.markView is null or l.markView <> 1) ");	
         	} else {
-        		sqlCommonBuilder.append(" AND repStatus = " + repStatus + " ");
+        		sqlCommonBuilder.append(" AND l.repStatus = " + repStatus + " ");
         	}
         	
         }
         
-        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY createDate DESC");
+        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY l.createDate DESC");
         sqlCountBuilder.append(sqlCommonBuilder);
         
         if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -92,16 +111,25 @@ public class LogServiceImpl implements LogService {
         
         Long count = ((Number)queryCount.getSingleResult()).longValue();
         pagin.setTotalRows(count);
-        pagin.setResults(new ArrayList<>());
-        if (count == 0l) {
-            return pagin;
-        }
         
         Query query = em.createQuery(sqlBuilder.toString());
         query.setFirstResult(pagin.getOffset());
         query.setMaxResults(pagin.getLimit());
         
-        pagin.setResults(query.getResultList());
+        @SuppressWarnings("rawtypes")
+		List data = query.getResultList();
+        if (!data.isEmpty() && data.get(0) instanceof Object[]) {
+        	pagin.setResults(new ArrayList<>());
+        	data.forEach(obj -> {
+        		Object[] os = (Object[]) obj;
+        		Log l = (Log) os[0];
+        		PiLog pl = (PiLog) os[1];
+        		l.setFtpResStatus(pl.getFtpResStatus());
+        		pagin.getResults().add(l);
+        	});
+        } else {
+        	pagin.setResults((List<Log>)data);
+        }
         return pagin;
         
     }

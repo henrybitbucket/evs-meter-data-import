@@ -5,6 +5,7 @@ import java.util.Map;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -62,6 +63,9 @@ public class Log extends BaseEntity {
 	
 	@Column(name = "mark_view")
 	private Integer markView;
+	
+    @Transient
+	private String ftpResStatus;
 	
 	@SuppressWarnings("unchecked")
 	public static Log build(Map<String, Object> data, String type) throws Exception {
