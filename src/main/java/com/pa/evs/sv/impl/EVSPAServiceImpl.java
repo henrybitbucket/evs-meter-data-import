@@ -253,19 +253,19 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		publish(evsMeterLocalDataSendTopic, src, type);
 		try {
-			logMDTSent((String)header.get("msn"), (Long)header.get("mid"));
+			logMDTSent((String)header.get("msn"), (Integer)header.get("mid"));
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
 	}
 	
-	private void logMDTSent(String msn, Long mid) {
+	private void logMDTSent(String msn, Integer mid) {
 		piRepository.findExists()
 		.forEach(pi -> {
 			PiLog piLog = new PiLog();
 			piLog.setPi(pi);
 			piLog.setMsn(msn);
-			piLog.setMid(mid);
+			piLog.setMid(Long.valueOf(mid));
 			piLog.setType("MDT");
 			piLog.setFtpResStatus("NEW");
 			piLogRepository.save(piLog);
