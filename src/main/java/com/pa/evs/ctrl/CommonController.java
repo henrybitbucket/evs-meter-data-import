@@ -300,12 +300,16 @@ public class CommonController {
     		@RequestParam(required = false) String hide
     		) throws Exception {
         try {
+        	
+        	LOG.info("PI Ping0: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
             if ("ping".equalsIgnoreCase(type)) {
             	if (StringUtils.isBlank(uuid)) {
             		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message("uuid is required").build());
             	}
+            	LOG.info("PI Ping1: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
             	evsPAService.ping(uuid, hide);
             } else if ("ftpRes".equalsIgnoreCase(type)) {
+            	LOG.info("PI Ping2: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
             	evsPAService.ftpRes(msn, mid, uuid, status);
             }
         } catch (Exception e) {

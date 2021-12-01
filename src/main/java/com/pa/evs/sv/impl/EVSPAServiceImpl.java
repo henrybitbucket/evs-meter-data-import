@@ -42,6 +42,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
@@ -251,14 +253,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 			meterLogRepository.save(MeterLog.build(tmp));
 		}
 		
-		publish(evsMeterLocalDataSendTopic, src, type);
 		try {
 			logMDTSent((String)header.get("msn"), (Integer)header.get("mid"));
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
+		publish(evsMeterLocalDataSendTopic, src, type);
 	}
 	
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	private void logMDTSent(String msn, Integer mid) {
 		piRepository.findExists()
 		.forEach(pi -> {
@@ -269,6 +272,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			piLog.setType("MDT");
 			piLog.setFtpResStatus("NEW");
 			piLogRepository.save(piLog);
+			piLogRepository.flush();
 		});
 	}
 
@@ -1085,6 +1089,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}*/
 	}
 
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
 	public void ping(String uuid, String hide) {
 		
@@ -1110,10 +1115,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 		piRepository.save(pi);
 	}
 
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
 	public void ftpRes(String msn, Long mid, String piUuid, String status) {
 		//logMDTSent(msn, mid);
 		List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiUuid(msn, mid, piUuid);
+		LOG.info("PI Ping3: ftpRes,  " + piUuid + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
 		logs.forEach(log -> {
 			log.setFtpResStatus(status);
 			piLogRepository.save(log);
