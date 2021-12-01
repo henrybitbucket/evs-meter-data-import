@@ -1125,6 +1125,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			log.setFtpResStatus(status);
 			piLogRepository.save(log);
 		});
+		this.ping(piUuid, null);
 	}
 	
 	@SuppressWarnings("rawtypes")
