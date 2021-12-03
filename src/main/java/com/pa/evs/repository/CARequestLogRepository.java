@@ -50,7 +50,7 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	@Query(value = "update {h-schema}ca_request_log set status = 'OFFLINE' where msn is not null and sn is not null and (EXTRACT(EPOCH FROM (SELECT NOW())) * 1000 - COALESCE(last_subscribe_datetime, 0)) > (COALESCE(interval, 60) * 60 * 1000)", nativeQuery = true)
 	void checkDevicesOffline();
 
-	@Query(value = "select count(id) from {h-schema}log where mid is not null and topic <> 'evs/pa/local/data/send' and (rep_status = -999 or (rep_status is not null and rep_status <> 0)) and type = 'PUBLISH' and (mark_view is null or mark_view <> 1)", nativeQuery = true)
+	@Query(value = "select count(id) from {h-schema}log where msn <> '' and mid is not null and topic <> 'evs/pa/local/data/send' and (rep_status = -999 or (rep_status is not null and rep_status <> 0)) and type = 'PUBLISH' and (mark_view is null or mark_view <> 1)", nativeQuery = true)
 	Number countAlarms();
 
 	@Query("SELECT COUNT(*) FROM CARequestLog WHERE status = ?1")
