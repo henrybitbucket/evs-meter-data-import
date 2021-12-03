@@ -460,4 +460,22 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         }
 
     }
+
+    @Override
+    public PaginDto<CARequestLog> getDevicesInGroup(List<Long> listGroupId) {
+        PaginDto<CARequestLog> pagin = new PaginDto<>();
+        List<CARequestLog> listDevices = caRequestLogRepository.findDevicesInGroup(listGroupId);
+        pagin.setTotalRows((long) listDevices.size());
+        listDevices.forEach(li -> {
+            Users user = li.getInstaller();
+            Users installer = new Users();
+            if (user != null) {
+                installer.setUserId(user.getUserId());
+                installer.setUsername(user.getUsername());
+                li.setInstaller(installer);
+            }
+        });
+        pagin.setResults(listDevices);
+        return pagin;
+    }
 }

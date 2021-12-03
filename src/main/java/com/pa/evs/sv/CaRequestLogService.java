@@ -41,4 +41,6 @@ public interface CaRequestLogService {
     void checkServerCertificate();
 
 	void markViewAll();
+
+    PaginDto<CARequestLog> getDevicesInGroup(List<Long> listGroupId);
 }

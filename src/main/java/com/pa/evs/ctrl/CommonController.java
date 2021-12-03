@@ -8,6 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
@@ -253,25 +254,25 @@ public class CommonController {
     @PostMapping("/api/logs")
     public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, HttpServletResponse response, @RequestBody PaginDto<Log> pagin) throws Exception {
         try {
-        	
+
         	if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
         		pagin.setLimit(Integer.MAX_VALUE);
             }
-        	
+
             logService.getRelatedLogs(pagin);
-            
+
         	if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
         		String timeZone = (String) pagin.getOptions().get("timeZone");
         		if (StringUtils.isNotBlank(timeZone)) {
         			TimeZoneHolder.set(timeZone);
         		}
-        		
+
         		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         		sdf.setTimeZone(TimeZoneHolder.get());
                 String tag = sdf.format(new Date());
                 String fileName = "log-" + tag + ".csv";
                 File file = CsvUtils.writeAlarmsLogCsv(pagin.getResults(), fileName, null);
-                
+
                 try (FileInputStream fis = new FileInputStream(file)) {
                     response.setContentLengthLong(file.length());
                     response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
@@ -376,7 +377,18 @@ public class CommonController {
 			) {
 		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(evsPAService.searchPiLog(piId, msn, mid)).success(true).build());
 	}
-    
+
+    @PostMapping("/api/devices-in-groups")
+    public ResponseEntity<Object> getDevicesInGroup(HttpServletRequest httpServletRequest, @RequestBody List<Long> listGroupId) throws Exception {
+        PaginDto<CARequestLog> pagin;
+        try {
+            pagin = caRequestLogService.getDevicesInGroup(listGroupId);
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+    }
+
 	@PostConstruct
 	public void init() {
 		

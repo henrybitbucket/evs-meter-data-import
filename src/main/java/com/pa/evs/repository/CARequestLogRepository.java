@@ -66,4 +66,7 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	@Query(value = "update {h-schema}log set mark_view = 1 WHERE rep_status = -999", nativeQuery = true)
     void markViewAll();
 
+    @Query(value = "select * from {h-schema}ca_request_log where group_id in (?1)", nativeQuery = true)
+    List<CARequestLog> findDevicesInGroup(List<Long> listGroupId);
+
 }
