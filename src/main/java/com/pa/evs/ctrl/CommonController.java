@@ -1,23 +1,30 @@
 package com.pa.evs.ctrl;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TimeZone;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import com.pa.evs.LocalMapStorage;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.LocalMapStorage;
 import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.Command;
 import com.pa.evs.dto.FirmwareDto;
@@ -45,8 +53,10 @@ import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.GroupService;
 import com.pa.evs.sv.LogService;
 import com.pa.evs.utils.CMD;
+import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SimpleMap;
+import com.pa.evs.utils.TimeZoneHolder;
 
 @RestController
 public class CommonController {
@@ -241,9 +251,40 @@ public class CommonController {
 
 
     @PostMapping("/api/logs")
-    public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, @RequestBody PaginDto<Log> pagin) throws Exception {
+    public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, HttpServletResponse response, @RequestBody PaginDto<Log> pagin) throws Exception {
         try {
+        	
+        	if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
+        		pagin.setLimit(Integer.MAX_VALUE);
+            }
+        	
             logService.getRelatedLogs(pagin);
+            
+        	if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
+        		String timeZone = (String) pagin.getOptions().get("timeZone");
+        		if (StringUtils.isNotBlank(timeZone)) {
+        			TimeZoneHolder.set(timeZone);
+        		}
+        		
+        		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        		sdf.setTimeZone(TimeZoneHolder.get());
+                String tag = sdf.format(new Date());
+                String fileName = "log-" + tag + ".csv";
+                File file = CsvUtils.writeAlarmsLogCsv(pagin.getResults(), fileName, null);
+                
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    response.setContentLengthLong(file.length());
+                    response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                    response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                    response.setHeader("name", fileName);
+                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                    IOUtils.copy(fis, response.getOutputStream());
+                } finally {
+                    FileUtils.deleteDirectory(file.getParentFile());
+                }
+                TimeZoneHolder.remove();
+                return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+            }
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }

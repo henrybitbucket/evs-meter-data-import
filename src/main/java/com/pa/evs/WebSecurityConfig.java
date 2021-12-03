@@ -98,6 +98,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/api/pis").permitAll()
 				.antMatchers("/api/pis**").permitAll()
 				.antMatchers("/api/pi/log**").permitAll()
+				.antMatchers("/api/logs/**").permitAll()
+				.antMatchers("/api/logs**").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

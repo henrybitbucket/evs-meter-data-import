@@ -66,6 +66,22 @@ public class Log extends BaseEntity {
 	
     @Transient
 	private String ftpResStatus;
+    
+    @Transient
+    private String sn;
+    
+    public String getRepStatusDesc() {
+    	Log it = this;
+    	return it.repStatus == 0 ? "OK"
+                : it.repStatus == 1 ? "Invalid Format"
+                : it.repStatus == 2 ? "Invalid Command"
+                : it.repStatus == 3 ? "Invalid Signature"
+                : it.repStatus == 4 ? "Decryption Failed"
+                : it.repStatus == 5 ? "Invalid Configuration"
+                : it.repStatus == 8 ? "Failed send to device (Gateway)"
+                : it.repStatus == 9 ? "General Error"
+                : "NO RESPONSE";
+    }
 	
 	@SuppressWarnings("unchecked")
 	public static Log build(Map<String, Object> data, String type) throws Exception {

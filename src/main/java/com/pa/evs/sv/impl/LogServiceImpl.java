@@ -5,8 +5,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -88,10 +90,10 @@ public class LogServiceImpl implements LogService {
         }
         if (repStatus != null) {
         	if (repStatus.intValue() == -999) {
-        		sqlCommonBuilder.append(" AND (l.repStatus = " + repStatus + " OR (l.repStatus is not null and l.repStatus <> 0)) ");
+        		sqlCommonBuilder.append(" AND (l.repStatus = " + repStatus + " OR (l.repStatus is not null and l.repStatus <> 0)) and l.msn <> '' ");
         		sqlCommonBuilder.append(" AND l.mid is not null and l.type = 'PUBLISH' and l.topic <> 'evs/pa/local/data/send' and (l.markView is null or l.markView <> 1) ");	
         	} else {
-        		sqlCommonBuilder.append(" AND l.repStatus = " + repStatus + " ");
+        		sqlCommonBuilder.append(" AND l.repStatus = " + repStatus + "  and l.msn <> '' ");
         	}
         	
         }
@@ -130,6 +132,17 @@ public class LogServiceImpl implements LogService {
         } else {
         	pagin.setResults((List<Log>)data);
         }
+        
+        if (!pagin.getResults().isEmpty()) {
+	        query = em.createQuery("SELECT sn, msn FROM CARequestLog where msn in (:msn)");
+	        query.setParameter("msn", pagin.getResults().stream().map(l -> l.getMsn()).collect(Collectors.toList()));
+	        List<Object[]> objs = query.getResultList();
+	        Map<String, String> temp = new LinkedHashMap<>();
+	        objs.forEach(obj -> temp.put((String)obj[1], (String)obj[0]));
+	        pagin.getResults().forEach(l -> l.setSn(temp.get(l.getMsn())));
+	        temp.clear();
+        }
+        
         return pagin;
         
     }

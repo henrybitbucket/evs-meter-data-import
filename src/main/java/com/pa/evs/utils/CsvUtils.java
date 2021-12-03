@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Log;
 
 public class CsvUtils {
     
@@ -41,6 +42,28 @@ public class CsvUtils {
         List<String> headers = Arrays.asList(
                 "eSIM", "Profile", "ActivationDate(yyyy-mm-dd)");
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
+    }
+    
+    public static File writeAlarmsLogCsv(List<Log> listInput, String fileName, Long activateDate) throws IOException{
+        List<String> headers = Arrays.asList(
+                "TIME", "TYPE", "TOPIC", "MID", "MSN", "SN", "COMMAND", "RAW MESSAGE", "STATUS");
+        return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
+    }
+    
+    private static List<String> toCSVRecord(int idx, Log log, Long activateDate) {
+        List<String> record = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+        sdf.setTimeZone(TimeZoneHolder.get());
+        record.add(sdf.format(log.getCreateDate()));
+        record.add(log.getType());
+        record.add(log.getTopic());
+        record.add((log.getMid() == null ? log.getOid() : log.getMid()) + "");
+        record.add(log.getMsn());
+        record.add(log.getSn());
+        record.add(log.getPType());
+        record.add(log.getRaw());
+        record.add(log.getRepStatusDesc());
+        return postProcessCsv(record);
     }
     
     private static List<String> toCSVRecord(int idx, CARequestLog caRequestLog, Long activateDate) {
