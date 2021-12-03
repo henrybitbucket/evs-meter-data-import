@@ -7,6 +7,7 @@ import javax.persistence.Entity;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AllArgsConstructor;
@@ -70,16 +71,16 @@ public class Log extends BaseEntity {
     @Transient
     private String sn;
     
+    @JsonIgnore
     public String getRepStatusDesc() {
-    	Log it = this;
-    	return it.repStatus == 0 ? "OK"
-                : it.repStatus == 1 ? "Invalid Format"
-                : it.repStatus == 2 ? "Invalid Command"
-                : it.repStatus == 3 ? "Invalid Signature"
-                : it.repStatus == 4 ? "Decryption Failed"
-                : it.repStatus == 5 ? "Invalid Configuration"
-                : it.repStatus == 8 ? "Failed send to device (Gateway)"
-                : it.repStatus == 9 ? "General Error"
+    	return repStatus == 0 ? "OK"
+                : repStatus == 1 ? "Invalid Format"
+                : repStatus == 2 ? "Invalid Command"
+                : repStatus == 3 ? "Invalid Signature"
+                : repStatus == 4 ? "Decryption Failed"
+                : repStatus == 5 ? "Invalid Configuration"
+                : repStatus == 8 ? "Failed send to device (Gateway)"
+                : repStatus == 9 ? "General Error"
                 : "NO RESPONSE";
     }
 	
