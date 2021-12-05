@@ -59,6 +59,9 @@ public class Log extends BaseEntity {
 	
 	private String ver;
 	
+	@Column(name = "batch_id")
+	private String batchId;
+	
 	@Column(name = "rep_status")
 	private Long repStatus;
 	

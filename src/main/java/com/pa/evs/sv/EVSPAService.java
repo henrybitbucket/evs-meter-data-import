@@ -7,11 +7,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
-import com.pa.evs.model.PiLog;
+import com.pa.evs.model.Log;
 
 public interface EVSPAService {
 
-	void publish(String topic, Object message, String type) throws Exception;
+	Log publish(String topic, Object message, String type) throws Exception;
 
 	Long nextvalMID();
 
@@ -28,4 +28,8 @@ public interface EVSPAService {
 	List<PiLogDto> searchPiLog(Long piId, String msn, Long mid);
 
 	void ftpRes(String msn, Long mid, String piUuid, String status);
+
+	Log publish(String topic, Object message, String type, String batchId) throws Exception;
+
+	void searchBatchLog(PaginDto<?> pagin);
 }

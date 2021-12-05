@@ -55,6 +55,8 @@ public class LogServiceImpl implements LogService {
         Long toDate = (Long) map.get("toDate");
         Object piId = (Object) map.get("piId");
         
+        String batchId = (String) map.get("batchId");
+        
         
         Number repStatus = (Number) map.get("repStatus");
         
@@ -72,6 +74,9 @@ public class LogServiceImpl implements LogService {
 
         if (uid != null) {
         	sqlCommonBuilder.append(" AND l.uid = '" + uid + "' ");
+        }
+        if (StringUtils.isNotBlank(batchId)) {
+        	sqlCommonBuilder.append(" AND l.batchId = '" + batchId + "' ");
         }
         if (msn != null) {
         	sqlCommonBuilder.append(" AND l.msn = '" + msn + "'");

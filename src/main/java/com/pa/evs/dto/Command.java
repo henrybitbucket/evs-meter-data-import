@@ -23,6 +23,8 @@ public class Command {
 	
 	private String type;
 	
+	private String batchId;
+	
 	private Map<String, Object> data;
 	
 }

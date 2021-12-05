@@ -70,11 +70,13 @@ import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
+import com.pa.evs.model.LogBatch;
 import com.pa.evs.model.MeterLog;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.PiLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.LogBatchRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.MeterLogRepository;
 import com.pa.evs.repository.PiLogRepository;
@@ -114,6 +116,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired CaRequestLogService caRequestLogService;
 
 	@Autowired private LogRepository logRepository;
+	
+	@Autowired private LogBatchRepository logBatchRepository;
 
 	@Autowired private CARequestLogRepository caRequestLogRepository;
 	
@@ -184,9 +188,21 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 	}
 
+	@Override
+	public Log publish(String topic, Object message, String type, String batchId) throws Exception {
+		Log log = publish(topic, message, type);
+		if (log != null && StringUtils.isNotBlank(batchId)) {
+			LogBatch batch = logBatchRepository.findByUuid(batchId).orElse(LogBatch.builder().email(SecurityUtils.getEmail()).uuid(batchId).build());
+			logBatchRepository.save(batch);
+			log.setBatchId(batchId);
+			logRepository.save(log);
+		}
+		return log;
+	}
+	
 	@SuppressWarnings("rawtypes")
 	@Override
-	public void publish(String topic, Object message, String type) throws Exception {
+	public Log publish(String topic, Object message, String type) throws Exception {
 		try {
 			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
@@ -202,9 +218,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 			logP.setTopic(topic);
 			logP.setMqttAddress(evsPAMQTTAddress);
 			logRepository.save(logP);
+			return logP;
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
+		return null;
 	}
 
 	private void publish(String topic, Object message) {
@@ -1134,6 +1152,30 @@ public class EVSPAServiceImpl implements EVSPAService {
 		StringBuilder sqlBuilder = new StringBuilder(" ");
 		StringBuilder sqlCountBuilder = new StringBuilder(" SELECT count(*) ");
 		StringBuilder cmBuilder = new StringBuilder(" FROM Pi WHERE email is not null and (hide is null or hide <> true)");
+		sqlBuilder.append(cmBuilder).append(" ORDER BY createDate DESC ");
+		sqlCountBuilder.append(cmBuilder);
+		
+		Long count = ((Number)em.createQuery(sqlCountBuilder.toString()).getSingleResult()).longValue();
+		
+		Query query = em.createQuery(sqlBuilder.toString());
+		query.setFirstResult(pagin.getOffset());
+		query.setMaxResults(pagin.getLimit());
+		pagin.getResults().clear();
+		pagin.setResults(query.getResultList());
+		pagin.setTotalRows(count);
+	}
+	
+	@SuppressWarnings("rawtypes")
+	@Override
+	public void searchBatchLog(PaginDto pagin) {
+		StringBuilder sqlBuilder = new StringBuilder(" ");
+		StringBuilder sqlCountBuilder = new StringBuilder(" SELECT count(*) ");
+		StringBuilder cmBuilder = new StringBuilder(" FROM LogBatch WHERE 1=1 ");
+		
+		if (StringUtils.isNotBlank(pagin.getKeyword())) {
+			cmBuilder.append(" AND uuid like '%" + pagin.getKeyword().trim() + "%' ");
+		}
+		
 		sqlBuilder.append(cmBuilder).append(" ORDER BY createDate DESC ");
 		sqlCountBuilder.append(cmBuilder);
 		

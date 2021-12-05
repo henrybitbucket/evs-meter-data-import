@@ -11,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.TimeZone;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
@@ -157,7 +156,7 @@ public class CommonController {
                     "header", SimpleMap.init("uid", command.getUid()).more("mid", mid).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
                 ).more(
                     "payload", map
-                ), command.getCmd());
+                ), command.getCmd(), command.getBatchId());
             
             Thread.sleep(2000l);
             return ResponseEntity.ok(ResponseDto.builder().success(true).response(mid).build());
@@ -366,6 +365,16 @@ public class CommonController {
 		pagin.setOffset(request.getParameter("offset"));
 		pagin.setLimit(request.getParameter("limit"));
 		evsPAService.searchPi(pagin);
+		return pagin;
+	}
+	
+	@GetMapping("/api/batch-logs")
+	public Object searchBatchLog(HttpServletRequest request) {
+		PaginDto<?> pagin = new PaginDto<>();
+		pagin.setOffset(request.getParameter("offset"));
+		pagin.setLimit(request.getParameter("limit"));
+		pagin.setKeyword(request.getParameter("search"));
+		evsPAService.searchBatchLog(pagin);
 		return pagin;
 	}
 	
