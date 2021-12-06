@@ -1,5 +1,9 @@
 package com.pa.evs;
 
+import com.pa.evs.constant.RestPath;
+import com.pa.evs.security.jwt.JwtAuthenticationEntryPoint;
+import com.pa.evs.security.jwt.JwtAuthorizationTokenFilter;
+import com.pa.evs.security.user.JwtUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -16,11 +20,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import com.pa.evs.constant.RestPath;
-import com.pa.evs.security.jwt.JwtAuthenticationEntryPoint;
-import com.pa.evs.security.jwt.JwtAuthorizationTokenFilter;
-import com.pa.evs.security.user.JwtUserDetailsService;
 
 @Configuration
 @EnableWebSecurity
@@ -100,6 +99,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/api/pi/log**").permitAll()
 				.antMatchers("/api/logs/**").permitAll()
 				.antMatchers("/api/logs**").permitAll()
+				.antMatchers("/api/report").permitAll()
+				.antMatchers("/api/report**").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

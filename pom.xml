@@ -26,6 +26,7 @@
 		<mariadb-java-client.version>2.5.4</mariadb-java-client.version>
 		<slack.api.version>1.2.0</slack.api.version>
 		<glassfish.version>1.13.1</glassfish.version>
+		<jasperreport.version>6.7.0</jasperreport.version>
 	</properties>
 
 	<dependencies>
@@ -238,6 +239,37 @@
 			<artifactId>aws-java-sdk-kms</artifactId>
 			<version>1.11.136</version>
 		</dependency>
+
+		<dependency>
+			<groupId>net.sf.jasperreport</groupId>
+			<artifactId>jasperreport</artifactId>
+			<version>${jasperreport.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sf.jasperreport</groupId>
+			<artifactId>jasperreport-chart-customizers</artifactId>
+			<version>${jasperreport.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sf.jasperreport</groupId>
+			<artifactId>jasperreport-fonts</artifactId>
+			<version>${jasperreport.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sf.jasperreport</groupId>
+			<artifactId>jasperreport-funnctions</artifactId>
+			<version>${jasperreport.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sf.jasperreport</groupId>
+			<artifactId>jasperreport-javaflow</artifactId>
+			<version>${jasperreport.version}</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
