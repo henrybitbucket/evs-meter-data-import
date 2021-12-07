@@ -285,6 +285,7 @@
 				<version>2.5.2</version>
 				<executions>
 					<execution>
+						<id>install1</id>
 						<phase>clean</phase>
 						<goals>
 							<goal>install-file</goal>
@@ -294,6 +295,76 @@
 							<groupId>commons-httpclient</groupId>
 							<artifactId>commons-httpclient</artifactId>
 							<version>3.1.0.redhat-7</version>
+							<packaging>jar</packaging>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install2</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<file>external-jar/jasperreports-6.7.0.jar</file>
+							<groupId>net.sf.jasperreport</groupId>
+							<artifactId>jasperreport</artifactId>
+							<version>${jasperreport.version}</version>
+							<packaging>jar</packaging>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install3</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<file>external-jar/jasperreports-chart-customizers-6.7.0.jar</file>
+							<groupId>net.sf.jasperreport</groupId>
+							<artifactId>jasperreport-chart-customizers</artifactId>
+							<version>${jasperreport.version}</version>
+							<packaging>jar</packaging>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install4</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<file>external-jar/jasperreports-fonts-6.7.0.jar</file>
+							<groupId>net.sf.jasperreport</groupId>
+							<artifactId>jasperreport-fonts</artifactId>
+							<version>${jasperreport.version}</version>
+							<packaging>jar</packaging>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install5</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<file>external-jar/jasperreports-functions-6.7.0.jar</file>
+							<groupId>net.sf.jasperreport</groupId>
+							<artifactId>jasperreport-funnctions</artifactId>
+							<version>${jasperreport.version}</version>
+							<packaging>jar</packaging>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install6</id>
+						<phase>clean</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<file>external-jar/jasperreports-javaflow-6.7.0.jar</file>
+							<groupId>net.sf.jasperreport</groupId>
+							<artifactId>jasperreport-javaflow</artifactId>
+							<version>${jasperreport.version}</version>
 							<packaging>jar</packaging>
 						</configuration>
 					</execution>
