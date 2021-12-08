@@ -1,5 +1,6 @@
 package com.pa.evs.sv.impl;
 
+import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ScheduleDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.exception.ApiException;
@@ -15,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +42,9 @@ public class ScheduleServiceImpl implements ScheduleService {
     public List<GroupTask> findAll() {
         return groupTaskRepository.findAll();
     }
+
+    @Autowired
+    EntityManager em;
 
     @Override
     public void createSchedule(ScheduleDto data) {
@@ -66,6 +72,41 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Override
     public List<GroupTask> findAllByGroupId(Long groupId){
         return groupTaskRepository.findByGroupId(groupId);
+    }
+
+    @Override
+    public void searchAllSchedule(PaginDto<?> pagin){
+        StringBuilder sqlBuilder = new StringBuilder(" ");
+        StringBuilder sqlCountBuilder = new StringBuilder(" SELECT count(*) ");
+        StringBuilder cmBuilder = new StringBuilder(" FROM GroupTask");
+        sqlBuilder.append(cmBuilder).append(" ORDER BY startTime DESC ");
+        sqlCountBuilder.append(cmBuilder);
+
+        Long count = ((Number)em.createQuery(sqlCountBuilder.toString()).getSingleResult()).longValue();
+
+        Query query = em.createQuery(sqlBuilder.toString());
+        query.setFirstResult(pagin.getOffset());
+        query.setMaxResults(pagin.getLimit());
+        pagin.getResults().clear();
+        pagin.setResults(query.getResultList());
+        pagin.setTotalRows(count);
+    }
+
+    @Override
+    public void editSchedule (ScheduleDto data, Long id){
+        Optional<GroupTask> groupTask = groupTaskRepository.findById(id);
+        Optional<Group> group = groupRepository.findById(data.getGroupId());
+        if (!groupTask.isPresent()) {
+            throw new ApiException(ResponseEnum.TASK_IS_NOT_EXISTS);
+        }
+        GroupTask entity = groupTask.get();
+        entity.setGroup(group.get());
+        entity.setCommand(data.getCommand());
+        entity.setType(data.getType());
+        entity.setStartTime(data.getStartTime());
+        entity.setCreateDate(Calendar.getInstance().getTime());
+        entity = groupTaskRepository.save(entity);
+        webSchedule.addSchedule(new GroupTaskSchedule(entity, evsPAService));
     }
 
 }

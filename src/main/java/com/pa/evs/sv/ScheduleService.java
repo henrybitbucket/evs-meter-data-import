@@ -1,5 +1,6 @@
 package com.pa.evs.sv;
 
+import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ScheduleDto;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.Group;
@@ -12,4 +13,6 @@ public interface ScheduleService {
     void createSchedule(ScheduleDto data);
     void removeSchedule(Long id) throws ApiException;
     List<GroupTask> findAllByGroupId(Long groupId);
+    void searchAllSchedule(PaginDto<?> pagin);
+    void editSchedule (ScheduleDto data, Long id);
 }

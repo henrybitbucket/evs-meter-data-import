@@ -2,6 +2,7 @@ package com.pa.evs.ctrl;
 
 import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.GetGroupTaskResponseDto;
+import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.ScheduleDto;
 import com.pa.evs.enums.ResponseEnum;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -60,6 +62,32 @@ public class ScheduleController {
             dto.setResults(scheduleService.findAllByGroupId(groupId));
             return ResponseDto.<GetGroupTaskResponseDto>builder().success(true).response(dto).build();
         }catch (Exception ex) {
+            return exceptionConvertor.createResponseDto(ex);
+        }
+    }
+
+    @GetMapping("/api/schedule/group-task")
+    public Object getGroupTask(HttpServletRequest request) {
+        try {
+            PaginDto<?> pagin = new PaginDto<>();
+            pagin.setOffset(request.getParameter("offset"));
+            pagin.setLimit(request.getParameter("limit"));
+            scheduleService.searchAllSchedule(pagin);
+            return pagin;
+        }catch (Exception ex) {
+            return exceptionConvertor.createResponseDto(ex);
+        }
+    }
+
+    @PutMapping("/api/schedule/group-task/edit/{id}")
+    public ResponseDto createSchedule(@RequestBody ScheduleDto data, @PathVariable Long id) {
+        try {
+            logger.info("invoke removeSchedule, scheduleId: {} ", id);
+            logger.info("invoke createSchedule, groupId: {}, type: {}, command: {} "
+                    , data.getGroupId(), data.getType().name(), data.getCommand().name());
+            scheduleService.editSchedule(data, id);
+            return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
+        } catch (Exception ex) {
             return exceptionConvertor.createResponseDto(ex);
         }
     }

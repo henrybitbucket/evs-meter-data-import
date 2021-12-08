@@ -1,5 +1,8 @@
 package com.pa.evs.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum CommandEnum {
     
     CFG(false),

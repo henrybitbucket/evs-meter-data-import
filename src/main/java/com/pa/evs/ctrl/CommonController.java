@@ -5,8 +5,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -396,6 +398,19 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+    }
+
+    @GetMapping("/api/command-enum")
+    public ResponseEntity<List<CommandEnum>> getCommandEnum() {
+        List<CommandEnum> commandEnumList = new ArrayList<CommandEnum>(EnumSet.allOf(CommandEnum.class));
+        List<CommandEnum> commandEnumResult = new ArrayList();
+        for (CommandEnum command : commandEnumList) {
+            if(command.isVisible()) {
+                commandEnumResult.add(command);
+            }
+        }
+
+        return ResponseEntity.ok(commandEnumResult);
     }
 
 	@PostConstruct
