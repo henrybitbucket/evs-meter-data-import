@@ -79,17 +79,4 @@ public class ScheduleController {
         }
     }
 
-    @PutMapping("/api/schedule/group-task/edit/{id}")
-    public ResponseDto createSchedule(@RequestBody ScheduleDto data, @PathVariable Long id) {
-        try {
-            logger.info("invoke removeSchedule, scheduleId: {} ", id);
-            logger.info("invoke createSchedule, groupId: {}, type: {}, command: {} "
-                    , data.getGroupId(), data.getType().name(), data.getCommand().name());
-            scheduleService.editSchedule(data, id);
-            return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
-        } catch (Exception ex) {
-            return exceptionConvertor.createResponseDto(ex);
-        }
-    }
-
 }

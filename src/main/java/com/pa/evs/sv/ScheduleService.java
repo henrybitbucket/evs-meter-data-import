@@ -14,5 +14,4 @@ public interface ScheduleService {
     void removeSchedule(Long id) throws ApiException;
     List<GroupTask> findAllByGroupId(Long groupId);
     void searchAllSchedule(PaginDto<?> pagin);
-    void editSchedule (ScheduleDto data, Long id);
 }

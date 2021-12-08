@@ -49,13 +49,17 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Override
     public void createSchedule(ScheduleDto data) {
         Optional<Group> group = groupRepository.findById(data.getGroupId());
-        GroupTask groupTask = new GroupTask();
+        GroupTask groupTask = data.getId() == null ? new GroupTask() : groupTaskRepository.findById(data.getId()).orElse(new GroupTask());
         groupTask.setCommand(data.getCommand());
         groupTask.setType(data.getType());
         groupTask.setGroup(group.get());
         groupTask.setStartTime(data.getStartTime());
         groupTask.setCreateDate(Calendar.getInstance().getTime());
+        boolean isNew = groupTask.getId() == null;
         groupTask = groupTaskRepository.save(groupTask);
+        if (!isNew) {
+            webSchedule.removeSchedule(new GroupTaskSchedule(groupTask, evsPAService));
+        }
         webSchedule.addSchedule(new GroupTaskSchedule(groupTask, evsPAService));
     }
 
@@ -90,23 +94,6 @@ public class ScheduleServiceImpl implements ScheduleService {
         pagin.getResults().clear();
         pagin.setResults(query.getResultList());
         pagin.setTotalRows(count);
-    }
-
-    @Override
-    public void editSchedule (ScheduleDto data, Long id){
-        Optional<GroupTask> groupTask = groupTaskRepository.findById(id);
-        Optional<Group> group = groupRepository.findById(data.getGroupId());
-        if (!groupTask.isPresent()) {
-            throw new ApiException(ResponseEnum.TASK_IS_NOT_EXISTS);
-        }
-        GroupTask entity = groupTask.get();
-        entity.setGroup(group.get());
-        entity.setCommand(data.getCommand());
-        entity.setType(data.getType());
-        entity.setStartTime(data.getStartTime());
-        entity.setCreateDate(Calendar.getInstance().getTime());
-        entity = groupTaskRepository.save(entity);
-        webSchedule.addSchedule(new GroupTaskSchedule(entity, evsPAService));
     }
 
 }

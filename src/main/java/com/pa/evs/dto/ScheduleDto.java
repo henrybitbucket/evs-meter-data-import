@@ -18,6 +18,8 @@ import java.util.Date;
 @Getter
 @Setter
 public class ScheduleDto {
+
+	private Long id;
     
 	private Long groupId;
 
