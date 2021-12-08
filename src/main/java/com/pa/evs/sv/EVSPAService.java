@@ -3,6 +3,7 @@ package com.pa.evs.sv;
 import java.io.InputStream;
 import java.util.List;
 
+import com.pa.evs.model.CARequestLog;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.PaginDto;
@@ -32,4 +33,7 @@ public interface EVSPAService {
 	Log publish(String topic, Object message, String type, String batchId) throws Exception;
 
 	void searchBatchLog(PaginDto<?> pagin);
+
+	List<CARequestLog> findDevicesInGroup(List<Long> listGroupId);
+
 }

@@ -199,7 +199,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		return log;
 	}
-	
+
+	@Override
+	public List<CARequestLog> findDevicesInGroup(List<Long> listGroupId) {
+		return caRequestLogRepository.findDevicesInGroup(listGroupId);
+	}
+
 	@SuppressWarnings("rawtypes")
 	@Override
 	public Log publish(String topic, Object message, String type) throws Exception {

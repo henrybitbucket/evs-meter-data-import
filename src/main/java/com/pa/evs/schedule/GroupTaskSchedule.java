@@ -15,9 +15,11 @@ public class GroupTaskSchedule implements ISchedule {
 
     public static final String GROUP_NAME = "GroupOperationSchedule";
 
-    public GroupTaskSchedule(GroupTask task, EVSPAService evsPAService) {
+    public GroupTaskSchedule(GroupTask task, EVSPAService evsPAService, String alias, String pkPath) {
         this.task = task;
         this.evsPAService = evsPAService;
+        this.alias = alias;
+        this.pkPath = pkPath;
     }
 
     @Override
@@ -45,6 +47,8 @@ public class GroupTaskSchedule implements ISchedule {
         jobDataMap.put("COMMAND", task.getCommand());
         jobDataMap.put("GROUP", task.getGroup());
         jobDataMap.put("EVS_PA_SERVICE", evsPAService);
+        jobDataMap.put("ALIAS", alias);
+        jobDataMap.put("PK_PATH", pkPath);
         return JobBuilder.newJob(GroupTaskJob.class)
                 .withIdentity("group_schedule_job_" + task.getId(), GROUP_NAME)
                 .usingJobData(jobDataMap)
@@ -53,4 +57,6 @@ public class GroupTaskSchedule implements ISchedule {
 
     private GroupTask task;
     private EVSPAService evsPAService;
+    private String alias;
+    private String pkPath;
 }

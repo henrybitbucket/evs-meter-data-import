@@ -11,6 +11,7 @@ import org.quartz.impl.StdSchedulerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -28,6 +29,11 @@ public class WebSchedule {
     @Autowired
     private EVSPAService evsPAService;
 
+    @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
+
+    @Value("${evs.pa.privatekey.path}")
+    private String pkPath;
+
     private SchedulerFactory schedulerFactory;
 
     @PostConstruct
@@ -42,7 +48,7 @@ public class WebSchedule {
             logger.debug("Getting list of scheduled tasks");
             scheduleService.findAll().stream().forEach(task -> {
                 if(!(GroupTask.Type.ONE_TIME == task.getType() && task.getStartTime().compareTo(new Date()) < 0)) {
-                    this.addSchedule(new GroupTaskSchedule(task, evsPAService));
+                    this.addSchedule(new GroupTaskSchedule(task, evsPAService, alias, pkPath));
                 }
             });
             logger.trace("Scheduled reports list gotten successfully");
