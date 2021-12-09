@@ -13,6 +13,7 @@ import com.pa.evs.schedule.WebSchedule;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.ScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +47,11 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Autowired
     EntityManager em;
 
+    @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
+
+    @Value("${evs.pa.privatekey.path}")
+    private String pkPath;
+
     @Override
     public void createSchedule(ScheduleDto data) {
         Optional<Group> group = groupRepository.findById(data.getGroupId());
@@ -58,9 +64,9 @@ public class ScheduleServiceImpl implements ScheduleService {
         boolean isNew = groupTask.getId() == null;
         groupTask = groupTaskRepository.save(groupTask);
         if (!isNew) {
-            webSchedule.removeSchedule(new GroupTaskSchedule(groupTask, evsPAService));
+            webSchedule.removeSchedule(new GroupTaskSchedule(groupTask, evsPAService, alias, pkPath));
         }
-        webSchedule.addSchedule(new GroupTaskSchedule(groupTask, evsPAService));
+        webSchedule.addSchedule(new GroupTaskSchedule(groupTask, evsPAService, alias, pkPath));
     }
 
     @Override
@@ -69,7 +75,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         if (!groupTask.isPresent()) {
             throw new ApiException(ResponseEnum.TASK_IS_NOT_EXISTS);
         }
-        webSchedule.removeSchedule(new GroupTaskSchedule(groupTask.get(), evsPAService));
+        webSchedule.removeSchedule(new GroupTaskSchedule(groupTask.get(), evsPAService, alias, pkPath));
         groupTaskRepository.delete(groupTask.get());
     }
 
