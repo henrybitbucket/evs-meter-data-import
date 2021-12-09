@@ -809,6 +809,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		SchedulerHelper.scheduleJob("0/1 * * * * ? *", () -> {
 			File[] fs = new File(evsDataFolder).listFiles();
+			if (fs == null) return;
 			for (File f : fs) {
 				if (f.exists() && f.isFile() && f.getName().endsWith(".zip")) {
 					ZipUtils.unzip(f.getAbsolutePath(), evsDataFolder + "/IN_CSR");
@@ -820,6 +821,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		SchedulerHelper.scheduleJob("0/1 * * * * ? *", () -> {
 			File f = new File(evsDataFolder + "/IN_CSR");
+			if (f.listFiles() == null) return;
 			for (File ful : f.listFiles()) {
 				if (ful.isFile() && ful.getName().endsWith(".csv")) {
 					try {

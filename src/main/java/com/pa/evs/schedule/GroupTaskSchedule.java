@@ -33,7 +33,7 @@ public class GroupTaskSchedule implements ISchedule {
         }
         Calendar cal = Calendar.getInstance();
         cal.setTime(task.getStartTime());
-        String cron = cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " * * *";
+        String cron = "0 " + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " * * ? *";
         return TriggerBuilder.newTrigger()
                 .withIdentity("group_schedule_id_" + task.getId(), GROUP_NAME)
                 .withSchedule(CronScheduleBuilder.cronSchedule(cron))
