@@ -39,11 +39,6 @@ public class ScheduleServiceImpl implements ScheduleService {
     @Autowired
     private GroupRepository groupRepository;
 
-    @Override
-    public List<GroupTask> findAll() {
-        return groupTaskRepository.findAll();
-    }
-
     @Autowired
     EntityManager em;
 

@@ -1,8 +1,8 @@
 package com.pa.evs.schedule;
 
 import com.pa.evs.model.GroupTask;
+import com.pa.evs.repository.GroupTaskRepository;
 import com.pa.evs.sv.EVSPAService;
-import com.pa.evs.sv.ScheduleService;
 import org.quartz.JobDetail;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerFactory;
@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class WebSchedule {
@@ -24,10 +25,10 @@ public class WebSchedule {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
-    private ScheduleService scheduleService;
+    private EVSPAService evsPAService;
 
     @Autowired
-    private EVSPAService evsPAService;
+    private GroupTaskRepository groupTaskRepository;
 
     @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 
@@ -46,11 +47,14 @@ public class WebSchedule {
         try {
             logger.debug("All scheduled tasks");
             logger.debug("Getting list of scheduled tasks");
-            scheduleService.findAll().stream().forEach(task -> {
-                if(!(GroupTask.Type.ONE_TIME == task.getType() && task.getStartTime().compareTo(new Date()) < 0)) {
-                    this.addSchedule(new GroupTaskSchedule(task, evsPAService, alias, pkPath));
-                }
-            });
+            List<GroupTask> groupTasks = groupTaskRepository.findAll();
+            if(!groupTasks.isEmpty()) {
+                groupTasks.forEach(task -> {
+                    if (!(GroupTask.Type.ONE_TIME == task.getType() && task.getStartTime().compareTo(new Date()) < 0)) {
+                        this.addSchedule(new GroupTaskSchedule(task, evsPAService, alias, pkPath));
+                    }
+                });
+            }
             logger.trace("Scheduled reports list gotten successfully");
         } catch (Exception e) {
             logger.error("Silent catch for restart schedule: ", e);
