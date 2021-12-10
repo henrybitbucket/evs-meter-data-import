@@ -9,6 +9,7 @@ import com.pa.evs.model.Report;
 import com.pa.evs.repository.ReportRepository;
 import com.pa.evs.sv.ReportService;
 import com.pa.evs.utils.JasperUtil;
+import com.pa.evs.utils.Utils;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JRParameter;
 import net.sf.jasperreports.engine.JRPropertiesMap;
@@ -119,6 +120,7 @@ public class ReportServiceImpl implements ReportService {
         report.setReportName(reportName);
         try {
             File fileBin = null;
+            Utils.mkdirs(jasperDir);
             try (InputStream isSrc = file.getInputStream()) {
                 fileBin = JasperUtil.getTempFile(jasperDir);
                 JasperCompileManager.compileReportToFile(JRXmlLoader.load(isSrc),
@@ -144,6 +146,7 @@ public class ReportServiceImpl implements ReportService {
             }
             if (file != null) {
                 File fileBin = null;
+                Utils.mkdirs(jasperDir);
                 try (InputStream isSrc = file.getInputStream()) {
                     fileBin = JasperUtil.getTempFile(jasperDir);
                     JasperCompileManager.compileReportToFile(JRXmlLoader.load(isSrc),

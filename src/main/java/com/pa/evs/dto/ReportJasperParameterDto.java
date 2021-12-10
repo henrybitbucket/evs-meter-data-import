@@ -7,6 +7,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.Format;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -275,6 +276,30 @@ public class ReportJasperParameterDto implements Serializable {
 	}
 
 	private Date toDate(Object obj) {
+
+		if (obj == null) {
+			return null;
+		}
+
+		if (obj instanceof String) {
+			SimpleDateFormat sf = new SimpleDateFormat();
+			if ((obj + "").matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")) {
+				sf.applyPattern("yyyy-MM-dd");
+			} else if ((obj + "").matches("^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}\\:[0-9]{2}$")) {
+				sf.applyPattern("yyyy-MM-dd HH:mm");
+			} else if ((obj + "").matches("^[0-9]{4}-[0-9]2}-[0-9]{2}.*")) {
+				obj = (obj + "").substring(0, 8);
+				sf.applyPattern("yyyy-MM-dd");
+			} else {
+				return null;
+			}
+			try {
+				return sf.parse((obj + ""));
+			} catch (Exception e) {
+				return null;
+			}
+		}
+
 		return (Date) obj;
 	}
 
