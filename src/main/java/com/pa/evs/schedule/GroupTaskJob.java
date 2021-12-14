@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class GroupTaskJob implements Job {
@@ -38,7 +39,7 @@ public class GroupTaskJob implements Job {
         logger.debug("Group: " + group.getId());
         logger.debug("command: " + command.name());
         try {
-            String batchId = "batch_" + Calendar.getInstance().getTimeInMillis();
+            String batchId = UUID.randomUUID().toString();
             logger.debug("GroupTaskJob, batchId: {}", batchId);
             List<Long> groupIDs = new ArrayList<>();
             groupIDs.add(group.getId());
