@@ -64,7 +64,7 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
     Long getDatabaseSize();
     
     @Modifying
-	@Query(value = "update {h-schema}log set mark_view = 1 WHERE rep_status = -999", nativeQuery = true)
+	@Query(value = "update {h-schema}log set mark_view = 1 WHERE (rep_status = -999 or (rep_status is not null and rep_status <> 0))", nativeQuery = true)
     void markViewAll();
 
     @Query(value = "select * from {h-schema}ca_request_log where group_id in (?1)", nativeQuery = true)
