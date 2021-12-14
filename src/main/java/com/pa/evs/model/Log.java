@@ -9,6 +9,7 @@ import javax.persistence.Transient;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.dto.GroupDto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -73,6 +74,9 @@ public class Log extends BaseEntity {
     
     @Transient
     private String sn;
+    
+    @Transient
+    private GroupDto group;
     
     @JsonIgnore
     public String getRepStatusDesc() {

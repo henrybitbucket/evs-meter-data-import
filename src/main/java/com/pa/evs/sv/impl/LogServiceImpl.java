@@ -5,10 +5,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -17,7 +15,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.pa.evs.dto.GroupDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Group;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.MeterLog;
 import com.pa.evs.model.PiLog;
@@ -54,26 +55,34 @@ public class LogServiceImpl implements LogService {
         Long fromDate = (Long) map.get("fromDate");
         Long toDate = (Long) map.get("toDate");
         Object piId = (Object) map.get("piId");
+        Object groupId = (Object) map.get("groupId");
+        
+        Object markView = (Object) map.get("markView");
         
         String batchId = (String) map.get("batchId");
         
         
         Number repStatus = (Number) map.get("repStatus");
         
-        StringBuilder sqlBuilder = new StringBuilder(piId != null ? " Select l, pl " : " Select l ");
+        StringBuilder sqlBuilder = new StringBuilder(piId != null ? " Select l, pl, cl " : " Select l, true, cl ");
         
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(l.id) ");
         
-        StringBuilder sqlCommonBuilder = new StringBuilder("FROM Log l");
+        StringBuilder sqlCommonBuilder = new StringBuilder("FROM Log l ");
         
         if (piId != null) {
         	sqlCommonBuilder.append(" JOIN PiLog pl on (pl.pi.id = " + piId + " and l.msn = pl.msn and l.mid = pl.mid and l.type = 'PUBLISH') ");
         }
         
+        sqlCommonBuilder.append(" LEFT JOIN CARequestLog cl on (cl.msn = cl.msn and cl.uid = l.uid)");
+        
         sqlCommonBuilder.append(" WHERE 1=1 ");
 
         if (uid != null) {
         	sqlCommonBuilder.append(" AND l.uid = '" + uid + "' ");
+        }
+        if (groupId instanceof Number) {
+        	sqlCommonBuilder.append(" AND cl.group.id = " + groupId + " ");
         }
         if (StringUtils.isNotBlank(batchId)) {
         	sqlCommonBuilder.append(" AND (l.batchId = '" + batchId + "' or exists(select l1.id from Log l1 where l1.batchId = '" + batchId + "' and l1.pType = l.pType and l1.msn = l.msn and l1.mid = l.oid )) ");
@@ -95,10 +104,12 @@ public class LogServiceImpl implements LogService {
         }
         if (repStatus != null) {
         	if (repStatus.intValue() == -999) {
-        		sqlCommonBuilder.append(" AND (l.repStatus = " + repStatus + " OR (l.repStatus is not null and l.repStatus <> 0)) and l.msn <> '' ");
-        		sqlCommonBuilder.append(" AND l.mid is not null and l.type = 'PUBLISH' and l.topic <> 'evs/pa/local/data/send' and (l.markView is null or l.markView <> 1) ");	
+        		// sqlCommonBuilder.append(" AND (l.repStatus = " + repStatus + " OR (l.repStatus is not null and l.repStatus <> 0)) and l.msn <> '' ");
+        		sqlCommonBuilder.append(" AND (l.repStatus = " + repStatus + " OR (l.repStatus is not null and l.repStatus <> 0)) ");
+        		sqlCommonBuilder.append(" AND l.mid is not null and l.type = 'PUBLISH' and l.topic <> 'evs/pa/local/data/send' and " + (markView instanceof Number ? "(l.markView = " + markView + ") " : "(l.markView is null or l.markView <> 1) "));	
         	} else {
-        		sqlCommonBuilder.append(" AND l.repStatus = " + repStatus + "  and l.msn <> '' ");
+        		// sqlCommonBuilder.append(" AND l.repStatus = " + repStatus + "  and l.msn <> '' ");
+        		sqlCommonBuilder.append(" AND l.repStatus = " + repStatus + " ");
         	}
         	
         }
@@ -130,22 +141,28 @@ public class LogServiceImpl implements LogService {
         	data.forEach(obj -> {
         		Object[] os = (Object[]) obj;
         		Log l = (Log) os[0];
-        		PiLog pl = (PiLog) os[1];
-        		l.setFtpResStatus(pl.getFtpResStatus());
+        		if (os[1] instanceof PiLog) {
+	        		PiLog pl = (PiLog) os[1];
+	        		l.setFtpResStatus(pl.getFtpResStatus());
+        		}
+        		if (os[2] instanceof CARequestLog) {
+        			CARequestLog cl = (CARequestLog) os[2];
+        			Group group = cl.getGroup();
+        			if (group != null) {
+        				l.setGroup(GroupDto.builder()
+	                    .id(group.getId())
+	                    .name(group.getName())
+	                    .remark(group.getRemark())
+	                    .build());
+        			} else {
+        				l.setGroup(new GroupDto());
+        			}
+        			l.setSn(cl.getSn());
+        		}
         		pagin.getResults().add(l);
         	});
         } else {
         	pagin.setResults((List<Log>)data);
-        }
-        
-        if (!pagin.getResults().isEmpty()) {
-	        query = em.createQuery("SELECT sn, msn FROM CARequestLog where msn in (:msn)");
-	        query.setParameter("msn", pagin.getResults().stream().map(l -> l.getMsn()).collect(Collectors.toList()));
-	        List<Object[]> objs = query.getResultList();
-	        Map<String, String> temp = new LinkedHashMap<>();
-	        objs.forEach(obj -> temp.put((String)obj[1], (String)obj[0]));
-	        pagin.getResults().forEach(l -> l.setSn(temp.get(l.getMsn())));
-	        temp.clear();
         }
         
         return pagin;
