@@ -7,7 +7,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.sql.Blob;
+
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Lob;
 import javax.persistence.Table;
 
 @AllArgsConstructor
@@ -22,6 +26,8 @@ public class Report extends BaseEntity {
 
     private String reportName;
 
-    private byte[] binBlob;
+    @Lob
+	@Column(name = "bin_Blob")
+    private Blob binBlob;
 
 }

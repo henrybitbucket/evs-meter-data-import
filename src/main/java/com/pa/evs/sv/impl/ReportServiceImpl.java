@@ -33,9 +33,11 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.EntityManager;
@@ -43,7 +45,9 @@ import javax.persistence.Query;
 import javax.sql.DataSource;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.sql.Blob;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -125,13 +129,17 @@ public class ReportServiceImpl implements ReportService {
                 fileBin = JasperUtil.getTempFile(jasperDir);
                 JasperCompileManager.compileReportToFile(JRXmlLoader.load(isSrc),
                         fileBin.getAbsolutePath());
-                report.setBinBlob(FileUtils.readFileToByteArray(fileBin));
+                
+                InputStream in = new FileInputStream(fileBin);
+                report.setBinBlob(em.unwrap(Session.class).getLobHelper().createBlob(in, fileBin.length()));
+                reportRepository.save(report);
+                reportRepository.flush();
+                in.close();
             } finally {
                 if (fileBin != null) {
                     FileUtils.deleteQuietly(fileBin);
                 }
             }
-            reportRepository.save(report);
         } catch (Exception ex) {
             logger.error("Error add report", ex);
         }
@@ -151,7 +159,11 @@ public class ReportServiceImpl implements ReportService {
                     fileBin = JasperUtil.getTempFile(jasperDir);
                     JasperCompileManager.compileReportToFile(JRXmlLoader.load(isSrc),
                             fileBin.getAbsolutePath());
-                    report.get().setBinBlob(FileUtils.readFileToByteArray(fileBin));
+                    InputStream in = new FileInputStream(fileBin);
+                    report.get().setBinBlob(em.unwrap(Session.class).getLobHelper().createBlob(in, fileBin.length()));
+                    reportRepository.save(report.get());
+                    reportRepository.flush();
+                    in.close();
                 } finally {
                     if (fileBin != null) {
                         FileUtils.deleteQuietly(fileBin);
@@ -170,6 +182,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ReportJasperParameterDto> getParameters(Long id) {
         logger.debug("Load Jasper Parameters");
         List<ReportJasperParameterDto> parameters = new ArrayList<>();
@@ -208,6 +221,7 @@ public class ReportServiceImpl implements ReportService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public void doExportReport(File exportFile, ExportReportDto dto) {
         File swapFile = null;
         try {
@@ -283,15 +297,14 @@ public class ReportServiceImpl implements ReportService {
         return parameter;
     }
 
-    private JasperReport loadReport(Report reportEntity) throws JRException {
+    private JasperReport loadReport(Report reportEntity) throws Exception {
         logger.info("Load report from database");
         InputStream isBin = null;
         JasperReport jasperReport = null;
         try {
-            byte[] bytes = reportEntity.getBinBlob();
-            if (bytes != null) {
-                isBin = new ByteArrayInputStream(bytes);
-                jasperReport = (JasperReport) JRLoader.loadObject(isBin);
+        	Blob blod = reportEntity.getBinBlob();
+            if (blod != null) {
+                jasperReport = (JasperReport) JRLoader.loadObject(blod.getBinaryStream());
             }
             logger.debug("Loaded report: " + jasperReport);
             return jasperReport;

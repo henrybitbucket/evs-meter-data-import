@@ -3,6 +3,7 @@ package com.pa.evs.ctrl;
 import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.GetGroupTaskResponseDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.ReportScheduleDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.ScheduleDto;
 import com.pa.evs.enums.ResponseEnum;
@@ -78,5 +79,42 @@ public class ScheduleController {
             return exceptionConvertor.createResponseDto(ex);
         }
     }
+    
+    @PostMapping("/api/schedule/report-task/create")
+    public ResponseDto createReportSchedule(@RequestBody ReportScheduleDto data) {
+        try {
+            logger.info("invoke createReportSchedule, groupId: {}, type: {}, parameter: {}, format: {} "
+                    , data.getReportId(), data.getType().name(), data.getParameter(), data.getFormat());
+            scheduleService.createReportSchedule(data);
+            return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
+        } catch (Exception ex) {
+            return exceptionConvertor.createResponseDto(ex);
+        }
+    }
+    
+    @DeleteMapping("/api/schedule/report-task/{id}/remove")
+    public ResponseDto removeReportSchedule(@PathVariable Long id) {
+        try {
+            logger.info("invoke removeReportSchedule, scheduleId: {} ", id);
+            scheduleService.removeReportSchedule(id);
+            return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
+        } catch (Exception ex) {
+            return exceptionConvertor.createResponseDto(ex);
+        }
+    }
+    
+    @GetMapping("/api/schedule/report-task")
+    public Object getReportTask(HttpServletRequest request) {
+        try {
+            PaginDto<?> pagin = new PaginDto<>();
+            pagin.setOffset(request.getParameter("offset"));
+            pagin.setLimit(request.getParameter("limit"));
+            scheduleService.searchAllReportSchedule(pagin);
+            return pagin;
+        }catch (Exception ex) {
+            return exceptionConvertor.createResponseDto(ex);
+        }
+    }
+
 
 }
