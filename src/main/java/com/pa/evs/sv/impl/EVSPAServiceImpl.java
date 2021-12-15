@@ -69,13 +69,17 @@ import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.GroupTask;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.LogBatch;
+import com.pa.evs.model.LogBatchGroupTask;
 import com.pa.evs.model.MeterLog;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.PiLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.GroupTaskRepository;
+import com.pa.evs.repository.LogBatchGroupTaskRepository;
 import com.pa.evs.repository.LogBatchRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.MeterLogRepository;
@@ -120,6 +124,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired private LogBatchRepository logBatchRepository;
 
 	@Autowired private CARequestLogRepository caRequestLogRepository;
+	
+	@Autowired private LogBatchGroupTaskRepository logBatchGroupTaskRepository;
+	
+	@Autowired private GroupTaskRepository groupTaskRepository;
 	
 	@Autowired private PiRepository piRepository;
 	
@@ -1175,15 +1183,21 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public void searchBatchLog(PaginDto pagin) {
-		StringBuilder sqlBuilder = new StringBuilder(" ");
+		StringBuilder sqlBuilder = new StringBuilder(" SELECT l ");
 		StringBuilder sqlCountBuilder = new StringBuilder(" SELECT count(*) ");
-		StringBuilder cmBuilder = new StringBuilder(" FROM LogBatch WHERE 1=1 ");
+		StringBuilder cmBuilder = new StringBuilder(" FROM LogBatch l ");
 		
-		if (StringUtils.isNotBlank(pagin.getKeyword())) {
-			cmBuilder.append(" AND uuid like '%" + pagin.getKeyword().trim() + "%' ");
+		if (pagin.getOptions().get("groupTaskId") != null) {
+			cmBuilder.append(" JOIN LogBatchGroupTask lt on (lt.batch.id = l.id and lt.task.id = " + pagin.getOptions().get("groupTaskId") + ") ");
 		}
 		
-		sqlBuilder.append(cmBuilder).append(" ORDER BY createDate DESC ");
+		cmBuilder.append(" WHERE 1=1 ");
+		
+		if (StringUtils.isNotBlank(pagin.getKeyword())) {
+			cmBuilder.append(" AND l.uuid like '%" + pagin.getKeyword().trim() + "%' ");
+		}
+		
+		sqlBuilder.append(cmBuilder).append(" ORDER BY l.createDate DESC ");
 		sqlCountBuilder.append(cmBuilder);
 		
 		Long count = ((Number)em.createQuery(sqlCountBuilder.toString()).getSingleResult()).longValue();
@@ -1207,5 +1221,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		data.forEach(d -> rp.add(PiLogDto.builder().type(d.getType()).ftpResStatus(d.getFtpResStatus()).msn(d.getMsn()).mid(d.getMid()).piUuid(d.getPi().getUuid()).build()));
 		return rp;
+	}
+	
+	@Override
+	@Transactional
+	public void createTaskLog(String uuid, Long groupTaskId) {
+		LogBatch batch = LogBatch.builder().uuid(uuid).build();
+		logBatchRepository.save(batch);
+		GroupTask task = groupTaskRepository.findById(groupTaskId).orElse(new GroupTask());
+		logBatchGroupTaskRepository.save(LogBatchGroupTask.builder().batch(batch).task(task).build());
 	}
 }

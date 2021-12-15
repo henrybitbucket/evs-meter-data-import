@@ -1,11 +1,6 @@
 package com.pa.evs.model;
 
-import com.pa.evs.enums.CommandEnum;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import java.util.Date;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -17,7 +12,14 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
-import java.util.Date;
+
+import com.pa.evs.enums.CommandEnum;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -29,7 +31,7 @@ import java.util.Date;
 public class GroupTask extends BaseEntity {
 
     public enum Type {
-        ONE_TIME, DAILY;
+        ONE_TIME, DAILY, WEEKLY, MONTHLY;
     }
 
     @Column(name = "command", length = 50)

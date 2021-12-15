@@ -36,4 +36,6 @@ public interface EVSPAService {
 
 	List<CARequestLog> findDevicesInGroup(List<Long> listGroupId);
 
+	void createTaskLog(String uuid, Long groupTaskId);
+
 }

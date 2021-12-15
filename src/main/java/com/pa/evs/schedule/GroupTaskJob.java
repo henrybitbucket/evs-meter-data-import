@@ -40,6 +40,7 @@ public class GroupTaskJob implements Job {
         logger.debug("command: " + command.name());
         try {
             String batchId = UUID.randomUUID().toString();
+            evsPAService.createTaskLog(batchId, (Long) ma.get("TASK_ID"));
             logger.debug("GroupTaskJob, batchId: {}", batchId);
             List<Long> groupIDs = new ArrayList<>();
             groupIDs.add(group.getId());
@@ -64,6 +65,5 @@ public class GroupTaskJob implements Job {
         } catch (Exception e) {
             logger.error("Error when executing zwave task", e);
         }
-
     }
 }

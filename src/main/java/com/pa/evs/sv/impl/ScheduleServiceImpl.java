@@ -89,6 +89,7 @@ public class ScheduleServiceImpl implements ScheduleService {
             throw new ApiException(ResponseEnum.TASK_IS_NOT_EXISTS);
         }
         webSchedule.removeSchedule(new GroupTaskSchedule(groupTask.get(), evsPAService, alias, pkPath));
+        groupTaskRepository.deleteTaskLog(groupTask.get().getId());
         groupTaskRepository.delete(groupTask.get());
     }
 

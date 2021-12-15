@@ -33,7 +33,14 @@ public class GroupTaskSchedule implements ISchedule {
         }
         Calendar cal = Calendar.getInstance();
         cal.setTime(task.getStartTime());
-        String cron = "0 " + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " * * ? *";
+        String cron = null;
+        if (GroupTask.Type.WEEKLY == task.getType()) {
+        	cron = "0 " + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " ? * " + cal.get(Calendar.DAY_OF_WEEK) + " *";
+        } else if (GroupTask.Type.MONTHLY == task.getType()) {
+        	cron = "0 " + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " " + cal.get(Calendar.DAY_OF_MONTH) + " * ? *";
+        } else {
+        	cron = "0 " + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " * * ? *";
+		}
         return TriggerBuilder.newTrigger()
                 .withIdentity("group_schedule_id_" + task.getId(), GROUP_NAME)
                 .withSchedule(CronScheduleBuilder.cronSchedule(cron))
@@ -49,6 +56,7 @@ public class GroupTaskSchedule implements ISchedule {
         jobDataMap.put("EVS_PA_SERVICE", evsPAService);
         jobDataMap.put("ALIAS", alias);
         jobDataMap.put("PK_PATH", pkPath);
+        jobDataMap.put("TASK_ID", task.getId());
         return JobBuilder.newJob(GroupTaskJob.class)
                 .withIdentity("group_schedule_job_" + task.getId(), GROUP_NAME)
                 .usingJobData(jobDataMap)

@@ -376,6 +376,7 @@ public class CommonController {
 		pagin.setOffset(request.getParameter("offset"));
 		pagin.setLimit(request.getParameter("limit"));
 		pagin.setKeyword(request.getParameter("search"));
+		pagin.getOptions().put("groupTaskId", (request.getParameter("groupTaskId")));
 		evsPAService.searchBatchLog(pagin);
 		return pagin;
 	}
