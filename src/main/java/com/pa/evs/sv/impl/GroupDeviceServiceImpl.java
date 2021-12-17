@@ -38,6 +38,7 @@ public class GroupDeviceServiceImpl implements GroupService {
                 throw new Exception(String.format("No group with id %d found!", dto.getId()));
             }
             Group group = opt.get();
+            group.setName(dto.getName());
             group.setRemark(dto.getRemark());
             groupRepository.save(group);
         }
