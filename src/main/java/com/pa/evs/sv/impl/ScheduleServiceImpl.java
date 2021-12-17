@@ -247,7 +247,10 @@ public class ScheduleServiceImpl implements ScheduleService {
         list.forEach(li -> {
         	ReportFileDto dto = ReportFileDto.builder()
                     .id(li.getId())
+                    .reportId(li.getReportTask().getReport().getReportName() + " (" +li.getReportTask().getReport().getId()+ ")")
+                    .reportTaskId(li.getReportTask().getId())                 
                     .fileName(li.getFileName())
+                    .createDate(li.getCreateDate())
                     .fileFormat(li.getFileFormat())
                     .build();
             pagin.getResults().add(dto);
