@@ -1,8 +1,8 @@
 package com.pa.evs.schedule;
 
-import com.pa.evs.dto.ReportScheduleDto;
 import com.pa.evs.enums.JasperFormat;
 import com.pa.evs.model.ReportTask;
+import com.pa.evs.repository.ReportFileRepository;
 import com.pa.evs.repository.ReportTaskRepository;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.ReportService;
@@ -13,9 +13,10 @@ import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Calendar;
+
+import javax.persistence.EntityManager;
 
 public class ReportTaskSchedule implements ISchedule {
 
@@ -28,9 +29,14 @@ public class ReportTaskSchedule implements ISchedule {
     private String pkPath;
     private ReportService reportService;    
     private ReportTaskRepository reportTaskRepository;
+    private ReportFileRepository reportFileRepository;
+    private EntityManager em;
 
-    public ReportTaskSchedule(ReportTask task, String parameter, JasperFormat format, ReportService reportService, ReportTaskRepository reportTaskRepository, EVSPAService evsPAService, String alias, String pkPath) {
-        this.task= task;
+    public ReportTaskSchedule(ReportTask task, ReportFileRepository reportFileRepository, EntityManager em, String parameter, JasperFormat format, ReportService reportService,
+    		ReportTaskRepository reportTaskRepository, EVSPAService evsPAService, String alias, String pkPath) {
+        this.task = task;
+        this.reportFileRepository = reportFileRepository;
+        this.em = em;
         this.parameter = parameter;
         this.format = format;
         this.reportService = reportService;
@@ -63,11 +69,14 @@ public class ReportTaskSchedule implements ISchedule {
     public JobDetail getJobDetail() {
         JobDataMap jobDataMap = new JobDataMap();
         jobDataMap.put("PARAMETER", parameter);
+        jobDataMap.put("ENTITY_MANAGER", em);
         jobDataMap.put("FORMAT", format);
-        jobDataMap.put("REPORT_TASK", task.getReport());
+        jobDataMap.put("REPORT", task.getReport());
+        jobDataMap.put("REPORT_TASK_ID", task.getId());
         jobDataMap.put("EVS_PA_SERVICE", evsPAService);
         jobDataMap.put("REPORT_SERVICE", reportService);
         jobDataMap.put("REPORT_TASK_REPOSITORY", reportTaskRepository);
+        jobDataMap.put("REPORT_FILE_REPOSITORY", reportFileRepository);
         jobDataMap.put("ALIAS", alias);
         jobDataMap.put("PK_PATH", pkPath);
         return JobBuilder.newJob(ReportTaskJob.class)

@@ -1,5 +1,34 @@
 package com.pa.evs.sv.impl;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.sql.Blob;
+import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+import javax.sql.DataSource;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.hibernate.Session;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.pa.evs.dto.ExportReportDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ReportDto;
@@ -10,7 +39,7 @@ import com.pa.evs.repository.ReportRepository;
 import com.pa.evs.sv.ReportService;
 import com.pa.evs.utils.JasperUtil;
 import com.pa.evs.utils.Utils;
-import net.sf.jasperreports.engine.JRException;
+
 import net.sf.jasperreports.engine.JRParameter;
 import net.sf.jasperreports.engine.JRPropertiesMap;
 import net.sf.jasperreports.engine.JasperCompileManager;
@@ -29,36 +58,9 @@ import net.sf.jasperreports.export.ExporterInput;
 import net.sf.jasperreports.export.SimpleExporterInput;
 import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
 import net.sf.jasperreports.export.SimpleWriterExporterOutput;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.hibernate.Session;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import javax.sql.DataSource;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.sql.Blob;
-import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
+@SuppressWarnings("unchecked")
 public class ReportServiceImpl implements ReportService {
 
     static final Logger logger = LogManager.getLogger(ReportServiceImpl.class);
@@ -75,7 +77,7 @@ public class ReportServiceImpl implements ReportService {
     @Value("${evs.pa.report.jasperDir}")
     private String jasperDir;
 
-    @Override
+	@Override
     public void getReports(PaginDto<ReportDto> pagin) {
         StringBuilder sqlBuilder = new StringBuilder("FROM Report");
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Report");

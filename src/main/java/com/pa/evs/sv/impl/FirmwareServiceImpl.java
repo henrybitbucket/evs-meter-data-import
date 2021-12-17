@@ -26,7 +26,7 @@ import com.pa.evs.sv.FirmwareService;
 @Service
 public class FirmwareServiceImpl implements FirmwareService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FirmwareServiceImpl.class);
+    static final Logger LOG = LoggerFactory.getLogger(FirmwareServiceImpl.class);
 
     @Autowired
     private FirmwareRepository firmwareRepository;
