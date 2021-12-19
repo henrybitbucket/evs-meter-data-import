@@ -1,8 +1,14 @@
 package com.pa.evs.schedule;
 
+import com.pa.evs.enums.JasperFormat;
 import com.pa.evs.model.GroupTask;
+import com.pa.evs.model.ReportTask;
 import com.pa.evs.repository.GroupTaskRepository;
+import com.pa.evs.repository.ReportFileRepository;
+import com.pa.evs.repository.ReportTaskRepository;
 import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.ReportService;
+
 import org.quartz.JobDetail;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerFactory;
@@ -16,6 +22,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.persistence.EntityManager;
+
 import java.util.Date;
 import java.util.List;
 
@@ -29,6 +37,18 @@ public class WebSchedule {
 
     @Autowired
     private GroupTaskRepository groupTaskRepository;
+    
+    @Autowired
+    private ReportTaskRepository reportTaskRepository;
+    
+    @Autowired
+    private ReportFileRepository reportFileRepository;
+    
+    @Autowired
+    EntityManager em;
+    
+    @Autowired
+    private ReportService reportService;
 
     @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 
@@ -41,6 +61,7 @@ public class WebSchedule {
     public void init() {
         schedulerFactory = new StdSchedulerFactory();
         restart();
+        restartReportSchedule();
     }
 
     public void restart() {
@@ -52,6 +73,26 @@ public class WebSchedule {
                 groupTasks.forEach(task -> {
                     if (!(GroupTask.Type.ONE_TIME == task.getType() && task.getStartTime().compareTo(new Date()) < 0)) {
                         this.addSchedule(new GroupTaskSchedule(task, evsPAService, alias, pkPath));
+                    }
+                });
+            }
+            logger.trace("Scheduled reports list gotten successfully");
+        } catch (Exception e) {
+            logger.error("Silent catch for restart schedule: ", e);
+        }
+    }
+    
+    public void restartReportSchedule() {
+        try {
+            logger.debug("All reports scheduled");
+            logger.debug("Getting list of reports scheduled tasks");
+            String parameter = "";
+            JasperFormat format = null;
+            List<ReportTask> reportTask = reportTaskRepository.findAll();
+            if(!reportTask.isEmpty()) {
+            	reportTask.forEach(task -> {
+                    if (!(ReportTask.Type.ONE_TIME == task.getType() && task.getStartTime().compareTo(new Date()) < 0)) {
+                        this.addSchedule(new ReportTaskSchedule(task, reportFileRepository, em, parameter, format, reportService, reportTaskRepository, evsPAService, alias, pkPath));
                     }
                 });
             }
