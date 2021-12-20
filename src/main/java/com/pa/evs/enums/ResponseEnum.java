@@ -5,6 +5,11 @@ public enum ResponseEnum {
     TASK_IS_NOT_EXISTS(104, "Task is not exist"),
     SYSTEM_ERROR(99, "Provisioning portal system error"),
     BAD_REQUEST(999, "Bad request"),
+    
+    BUILDING_NOT_FOUND(100, "Building is not exist"),
+    BUILDING_UNIT_NOT_FOUND(100, "Building Unit is not exist"),
+    FLOOR_LEVEL_NOT_FOUND(100, "Floor Level is not exist"),
+
     ;
 
     private final int errorCode;

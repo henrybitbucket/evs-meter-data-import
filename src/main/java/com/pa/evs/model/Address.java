@@ -1,0 +1,50 @@
+package com.pa.evs.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Table;
+
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@Builder
+@Entity
+@Table(name = "address")
+public class Address extends BaseEntity {
+
+	@Column(name = "display_name")
+	private String displayName;
+
+	@Column(name = "country", length = 50)
+	private String country;
+
+	@Column(name = "city", length = 100)
+	private String city;
+
+	@Column(name = "town", length = 100)
+	private String town;
+
+	@Column(name = "street")
+	private String street;
+
+	@Column(name = "street_number")
+	private String streetNumber;
+
+	@Column(name = "postal_code")
+	private String postalCode;
+
+	@Column(name = "block", length = 10)
+	private String block;
+
+	@Column(name = "unit_number", length = 50)
+	private String unitNumber;
+
+}
