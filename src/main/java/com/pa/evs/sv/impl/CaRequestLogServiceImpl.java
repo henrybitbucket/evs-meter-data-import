@@ -113,7 +113,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         ca.setRaw(dto.getRaw());
         ca.setStartDate(dto.getStartDate());
         ca.setEndDate(dto.getEndDate());
+        ca.setBuilding(dto.getBuilding());
         ca.setAddress(dto.getAddress());
+        ca.setBuildingUnit(dto.getBuildingUnit());
+        ca.setFloorLevel(dto.getFloorLevel());
+        ca.setHomeAddress(dto.getHomeAddress());
         
         if (dto.getInstaller() != null) {
             Optional<Users> installer = userRepository.findById(dto.getInstaller().longValue());
@@ -329,7 +333,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         			}
         			ca.setStatus(DeviceStatus.COUPLED);
     				ca.setCoupledDatetime(System.currentTimeMillis());
-        			ca.setAddress((String)map.get("address"));
+        			//ca.setAddress((String)map.get("address"));
         			if (map.get("request") instanceof HttpServletRequest) {
         				ResponseDto<JwtUser> us = authenticationService.getUser((HttpServletRequest) map.get("request"));
         				if (us != null && us.getResponse() != null) {

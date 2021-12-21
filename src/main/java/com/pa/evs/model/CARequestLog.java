@@ -1,6 +1,7 @@
 package com.pa.evs.model;
 
 import com.pa.evs.enums.DeviceStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -67,8 +68,24 @@ public class CARequestLog extends BaseEntity {
 	@Column
 	private Long readInterval = 30L; // read interval time
 	
-	@Column(name = "address")
-	private String address;
+	@Column(name = "home_address")
+	private String homeAddress;
+
+	@ManyToOne
+	@JoinColumn(name = "building_id")
+	private Building building;
+	
+	@ManyToOne
+	@JoinColumn(name = "floor_level_id")
+	private FloorLevel floorLevel;
+
+	@ManyToOne
+	@JoinColumn(name = "building_unit_id")
+	private BuildingUnit buildingUnit;
+
+	@ManyToOne
+	@JoinColumn(name = "address_id")
+	private Address address;
 	
 	@Column(name = "coupled_datetime")
 	private Long coupledDatetime;
