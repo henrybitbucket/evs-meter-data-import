@@ -1,36 +1,5 @@
 package com.pa.evs.sv.impl;
 
-import com.pa.evs.constant.Message;
-import com.pa.evs.dto.CaRequestLogDto;
-import com.pa.evs.dto.PaginDto;
-import com.pa.evs.dto.ResponseDto;
-import com.pa.evs.enums.DeviceStatus;
-import com.pa.evs.enums.ScreenMonitorKey;
-import com.pa.evs.enums.ScreenMonitorStatus;
-import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.Group;
-import com.pa.evs.model.ScreenMonitoring;
-import com.pa.evs.model.Users;
-import com.pa.evs.repository.CARequestLogRepository;
-import com.pa.evs.repository.GroupRepository;
-import com.pa.evs.repository.ScreenMonitoringRepository;
-import com.pa.evs.repository.UserRepository;
-import com.pa.evs.security.user.JwtUser;
-import com.pa.evs.sv.AuthenticationService;
-import com.pa.evs.sv.CaRequestLogService;
-import com.pa.evs.utils.CsvUtils;
-import org.apache.commons.lang3.BooleanUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
-
-import javax.annotation.PostConstruct;
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -44,6 +13,45 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+
+import javax.annotation.PostConstruct;
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+import javax.servlet.http.HttpServletRequest;
+
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+
+import com.pa.evs.constant.Message;
+import com.pa.evs.dto.CaRequestLogDto;
+import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.ScreenMonitorKey;
+import com.pa.evs.enums.ScreenMonitorStatus;
+import com.pa.evs.model.Address;
+import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Group;
+import com.pa.evs.model.ScreenMonitoring;
+import com.pa.evs.model.Users;
+import com.pa.evs.repository.AddressRepository;
+import com.pa.evs.repository.BuildingRepository;
+import com.pa.evs.repository.BuildingUnitRepository;
+import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.FloorLevelRepository;
+import com.pa.evs.repository.GroupRepository;
+import com.pa.evs.repository.ScreenMonitoringRepository;
+import com.pa.evs.repository.UserRepository;
+import com.pa.evs.security.user.JwtUser;
+import com.pa.evs.sv.AuthenticationService;
+import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.utils.CsvUtils;
+import com.pa.evs.utils.Utils;
 
 @Component
 @SuppressWarnings("unchecked")
@@ -62,6 +70,18 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+	AddressRepository addressRepository;
+	
+	@Autowired
+	BuildingRepository buildingRepository;
+	
+	@Autowired
+	FloorLevelRepository floorLevelRepository;
+	
+	@Autowired
+	BuildingUnitRepository buildingUnitRepository;
 	
 	@Autowired
 	EntityManager em;
@@ -113,11 +133,61 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         ca.setRaw(dto.getRaw());
         ca.setStartDate(dto.getStartDate());
         ca.setEndDate(dto.getEndDate());
-        ca.setBuilding(dto.getBuilding());
-        ca.setAddress(dto.getAddress());
-        ca.setBuildingUnit(dto.getBuildingUnit());
-        ca.setFloorLevel(dto.getFloorLevel());
-        ca.setHomeAddress(dto.getHomeAddress());
+        
+        try {
+        	if(StringUtils.isNotEmpty(dto.getHomeAddress())) {
+				ca.setHomeAddress(dto.getHomeAddress());
+			}
+			
+			if (dto.getBuildingId() == null) {
+				ca.setBuilding(null);
+			} else {
+				ca.setBuilding(buildingRepository.findById(dto.getBuildingId()).orElse(null));
+				ca.setAddress(null);
+			}
+			
+			if (dto.getFloorLevelId() == null) {
+				ca.setFloorLevel(null);
+			} else {
+				ca.setFloorLevel(floorLevelRepository.findById(dto.getFloorLevelId()).orElse(null));
+			}
+			
+			if (dto.getBuildingUnitId() == null) {
+				ca.setBuildingUnit(null);
+			} else {
+				ca.setBuildingUnit(buildingUnitRepository.findById(dto.getBuildingUnitId()).orElse(null));
+			}
+			
+			if (dto.getAddress() == null) {
+				ca.setAddress(null);
+			} else if (dto.getBuildingId() == null && StringUtils.isNotBlank(dto.getAddress().getStreetNumber())
+				&& StringUtils.isNotBlank(dto.getAddress().getStreet())
+				&& StringUtils.isNotBlank(dto.getAddress().getCity())
+				&& StringUtils.isNotBlank(dto.getAddress().getCountry())
+				&& dto.getAddress().getPostalCode() != null
+						) {
+				
+				Address address;
+				if (dto.getAddress().getId() == null) {
+					address = new Address();
+				} else {
+					address = addressRepository.findById(dto.getAddress().getId()).orElse(new Address());
+				}
+				address.setStreetNumber(dto.getAddress().getStreetNumber());
+				address.setStreet(dto.getAddress().getStreet());
+				address.setTown(dto.getAddress().getTown());
+				address.setCity(dto.getAddress().getCity());
+				address.setCountry(dto.getAddress().getCountry());
+				address.setPostalCode(dto.getAddress().getPostalCode());
+				addressRepository.save(address);
+
+				ca.setAddress(address);
+				ca.setBuilding(null);
+				ca.setFloorLevel(null);
+				ca.setBuildingUnit(null);
+
+			}
+		} catch (Exception e) {/**/}
         
         if (dto.getInstaller() != null) {
             Optional<Users> installer = userRepository.findById(dto.getInstaller().longValue());
@@ -308,6 +378,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         query.setMaxResults(pagin.getLimit());
         
         List<CARequestLog> list = query.getResultList();
+        list.forEach(ca -> ca.setHomeAddress(Utils.formatHomeAddress(ca)));
         
         pagin.setResults(list);
         return pagin;

@@ -1,14 +1,5 @@
 package com.pa.evs.dto;
 
-import javax.persistence.Column;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-
-import com.pa.evs.model.Address;
-import com.pa.evs.model.Building;
-import com.pa.evs.model.BuildingUnit;
-import com.pa.evs.model.FloorLevel;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -46,11 +37,17 @@ public class CaRequestLogDto {
     
 	private String homeAddress;
 
-	private Building building;
-	
-	private FloorLevel floorLevel;
-
-	private BuildingUnit buildingUnit;
-
-	private Address address;
+    private Long buildingId;
+    
+    private Long floorLevelId;
+    
+    private Long buildingUnitId;
+    
+    private BuildingDto building;
+    
+    private FloorLevelDto floorLevel;
+    
+    private BuildingUnitDto buildingUnit;
+    
+    private AddressDto address;
 }
