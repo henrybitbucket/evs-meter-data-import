@@ -26,6 +26,7 @@ import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.MeterLogRepository;
 import com.pa.evs.repository.PiLogRepository;
 import com.pa.evs.sv.LogService;
+import com.pa.evs.utils.Utils;
 
 @Service
 public class LogServiceImpl implements LogService {
@@ -146,7 +147,8 @@ public class LogServiceImpl implements LogService {
 	        		l.setFtpResStatus(pl.getFtpResStatus());
         		}
         		if (os[2] instanceof CARequestLog) {
-        			CARequestLog cl = (CARequestLog) os[2];
+        			CARequestLog cl = (CARequestLog) os[2];       		
+        			l.setAddress(Utils.formatHomeAddress(cl));
         			Group group = cl.getGroup();
         			if (group != null) {
         				l.setGroup(GroupDto.builder()

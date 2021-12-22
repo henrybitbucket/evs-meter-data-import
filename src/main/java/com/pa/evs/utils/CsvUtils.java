@@ -46,7 +46,7 @@ public class CsvUtils {
     
     public static File writeAlarmsLogCsv(List<Log> listInput, String fileName, Long activateDate) throws IOException{
         List<String> headers = Arrays.asList(
-                "TIME", "TYPE", "TOPIC", "MID", "MSN", "SN", "COMMAND", "RAW MESSAGE", "STATUS");
+                "TIME", "TYPE", "TOPIC", "MID", "MSN", "SN", "COMMAND", "RAW MESSAGE", "STATUS", "ADDRESS");
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
     }
     
@@ -63,6 +63,7 @@ public class CsvUtils {
         record.add(log.getPType());
         record.add(log.getRaw());
         record.add(log.getRepStatusDesc());
+        record.add(log.getAddress());
         return postProcessCsv(record);
     }
     

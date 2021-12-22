@@ -56,6 +56,8 @@ public class Log extends BaseEntity {
 	@Column(name = "mqtt_address")
 	private String mqttAddress;
 	
+	private String address;
+	
 	private String topic;
 	
 	private String ver;
