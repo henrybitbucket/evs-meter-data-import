@@ -3,6 +3,7 @@ package com.pa.evs.ctrl;
 import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.GetGroupTaskResponseDto;
 import com.pa.evs.dto.GetReportTaskResponseDto;
+import com.pa.evs.dto.GroupTaskDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ReportFileDto;
 import com.pa.evs.dto.ReportScheduleDto;
@@ -71,18 +72,16 @@ public class ScheduleController {
             return exceptionConvertor.createResponseDto(ex);
         }
     }
-
-    @GetMapping("/api/schedule/group-task")
-    public Object getGroupTask(HttpServletRequest request) {
+    
+    @PostMapping("/api/schedule/group-task")
+    public ResponseEntity<Object> getGroupTask(HttpServletRequest httpServletRequest, @RequestBody PaginDto<GroupTaskDto> pagin) throws Exception {
         try {
-            PaginDto<?> pagin = new PaginDto<>();
-            pagin.setOffset(request.getParameter("offset"));
-            pagin.setLimit(request.getParameter("limit"));
-            scheduleService.searchAllSchedule(pagin);
-            return pagin;
-        }catch (Exception ex) {
-            return exceptionConvertor.createResponseDto(ex);
+        	scheduleService.searchAllSchedule(pagin);
+        } catch (Exception e) {
+        	e.printStackTrace();
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
         }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).response(pagin).build());
     }
     
     @PostMapping("/api/schedule/report-task/create")

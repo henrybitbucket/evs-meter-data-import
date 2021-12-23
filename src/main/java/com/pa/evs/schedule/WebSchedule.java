@@ -3,11 +3,14 @@ package com.pa.evs.schedule;
 import com.pa.evs.enums.JasperFormat;
 import com.pa.evs.model.GroupTask;
 import com.pa.evs.model.ReportTask;
+import com.pa.evs.model.Users;
 import com.pa.evs.repository.GroupTaskRepository;
 import com.pa.evs.repository.ReportFileRepository;
 import com.pa.evs.repository.ReportTaskRepository;
+import com.pa.evs.repository.UserRepository;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.ReportService;
+import com.pa.evs.utils.SecurityUtils;
 
 import org.quartz.JobDetail;
 import org.quartz.Scheduler;
@@ -49,6 +52,9 @@ public class WebSchedule {
     
     @Autowired
     private ReportService reportService;
+    
+    @Autowired
+    private UserRepository userRepository;
 
     @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 
@@ -69,10 +75,11 @@ public class WebSchedule {
             logger.debug("All scheduled tasks");
             logger.debug("Getting list of scheduled tasks");
             List<GroupTask> groupTasks = groupTaskRepository.findAll();
+            Users user = userRepository.findByEmail(SecurityUtils.getEmail());
             if(!groupTasks.isEmpty()) {
                 groupTasks.forEach(task -> {
                     if (!(GroupTask.Type.ONE_TIME == task.getType() && task.getStartTime().compareTo(new Date()) < 0)) {
-                        this.addSchedule(new GroupTaskSchedule(task, evsPAService, alias, pkPath));
+                        this.addSchedule(new GroupTaskSchedule(task, user,evsPAService, alias, pkPath));
                     }
                 });
             }

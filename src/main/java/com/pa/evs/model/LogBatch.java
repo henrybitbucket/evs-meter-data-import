@@ -2,6 +2,9 @@ package com.pa.evs.model;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import lombok.AllArgsConstructor;
@@ -23,4 +26,8 @@ public class LogBatch extends BaseEntity {
 	private String uuid;
 
     private String email;
+    
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private Users user;
 }

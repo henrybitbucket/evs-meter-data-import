@@ -4,6 +4,9 @@ import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -70,6 +73,10 @@ public class Log extends BaseEntity {
 	
 	@Column(name = "mark_view")
 	private Integer markView;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private Users user;
 	
     @Transient
 	private String ftpResStatus;

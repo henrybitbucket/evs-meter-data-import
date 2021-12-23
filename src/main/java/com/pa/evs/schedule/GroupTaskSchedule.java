@@ -1,6 +1,7 @@
 package com.pa.evs.schedule;
 
 import com.pa.evs.model.GroupTask;
+import com.pa.evs.model.Users;
 import com.pa.evs.sv.EVSPAService;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
@@ -14,9 +15,10 @@ import java.util.Calendar;
 public class GroupTaskSchedule implements ISchedule {
 
     public static final String GROUP_NAME = "GroupOperationSchedule";
-
-    public GroupTaskSchedule(GroupTask task, EVSPAService evsPAService, String alias, String pkPath) {
+    
+    public GroupTaskSchedule(GroupTask task, Users user, EVSPAService evsPAService, String alias, String pkPath) {
         this.task = task;
+        this.user = user;
         this.evsPAService = evsPAService;
         this.alias = alias;
         this.pkPath = pkPath;
@@ -57,6 +59,7 @@ public class GroupTaskSchedule implements ISchedule {
         jobDataMap.put("ALIAS", alias);
         jobDataMap.put("PK_PATH", pkPath);
         jobDataMap.put("TASK_ID", task.getId());
+        jobDataMap.put("USER", user);
         return JobBuilder.newJob(GroupTaskJob.class)
                 .withIdentity("group_schedule_job_" + task.getId(), GROUP_NAME)
                 .usingJobData(jobDataMap)
@@ -67,4 +70,5 @@ public class GroupTaskSchedule implements ISchedule {
     private EVSPAService evsPAService;
     private String alias;
     private String pkPath;
+    private Users user;
 }

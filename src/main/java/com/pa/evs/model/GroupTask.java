@@ -50,5 +50,9 @@ public class GroupTask extends BaseEntity {
 
     @Column(name = "start_time")
     private Date startTime;
+    
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id")
+	private Users user;
 
 }

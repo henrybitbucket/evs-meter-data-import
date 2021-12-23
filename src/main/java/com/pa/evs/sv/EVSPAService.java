@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
 import com.pa.evs.model.Log;
+import com.pa.evs.model.Users;
 
 public interface EVSPAService {
 
@@ -36,6 +37,6 @@ public interface EVSPAService {
 
 	List<CARequestLog> findDevicesInGroup(List<Long> listGroupId);
 
-	void createTaskLog(String uuid, Long groupTaskId);
+	void createTaskLog(String uuid, Long groupTaskId, Users user);
 
 }

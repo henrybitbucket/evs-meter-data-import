@@ -1,10 +1,10 @@
 package com.pa.evs.schedule;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
+import com.pa.evs.model.Users;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SimpleMap;
@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +31,7 @@ public class GroupTaskJob implements Job {
         logger.debug("Executing scheduled event at: " + new Date());
         JobDataMap ma = cntxt.getJobDetail().getJobDataMap();
         EVSPAService evsPAService = (EVSPAService) ma.get("EVS_PA_SERVICE");
+        Users user = (Users) ma.get("USER");
         Group group = (Group) ma.get("GROUP");
         CommandEnum command = (CommandEnum) ma.get("COMMAND");
         String alias = (String) ma.get("ALIAS");
@@ -40,7 +40,7 @@ public class GroupTaskJob implements Job {
         logger.debug("command: " + command.name());
         try {
             String batchId = UUID.randomUUID().toString();
-            evsPAService.createTaskLog(batchId, (Long) ma.get("TASK_ID"));
+            evsPAService.createTaskLog(batchId, (Long) ma.get("TASK_ID"), user);
             logger.debug("GroupTaskJob, batchId: {}", batchId);
             List<Long> groupIDs = new ArrayList<>();
             groupIDs.add(group.getId());

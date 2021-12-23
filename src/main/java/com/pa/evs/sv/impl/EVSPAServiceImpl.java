@@ -77,6 +77,7 @@ import com.pa.evs.model.MeterLog;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.PiLog;
 import com.pa.evs.model.ScreenMonitoring;
+import com.pa.evs.model.Users;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.GroupTaskRepository;
 import com.pa.evs.repository.LogBatchGroupTaskRepository;
@@ -86,6 +87,7 @@ import com.pa.evs.repository.MeterLogRepository;
 import com.pa.evs.repository.PiLogRepository;
 import com.pa.evs.repository.PiRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
+import com.pa.evs.repository.UserRepository;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
@@ -138,6 +140,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired private MeterLogRepository meterLogRepository;
 	
 	@Autowired private ScreenMonitoringRepository screenMonitoringRepository;
+	
+    @Autowired private UserRepository userRepository;
 	
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
 	
@@ -199,10 +203,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Override
 	public Log publish(String topic, Object message, String type, String batchId) throws Exception {
 		Log log = publish(topic, message, type);
+    	Users user = userRepository.findByEmail(SecurityUtils.getEmail());
 		if (log != null && StringUtils.isNotBlank(batchId)) {
-			LogBatch batch = logBatchRepository.findByUuid(batchId).orElse(LogBatch.builder().email(SecurityUtils.getEmail()).uuid(batchId).build());
+			LogBatch batch = logBatchRepository.findByUuid(batchId).orElse(LogBatch.builder().email(SecurityUtils.getEmail()).uuid(batchId).user(user).build());
 			logBatchRepository.save(batch);
 			log.setBatchId(batchId);
+			if(type == "PUBLISH") {
+				log.setUser(user);
+			}
 			logRepository.save(log);
 		}
 		return log;
@@ -1225,8 +1233,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Override
 	@Transactional
-	public void createTaskLog(String uuid, Long groupTaskId) {
-		LogBatch batch = LogBatch.builder().uuid(uuid).build();
+	public void createTaskLog(String uuid, Long groupTaskId, Users user) {
+		LogBatch batch = LogBatch.builder().uuid(uuid).user(user).build();
 		logBatchRepository.save(batch);
 		GroupTask task = groupTaskRepository.findById(groupTaskId).orElse(new GroupTask());
 		logBatchGroupTaskRepository.save(LogBatchGroupTask.builder().batch(batch).task(task).build());
