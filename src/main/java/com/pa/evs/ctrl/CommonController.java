@@ -44,6 +44,9 @@ import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.Command;
 import com.pa.evs.dto.FirmwareDto;
 import com.pa.evs.dto.GroupDto;
+import com.pa.evs.dto.GroupTaskDto;
+import com.pa.evs.dto.LogBatchDto;
+import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
@@ -380,6 +383,28 @@ public class CommonController {
 		evsPAService.searchBatchLog(pagin);
 		return pagin;
 	}
+	
+	@PostMapping("/api/batch-logs/search")
+    public ResponseEntity<Object> searchBatchLogsByUser(HttpServletRequest httpServletRequest, @RequestBody PaginDto<LogBatchDto> pagin) throws Exception {
+        try {
+        	evsPAService.searchBatchLogsByUser(pagin);
+        } catch (Exception e) {
+        	e.printStackTrace();
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).response(pagin).build());
+    }
+	
+	@PostMapping("/api/logs/search")
+    public ResponseEntity<Object> searchLogsByUser(HttpServletRequest httpServletRequest, @RequestBody PaginDto<LogDto> pagin) throws Exception {
+        try {
+        	logService.searchLog(pagin);
+        } catch (Exception e) {
+        	e.printStackTrace();
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).response(pagin).build());
+    }
 	
 	@GetMapping("/api/pi/logs")
 	public Object searchPiLog(

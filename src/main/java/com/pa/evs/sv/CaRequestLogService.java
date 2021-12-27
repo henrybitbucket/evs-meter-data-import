@@ -1,6 +1,7 @@
 package com.pa.evs.sv;
 
 import com.pa.evs.dto.CaRequestLogDto;
+import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.ScreenMonitoring;
@@ -43,4 +44,6 @@ public interface CaRequestLogService {
 	void markViewAll();
 
     PaginDto<CARequestLog> getDevicesInGroup(List<Long> listGroupId);
+    
+    void searchCaRequestLog (PaginDto<CaRequestLogDto> pagin);
 }

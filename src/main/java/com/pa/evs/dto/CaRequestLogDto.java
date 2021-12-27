@@ -1,5 +1,7 @@
 package com.pa.evs.dto;
 
+import com.pa.evs.enums.DeviceStatus;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,9 +33,13 @@ public class CaRequestLogDto {
     
     private Boolean requireRefresh;
     
-    private Integer installer;
+    private Long installer;
     
-    private Integer group;
+    private String installerName;
+    
+    private String installerEmail;
+    
+    private Long group;
     
 	private String homeAddress;
 
@@ -42,6 +48,8 @@ public class CaRequestLogDto {
     private Long floorLevelId;
     
     private Long buildingUnitId;
+    
+    private DeviceStatus status;
     
     private BuildingDto building;
     

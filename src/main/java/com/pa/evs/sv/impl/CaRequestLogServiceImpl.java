@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -29,6 +30,7 @@ import org.springframework.util.CollectionUtils;
 
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
+import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.DeviceStatus;
@@ -37,6 +39,7 @@ import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.Address;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
+import com.pa.evs.model.LogBatch;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.AddressRepository;
@@ -552,5 +555,73 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         });
         pagin.setResults(listDevices);
         return pagin;
+    }
+    
+    @Override
+    public void searchCaRequestLog (PaginDto<CaRequestLogDto> pagin) {
+    	Map<String, Object> map = pagin.getOptions();
+		
+        Long fromDate = (Long) map.get("fromDate");
+        Long toDate = (Long) map.get("toDate");
+        String userName = (String) map.get("userName");
+		
+		StringBuilder sqlBuilder = new StringBuilder("select l FROM CARequestLog l  JOIN Users u ON l.installer.userId = u.userId ");
+        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM CARequestLog l JOIN Users u ON l.installer.userId = u.userId");
+
+        StringBuilder sqlCommonBuilder = new StringBuilder();
+        
+        if(userName != null) {
+        	sqlCommonBuilder.append(" AND u.username like '%" + userName + "%' ");
+        }
+        if (fromDate != null) {
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM l.createDate) * 1000 >= " + fromDate);
+        }
+        if (toDate != null) {
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM l.createDate) * 1000 <= " + toDate);
+        }
+        
+        if(userName == null && fromDate == null && toDate == null ) {
+        	sqlCommonBuilder.append(" WHERE 1=1 ");
+        }
+        
+        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY l.coupledDatetime DESC");
+        sqlCountBuilder.append(sqlCommonBuilder);
+
+        if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+            pagin.setOffset(0);
+        }
+
+        if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+            pagin.setLimit(100);
+        }
+
+        Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+        Long count = ((Number)queryCount.getSingleResult()).longValue();
+        pagin.setTotalRows(count);
+        pagin.setResults(new ArrayList<>());
+        if (count == 0l) {
+            return;
+        }
+
+        Query query = em.createQuery(sqlBuilder.toString());
+        query.setFirstResult(pagin.getOffset());
+        query.setMaxResults(pagin.getLimit());
+
+        List<CARequestLog> list = query.getResultList();
+
+        list.forEach(li -> {
+        	CaRequestLogDto dto = CaRequestLogDto.builder()
+                        .id(li.getId())
+                        .uid(li.getUid())
+                        .msn(li.getMsn())
+                        .group(li.getGroup().getId())
+                        .status(li.getStatus())
+                        .installer(li.getInstaller().getUserId())
+                        .installerName(li.getInstaller().getUsername())
+                        .installerEmail(li.getInstaller().getEmail())
+                        .build();
+                pagin.getResults().add(dto);
+        }); 
     }
 }

@@ -68,6 +68,9 @@ public class CARequestLog extends BaseEntity {
 	@Column
 	private Long readInterval = 30L; // read interval time
 	
+	@Column(name = "address")
+	private String addressOld;
+	
 	@Column(name = "home_address")
 	private String homeAddress;
 

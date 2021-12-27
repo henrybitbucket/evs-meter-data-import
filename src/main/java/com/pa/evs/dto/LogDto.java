@@ -1,5 +1,9 @@
 package com.pa.evs.dto;
 
+import java.util.Date;
+
+import com.pa.evs.dto.LogBatchDto.LogBatchDtoBuilder;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -40,4 +44,10 @@ public class LogDto {
     private String raw;
     
     private String mqttAddress;
+    
+    private String userID;
+    
+    private String userName;
+    
+    private String userEmail;
 }

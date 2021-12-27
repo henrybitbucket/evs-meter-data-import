@@ -2,6 +2,7 @@ package com.pa.evs.ctrl;
 
 import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.CaRequestLogDto;
+import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.model.CARequestLog;
@@ -119,5 +120,16 @@ public class CaRequestLogController {
     public ResponseEntity<?> getDashboard(HttpServletRequest httpServletRequest) {
         List<ScreenMonitoring> result = caRequestLogService.getDashboard();
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(result).build());
+    }
+    
+    @PostMapping("/api/caRequestLog/search")
+    public ResponseEntity<Object> searchLogsByUser(HttpServletRequest httpServletRequest, @RequestBody PaginDto<CaRequestLogDto> pagin) throws Exception {
+        try {
+        	caRequestLogService.searchCaRequestLog(pagin);
+        } catch (Exception e) {
+        	e.printStackTrace();
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).response(pagin).build());
     }
 }

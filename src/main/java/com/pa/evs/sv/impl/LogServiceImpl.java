@@ -7,6 +7,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -16,10 +17,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.pa.evs.dto.GroupDto;
+import com.pa.evs.dto.LogBatchDto;
+import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.UserDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.Log;
+import com.pa.evs.model.LogBatch;
 import com.pa.evs.model.MeterLog;
 import com.pa.evs.model.PiLog;
 import com.pa.evs.repository.LogRepository;
@@ -167,8 +172,89 @@ public class LogServiceImpl implements LogService {
         	pagin.setResults((List<Log>)data);
         }
         
-        return pagin;
+        return pagin;   
+    }
+    
+    @Override
+    public void searchLog (PaginDto<LogDto> pagin) {
+    	
+    	Map<String, Object> map = pagin.getOptions();
+    	
+    	Long fromDate = (Long) map.get("fromDate");
+        Long toDate = (Long) map.get("toDate");
+        String userName = (String) map.get("userName");
+		
+		StringBuilder sqlBuilder = new StringBuilder("select l FROM Log l JOIN Users u ON l.user.userId = u.userId");
+        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Log l JOIN Users u ON l.user.userId = u.userId");
+
+        StringBuilder sqlCommonBuilder = new StringBuilder();
         
+        if(userName != null) {
+        	sqlCommonBuilder.append(" AND u.username like '%" + userName + "%' ");
+        }
+        if (fromDate != null) {
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM l.createDate) * 1000 >= " + fromDate);
+        }
+        if (toDate != null) {
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM l.createDate) * 1000 <= " + toDate);
+        }
+        
+        if(userName == null && fromDate == null && toDate == null ) {
+        	sqlCommonBuilder.append(" WHERE 1=1 ");
+        }
+        sqlBuilder.append(sqlCommonBuilder);
+        sqlCountBuilder.append(sqlCommonBuilder);
+
+        if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+            pagin.setOffset(0);
+        }
+
+        if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+            pagin.setLimit(100);
+        }
+
+        Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+        Long count = ((Number)queryCount.getSingleResult()).longValue();
+        pagin.setTotalRows(count);
+        pagin.setResults(new ArrayList<>());
+        if (count == 0l) {
+            return;
+        }
+
+        Query query = em.createQuery(sqlBuilder.toString());
+        query.setFirstResult(pagin.getOffset());
+        query.setMaxResults(pagin.getLimit());
+
+        List<Log> list = query.getResultList();
+
+        list.forEach(li -> {
+        	if(Objects.isNull(li.getUser())) {
+        		LogDto dto = LogDto.builder()
+                        .id(li.getId())
+                        .mid(li.getMid())
+                        .msn(li.getMsn())
+                        .oid(li.getOid())
+                        .pId(li.getPId())                       
+                        .uid(li.getUid())
+                        .build();
+                pagin.getResults().add(dto);               
+        	} else {
+        		LogDto dto = LogDto.builder()
+                        .id(li.getId())
+                        .mid(li.getMid())
+                        .msn(li.getMsn())
+                        .oid(li.getOid())
+                        .pId(li.getPId())                       
+                        .uid(li.getUid())
+                        .userName(li.getUser().getUsername())
+                        .userEmail(li.getUser().getEmail())
+                        .build();
+                pagin.getResults().add(dto);
+        	}
+        }); 
+       
+
     }
     
     @Override

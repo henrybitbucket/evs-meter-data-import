@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.Timer;
@@ -30,6 +31,7 @@ import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -63,6 +65,8 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.ctrl.CommonController;
+import com.pa.evs.dto.GroupTaskDto;
+import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
 import com.pa.evs.enums.DeviceStatus;
@@ -1216,6 +1220,81 @@ public class EVSPAServiceImpl implements EVSPAService {
 		pagin.getResults().clear();
 		pagin.setResults(query.getResultList());
 		pagin.setTotalRows(count);
+	}
+	
+	@Override
+	public void searchBatchLogsByUser (PaginDto<LogBatchDto> pagin) {
+		
+		Map<String, Object> map = pagin.getOptions();
+		
+        Long fromDate = (Long) map.get("fromDate");
+        Long toDate = (Long) map.get("toDate");
+        String userName = (String) map.get("userName");
+		
+		StringBuilder sqlBuilder = new StringBuilder("select l FROM LogBatch l JOIN Users u ON l.user.userId = u.userId");
+        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM LogBatch l JOIN Users u ON l.user.userId = u.userId");
+
+        StringBuilder sqlCommonBuilder = new StringBuilder();
+        
+        if(userName != null) {
+        	sqlCommonBuilder.append(" AND u.username like '%" + userName + "%' ");
+        }
+        if (fromDate != null) {
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM l.createDate) * 1000 >= " + fromDate);
+        }
+        if (toDate != null) {
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM l.createDate) * 1000 <= " + toDate);
+        }
+        
+        if(userName == null && fromDate == null && toDate == null ) {
+        	sqlCommonBuilder.append(" WHERE 1=1 ");
+        }
+        sqlBuilder.append(sqlCommonBuilder);
+        sqlCountBuilder.append(sqlCommonBuilder);
+
+        if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+            pagin.setOffset(0);
+        }
+
+        if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+            pagin.setLimit(100);
+        }
+
+        Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+        Long count = ((Number)queryCount.getSingleResult()).longValue();
+        pagin.setTotalRows(count);
+        pagin.setResults(new ArrayList<>());
+        if (count == 0l) {
+            return;
+        }
+
+        Query query = em.createQuery(sqlBuilder.toString());
+        query.setFirstResult(pagin.getOffset());
+        query.setMaxResults(pagin.getLimit());
+
+        List<LogBatch> list = query.getResultList();
+
+        list.forEach(li -> {
+        	if(Objects.isNull(li.getUser())) {
+                LogBatchDto dto = LogBatchDto.builder()
+                        .id(li.getId())
+                        .createDate(li.getCreateDate())
+                        .uuid(li.getUuid())
+                        .build();
+                pagin.getResults().add(dto);               
+        	} else {
+        		LogBatchDto dto = LogBatchDto.builder()
+                        .id(li.getId())
+                        .createDate(li.getCreateDate())
+                        .uuid(li.getUuid())
+                        .userId(li.getUser().getUserId())
+                        .userName(li.getUser().getUsername())
+                        .userEmail(li.getUser().getEmail())
+                        .build();
+                pagin.getResults().add(dto);
+        	}
+        }); 
 	}
 	
 	@Override
