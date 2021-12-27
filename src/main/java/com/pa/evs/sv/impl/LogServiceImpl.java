@@ -163,11 +163,12 @@ public class LogServiceImpl implements LogService {
 	              .markView(l.getMarkView())
 	              .pType(l.getPType())
 	              .pId(l.getPId())
-	              .sn(l.getSn())            
+	              .sn(l.getSn()) 
+	              .RepStatusDesc(l.getRepStatusDesc())
 	              .build();
         		if (os[1] instanceof PiLog) {
 	        		PiLog pl = (PiLog) os[1];	        		
-	        		dto.setSetFtpResStatus(pl.getFtpResStatus());
+	        		dto.setFtpResStatus(pl.getFtpResStatus());
         		}
         		if (os[2] instanceof CARequestLog) {
         			CARequestLog cl = (CARequestLog) os[2];       		

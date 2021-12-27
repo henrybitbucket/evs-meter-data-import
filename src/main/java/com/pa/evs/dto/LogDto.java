@@ -62,7 +62,9 @@ public class LogDto {
     
     private String groupName;
     
-    private String setFtpResStatus;
+    private String FtpResStatus;
+    
+    private String RepStatusDesc;
     
     private String groupRemark;
     

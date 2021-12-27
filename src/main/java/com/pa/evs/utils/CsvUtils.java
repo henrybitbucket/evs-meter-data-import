@@ -62,7 +62,7 @@ public class CsvUtils {
         record.add(log.getSn());
         record.add(log.getPType());
         record.add(log.getRaw());
-        record.add(log.getSetFtpResStatus());
+        record.add(log.getRepStatusDesc());
         record.add(log.getAddress());
         return postProcessCsv(record);
     }
