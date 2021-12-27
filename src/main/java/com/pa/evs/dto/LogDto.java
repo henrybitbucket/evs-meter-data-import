@@ -2,7 +2,6 @@ package com.pa.evs.dto;
 
 import java.util.Date;
 
-import com.pa.evs.dto.LogBatchDto.LogBatchDtoBuilder;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,6 +36,10 @@ public class LogDto {
     
     private Long status;
     
+    private Date createDate;
+    
+    private String topic;
+    
     private String pId;
     
     private String pType;
@@ -44,6 +47,26 @@ public class LogDto {
     private String raw;
     
     private String mqttAddress;
+    
+    private Long repStatus;
+    
+    private String batchId;
+    
+    private Integer markView;
+    
+    private String sn;
+    
+    private String address;
+    
+    private Long groupId;
+    
+    private String groupName;
+    
+    private String setFtpResStatus;
+    
+    private String groupRemark;
+    
+    private GroupDto groupDto;
     
     private String userID;
     

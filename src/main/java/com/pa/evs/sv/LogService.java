@@ -9,7 +9,7 @@ import java.util.Map;
 
 public interface LogService {
 
-    PaginDto<Log> getRelatedLogs(PaginDto<Log> pagin) throws ParseException;
+    PaginDto<LogDto> getRelatedLogs(PaginDto<LogDto> pagin) throws ParseException;
     
     void searchLog (PaginDto<LogDto> pagin);
 

@@ -21,8 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import com.pa.evs.dto.LogDto;
 import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.Log;
 
 public class CsvUtils {
     
@@ -44,13 +44,13 @@ public class CsvUtils {
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
     }
     
-    public static File writeAlarmsLogCsv(List<Log> listInput, String fileName, Long activateDate) throws IOException{
+    public static File writeAlarmsLogCsv(List<LogDto> listInput, String fileName, Long activateDate) throws IOException{
         List<String> headers = Arrays.asList(
                 "TIME", "TYPE", "TOPIC", "MID", "MSN", "SN", "COMMAND", "RAW MESSAGE", "STATUS", "ADDRESS");
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
     }
     
-    private static List<String> toCSVRecord(int idx, Log log, Long activateDate) {
+    private static List<String> toCSVRecord(int idx, LogDto log, Long activateDate) {
         List<String> record = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
         sdf.setTimeZone(TimeZoneHolder.get());
@@ -62,7 +62,7 @@ public class CsvUtils {
         record.add(log.getSn());
         record.add(log.getPType());
         record.add(log.getRaw());
-        record.add(log.getRepStatusDesc());
+        record.add(log.getSetFtpResStatus());
         record.add(log.getAddress());
         return postProcessCsv(record);
     }

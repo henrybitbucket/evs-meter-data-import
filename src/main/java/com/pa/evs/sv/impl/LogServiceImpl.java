@@ -50,7 +50,7 @@ public class LogServiceImpl implements LogService {
     
     @SuppressWarnings("unchecked")
     @Override
-    public PaginDto<Log> getRelatedLogs(PaginDto<Log> pagin) throws ParseException {
+    public PaginDto<LogDto> getRelatedLogs(PaginDto<LogDto> pagin) throws ParseException {
         
         Map<String, Object> map = pagin.getOptions();
         
@@ -142,34 +142,52 @@ public class LogServiceImpl implements LogService {
         
         @SuppressWarnings("rawtypes")
 		List data = query.getResultList();
+        
         if (!data.isEmpty() && data.get(0) instanceof Object[]) {
         	pagin.setResults(new ArrayList<>());
         	data.forEach(obj -> {
         		Object[] os = (Object[]) obj;
         		Log l = (Log) os[0];
+        		LogDto dto = LogDto.builder()
+	              .id(l.getId())
+	              .createDate(l.getCreateDate())
+	              .mid(l.getMid())
+	              .uid(l.getUid())
+	              .gid(l.getGid())
+	              .msn(l.getMsn())
+	              .sig(l.getSig())
+	              .topic(l.getTopic())
+	              .type(l.getType())
+	              .repStatus(l.getRepStatus())
+	              .batchId(l.getBatchId())
+	              .markView(l.getMarkView())
+	              .pType(l.getPType())
+	              .pId(l.getPId())
+	              .sn(l.getSn())            
+	              .build();
         		if (os[1] instanceof PiLog) {
-	        		PiLog pl = (PiLog) os[1];
-	        		l.setFtpResStatus(pl.getFtpResStatus());
+	        		PiLog pl = (PiLog) os[1];	        		
+	        		dto.setSetFtpResStatus(pl.getFtpResStatus());
         		}
         		if (os[2] instanceof CARequestLog) {
         			CARequestLog cl = (CARequestLog) os[2];       		
-        			l.setAddress(Utils.formatHomeAddress(cl));
+        			dto.setAddress(Utils.formatHomeAddress(cl));
         			Group group = cl.getGroup();
         			if (group != null) {
-        				l.setGroup(GroupDto.builder()
+        				dto.setGroupDto(GroupDto.builder()
 	                    .id(group.getId())
 	                    .name(group.getName())
 	                    .remark(group.getRemark())
 	                    .build());
         			} else {
-        				l.setGroup(new GroupDto());
-        			}
-        			l.setSn(cl.getSn());
+        				dto.setGroupDto(new GroupDto());
+        			}        		
+        			dto.setSn(cl.getSn());
         		}
-        		pagin.getResults().add(l);
+        		pagin.getResults().add(dto);
         	});
         } else {
-        	pagin.setResults((List<Log>)data);
+        	pagin.setResults((List<LogDto>)data);
         }
         
         return pagin;   

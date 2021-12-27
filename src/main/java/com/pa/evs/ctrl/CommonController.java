@@ -44,14 +44,12 @@ import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.Command;
 import com.pa.evs.dto.FirmwareDto;
 import com.pa.evs.dto.GroupDto;
-import com.pa.evs.dto.GroupTaskDto;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.Log;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
@@ -256,7 +254,7 @@ public class CommonController {
 
 
     @PostMapping("/api/logs")
-    public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, HttpServletResponse response, @RequestBody PaginDto<Log> pagin) throws Exception {
+    public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, HttpServletResponse response, @RequestBody PaginDto<LogDto> pagin) throws Exception {
         try {
 
         	if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
@@ -269,7 +267,7 @@ public class CommonController {
         		String timeZone = (String) pagin.getOptions().get("timeZone");
         		if (StringUtils.isNotBlank(timeZone)) {
         			TimeZoneHolder.set(timeZone);
-        		}
+        		}        	
 
         		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
         		sdf.setTimeZone(TimeZoneHolder.get());
