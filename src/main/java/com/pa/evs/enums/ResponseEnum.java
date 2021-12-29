@@ -9,6 +9,8 @@ public enum ResponseEnum {
     BUILDING_NOT_FOUND(100, "Building is not exist"),
     BUILDING_UNIT_NOT_FOUND(100, "Building Unit is not exist"),
     FLOOR_LEVEL_NOT_FOUND(100, "Floor Level is not exist"),
+    
+    ROLE_EXIST(999, "Role exist"),
 
     ;
 
