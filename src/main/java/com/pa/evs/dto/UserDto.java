@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.pa.evs.model.GroupUser;
+import com.pa.evs.model.Role;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,4 +41,8 @@ public class UserDto {
     private List<Map<String, Object>> roleDescs = new ArrayList<>();
     
     private String status;
+    
+    private List<Role> role;
+    
+    private List<GroupUser> groupUsers;
 }

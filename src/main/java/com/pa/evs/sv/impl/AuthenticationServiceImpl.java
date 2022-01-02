@@ -42,10 +42,13 @@ import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.customException.AuthenticationException;
 import com.pa.evs.exception.customException.DuplicateUserException;
+import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.Role;
+import com.pa.evs.model.UserGroup;
 import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.RoleRepository;
+import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.repository.UserRoleRepository;
 import com.pa.evs.security.jwt.JwtTokenUtil;
@@ -70,6 +73,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     
     @Autowired
     private UserRoleRepository userRoleRepository;
+    
+    @Autowired
+    private UserGroupRepository userGroupRepository;
     
     @Autowired
     AuthorityService authorityService;
@@ -185,6 +191,40 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 		};
 		// End role
+	}
+	
+	@Override
+	public void saveRole (UserDto dto) {
+		Optional<Users> user = userRepository.findById(dto.getId());
+		if(user.isPresent()) {
+			for(Role role : dto.getRole()) {
+				UserRole userRole = new UserRole();
+				userRole.setRole(role);
+				userRole.setUser(user.get());
+				try {
+					userRoleRepository.save(userRole);
+				} catch (Exception e) {
+					LOGGER.error(e.getMessage(), e);
+	      		}
+			}
+		}
+	}
+	
+	@Override
+	public void saveGroup (UserDto dto) {
+		Optional<Users> user = userRepository.findById(dto.getId());
+		if(user.isPresent()) {
+			for(GroupUser group : dto.getGroupUsers()) {
+				UserGroup userGroup = new UserGroup();
+				userGroup.setGroupUser(group);;
+				userGroup.setUser(user.get());
+				try {
+					userGroupRepository.save(userGroup);
+				} catch (Exception e) {
+					LOGGER.error(e.getMessage(), e);
+	      		}
+			}
+		}
 	}
 	
     public ResponseDto<LoginResponseDto> passLogin(LoginRequestDto loginRequestDTO) {

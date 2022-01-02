@@ -14,6 +14,7 @@ import com.pa.evs.dto.GroupDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.Group;
 import com.pa.evs.repository.GroupRepository;
+import com.pa.evs.repository.RoleGroupRepository;
 import com.pa.evs.sv.GroupService;
 
 @Service
@@ -24,6 +25,8 @@ public class GroupDeviceServiceImpl implements GroupService {
     @Autowired EntityManager em;
     
     @Autowired GroupRepository groupRepository;
+    
+	@Autowired RoleGroupRepository roleGroupRepository;
 
     @Override
     public void addGroupDevice(GroupDto dto) throws Exception {

@@ -1,6 +1,7 @@
 package com.pa.evs.ctrl;
 
 
+import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -70,6 +71,26 @@ public class AuthenticationController {
 		}
     	
         return ResponseDto.<Object>builder().success(true).build();
+    }
+    
+    @PostMapping(value = {RestPath.UPDATEROLE})
+    public ResponseEntity<Object> saveRole(@RequestBody UserDto user) {
+        try {
+        	authenticationService.saveRole(user);
+        } catch (Exception e) {
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).build());
+    }
+    
+    @PostMapping(value = {RestPath.UPDATEGROUP})
+    public ResponseEntity<Object> linkGroupUser(@RequestBody UserDto dto) throws IOException {
+        try {
+        	authenticationService.saveGroup(dto);
+        } catch (Exception e) {
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).build());
     }
 
     @GetMapping(value = {RestPath.WHOAMI, RestPath.WHOAMI1})

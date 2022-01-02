@@ -322,7 +322,7 @@ public class CommonController {
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
-    
+     
     @DeleteMapping("/api/device-group/{id}")
     public ResponseEntity<Object> deleteGroupDevice(HttpServletRequest httpServletRequest, @PathVariable final Long id) throws Exception {
         try {

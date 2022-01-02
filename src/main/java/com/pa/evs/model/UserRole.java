@@ -5,6 +5,7 @@ import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,7 +19,7 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "user_role")
+@Table(name = "user_role", uniqueConstraints = @UniqueConstraint(columnNames = {"role_id", "user_id"}) )
 public class UserRole extends BaseEntity {
 
 	@ManyToOne(fetch = FetchType.LAZY)
