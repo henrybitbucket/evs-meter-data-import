@@ -89,6 +89,7 @@ public class Log extends BaseEntity {
     
     @JsonIgnore
     public String getRepStatusDesc() {
+		if (repStatus == null) return "NO RESPONSE";
     	return repStatus == 0 ? "OK"
                 : repStatus == 1 ? "Invalid Format"
                 : repStatus == 2 ? "Invalid Command"
