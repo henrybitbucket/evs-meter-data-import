@@ -57,7 +57,14 @@ public class ReportTaskSchedule implements ISchedule {
         }
         Calendar cal = Calendar.getInstance();
         cal.setTime(task.getStartTime());
-        String cron = "0 " + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " * * ? *";
+        String cron = null;
+        if (ReportTask.Type.WEEKLY == task.getType()) {
+        	cron = "0 " + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " ? * " + cal.get(Calendar.DAY_OF_WEEK) + " *";
+        } else if (ReportTask.Type.MONTHLY == task.getType()) {
+        	cron = "0 " + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " " + cal.get(Calendar.DAY_OF_MONTH) + " * ? *";
+        } else {
+        	cron = "0 " + cal.get(Calendar.MINUTE) + " " + cal.get(Calendar.HOUR_OF_DAY) + " * * ? *";
+		}
         return TriggerBuilder.newTrigger()
                 .withIdentity("report_schedule_id_" + task.getId(), REPORT_NAME)
                 .withSchedule(CronScheduleBuilder.cronSchedule(cron))
