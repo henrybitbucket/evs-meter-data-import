@@ -17,14 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.pa.evs.dto.GroupDto;
-import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.PaginDto;
-import com.pa.evs.dto.UserDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.Log;
-import com.pa.evs.model.LogBatch;
 import com.pa.evs.model.MeterLog;
 import com.pa.evs.model.PiLog;
 import com.pa.evs.repository.LogRepository;
@@ -169,6 +166,7 @@ public class LogServiceImpl implements LogService {
 	              .pId(l.getPId())
 	              .sn(l.getSn()) 
 	              .RepStatusDesc(l.getRepStatusDesc())
+	              .raw(l.getRaw())
 	              .build();
         		if (os[1] instanceof PiLog) {
 	        		PiLog pl = (PiLog) os[1];	        		
@@ -283,8 +281,15 @@ public class LogServiceImpl implements LogService {
     @Override
 	public Object getMeterLog(Map<String, Object> map) {
     	String uid = (String) map.get("uid"); 
-    	Long from = (Long) map.get("from");
-    	Long to = (Long) map.get("to");
+    	String order = (String) map.get("order"); 
+    	if (StringUtils.isBlank(order)) {
+    		order = "asc";
+    	}
+    	Number from = (Number) map.get("from");
+    	Number to = (Number) map.get("to");
+    	
+    	Number offset = (Number) map.get("offset");
+    	Number limit = (Number) map.get("limit");
 		
 		if (from == null) {
 			from = System.currentTimeMillis() - 10 * 24 * 60 * 60 * 1000l;
@@ -294,9 +299,15 @@ public class LogServiceImpl implements LogService {
 			to = System.currentTimeMillis();
 		}
 		
-		StringBuilder sqlBuilder = new StringBuilder("FROM MeterLog where uid='" + uid + "' and dt <= " + to + " and dt >= " + from + " order by dt asc ");
+		StringBuilder sqlBuilder = new StringBuilder("FROM MeterLog where uid='" + uid + "' and dt <= " + to + " and dt >= " + from + " order by dt " + order);
 		
 		Query query = em.createQuery(sqlBuilder.toString());
+		if (offset != null && offset.intValue() >= 0) {
+			query.setFirstResult(offset.intValue());
+		}
+		if (limit != null && limit.intValue() > 0) {
+			query.setMaxResults(limit.intValue());
+		}
 		return query.getResultList();
 	}
 
