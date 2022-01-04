@@ -140,7 +140,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         final UserDetails userDetails = userDetailsService.loadUserByUsername(email);
         final String token = jwtTokenUtil.generateToken(userDetails);
         this.updateLastLogin(email);
-        return apiResponse.response(ValueConstant.SUCCESS,ValueConstant.TRUE,LoginResponseDto.builder().token(token).build());
+		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE,
+				LoginResponseDto.builder().token(token).authorities(
+						userDetails.getAuthorities().stream().map(au -> au.getAuthority()).collect(Collectors.toList()))
+						.build());
     }
 	
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -322,6 +325,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		roleMap.put("STAFF", "Staff");
 		roleMap.put("SUPER_ADMIN", "Super Admin");
 		roleMap.put("INSTALLER", "Installer");
+		roleMap.put("FACTORY_STAFF", "Factory Staff");
 		
 		List<String> existsRoles = roleRepository.findByNameIn(roleMap.keySet())
 				.stream().map(r -> r.getName()).collect(Collectors.toList());

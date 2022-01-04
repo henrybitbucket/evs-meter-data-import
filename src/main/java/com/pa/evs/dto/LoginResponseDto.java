@@ -1,5 +1,7 @@
 package com.pa.evs.dto;
 
+import java.util.List;
+
 import lombok.*;
 
 @Getter
@@ -10,4 +12,5 @@ import lombok.*;
 @Data
 public class LoginResponseDto {
     private  String token;
+    private List<String> authorities;
 }
