@@ -97,7 +97,11 @@ public class LogServiceImpl implements LogService {
         	sqlCommonBuilder.append(" AND l.msn = '" + msn + "'");
         }        
         if (StringUtils.isNotBlank(ptype)) {
-            sqlCommonBuilder.append(" AND upper(l.pType) like '%" + ptype.toUpperCase() + "%'");
+        	if (ptype.trim().startsWith("(") && ptype.trim().endsWith(")")) {
+        		sqlCommonBuilder.append(" AND l.pType IN " + ptype.toUpperCase() + "");
+        	} else {
+        		sqlCommonBuilder.append(" AND upper(l.pType) like '%" + ptype.toUpperCase() + "%'");
+        	}
         }
         if (StringUtils.isNotBlank(midString)) {
             sqlCommonBuilder.append(" AND (l.mid = " + midString + " OR l.oid = " + midString + " OR l.rmid = " + midString + ")");
