@@ -16,12 +16,14 @@ import org.springframework.stereotype.Service;
 
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.RoleDto;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.RoleGroup;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.RoleGroupRepository;
+import com.pa.evs.repository.RoleRepository;
 import com.pa.evs.sv.GroupUserService;
 
 @Service
@@ -35,6 +37,9 @@ public class GroupUserServiceImpl implements GroupUserService {
     
     @Autowired
     RoleGroupRepository roleGroupRepository;
+    
+    @Autowired
+    RoleRepository roleRepository;
 
     @Autowired
     EntityManager em;
@@ -108,14 +113,17 @@ public class GroupUserServiceImpl implements GroupUserService {
       group.setDescription(dto.getDescription());
       groupUserRepository.save(group);
       if (dto.getRoles() != null) {
-      	for (Role role : dto.getRoles()) {
-      		RoleGroup roleGroup = new RoleGroup();
-      		roleGroup.setGroupUser(opt.get());
-      		roleGroup.setRole(role);
-      		try {
-      			roleGroupRepository.save(roleGroup);
-      		} catch (Exception e) {
-      			logger.error(e.getMessage(), e);
+      	for (RoleDto roleDto : dto.getRoles()) {
+      		Optional<Role> role = roleRepository.findById(roleDto.getId());
+      		if(role.isPresent()) {
+      			RoleGroup roleGroup = new RoleGroup();
+          		roleGroup.setGroupUser(opt.get());
+          		roleGroup.setRole(role.get());
+          		try {
+          			roleGroupRepository.save(roleGroup);
+          		} catch (Exception e) {
+          			logger.error(e.getMessage(), e);
+          		}
       		}
       	}
       }

@@ -92,6 +92,16 @@ public class AuthenticationController {
         }
         return ResponseEntity.ok(ResponseDto.builder().success(true).build());
     }
+    
+    @PostMapping(value = {RestPath.UPDATEPERMISSON})
+    public ResponseEntity<Object> linkPermission(@RequestBody UserDto dto) throws IOException {
+        try {
+        	authenticationService.savePermission(dto);
+        } catch (Exception e) {
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).build());
+    }
 
     @GetMapping(value = {RestPath.WHOAMI, RestPath.WHOAMI1})
     public ResponseDto<JwtUser> getUser(HttpServletRequest httpServletRequest){

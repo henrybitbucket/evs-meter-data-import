@@ -18,6 +18,7 @@ public interface AuthenticationService {
 	void save(UserDto dto);
 	void saveRole (UserDto dto);
 	void saveGroup (UserDto dto);
+	void savePermission (UserDto dto);
 	
 	void initDataAuths();
 	void getUsers(PaginDto<UserDto> pagin);

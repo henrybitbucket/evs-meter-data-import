@@ -13,6 +13,7 @@ public interface RestPath {
 	String USER = API + "/user";
 	String UPDATEROLE = API + "/update/role";
 	String UPDATEGROUP = API + "/update/group";
+	String UPDATEPERMISSON = API + "/update/permission";
 	String WHOAMI1 = API + "/whoami";
 	
 	String GET_CA_REQUEST_LOG = API + "/ca-request-logs";

@@ -2,8 +2,6 @@ package com.pa.evs.dto;
 
 import java.util.List;
 
-import com.pa.evs.model.Role;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,5 +20,5 @@ public class GroupUserDto {
     private Long id;
     private String name;
     private String description;
-    private List<Role> roles;
+    private List<RoleDto> roles;
 }

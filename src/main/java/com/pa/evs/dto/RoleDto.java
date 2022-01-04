@@ -2,8 +2,6 @@ package com.pa.evs.dto;
 
 import java.util.List;
 
-import com.pa.evs.model.Permission;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,6 +20,6 @@ public class RoleDto {
     private Long id;
     private String name;
     private String desc;
-    private List<Permission> permissions;
+    private List<PermissionDto> permissions;
 
 }

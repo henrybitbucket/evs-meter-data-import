@@ -35,20 +35,28 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.constant.Message;
 import com.pa.evs.constant.ValueConstant;
+import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.customException.AuthenticationException;
 import com.pa.evs.exception.customException.DuplicateUserException;
 import com.pa.evs.model.GroupUser;
+import com.pa.evs.model.Permission;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.UserGroup;
+import com.pa.evs.model.UserPermission;
 import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
+import com.pa.evs.repository.GroupUserRepository;
+import com.pa.evs.repository.PermissionRepository;
 import com.pa.evs.repository.RoleRepository;
 import com.pa.evs.repository.UserGroupRepository;
+import com.pa.evs.repository.UserPermissionRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.repository.UserRoleRepository;
 import com.pa.evs.security.jwt.JwtTokenUtil;
@@ -76,6 +84,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     
     @Autowired
     private UserGroupRepository userGroupRepository;
+    
+    @Autowired
+    private GroupUserRepository groupUserRepository;
+    
+    @Autowired
+    private PermissionRepository permissionRepository;
+    
+    @Autowired
+    private UserPermissionRepository userPermissionRepository;
     
     @Autowired
     AuthorityService authorityService;
@@ -197,15 +214,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	public void saveRole (UserDto dto) {
 		Optional<Users> user = userRepository.findById(dto.getId());
 		if(user.isPresent()) {
-			for(Role role : dto.getRole()) {
-				UserRole userRole = new UserRole();
-				userRole.setRole(role);
-				userRole.setUser(user.get());
-				try {
-					userRoleRepository.save(userRole);
-				} catch (Exception e) {
-					LOGGER.error(e.getMessage(), e);
-	      		}
+			for(RoleDto roleDto : dto.getRole()) {
+				Optional<Role> role = roleRepository.findById(roleDto.getId());
+				if(role.isPresent()) {
+					UserRole userRole = new UserRole();
+					userRole.setRole(role.get());
+					userRole.setUser(user.get());
+					try {
+						userRoleRepository.save(userRole);
+					} catch (Exception e) {
+						LOGGER.error(e.getMessage(), e);
+		      		}
+				}
 			}
 		}
 	}
@@ -214,15 +234,38 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	public void saveGroup (UserDto dto) {
 		Optional<Users> user = userRepository.findById(dto.getId());
 		if(user.isPresent()) {
-			for(GroupUser group : dto.getGroupUsers()) {
+			for(GroupUserDto groupUserDto : dto.getGroupUsers()) {
+				Optional<GroupUser> groupUser = groupUserRepository.findById(groupUserDto.getId());
 				UserGroup userGroup = new UserGroup();
-				userGroup.setGroupUser(group);;
-				userGroup.setUser(user.get());
-				try {
-					userGroupRepository.save(userGroup);
-				} catch (Exception e) {
-					LOGGER.error(e.getMessage(), e);
-	      		}
+				if(groupUser.isPresent()) {
+					userGroup.setGroupUser(groupUser.get());;
+					userGroup.setUser(user.get());
+					try {
+						userGroupRepository.save(userGroup);
+					} catch (Exception e) {
+						LOGGER.error(e.getMessage(), e);
+		      		}
+				}
+			}
+		}
+	}
+	
+	@Override
+	public void savePermission (UserDto dto) {
+		Optional<Users> user = userRepository.findById(dto.getId());
+		if(user.isPresent()) {
+			for(PermissionDto permissionDto : dto.getPermissions()) {
+				Optional<Permission> permission = permissionRepository.findById(permissionDto.getId());
+				UserPermission userPermission = new UserPermission();
+				if(permission.isPresent()) {
+					userPermission.setPermission(permission.get());;
+					userPermission.setUser(user.get());
+					try {
+						userPermissionRepository.save(userPermission);
+					} catch (Exception e) {
+						LOGGER.error(e.getMessage(), e);
+		      		}
+				}
 			}
 		}
 	}

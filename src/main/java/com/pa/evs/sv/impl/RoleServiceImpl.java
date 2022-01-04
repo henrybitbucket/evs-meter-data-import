@@ -124,18 +124,21 @@ public class RoleServiceImpl implements RoleService {
 			role.get().setDesc(dto.getDesc());
 			roleRepository.save(role.get());
 			if(dto.getPermissions().size() != 0) {
-				for (Permission permisstion : dto.getPermissions()) {
+				for (PermissionDto permisstionDto : dto.getPermissions()) {
 					check = false;
 					for (RolePermission rolePerm :  rolePermissions) {
-						if (StringUtils.equals(permisstion.getName(), rolePerm.getPermission().getName())) {
+						if (StringUtils.equals(permisstionDto.getName(), rolePerm.getPermission().getName())) {
 							check = true;
 						}
 					}
 					if(!check) {
-						RolePermission rolePer = new RolePermission();
-						rolePer.setPermission(permisstion);
-						rolePer.setRole(role.get());
-						rolePermissionRepository.save(rolePer);
+						Optional<Permission> permisstion = permissionRepository.findById(permisstionDto.getId());
+						if(permisstion.isPresent()) {
+							RolePermission rolePer = new RolePermission();
+							rolePer.setPermission(permisstion.get());
+							rolePer.setRole(role.get());
+							rolePermissionRepository.save(rolePer);
+						}
 					}
 				}
 			}
