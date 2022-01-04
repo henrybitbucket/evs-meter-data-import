@@ -29,7 +29,7 @@ import lombok.Setter;
 public class ReportTask extends BaseEntity {
 
     public enum Type {
-        ONE_TIME, DAILY;
+        ONE_TIME, DAILY, WEEKLY, MONTHLY;
     }
 
     @Column(name = "type", length = 50)
