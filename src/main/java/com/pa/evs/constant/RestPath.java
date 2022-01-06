@@ -11,6 +11,7 @@ public interface RestPath {
 	String WHOAMI = API + "/user/me";
 	String USERS = API + "/users";
 	String USER = API + "/user";
+	String USERPERMISSION = API + "/user/permission";
 	String UPDATEROLE = API + "/update/role";
 	String UPDATEGROUP = API + "/update/group";
 	String UPDATEPERMISSON = API + "/update/permission";

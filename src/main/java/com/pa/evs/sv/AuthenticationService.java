@@ -22,5 +22,6 @@ public interface AuthenticationService {
 	
 	void initDataAuths();
 	void getUsers(PaginDto<UserDto> pagin);
+	void getPermissionsOfUser(PaginDto<UserDto> pagin);
 	void removeUserById(Long userId);
 }

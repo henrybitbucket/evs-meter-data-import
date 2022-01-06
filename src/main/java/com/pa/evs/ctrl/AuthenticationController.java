@@ -62,6 +62,12 @@ public class AuthenticationController {
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
+    @PostMapping(value = {RestPath.USERPERMISSION})
+    public Object getPermissionsOfUser(@RequestBody PaginDto<UserDto> pagin) {
+        authenticationService.getPermissionsOfUser(pagin);
+        return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
     @PostMapping(value = {RestPath.USER})
     public Object saveUser(@RequestBody UserDto user) {
         try {

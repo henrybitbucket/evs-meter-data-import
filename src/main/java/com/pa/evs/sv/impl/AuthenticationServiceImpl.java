@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,12 +49,14 @@ import com.pa.evs.exception.customException.DuplicateUserException;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.Permission;
 import com.pa.evs.model.Role;
+import com.pa.evs.model.RolePermission;
 import com.pa.evs.model.UserGroup;
 import com.pa.evs.model.UserPermission;
 import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.PermissionRepository;
+import com.pa.evs.repository.RolePermissionRepository;
 import com.pa.evs.repository.RoleRepository;
 import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.repository.UserPermissionRepository;
@@ -64,6 +67,7 @@ import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.AuthorityService;
 import com.pa.evs.utils.ApiResponse;
+import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 
 
@@ -81,6 +85,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     
     @Autowired
     private UserRoleRepository userRoleRepository;
+    
+    @Autowired
+    private RolePermissionRepository rolePermissionRepository;
     
     @Autowired
     private UserGroupRepository userGroupRepository;
@@ -123,6 +130,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     static final String EMAIL = "email";
     
     static final String USER_PRINCIPAL_NAME = "userPrincipalName";
+    
+    static Map<String, List<Permission>> map = new HashMap<String, List<Permission>>();
 
 	@Override
     public ResponseDto<LoginResponseDto> login(LoginRequestDto loginRequestDTO) {
@@ -140,6 +149,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         final UserDetails userDetails = userDetailsService.loadUserByUsername(email);
         final String token = jwtTokenUtil.generateToken(userDetails);
         this.updateLastLogin(email);
+        this.loadRoleAndPermission();
 		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE,
 				LoginResponseDto.builder().token(token).authorities(
 						userDetails.getAuthorities().stream().map(au -> au.getAuthority()).collect(Collectors.toList()))
@@ -155,6 +165,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 		user.setLastLogin(new Date());
 		userRepository.save(user);
+	}
+	
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	void loadRoleAndPermission() {
+		List<Role> roles = roleRepository.findAll();
+		for(Role role : roles) {
+			List<Permission> permissions = new ArrayList();
+			List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(role.getId());
+			for(RolePermission rolePer : rolePermissions) {
+				Optional<Permission> permisstion = permissionRepository.findById(rolePer.getPermission().getId());
+				if(permisstion.isPresent()) {
+					permissions.add(permisstion.get());
+				}
+			}
+			map.put(role.getName(), permissions);
+		}
 	}
 	
 	@Transactional
@@ -411,5 +437,78 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			dto.setRoles(roles);
 			pagin.getResults().add(dto);
 		});
+	}
+	
+	@Override
+	public void getPermissionsOfUser(PaginDto<UserDto> pagin) {
+		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+
+        if (user == null) {
+        	user = userRepository.findByUsername(SecurityUtils.getEmail());
+        }
+        permissionRepository.findAll();
+        List<PermissionDto> permissionsDto = new ArrayList();
+        for(UserRole userRole : user.getRoles()) {
+        	if(StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+        		for(Permission per : permissionRepository.findAll()) {
+        			PermissionDto permiss = new PermissionDto();
+        			permiss.setId(per.getId());
+        			permiss.setName(per.getName());
+        			permiss.setDescription(per.getDescription());
+        			permissionsDto.add(permiss);
+        		}
+        	} else {
+	        	Iterator<Map.Entry<String, List<Permission>>> itr = map.entrySet().iterator();
+	        	while(itr.hasNext()) {
+	        		Map.Entry<String, List<Permission>> it = itr.next();
+	        		List<PermissionDto> permissionss = new ArrayList();
+	        		for(Permission permission : it.getValue()) {
+	        			PermissionDto perDto = new PermissionDto(); 
+	        			perDto.setId(permission.getId());
+	        			perDto.setName(permission.getName());
+	        			perDto.setDescription(permission.getDescription());
+	        			if(permissionsDto.isEmpty()) {
+	        				permissionss.add(perDto);
+	        			} else {
+	        				boolean check = false;
+	        				for (PermissionDto per : permissionsDto) {
+	        					if(per.getId() == perDto.getId()) {
+	        						check = true;
+	        					}
+	        				}
+	        				if(check != true) {
+	    						permissionss.add(perDto);
+	    					}
+	        			}
+	        		}
+	        		if(StringUtils.equals(userRole.getRole().getName(), it.getKey())) {       			
+	        			permissionsDto.addAll(permissionss);
+	        		}        			
+	        	}
+	        }
+	        List<UserPermission> userPermissions = userPermissionRepository.findAll();
+	        for(UserPermission userPer : userPermissions) {
+	        	if(userPer.getUser().getUserId() == user.getUserId()) {
+	        		List<PermissionDto> permissionss = new ArrayList();
+	        		boolean check = false;
+					for (PermissionDto per : permissionsDto) {
+						if(per.getId() == userPer.getPermission().getId()) {
+							check = true;
+						}
+					}
+					if(check != true) {
+						PermissionDto PerDto = new PermissionDto();
+						PerDto.setId(userPer.getPermission().getId());
+						PerDto.setName(userPer.getPermission().getName());
+						PerDto.setDescription(userPer.getPermission().getDescription());
+						permissionsDto.add(PerDto);
+					}
+	        	}
+	        }
+        }
+        UserDto dto = UserDto.builder()
+                .permissions(permissionsDto)
+				.build();
+		pagin.getResults().add(dto);
 	}
 }
