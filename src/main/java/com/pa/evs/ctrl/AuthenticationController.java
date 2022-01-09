@@ -23,10 +23,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pa.evs.constant.RestPath;
+import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
@@ -65,6 +68,23 @@ public class AuthenticationController {
     @PostMapping(value = {RestPath.USERPERMISSION})
     public Object getPermissionsOfUser(@RequestBody PaginDto<UserDto> pagin) {
         authenticationService.getPermissionsOfUser(pagin);
+        return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
+    @PostMapping(value = {RestPath.USERROLE})
+    public Object getRoleOfUser(@RequestBody PaginDto<RoleDto> pagin) {
+        authenticationService.getRoleOfUser(pagin);
+        return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
+    @PostMapping(value = {RestPath.USERGROUP})
+    public Object getGroupOfUser(@RequestBody PaginDto<GroupUserDto> pagin) {
+        authenticationService.getGroupOfUser(pagin);
+        return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    @PostMapping(value = {RestPath.EACHUSERPERMISSION})
+    public Object getPermissionsEachUser(@RequestBody PaginDto<PermissionDto> pagin) {
+        authenticationService.getPermissionsEachUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     

@@ -2,10 +2,13 @@ package com.pa.evs.sv;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.security.user.JwtUser;
 
@@ -23,5 +26,8 @@ public interface AuthenticationService {
 	void initDataAuths();
 	void getUsers(PaginDto<UserDto> pagin);
 	void getPermissionsOfUser(PaginDto<UserDto> pagin);
+	void getRoleOfUser(PaginDto<RoleDto> pagin);
+	void getGroupOfUser(PaginDto<GroupUserDto> pagin);
+	void getPermissionsEachUser(PaginDto<PermissionDto> pagin);
 	void removeUserById(Long userId);
 }

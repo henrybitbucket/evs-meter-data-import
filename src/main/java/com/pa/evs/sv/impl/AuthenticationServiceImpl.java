@@ -511,4 +511,248 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				.build();
 		pagin.getResults().add(dto);
 	}
+	
+	@Override
+	public void getRoleOfUser(PaginDto<RoleDto> pagin) {
+		
+        Map<String, Object> map = pagin.getOptions();
+
+        Object userId = (Object) map.get("userId");
+        
+        Optional<Users> user = userRepository.findById(Long.parseLong(userId.toString()));
+
+        if(user.isPresent()) {
+        	boolean check = false;
+        	for(UserRole userRole : user.get().getRoles()) {
+            	if(StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+            		check = true;
+            	}
+            }
+        	if(check == true) {
+        		StringBuilder sqlBuilder = new StringBuilder("FROM Role");
+        		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Role");
+        		
+        		StringBuilder sqlCommonBuilder = new StringBuilder();
+        		sqlCommonBuilder.append(" WHERE 1 = 1");
+        		sqlCountBuilder.append(sqlCommonBuilder);
+        		
+        		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+        			pagin.setOffset(0);
+        		}
+        		
+        		if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+        			pagin.setLimit(20);
+        		}
+        		
+        		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+        		
+        		Long count = ((Number)queryCount.getSingleResult()).longValue();
+        		pagin.setTotalRows(count);
+        		pagin.setResults(new ArrayList<>());
+        		if (count == 0l) {
+        			return;
+        		}
+        		
+        		Query query = em.createQuery(sqlBuilder.toString());
+        		query.setFirstResult(pagin.getOffset());
+        		query.setMaxResults(pagin.getLimit());
+        		
+        		List<Role> roles = query.getResultList();
+        		roles.forEach(role -> {		
+        			
+        			RoleDto dto = RoleDto.builder()
+        	                .id(role.getId())
+        	                .name(role.getName())
+        	                .desc(role.getDesc())
+        					.build();
+        			pagin.getResults().add(dto);
+        		});
+        	} else {
+        		StringBuilder sqlBuilder = new StringBuilder("FROM UserRole ur");
+        		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM UserRole ur");
+        		
+        		StringBuilder sqlCommonBuilder = new StringBuilder();
+        		sqlCommonBuilder.append(" WHERE ur.user.userId = "  + userId);
+        		sqlBuilder.append(" WHERE ur.user.userId = "  + userId);
+        		sqlCountBuilder.append(sqlCommonBuilder);
+        		
+        		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+        			pagin.setOffset(0);
+        		}
+        		
+        		if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+        			pagin.setLimit(20);
+        		}
+        		
+        		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+        		
+        		Long count = ((Number)queryCount.getSingleResult()).longValue();
+        		pagin.setTotalRows(count);
+        		pagin.setResults(new ArrayList<>());
+        		if (count == 0l) {
+        			return;
+        		}
+        		
+        		Query query = em.createQuery(sqlBuilder.toString());
+        		query.setFirstResult(pagin.getOffset());
+        		query.setMaxResults(pagin.getLimit());
+        		
+        		List<UserRole> userRoles = query.getResultList();
+        		userRoles.forEach(userRole -> {		
+        			
+        			RoleDto dto = RoleDto.builder()
+        	                .id(userRole.getRole().getId())
+        	                .name(userRole.getRole().getName())
+        	                .desc(userRole.getRole().getDesc())
+        					.build();
+        			pagin.getResults().add(dto);
+        		});
+        	}
+        }
+	}
+	
+	@Override
+	public void getGroupOfUser(PaginDto<GroupUserDto> pagin) {
+        Map<String, Object> map = pagin.getOptions();
+
+        Object userId = (Object) map.get("userId");
+        
+        StringBuilder sqlBuilder = new StringBuilder("FROM UserGroup ur");
+		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM UserGroup ur");
+		
+		StringBuilder sqlCommonBuilder = new StringBuilder();
+		sqlCommonBuilder.append(" WHERE ur.user.userId = "  + userId);
+		sqlBuilder.append(" WHERE ur.user.userId = "  + userId);
+		sqlCountBuilder.append(sqlCommonBuilder);
+		
+		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+			pagin.setOffset(0);
+		}
+		
+		if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+			pagin.setLimit(20);
+		}
+		
+		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+		
+		Long count = ((Number)queryCount.getSingleResult()).longValue();
+		pagin.setTotalRows(count);
+		pagin.setResults(new ArrayList<>());
+		if (count == 0l) {
+			return;
+		}
+		
+		Query query = em.createQuery(sqlBuilder.toString());
+		query.setFirstResult(pagin.getOffset());
+		query.setMaxResults(pagin.getLimit());
+		
+		List<UserGroup> userGroups = query.getResultList();
+		userGroups.forEach(userGroup -> {		
+			GroupUserDto dto = GroupUserDto.builder()
+	                .id(userGroup.getGroupUser().getId())
+	                .name(userGroup.getGroupUser().getName())
+	                .description(userGroup.getGroupUser().getDescription())
+					.build();
+			pagin.getResults().add(dto);
+		});
+       
+	}
+	
+	@Override
+	public void getPermissionsEachUser(PaginDto<PermissionDto> pagin) {
+		Map<String, Object> map = pagin.getOptions();
+
+        Object userId = (Object) map.get("userId");
+        
+        Optional<Users> user = userRepository.findById(Long.parseLong(userId.toString()));
+
+        if(user.isPresent()) {
+        	boolean check = false;
+        	for(UserRole userRole : user.get().getRoles()) {
+            	if(StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+            		check = true;
+            	}
+            }
+        	if(check == true) {
+        		StringBuilder sqlBuilder = new StringBuilder("FROM Permission");
+        		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Permission");
+        		
+        		StringBuilder sqlCommonBuilder = new StringBuilder();
+        		sqlCommonBuilder.append(" WHERE 1 = 1");
+        		sqlCountBuilder.append(sqlCommonBuilder);
+        		
+        		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+        			pagin.setOffset(0);
+        		}
+        		
+        		if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+        			pagin.setLimit(20);
+        		}
+        		
+        		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+        		
+        		Long count = ((Number)queryCount.getSingleResult()).longValue();
+        		pagin.setTotalRows(count);
+        		pagin.setResults(new ArrayList<>());
+        		if (count == 0l) {
+        			return;
+        		}
+        		
+        		Query query = em.createQuery(sqlBuilder.toString());
+        		query.setFirstResult(pagin.getOffset());
+        		query.setMaxResults(pagin.getLimit());
+        		
+        		List<Permission> permissions = query.getResultList();
+        		permissions.forEach(permission -> {		
+        			
+        			PermissionDto dto = PermissionDto.builder()
+        	                .id(permission.getId())
+        	                .name(permission.getName())
+        	                .description(permission.getDescription())
+        					.build();
+        			pagin.getResults().add(dto);
+        		});
+        	} else {
+                StringBuilder sqlBuilder = new StringBuilder("FROM UserPermission up");
+        		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM UserPermission up");
+        		
+        		StringBuilder sqlCommonBuilder = new StringBuilder();
+        		sqlCommonBuilder.append(" WHERE up.user.userId = "  + userId);
+        		sqlBuilder.append(" WHERE up.user.userId = "  + userId);
+        		sqlCountBuilder.append(sqlCommonBuilder);
+        		
+        		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+        			pagin.setOffset(0);
+        		}
+        		
+        		if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+        			pagin.setLimit(20);
+        		}
+        		
+        		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+        		
+        		Long count = ((Number)queryCount.getSingleResult()).longValue();
+        		pagin.setTotalRows(count);
+        		pagin.setResults(new ArrayList<>());
+        		if (count == 0l) {
+        			return;
+        		}
+        		
+        		Query query = em.createQuery(sqlBuilder.toString());
+        		query.setFirstResult(pagin.getOffset());
+        		query.setMaxResults(pagin.getLimit());
+        		
+        		List<UserPermission> userPermissions = query.getResultList();
+        		userPermissions.forEach(permission -> {		
+        			
+        			PermissionDto dto = PermissionDto.builder()
+        	                .id(permission.getPermission().getId())
+        	                .name(permission.getPermission().getName())
+        	                .description(permission.getPermission().getDescription())
+        					.build();
+        			pagin.getResults().add(dto);
+        		});
+        	}
+        }
+	}
 }
