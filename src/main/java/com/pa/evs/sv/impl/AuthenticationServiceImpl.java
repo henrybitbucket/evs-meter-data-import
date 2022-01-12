@@ -239,23 +239,42 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		// End role
 	}
 	
+	@Transactional
 	@Override
 	public void saveRole (UserDto dto) {
 		Optional<Users> user = userRepository.findById(dto.getId());
 		if(user.isPresent()) {
 			for(RoleDto roleDto : dto.getRole()) {
-				Optional<Role> role = roleRepository.findById(roleDto.getId());
-				if(role.isPresent()) {
-					UserRole userRole = new UserRole();
-					userRole.setRole(role.get());
-					userRole.setUser(user.get());
-					try {
-						userRoleRepository.save(userRole);
-					} catch (Exception e) {
-						LOGGER.error(e.getMessage(), e);
-		      		}
+				boolean check = false;
+				for(UserRole userRole : user.get().getRoles()) {
+					if(roleDto.getId() == userRole.getRole().getId()) {
+						check = true;
+					}
 				}
+				if(check == false) {
+					Optional<Role> role = roleRepository.findById(roleDto.getId());
+					if(role.isPresent()) {
+						UserRole userRole1 = new UserRole();
+						userRole1.setRole(role.get());
+						userRole1.setUser(user.get());
+						try {
+							userRoleRepository.save(userRole1);
+						} catch (Exception e) {
+							LOGGER.error(e.getMessage(), e);
+			      		}
+					}
+				}
+			}		
+			Set<String> userRoles = new HashSet<>();
+			for(RoleDto roleDto : dto.getRole()) {
+				userRoles.add(roleDto.getName());
 			}
+			try {
+				userRoleRepository.deleteNotInRoles(user.get().getUserId(), userRoles.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : userRoles);
+			} catch (Exception e) {
+				e.printStackTrace();
+				LOGGER.error(e.getMessage(), e);
+      		}
 		}
 	}
 	
@@ -276,6 +295,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		      		}
 				}
 			}
+			List<UserGroup> userGroups = userGroupRepository.findAll();
+			for(UserGroup userGroup : userGroups) {
+				boolean check = false;
+				for(GroupUserDto groupUserDto : dto.getGroupUsers()) {
+						if(groupUserDto.getId() == userGroup.getGroupUser().getId()) {
+							check = true;
+						}
+				}
+				if(check == false) {
+					try {
+						userGroupRepository.deleteById(userGroup.getId());
+					} catch (Exception e) {
+						e.printStackTrace();
+						LOGGER.error(e.getMessage(), e);
+		      		}
+				}
+			}
 		}
 	}
 	
@@ -292,6 +328,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					try {
 						userPermissionRepository.save(userPermission);
 					} catch (Exception e) {
+						LOGGER.error(e.getMessage(), e);
+		      		}
+				}
+			}
+			List<UserPermission> userPermissions = userPermissionRepository.findAll();
+			for(UserPermission userPermission : userPermissions) {
+				boolean check = false;
+				for(PermissionDto permissionDto : dto.getPermissions()) {
+						if(permissionDto.getId() == userPermission.getPermission().getId()) {
+							check = true;
+						}
+				}
+				if(check == false) {
+					try {
+						userPermissionRepository.deleteById(userPermission.getId());
+					} catch (Exception e) {
+						e.printStackTrace();
 						LOGGER.error(e.getMessage(), e);
 		      		}
 				}
@@ -451,11 +504,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         for(UserRole userRole : user.getRoles()) {
         	if(StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
         		for(Permission per : permissionRepository.findAll()) {
-        			PermissionDto permiss = new PermissionDto();
-        			permiss.setId(per.getId());
-        			permiss.setName(per.getName());
-        			permiss.setDescription(per.getDescription());
-        			permissionsDto.add(permiss);
+        			if(StringUtils.equals(per.getName(), "PAGE_ROLES_EDIT_ROLE_BUTTON_PERM") || StringUtils.equals(per.getName(), "PAGE_ROLES_REMOVE_ROLE_BUTTON_PERM") ) {
+        			
+        			} else {
+        				PermissionDto permiss = new PermissionDto();
+            			permiss.setId(per.getId());
+            			permiss.setName(per.getName());
+            			permiss.setDescription(per.getDescription());
+            			permissionsDto.add(permiss);
+        			}
         		}
         	} else {
 	        	Iterator<Map.Entry<String, List<Permission>>> itr = map.entrySet().iterator();
@@ -463,7 +520,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	        		Map.Entry<String, List<Permission>> it = itr.next();
 	        		List<PermissionDto> permissionss = new ArrayList();
 	        		for(Permission permission : it.getValue()) {
-	        			PermissionDto perDto = new PermissionDto(); 
+	        			PermissionDto perDto = new PermissionDto();
 	        			perDto.setId(permission.getId());
 	        			perDto.setName(permission.getName());
 	        			perDto.setDescription(permission.getDescription());
@@ -510,6 +567,106 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .permissions(permissionsDto)
 				.build();
 		pagin.getResults().add(dto);
+	}
+	
+	
+	@Override
+	public void getRoleOfUserLogin(PaginDto<RoleDto> pagin) {
+		
+		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+
+        if (user == null) {
+        	user = userRepository.findByUsername(SecurityUtils.getEmail());
+        }
+
+        if(user != null) {
+        	boolean check = false;
+        	for(UserRole userRole : user.getRoles()) {
+            	if(StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+            		check = true;
+            	}
+            }
+        	if(check == true) {
+        		StringBuilder sqlBuilder = new StringBuilder("FROM Role");
+        		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Role");
+        		
+        		StringBuilder sqlCommonBuilder = new StringBuilder();
+        		sqlCommonBuilder.append(" WHERE 1 = 1");
+        		sqlCountBuilder.append(sqlCommonBuilder);
+        		
+        		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+        			pagin.setOffset(0);
+        		}
+        		
+        		if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+        			pagin.setLimit(10000);
+        		}
+        		
+        		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+        		
+        		Long count = ((Number)queryCount.getSingleResult()).longValue();
+        		pagin.setTotalRows(count);
+        		pagin.setResults(new ArrayList<>());
+        		if (count == 0l) {
+        			return;
+        		}
+        		
+        		Query query = em.createQuery(sqlBuilder.toString());
+        		query.setFirstResult(pagin.getOffset());
+        		query.setMaxResults(pagin.getLimit());
+        		
+        		List<Role> roles = query.getResultList();
+        		roles.forEach(role -> {		
+        			
+        			RoleDto dto = RoleDto.builder()
+        	                .id(role.getId())
+        	                .name(role.getName())
+        	                .desc(role.getDesc())
+        					.build();
+        			pagin.getResults().add(dto);
+        		});
+        	} else {
+        		StringBuilder sqlBuilder = new StringBuilder("FROM UserRole ur");
+        		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM UserRole ur");
+        		
+        		StringBuilder sqlCommonBuilder = new StringBuilder();
+        		sqlCommonBuilder.append(" WHERE ur.user.userId = "  + user.getUserId());
+        		sqlBuilder.append(" WHERE ur.user.userId = "  + user.getUserId());
+        		sqlCountBuilder.append(sqlCommonBuilder);
+        		
+        		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+        			pagin.setOffset(0);
+        		}
+        		
+        		if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+        			pagin.setLimit(10000);
+        		}
+        		
+        		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+        		
+        		Long count = ((Number)queryCount.getSingleResult()).longValue();
+        		pagin.setTotalRows(count);
+        		pagin.setResults(new ArrayList<>());
+        		if (count == 0l) {
+        			return;
+        		}
+        		
+        		Query query = em.createQuery(sqlBuilder.toString());
+        		query.setFirstResult(pagin.getOffset());
+        		query.setMaxResults(pagin.getLimit());
+        		
+        		List<UserRole> userRoles = query.getResultList();
+        		userRoles.forEach(userRole -> {		
+        			
+        			RoleDto dto = RoleDto.builder()
+        	                .id(userRole.getRole().getId())
+        	                .name(userRole.getRole().getName())
+        	                .desc(userRole.getRole().getDesc())
+        					.build();
+        			pagin.getResults().add(dto);
+        		});
+        	}
+        }
 	}
 	
 	@Override

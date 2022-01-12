@@ -26,6 +26,7 @@ public interface AuthenticationService {
 	void initDataAuths();
 	void getUsers(PaginDto<UserDto> pagin);
 	void getPermissionsOfUser(PaginDto<UserDto> pagin);
+	void getRoleOfUserLogin(PaginDto<RoleDto> pagin);
 	void getRoleOfUser(PaginDto<RoleDto> pagin);
 	void getGroupOfUser(PaginDto<GroupUserDto> pagin);
 	void getPermissionsEachUser(PaginDto<PermissionDto> pagin);

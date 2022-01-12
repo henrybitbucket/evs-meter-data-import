@@ -71,6 +71,12 @@ public class AuthenticationController {
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
+    @PostMapping(value = {RestPath.USERROLELOGGING})
+    public Object getRoleOfUserLogin(@RequestBody PaginDto<RoleDto> pagin) {
+        authenticationService.getRoleOfUserLogin(pagin);
+        return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
     @PostMapping(value = {RestPath.USERROLE})
     public Object getRoleOfUser(@RequestBody PaginDto<RoleDto> pagin) {
         authenticationService.getRoleOfUser(pagin);
