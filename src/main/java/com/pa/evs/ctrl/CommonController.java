@@ -186,6 +186,23 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
+    @GetMapping("/api/test-link-msn")
+    public ResponseEntity<?> testlinkMsn(
+    		HttpServletRequest httpServletRequest,
+    		HttpServletRequest request
+    		) throws Exception {
+    	
+		try {
+			Map<String, Object> map = SimpleMap.init("sn", "SM02AMX21AAA01AA0390").more("msn", "301002110002");
+			map.put("request", request);
+			caRequestLogService.linkMsn(map);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build());
+		}
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
     @PostMapping("/api/firm-ware/upload/{version}/{hashCode}")
     public ResponseEntity<Object> uploadFirmware(
             HttpServletRequest httpServletRequest,

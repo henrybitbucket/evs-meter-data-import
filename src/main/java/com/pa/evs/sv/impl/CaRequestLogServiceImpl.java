@@ -405,6 +405,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         			    Optional<Group> group = groupRepository.findById(((Number)map.get("groupId")).longValue());
                         ca.setGroup(group.get());
         			}
+        			ca.setMsn((String)map.get("msn"));
         			ca.setStatus(DeviceStatus.COUPLED);
     				ca.setCoupledDatetime(System.currentTimeMillis());
         			//ca.setAddress((String)map.get("address"));
