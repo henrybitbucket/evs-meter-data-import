@@ -2,24 +2,24 @@ package com.pa.evs.dto;
 
 import java.util.List;
 
-import com.pa.evs.model.FloorLevel;
+import com.pa.evs.model.Block;
 
-public class FloorLevelDto {
+
+public class BlockDto {
 	private Long id;
 	private String name;
 	private String displayName;
-	private String level;
+	private String block;
 	private Boolean hasTenant;
 	private BuildingDto building;
-	private BlockDto block;
-	private List<BuildingUnitDto> units;
 	private List<String> names;
-	
-	public FloorLevelDto() {
+	private List<FloorLevelDto> levels;
+
+	public BlockDto() {
 		
 	}
 	
-	public FloorLevelDto(FloorLevel fr) {
+	public BlockDto(Block fr) {
 		if (fr != null) {
 			this.id = fr.getId();
 		}
@@ -56,27 +56,17 @@ public class FloorLevelDto {
 		this.building = building;
 	}
 
-	public String getLevel() {
-		return level;
-	}
-	public void setLevel(String level) {
-		this.level = level;
-	}
-
-	public BlockDto getBlock() {
+	public String getBlock() {
 		return block;
 	}
-
-	public void setBlock(BlockDto block) {
+	public void setBlock(String block) {
 		this.block = block;
 	}
-
-	public List<BuildingUnitDto> getUnits() {
-		return units;
+	public List<FloorLevelDto> getLevels() {
+		return levels;
 	}
-
-	public void setUnits(List<BuildingUnitDto> units) {
-		this.units = units;
+	public void setLevels(List<FloorLevelDto> levels) {
+		this.levels = levels;
 	}
 
 	public List<String> getNames() {

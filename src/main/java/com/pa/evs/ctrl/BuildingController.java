@@ -1,10 +1,13 @@
 package com.pa.evs.ctrl;
 
+import javax.annotation.PostConstruct;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pa.evs.converter.ExceptionConvertor;
@@ -36,8 +39,8 @@ public class BuildingController {
 	}
 	
 	@PostMapping("/api/buildings")
-	public PaginDto<BuildingDto> search(@RequestBody PaginDto<BuildingDto> pagin) {
-		buildingService.search(pagin);
+	public PaginDto<BuildingDto> search(@RequestBody PaginDto<BuildingDto> pagin, @RequestParam(required = false) String search) {
+		buildingService.search(pagin, search);
 		return pagin;
 	}
 	
@@ -50,4 +53,9 @@ public class BuildingController {
             return exceptionConvertor.createResponseDto(ex);
         }	
 	}
+	
+	@PostConstruct
+    public void init() {
+    	new Thread(() -> buildingService.updateBuildingFullText()).start();
+    }
 }

@@ -3,6 +3,7 @@ package com.pa.evs.sv.impl;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -13,15 +14,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.AddressDto;
+import com.pa.evs.dto.BlockDto;
 import com.pa.evs.dto.BuildingDto;
+import com.pa.evs.dto.BuildingUnitDto;
+import com.pa.evs.dto.FloorLevelDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.Address;
+import com.pa.evs.model.Block;
 import com.pa.evs.model.Building;
 import com.pa.evs.model.Building.BuildingType;
+import com.pa.evs.model.BuildingUnit;
+import com.pa.evs.model.FloorLevel;
 import com.pa.evs.repository.AddressRepository;
+import com.pa.evs.repository.BlockRepository;
 import com.pa.evs.repository.BuildingRepository;
+import com.pa.evs.repository.BuildingUnitRepository;
+import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.sv.BuildingService;
 import com.pa.evs.utils.Utils;
 
@@ -38,6 +48,15 @@ public class BuildingServiceImpl implements BuildingService {
 
 	@Autowired
 	AddressRepository addressRepository;
+	
+	@Autowired
+	BlockRepository blockRepository;
+	
+	@Autowired
+	FloorLevelRepository floorLevelRepository;
+	
+	@Autowired
+	BuildingUnitRepository buildingUnitRepository;
 
 	@Override
 	public void save(BuildingDto dto) throws ApiException {
@@ -68,11 +87,39 @@ public class BuildingServiceImpl implements BuildingService {
 			entity.setType(BuildingType.from(dto.getType()));
 			entity.setAddress(address);
 			buildingRepository.save(entity);
+			entity.setFullText1(entity);
+			buildingRepository.save(entity);
+			
+			if(Objects.nonNull(dto.getBlocks())) {
+				for(BlockDto blockDto : dto.getBlocks()) {
+					Block block = new Block();				
+					block.setName(blockDto.getName());
+					block.setBuilding(entity);
+					blockRepository.save(block);
+					if(Objects.nonNull(blockDto.getLevels())) {
+						for(FloorLevelDto floorDto : blockDto.getLevels()) {
+							FloorLevel floorLevel = new FloorLevel();
+							floorLevel.setName(floorDto.getName());
+							floorLevel.setBlock(block);;
+							floorLevel.setBuilding(entity);
+							floorLevelRepository.save(floorLevel);
+							if(Objects.nonNull(floorDto.getUnits())) {
+								for(BuildingUnitDto buildingUnitDto : floorDto.getUnits()) {
+									BuildingUnit buildingUnit = new BuildingUnit();
+									buildingUnit.setName(buildingUnitDto.getName());
+									buildingUnit.setFloorLevel(floorLevel);
+									buildingUnitRepository.save(buildingUnit);
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 
 	@Override
-	public void search(PaginDto<BuildingDto> pagin) {
+	public void search(PaginDto<BuildingDto> pagin, String search) {
 
 		StringBuilder sqlBuilder = new StringBuilder();
 		sqlBuilder.append(" select b.id, b.name, b.type, b.description, b.has_tenant, ");
@@ -84,6 +131,12 @@ public class BuildingServiceImpl implements BuildingService {
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlBuilder.append(" and (b.name like '%" + pagin.getKeyword() + "%' or a.display_name like '%" + pagin.getKeyword() + "%')");
 		}
+		if (search != null) {
+			sqlBuilder.append(" and (b.full_text like '%" + search.toLowerCase().replaceAll("[ \t]+", " | ") + "%')");
+		}
+		
+		sqlBuilder.append(" order by b.id asc  ");
+		
 		sqlBuilder.append(" offset " + pagin.getOffset() + " limit " + pagin.getLimit());
 		Query q = em.createNativeQuery(sqlBuilder.toString());
 
@@ -94,6 +147,9 @@ public class BuildingServiceImpl implements BuildingService {
 		sqlCountBuilder.append(" where 1=1 ");
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlCountBuilder.append(" and (b.name like '%" + pagin.getKeyword() + "%' or a.display_name like '%" + pagin.getKeyword() + "%')");
+		}
+		if (search != null) {
+			sqlCountBuilder.append(" and (b.full_text like '%" + search.toLowerCase().replaceAll("[ \t]+", " | ") + "%')");
 		}
 
 		Query qr = em.createNativeQuery(sqlCountBuilder.toString());
@@ -137,6 +193,31 @@ public class BuildingServiceImpl implements BuildingService {
 	public void delete(Long id) throws ApiException {
 		Building entity = buildingRepository.findById(id)
 				.orElseThrow(() -> new ApiException(ResponseEnum.BUILDING_NOT_FOUND));
+		
+		List<Block> blocks = blockRepository.findAllByBuilding(entity);
+		if(!blocks.isEmpty()) {
+			for(Block block : blocks) {
+				List<FloorLevel> fls = floorLevelRepository.findAllByBlock(block);
+				for(FloorLevel floorLevel : fls) {
+					List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(floorLevel);
+					for(BuildingUnit buildingUnit : buildingUnits) {
+						buildingUnitRepository.delete(buildingUnit);
+					}
+					floorLevelRepository.delete(floorLevel);
+				}
+				blockRepository.delete(block);
+			}
+		} else {
+			List<FloorLevel> fls = floorLevelRepository.findAllByBuilding(entity);
+			for(FloorLevel floorLevel : fls) {
+				List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(floorLevel);
+				for(BuildingUnit buildingUnit : buildingUnits) {
+					buildingUnitRepository.delete(buildingUnit);
+				}
+				floorLevelRepository.delete(floorLevel);
+			}
+		}
+		
 		buildingRepository.delete(entity);
 		em.createNativeQuery("delete from {h-schema}address where id = " + entity.getAddress().getId()).executeUpdate();
 	}
@@ -167,5 +248,12 @@ public class BuildingServiceImpl implements BuildingService {
 		building.setType(BuildingType.from(buildingDto.getType()));
 		building.setAddress(address);
 		buildingRepository.save(building);
+		building.setFullText1(building);
+		buildingRepository.save(building);
+	}
+	
+	@Override
+	public void updateBuildingFullText() {
+		buildingRepository.findAll().forEach(bd -> bd.setFullText1(bd));
 	}
 }

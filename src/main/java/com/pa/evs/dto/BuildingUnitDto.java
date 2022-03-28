@@ -1,6 +1,7 @@
 package com.pa.evs.dto;
 
 import java.util.Date;
+import java.util.List;
 
 import com.pa.evs.model.BuildingUnit;
 
@@ -17,6 +18,7 @@ public class BuildingUnitDto {
 	private String unit;
 	private Date createdDate;
 	private Date modifiedDate;
+	private List<String> names;
 	
 	public BuildingUnitDto() {
 		
@@ -107,5 +109,14 @@ public class BuildingUnitDto {
 	public void setUnit(String unit) {
 		this.unit = unit;
 	}
+	
+	public List<String> getNames() {
+		return names;
+	}
+
+	public void setNames(List<String> names) {
+		this.names = names;
+	}
+
 
 }

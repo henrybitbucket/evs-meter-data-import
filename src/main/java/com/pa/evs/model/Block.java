@@ -11,6 +11,7 @@ import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 
 @AllArgsConstructor
@@ -19,27 +20,23 @@ import javax.persistence.Table;
 @Setter
 @Builder
 @Entity
-@Table(name = "floor_level")
-public class FloorLevel extends BaseEntity {
+@Table(name = "block", uniqueConstraints = {@UniqueConstraint(columnNames = {"name", "building_id"})})
+public class Block extends BaseEntity {
 
 	@Column(name = "name")
 	private String name;
 
-	@Column(name = "level")
-	private String level;
+	@Column(name = "block")
+	private String block;
 
 	@Column(name = "display_name")
 	private String displayName;
-
+	
 	@Column(name = "has_contract")
 	private Boolean hasTenant;
 
 	@ManyToOne
 	@JoinColumn(name = "building_id")
 	private Building building;
-	
-	@ManyToOne
-	@JoinColumn(name = "block_id")
-	private Block block;
 
 }

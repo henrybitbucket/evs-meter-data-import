@@ -8,12 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.model.Block;
 import com.pa.evs.model.Building;
-import com.pa.evs.model.FloorLevel;
 
 
 @Transactional
 @Repository
-public interface FloorLevelRepository extends JpaRepository<FloorLevel, Long> {
-	List<FloorLevel> findAllByBlock (Block block);
-	List<FloorLevel> findAllByBuilding (Building building);
+public interface BlockRepository extends JpaRepository<Block, Long> {
+	List<Block> findAllByBuilding (Building building);
+
 }

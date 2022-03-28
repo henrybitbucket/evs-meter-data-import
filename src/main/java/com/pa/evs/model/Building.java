@@ -53,4 +53,11 @@ public class Building extends BaseEntity {
 	@Column(name = "has_tenant")
 	private Boolean hasTenant;
 
+	@Column(name = "full_text")
+	private String fullText;
+	
+	public void setFullText1(Building bd) {
+		String fullText = bd.getName() + '-' + bd.getAddress().getStreet() + '-' + bd.getAddress().getPostalCode() + '-' + bd.getAddress().getCity();
+		setFullText(fullText.toLowerCase());
+	}
 }
