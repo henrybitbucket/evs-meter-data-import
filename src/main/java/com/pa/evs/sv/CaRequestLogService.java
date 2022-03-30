@@ -46,4 +46,6 @@ public interface CaRequestLogService {
     PaginDto<CARequestLog> getDevicesInGroup(List<Long> listGroupId);
     
     void searchCaRequestLog (PaginDto<CaRequestLogDto> pagin);
+
+	void removePiLlog();
 }

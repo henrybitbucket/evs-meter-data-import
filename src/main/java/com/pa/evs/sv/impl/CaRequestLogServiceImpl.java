@@ -625,4 +625,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 pagin.getResults().add(dto);
         }); 
     }
+
+    @Transactional
+	@Override
+	public void removePiLlog() {
+		Calendar c = Calendar.getInstance();
+		c.add(Calendar.MONTH, -1);
+		Query query = em.createQuery("DELETE FROM PiLog where createDate < :cd");
+		query.setParameter("cd", c.getTime());
+		query.executeUpdate();
+	}
 }

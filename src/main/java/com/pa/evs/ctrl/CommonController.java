@@ -358,6 +358,7 @@ public class CommonController {
     		@RequestParam(required = false) String msn,
     		@RequestParam(required = false) Long mid,
     		@RequestParam(required = false) String status,
+    		@RequestParam(required = false) String fileName,
     		@RequestParam(required = false) String hide
     		) throws Exception {
         try {
@@ -371,7 +372,7 @@ public class CommonController {
             	evsPAService.ping(uuid, hide);
             } else if ("ftpRes".equalsIgnoreCase(type)) {
             	LOG.info("PI Ping2: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
-            	evsPAService.ftpRes(msn, mid, uuid, status);
+            	evsPAService.ftpRes(msn, mid, uuid, status, fileName);
             }
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());

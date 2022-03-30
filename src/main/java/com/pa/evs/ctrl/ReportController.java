@@ -1,14 +1,13 @@
 package com.pa.evs.ctrl;
 
-import com.pa.evs.dto.ExportReportDto;
-import com.pa.evs.dto.PaginDto;
-import com.pa.evs.dto.ReportDto;
-import com.pa.evs.dto.ReportJasperParameterDto;
-import com.pa.evs.dto.ResponseDto;
-import com.pa.evs.enums.JasperFormat;
-import com.pa.evs.sv.ReportService;
-import com.pa.evs.utils.JasperUtil;
-import com.pa.evs.utils.TimeZoneHolder;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.List;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,12 +25,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.List;
+import com.pa.evs.dto.ExportReportDto;
+import com.pa.evs.dto.MeterFileDataDto;
+import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.ReportDto;
+import com.pa.evs.dto.ReportJasperParameterDto;
+import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.enums.JasperFormat;
+import com.pa.evs.sv.ReportService;
+import com.pa.evs.utils.JasperUtil;
+import com.pa.evs.utils.TimeZoneHolder;
 
 @RestController
 public class ReportController {
@@ -47,6 +50,16 @@ public class ReportController {
     public ResponseEntity<Object> getReports(HttpServletRequest httpServletRequest, @RequestBody PaginDto<ReportDto> pagin) throws Exception {
         try {
             reportService.getReports(pagin);
+        } catch (Exception e) {
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).response(pagin).build());
+    }
+    
+    @PostMapping("/api/meterFileDatas")
+    public ResponseEntity<Object> getMeterFileDatas(HttpServletRequest httpServletRequest, @RequestBody PaginDto<MeterFileDataDto> pagin) throws Exception {
+        try {
+            reportService.getMeterFileDatas(pagin);
         } catch (Exception e) {
             return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
         }

@@ -1,13 +1,15 @@
 package com.pa.evs.sv;
 
+import java.io.File;
+import java.util.List;
+
+import org.springframework.web.multipart.MultipartFile;
+
 import com.pa.evs.dto.ExportReportDto;
+import com.pa.evs.dto.MeterFileDataDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ReportDto;
 import com.pa.evs.dto.ReportJasperParameterDto;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.File;
-import java.util.List;
 
 public interface ReportService {
 
@@ -22,4 +24,6 @@ public interface ReportService {
     List<ReportJasperParameterDto> getParameters(Long id);
 
     void doExportReport(File exportFile, ExportReportDto dto);
+
+	void getMeterFileDatas(PaginDto<MeterFileDataDto> pagin);
 }

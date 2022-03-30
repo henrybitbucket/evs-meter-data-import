@@ -30,7 +30,7 @@ public interface EVSPAService {
 
 	List<PiLogDto> searchPiLog(Long piId, String msn, Long mid);
 
-	void ftpRes(String msn, Long mid, String piUuid, String status);
+	void ftpRes(String msn, Long mid, String piUuid, String status, String fileName);
 
 	Log publish(String topic, Object message, String type, String batchId) throws Exception;
 
