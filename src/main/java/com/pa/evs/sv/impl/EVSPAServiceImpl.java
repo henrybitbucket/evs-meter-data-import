@@ -77,6 +77,7 @@ import com.pa.evs.model.GroupTask;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.LogBatch;
 import com.pa.evs.model.LogBatchGroupTask;
+import com.pa.evs.model.MeterFileData;
 import com.pa.evs.model.MeterLog;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.PiLog;
@@ -87,6 +88,7 @@ import com.pa.evs.repository.GroupTaskRepository;
 import com.pa.evs.repository.LogBatchGroupTaskRepository;
 import com.pa.evs.repository.LogBatchRepository;
 import com.pa.evs.repository.LogRepository;
+import com.pa.evs.repository.MeterFileDataRepository;
 import com.pa.evs.repository.MeterLogRepository;
 import com.pa.evs.repository.PiLogRepository;
 import com.pa.evs.repository.PiRepository;
@@ -136,6 +138,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired private GroupTaskRepository groupTaskRepository;
 	
 	@Autowired private PiRepository piRepository;
+	
+	@Autowired private MeterFileDataRepository meterFileDataRepository;
 	
 	@Autowired private PiLogRepository piLogRepository;
 	
@@ -908,7 +912,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 				//
 			}
 			
-		}, "REFRESH_CID");		
+		}, "REFRESH_CID");	
+		
+		SchedulerHelper.scheduleJob("0 0 1 * * ? *", () -> {
+			//removePiLlog
+			try {
+				caRequestLogService.removePiLlog();
+			} catch (Exception e) {
+				//
+			}
+			
+		}, "removePiLlog");
 		
 		try {
 			initS3();
@@ -1162,14 +1176,23 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public void ftpRes(String msn, Long mid, String piUuid, String status) {
+	public void ftpRes(String msn, Long mid, String piUuid, String status, String fileName) {
 		//logMDTSent(msn, mid);
-		List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiUuid(msn, mid, piUuid);
-		LOG.info("PI Ping3: ftpRes,  " + piUuid + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
-		logs.forEach(log -> {
-			log.setFtpResStatus(status);
-			piLogRepository.save(log);
-		});
+		if (StringUtils.isBlank(fileName) || "null".equalsIgnoreCase(fileName)) {
+			List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiUuid(msn, mid, piUuid);
+			LOG.info("PI Ping3: ftpRes,  " + piUuid + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
+			logs.forEach(log -> {
+				log.setFtpResStatus(status);
+				piLogRepository.save(log);
+			});
+		} else {
+			Pi pi = piRepository.findByUuid(piUuid).orElse(null);
+			if (pi != null) {
+				MeterFileData m = MeterFileData.builder().filename(fileName).ftpResStatus(status).pi(pi).build();
+				m.setCreateDate(new Date());
+				meterFileDataRepository.save(m);
+			}
+		}
 		this.ping(piUuid, null);
 	}
 	
