@@ -11,8 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pa.evs.dto.BlockDto;
 import com.pa.evs.dto.BuildingDto;
-import com.pa.evs.dto.FloorLevelDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.exception.ApiException;
@@ -24,68 +24,61 @@ import com.pa.evs.repository.BlockRepository;
 import com.pa.evs.repository.BuildingRepository;
 import com.pa.evs.repository.BuildingUnitRepository;
 import com.pa.evs.repository.FloorLevelRepository;
-import com.pa.evs.sv.FloorLevelService;
-
+import com.pa.evs.sv.BlockService;
 
 
 @Transactional
 @Service
-public class FloorLevelServiceImpl implements FloorLevelService {
+public class BlockServiceImpl implements BlockService {
 
 	@Autowired
 	EntityManager em;
 	
 	@Autowired
-	FloorLevelRepository floorLevelRepository;
+	BlockRepository blockRepository;
 	
 	@Autowired
 	BuildingRepository buildingRepository;
 	
 	@Autowired
-	BlockRepository blockRepository;
+	FloorLevelRepository floorLevelRepository;
 	
 	@Autowired
 	BuildingUnitRepository buildingUnitRepository;
 	
 	@Override
-	public void save(FloorLevelDto dto) throws ApiException{
+	public void save(BlockDto dto) throws ApiException{
 		if (dto.getId() != null) {
 			update(dto);
 		} else {
-			
 			Building building = null;
 			if (dto.getBuilding() != null) {
 				building = buildingRepository.findById(dto.getBuilding().getId()).orElse(new Building());
 			}
-			Block block = null;
-			if (dto.getBlock() != null) {
-				block = blockRepository.findById(dto.getBlock().getId()).orElse(new Block());
-			}
 			for (String name : dto.getNames()) {
-				FloorLevel entity = new FloorLevel();
+				Block entity = new Block();
 				entity.setId(dto.getId());
 				entity.setBuilding(building);
 				entity.setDisplayName(dto.getDisplayName());
 				entity.setHasTenant(dto.getHasTenant());
 				entity.setName(name);
-				entity.setBlock(block);
-				entity.setLevel(dto.getLevel());
-				floorLevelRepository.save(entity);
+				entity.setBlock(dto.getBlock());
+				blockRepository.save(entity);
 			}
 		}
 	}
 	
 	@Override
-	public void search(PaginDto<FloorLevelDto> pagin) {
+	public void search(PaginDto<BlockDto> pagin) {
 
 		if (pagin.getLimit() == null) {
-			pagin.setLimit(10);
+			pagin.setLimit(10000);
 		}
 		if (pagin.getOffset() == null) {
 			pagin.setOffset(0);
 		}
 		
-		StringBuilder sqlBuilder = new StringBuilder("FROM FloorLevel where 1=1");
+		StringBuilder sqlBuilder = new StringBuilder("FROM Block where 1=1");
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlBuilder.append(" AND displayName like '%" + pagin.getKeyword() + "%'");
 		}
@@ -94,17 +87,13 @@ public class FloorLevelServiceImpl implements FloorLevelService {
 			sqlBuilder.append(" AND building.id = ").append(pagin.getOptions().get("buildingId"));
 		}
 		
-		if (pagin.getOptions().get("blockId") != null) {
-			sqlBuilder.append(" AND block.id = ").append(pagin.getOptions().get("blockId"));
-		}
-		
 		sqlBuilder.append(" ORDER BY modifyDate DESC ");
 		
-		Query q = em.createQuery(sqlBuilder.toString(), FloorLevel.class);
+		Query q = em.createQuery(sqlBuilder.toString(), Block.class);
 		q.setFirstResult(pagin.getOffset());
 		q.setMaxResults(pagin.getLimit());
 		
-		StringBuilder sqlCountBuilder = new StringBuilder("SELECT COUNT(*) FROM FloorLevel where 1=1");
+		StringBuilder sqlCountBuilder = new StringBuilder("SELECT COUNT(*) FROM Block where 1=1");
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlCountBuilder.append(" AND displayName like '%" + pagin.getKeyword() + "%'");
 		}
@@ -116,13 +105,13 @@ public class FloorLevelServiceImpl implements FloorLevelService {
 		Query qCount = em.createQuery(sqlCountBuilder.toString());
 		
 		@SuppressWarnings("unchecked")
-		List<FloorLevel> list = q.getResultList();
+		List<Block> list = q.getResultList();
 		
-		List<FloorLevelDto> dtos = new ArrayList<>();
+		List<BlockDto> dtos = new ArrayList<>();
 		list.forEach(f -> {
-			FloorLevelDto dto = new FloorLevelDto();
+			BlockDto dto = new BlockDto();
 			dto.setName(f.getName());
-			dto.setLevel(f.getLevel());
+			dto.setBlock(f.getBlock());
 			dto.setDisplayName(f.getDisplayName());
 			dto.setId(f.getId());
 			dto.setHasTenant(f.getHasTenant());
@@ -140,30 +129,28 @@ public class FloorLevelServiceImpl implements FloorLevelService {
 	}
 	
 	@Override
-	public void update(FloorLevelDto dto) throws ApiException {
-		FloorLevel entity = floorLevelRepository.findById(dto.getId()).orElseThrow(() 
-				-> new ApiException(ResponseEnum.FLOOR_LEVEL_NOT_FOUND));
-		Building building = null;
-		if (dto.getBuilding() != null) {
-			building = buildingRepository.findById(dto.getBuilding().getId()).orElseThrow(() 
-					-> new ApiException(ResponseEnum.BUILDING_NOT_FOUND));
-		}
-		entity.setBuilding(building);
+	public void update(BlockDto dto) throws ApiException {
+		Block entity = blockRepository.findById(dto.getId()).orElseThrow(() 
+				-> new ApiException(ResponseEnum.BLOCK_NOT_FOUND));
 		entity.setDisplayName(dto.getDisplayName());
 		entity.setHasTenant(dto.getHasTenant());
 		entity.setName(dto.getName());
-		entity.setLevel(dto.getLevel());
-		floorLevelRepository.save(entity);
+		entity.setBlock(dto.getBlock());
+		blockRepository.save(entity);
 	}
 	
 	@Override
 	public void delete(Long id) throws ApiException {
-		FloorLevel entity = floorLevelRepository.findById(id).orElseThrow(() -> new ApiException(ResponseEnum.FLOOR_LEVEL_NOT_FOUND));
-		List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(entity);
-		for(BuildingUnit buildingUnit : buildingUnits) {
-			buildingUnitRepository.delete(buildingUnit);
+		Block entity = blockRepository.findById(id).orElseThrow(() -> new ApiException(ResponseEnum.BLOCK_NOT_FOUND));
+		List<FloorLevel> fls = floorLevelRepository.findAllByBlock(entity);
+		for(FloorLevel floorLevel : fls) {
+			List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(floorLevel);
+			for(BuildingUnit buildingUnit : buildingUnits) {
+				buildingUnitRepository.delete(buildingUnit);
+			}
+			floorLevelRepository.delete(floorLevel);
 		}
-		floorLevelRepository.delete(entity);
+		blockRepository.delete(entity);
 	}
 	
 }

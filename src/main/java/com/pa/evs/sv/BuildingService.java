@@ -6,11 +6,13 @@ import com.pa.evs.exception.ApiException;
 
 public interface BuildingService {
 
-	void search(PaginDto<BuildingDto> pagin);
+	void search(PaginDto<BuildingDto> pagin, String search);
 
 	void delete(Long id) throws ApiException;
 
 	void update(BuildingDto building) throws ApiException;
 
 	void save(BuildingDto dto) throws ApiException;
+
+	void updateBuildingFullText();
 }

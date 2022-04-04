@@ -1,8 +1,10 @@
 package com.pa.evs.dto;
 
 import java.util.Date;
+import java.util.List;
 
 import com.pa.evs.model.Building;
+
 
 
 public class BuildingDto {
@@ -14,7 +16,9 @@ public class BuildingDto {
 	private String type;
 	private AddressDto address;
 	private Boolean hasTenant;
-	
+	private List<BlockDto> blocks;
+	private List<FloorLevelDto> floors;
+	private List<BuildingUnitDto> buildingUnits;
 	private String label;
 	
 	public BuildingDto() {
@@ -100,5 +104,30 @@ public class BuildingDto {
 		this.label = label;
 	}
 
+	public List<BlockDto> getBlocks() {
+		return blocks;
+	}
+
+	public void setBlocks(List<BlockDto> blocks) {
+		this.blocks = blocks;
+	}
+
+	public List<FloorLevelDto> getFloors() {
+		return floors;
+	}
+
+	public void setFloors(List<FloorLevelDto> floors) {
+		this.floors = floors;
+	}
+
+	public List<BuildingUnitDto> getBuildingUnits() {
+		return buildingUnits;
+	}
+
+	public void setBuildingUnits(List<BuildingUnitDto> buildingUnits) {
+		this.buildingUnits = buildingUnits;
+	}
+
+	
 	
 }

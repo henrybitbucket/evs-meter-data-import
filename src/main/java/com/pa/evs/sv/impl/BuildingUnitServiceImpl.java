@@ -49,21 +49,30 @@ public class BuildingUnitServiceImpl implements BuildingUnitService {
 			}
 			FloorLevel f = floorLevelRepository.findById(dto.getFloorLevel().getId())
 					.orElseThrow(() -> new ApiException(ResponseEnum.FLOOR_LEVEL_NOT_FOUND));
-			BuildingUnit entity = new BuildingUnit();
-			entity.setDescription(dto.getDescription());
-			entity.setHasTenant(dto.getHasTenant());
-			entity.setId(dto.getId());
-			entity.setName(dto.getName());
-			entity.setType(BuildingUnitType.from(dto.getType()));
-			entity.setFloorLevel(f);
-			entity.setDisplayName(dto.getDisplayName());
-			entity.setUnit(dto.getUnit());
-			buildingUnitRepository.save(entity);
+			for (String name : dto.getNames()) {
+				BuildingUnit entity = new BuildingUnit();
+				entity.setDescription(dto.getDescription());
+				entity.setHasTenant(dto.getHasTenant());
+				entity.setId(dto.getId());
+				entity.setName(name);
+				entity.setType(BuildingUnitType.from(dto.getType()));
+				entity.setFloorLevel(f);
+				entity.setDisplayName(dto.getDisplayName());
+				entity.setUnit(dto.getUnit());
+				buildingUnitRepository.save(entity);
+			}
 		}
 	}
 
 	@Override
 	public void search(PaginDto<BuildingUnitDto> pagin) {
+		
+		if (pagin.getLimit() == null) {
+			pagin.setLimit(10000);
+		}
+		if (pagin.getOffset() == null) {
+			pagin.setOffset(0);
+		}
 
 		StringBuilder sqlBuilder = new StringBuilder();
 		sqlBuilder.append("SELECT bu, bu.floorLevel.id, bu.floorLevel.building.id FROM BuildingUnit bu ");
@@ -135,8 +144,6 @@ public class BuildingUnitServiceImpl implements BuildingUnitService {
 		BuildingUnit entity = buildingUnitRepository.findById(id)
 				.orElseThrow(() -> new ApiException(ResponseEnum.BUILDING_NOT_FOUND));
 		buildingUnitRepository.delete(entity);
-		em.createNativeQuery("delete from {h-schema}floor_level where id = " + entity.getFloorLevel().getId())
-				.executeUpdate();
 	}
 
 	@Override
