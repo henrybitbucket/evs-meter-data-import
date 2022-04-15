@@ -102,6 +102,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/api/report").permitAll()
 				.antMatchers("/api/report**").permitAll()
 				.antMatchers("/api/test-link-msn").permitAll()
+	            .antMatchers("/actuator/shutdown").permitAll()
+	            .antMatchers("/shutdownContext").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
