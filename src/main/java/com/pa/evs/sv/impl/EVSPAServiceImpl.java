@@ -31,7 +31,6 @@ import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -65,7 +64,6 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.ctrl.CommonController;
-import com.pa.evs.dto.GroupTaskDto;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
@@ -117,7 +115,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 	
-	private static final int QUALITY_OF_SERVICE = 0;
+	private static final int QUALITY_OF_SERVICE = 2;
 
 	@Autowired LocalMapStorage localMap;
 

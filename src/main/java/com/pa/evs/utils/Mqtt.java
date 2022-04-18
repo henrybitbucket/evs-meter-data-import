@@ -56,7 +56,7 @@ public class Mqtt {
 		IMqttClient instance = INSTANCES.get(serverAddress);
 		try {
 			if (instance == null) {
-				instance = new MqttClient(serverAddress, clientId + "." + System.currentTimeMillis());
+				instance = new MqttClient(serverAddress, clientId + ".evsbeins");
 				INSTANCES.put(serverAddress, instance);
 			}
 			
