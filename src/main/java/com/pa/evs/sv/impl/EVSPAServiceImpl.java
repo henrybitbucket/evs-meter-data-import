@@ -2,6 +2,7 @@ package com.pa.evs.sv.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,6 +35,7 @@ import javax.persistence.Query;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -295,7 +297,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 			tmp.put("dt", datetime.getTime());
 			tmp.put("dtd", datetime);
 			tmp.put("dtn", Integer.parseInt(sf.format(datetime)));
-			meterLogRepository.save(MeterLog.build(tmp));
+			MeterLog log = MeterLog.build(tmp);
+			
+			File file = createFile(header, data);
+            try (InputStream in = new FileInputStream(file)) {
+                log.setFileName(file.getName());
+                log.setFileContent(em.unwrap(Session.class).getLobHelper().createBlob(in, file.length()));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+            meterLogRepository.save(log);
 		}
 		
 		try {
@@ -304,6 +315,29 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.error(e.getMessage(), e);
 		}
 		publish(evsMeterLocalDataSendTopic, src, type);
+	}
+	
+	private synchronized File createFile (Map<String, Object> header, List<Map<String, Object>> data) {
+		SimpleDateFormat sf = new SimpleDateFormat();
+		File file = null;
+		try {
+			for (Map<String, Object> o : data) {
+				sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+				Date dt_date = sf.parse((String) o.get("dt"));
+				sf.applyPattern("yyyyMMdd");
+				file = new File(evsDataFolder + "/meter_file/meter_" + header.get("msn") + "_" + sf.format(dt_date) + ".txt");
+				if (!file.exists()) {
+					Files.createFile(file.toPath());
+				}
+				try (FileOutputStream fos = new FileOutputStream(file, true)) {
+					sf.applyPattern("yyyy-MM-dd HH:mm:ss");
+					fos.write((sf.format(dt_date) + "," + o.get("msn") + "," + o.get("kwh") + "," + "\r\n")
+							.getBytes(StandardCharsets.UTF_8));
+				}
+			}
+		} catch (Exception e) {
+		}
+		return file;
 	}
 	
 	@Transactional(propagation = Propagation.REQUIRES_NEW)

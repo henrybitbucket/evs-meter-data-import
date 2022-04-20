@@ -1,9 +1,12 @@
 package com.pa.evs.model;
 
+import java.sql.Blob;
 import java.util.Date;
 import java.util.Map;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Lob;
 import javax.persistence.Table;
 
 import lombok.AllArgsConstructor;
@@ -40,6 +43,16 @@ public class MeterLog extends BaseEntity {
 	private Date dtd;
 	
 	private Integer dtn;
+	
+	@Column(name = "file_name")
+	private String fileName;
+	
+	@Lob
+	@Column(name = "file_content")
+	private Blob fileContent;
+	
+	@Column(name = "pi_downloaded")
+	private Boolean piDownloaded ;
 	
 	public static MeterLog build(Map<String, Object> data) throws Exception {
 		
