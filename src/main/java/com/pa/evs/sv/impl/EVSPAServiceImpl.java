@@ -325,7 +325,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
 				Date dt_date = sf.parse((String) o.get("dt"));
 				sf.applyPattern("yyyyMMdd");
-				file = new File(evsDataFolder + "/meter_file/meter_" + header.get("msn") + "_" + sf.format(dt_date) + ".txt");
+				file = new File(evsDataFolder + "/meter_file/evsv3ga100_" + header.get("msn") + "_" + sf.format(dt_date) + ".txt");
 				if (!file.exists()) {
 					Files.createFile(file.toPath());
 				}
