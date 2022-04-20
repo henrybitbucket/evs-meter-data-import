@@ -302,7 +302,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 			File file = createFile(header, data);
             try (InputStream in = new FileInputStream(file)) {
                 log.setFileName(file.getName());
-                log.setFileContent(em.unwrap(Session.class).getLobHelper().createBlob(in, file.length()));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
