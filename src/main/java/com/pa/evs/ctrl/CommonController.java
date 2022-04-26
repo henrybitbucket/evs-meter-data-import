@@ -473,7 +473,7 @@ public class CommonController {
 	            response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"");
 	            IOUtils.copy(fis, response.getOutputStream());
 	        } finally {
-	            FileUtils.deleteDirectory(file.getParentFile());
+	  
 	        }
 	        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
 	    } catch (Exception e) {
