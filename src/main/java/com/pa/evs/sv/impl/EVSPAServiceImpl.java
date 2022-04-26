@@ -1395,7 +1395,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 		query.setMaxResults(1);
 		List<MeterLog> meterLogs = query.getResultList();
 		if(!CollectionUtils.isEmpty(meterLogs)) {
-			fileName = meterLogs.get(0).getFileName().toString();
+			if(StringUtils.isNotBlank(meterLogs.get(0).getFileName())) {
+				fileName = meterLogs.get(0).getFileName().toString();
+			}
 		}
 				
 		Pi pi = piRepository.findByUuid(uuid).orElse(null);
