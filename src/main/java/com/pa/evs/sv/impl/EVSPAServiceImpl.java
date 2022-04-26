@@ -288,6 +288,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		Map<String, Object> payload = (Map<String, Object>) src.get("payload");
 		List<Map<String, Object>> data = (List<Map<String, Object>>) payload.get("data");
 
+		File file = null;
 		for (Map<String, Object> o : data) {
 			String dt = ((String) o.get("dt")).replace(".000", "") + "Z";
 			sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -303,9 +304,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			tmp.put("dtn", Integer.parseInt(sf.format(datetime)));
 			MeterLog log = MeterLog.build(tmp);
 			
-			File file = createFile(header, data);
-            try (InputStream in = new FileInputStream(file)) {
-                log.setFileName(file.getName());
+            try {
+            	file = createFile(header, data);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -313,7 +313,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		
 		try {
-			logMDTSent((String)header.get("msn"), (Integer)header.get("mid"));
+			logMDTSent((String)header.get("msn"), (Integer)header.get("mid"), file);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
@@ -344,7 +344,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
-	private void logMDTSent(String msn, Integer mid) {
+	private void logMDTSent(String msn, Integer mid, File file) {
 		piRepository.findExists()
 		.forEach(pi -> {
 			PiLog piLog = new PiLog();
@@ -353,6 +353,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 			piLog.setMid(Long.valueOf(mid));
 			piLog.setType("MDT");
 			piLog.setFtpResStatus("NEW");
+			if (file != null) {
+				piLog.setFileName(file.getName());
+				piLog.setPiDownloaded(false);
+				piLog.setPiFileName("/home/pi/evs-data/FTP_LOG/" + file.getName());
+			}
 			piLogRepository.save(piLog);
 			piLogRepository.flush();
 		});
@@ -1379,48 +1384,37 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Override
 	@Transactional
-	public String getListFileName(String uuid) {
+	public String getFileName(String uuid) {
 		String fileName = "";
 		Query query = null;
-		Calendar cd1 = Calendar.getInstance();
-		Calendar cd2 = Calendar.getInstance();
-		cd1.add(Calendar.HOUR_OF_DAY, -2);
-		cd2.add(Calendar.DAY_OF_YEAR, -10);
-		cd2.set(Calendar.HOUR_OF_DAY, 0);
-		cd2.set(Calendar.MINUTE, 0);
-		cd2.set(Calendar.SECOND, 0);
-		query = em.createQuery("FROM MeterLog WHERE createDate <= :cd1 and createDate >= :cd2 ORDER BY createDate ASC");
-		query.setParameter("cd1", cd1.getTime());
-		query.setParameter("cd2", cd2.getTime());
-		query.setMaxResults(1);
-		List<MeterLog> meterLogs = query.getResultList();
-		if(!CollectionUtils.isEmpty(meterLogs)) {
-			if(StringUtils.isNotBlank(meterLogs.get(0).getFileName())) {
-				fileName = meterLogs.get(0).getFileName().toString();
-			}
-		}
-				
 		Pi pi = piRepository.findByUuid(uuid).orElse(null);
 		
 		if (pi != null) {
-			query = em.createQuery("FROM MeterFileData WHERE pi_id = :cd ORDER BY createDate desc");
-			query.setParameter("cd", pi.getId());
-			List<MeterFileData> meterFileDatas = query.getResultList();
-			for(MeterFileData meterFileData : meterFileDatas) {
-				String[] names = meterFileData.getFilename().split("/");
-				try {
-					if(!names[5].isEmpty()) {				
-						if(StringUtils.equals(fileName, names[5].toString())) {
-							if(StringUtils.equals(meterFileData.getFtpResStatus(), "SUCCESS")) {
-								fileName = "";
-							}
-						}						
-					}
-				} catch(Exception e) {
-					e.printStackTrace();
+			Calendar cd1 = Calendar.getInstance();
+			Calendar cd2 = Calendar.getInstance();
+			cd1.add(Calendar.HOUR_OF_DAY, -2);
+			cd2.add(Calendar.DAY_OF_YEAR, -10);
+			cd2.set(Calendar.HOUR_OF_DAY, 0);
+			cd2.set(Calendar.MINUTE, 0);
+			cd2.set(Calendar.SECOND, 0);
+			query = em.createQuery("FROM PiLog pl" 
+					+ " WHERE pl.pi.id = :piId and pl.fileName is not null "
+					+ " and pl.createDate >= :cd2 "
+					+ " and pl.createDate <= :cd1 "
+					+ " and pl.ftpResStatus <> 'SUCCESS' "
+					+ " and pl.piDownloaded = false"
+					+ " ORDER BY createDate ASC");
+			query.setParameter("cd1", cd1.getTime());
+			query.setParameter("cd2", cd2.getTime());
+			query.setParameter("piId", pi.getId());
+			query.setMaxResults(1);
+			List<PiLog> piLogs = query.getResultList();
+			if(!CollectionUtils.isEmpty(piLogs)) {
+				if(StringUtils.isNotBlank(piLogs.get(0).getFileName())) {
+					fileName = piLogs.get(0).getFileName().toString();
 				}
 			}
-		}
+		}	
 		return fileName;
 	}
 	

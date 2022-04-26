@@ -30,6 +30,15 @@ public class PiLog extends BaseEntity {
 	
     @Column(name = "ftp_res_status")
 	private String ftpResStatus;
+    
+	@Column(name = "file_name")
+	private String fileName;
+	
+	@Column(name = "pi_file_name")
+	private String piFileName;
+	
+	@Column(name = "pi_downloaded")
+	private Boolean piDownloaded ;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "pi_id")

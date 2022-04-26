@@ -47,6 +47,9 @@ public class MeterLog extends BaseEntity {
 	@Column(name = "file_name")
 	private String fileName;
 	
+	@Column(name = "pi_file_name")
+	private String piFileName;
+	
 	@Lob
 	@Column(name = "file_content")
 	private Blob fileContent;

@@ -455,9 +455,9 @@ public class CommonController {
         return ResponseEntity.ok(commandEnumResult);
     }
     
-    @GetMapping("/api/list-file-name/{uuid}")
+    @GetMapping("/api/file-name/{uuid}")
     public ResponseEntity<String> getListFileName(@PathVariable(required = false) String uuid) {
-        String fileNamesResult = evsPAService.getListFileName(uuid);        
+        String fileNamesResult = evsPAService.getFileName(uuid);        
         return ResponseEntity.ok(fileNamesResult);
     }
     
