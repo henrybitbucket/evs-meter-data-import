@@ -43,7 +43,7 @@ public interface EVSPAService {
 
 	void createTaskLog(String uuid, Long groupTaskId, Users user);
 	
-	List<String> getListFileName(String uuid);
+	String getListFileName(String uuid);
 	
 	File getMeterFile(String fileName);  
 

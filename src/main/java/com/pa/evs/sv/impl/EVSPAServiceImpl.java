@@ -50,6 +50,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
@@ -1378,63 +1379,47 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Override
 	@Transactional
-	public List<String> getListFileName(String uuid) {
-		List<String> fileNames = new ArrayList<>();
-		List<String> fileNameResults = new ArrayList<>();
+	public String getListFileName(String uuid) {
+		String fileName = "";
 		Query query = null;
-		for (int i = 0 ; i <= 10; i ++) {
-			Calendar cd1 = Calendar.getInstance();
-			Calendar cd2 = Calendar.getInstance();
-			if( i == 0 ) {
-				cd1.add(Calendar.HOUR_OF_DAY, 2);
-				cd2.add(Calendar.DAY_OF_YEAR, -1);
-				cd2.set(Calendar.HOUR_OF_DAY, 0);
-				cd2.set(Calendar.MINUTE, 0);
-				cd2.set(Calendar.SECOND, 0);
-				query = em.createQuery("FROM MeterLog WHERE createDate <= :cd1 and createDate >= :cd2 ORDER BY createDate ASC");
-				query.setParameter("cd1", cd1.getTime());
-				query.setParameter("cd2", cd2.getTime());
-				query.setMaxResults(1);
-			} else {
-				cd1.add(Calendar.DAY_OF_YEAR, -i);
-				cd1.set(Calendar.HOUR_OF_DAY, 0);
-				cd1.set(Calendar.MINUTE, 0);
-				cd1.set(Calendar.SECOND, 0);
-				cd2.add(Calendar.DAY_OF_YEAR, -i-1);
-				cd2.set(Calendar.HOUR_OF_DAY, 0);
-				cd2.set(Calendar.MINUTE, 0);
-				cd2.set(Calendar.SECOND, 0);
-				query = em.createQuery("FROM MeterLog WHERE createDate <= :cd1 and createDate >= :cd2 ORDER BY createDate ASC");
-				query.setParameter("cd1", cd1.getTime());
-				query.setParameter("cd2", cd2.getTime());
-				query.setMaxResults(1);
-			}
-			List<MeterLog> meterLogs = query.getResultList();
-			meterLogs.forEach(li -> {
-				fileNames.add(li.getFileName());
-			});
+		Calendar cd1 = Calendar.getInstance();
+		Calendar cd2 = Calendar.getInstance();
+		cd1.add(Calendar.HOUR_OF_DAY, -2);
+		cd2.add(Calendar.DAY_OF_YEAR, -10);
+		cd2.set(Calendar.HOUR_OF_DAY, 0);
+		cd2.set(Calendar.MINUTE, 0);
+		cd2.set(Calendar.SECOND, 0);
+		query = em.createQuery("FROM MeterLog WHERE createDate <= :cd1 and createDate >= :cd2 ORDER BY createDate ASC");
+		query.setParameter("cd1", cd1.getTime());
+		query.setParameter("cd2", cd2.getTime());
+		query.setMaxResults(1);
+		List<MeterLog> meterLogs = query.getResultList();
+		if(!CollectionUtils.isEmpty(meterLogs)) {
+			fileName = meterLogs.get(0).getFileName().toString();
 		}
+				
 		Pi pi = piRepository.findByUuid(uuid).orElse(null);
+		
 		if (pi != null) {
 			query = em.createQuery("FROM MeterFileData WHERE pi_id = :cd ORDER BY createDate desc");
 			query.setParameter("cd", pi.getId());
 			List<MeterFileData> meterFileDatas = query.getResultList();
-			meterFileDatas.forEach(li -> {
-				String[] names = li.getFilename().split("/");
+			for(MeterFileData meterFileData : meterFileDatas) {
+				String[] names = meterFileData.getFilename().split("/");
 				try {
 					if(!names[5].isEmpty()) {				
-						if(fileNames.contains(names[5].toString())) {
-							if(StringUtils.equals(li.getFtpResStatus(), "SUCCESS")) {
-								fileNames.remove(names[5]);
+						if(StringUtils.equals(fileName, names[5].toString())) {
+							if(StringUtils.equals(meterFileData.getFtpResStatus(), "SUCCESS")) {
+								fileName = "";
 							}
 						}						
 					}
 				} catch(Exception e) {
 					e.printStackTrace();
 				}
-			});
+			}
 		}
-		return fileNames;
+		return fileName;
 	}
 	
 	@Override
