@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.sql.Blob;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -32,6 +34,7 @@ import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -1124,7 +1127,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	public static void main(String[] args) throws Exception {
 		/**System.out.println(requestCA("http://54.254.171.4:8880/api/evs-ca-request", new ClassPathResource("sv-ca/server.csr"), null));*/
-		
+
 		/*Mqtt.subscribe(null, "dev/evs/pa/data", QUALITY_OF_SERVICE, o -> {
 			MqttMessage mqttMessage = (MqttMessage) o;
 			LOG.info("1 -> " + new String(mqttMessage.getPayload()));
@@ -1372,4 +1375,80 @@ public class EVSPAServiceImpl implements EVSPAService {
 		GroupTask task = groupTaskRepository.findById(groupTaskId).orElse(new GroupTask());
 		logBatchGroupTaskRepository.save(LogBatchGroupTask.builder().batch(batch).task(task).build());
 	}
+	
+	@Override
+	@Transactional
+	public List<String> getListFileName(String uuid) {
+		List<String> fileNames = new ArrayList<>();
+		List<String> fileNameResults = new ArrayList<>();
+		Query query = null;
+		for (int i = 0 ; i <= 10; i ++) {
+			Calendar cd1 = Calendar.getInstance();
+			Calendar cd2 = Calendar.getInstance();
+			if( i == 0 ) {
+				cd1.add(Calendar.HOUR_OF_DAY, 2);
+				cd2.add(Calendar.DAY_OF_YEAR, -1);
+				cd2.set(Calendar.HOUR_OF_DAY, 0);
+				cd2.set(Calendar.MINUTE, 0);
+				cd2.set(Calendar.SECOND, 0);
+				query = em.createQuery("FROM MeterLog WHERE createDate <= :cd1 and createDate >= :cd2 ORDER BY createDate ASC");
+				query.setParameter("cd1", cd1.getTime());
+				query.setParameter("cd2", cd2.getTime());
+				query.setMaxResults(1);
+			} else {
+				cd1.add(Calendar.DAY_OF_YEAR, -i);
+				cd1.set(Calendar.HOUR_OF_DAY, 0);
+				cd1.set(Calendar.MINUTE, 0);
+				cd1.set(Calendar.SECOND, 0);
+				cd2.add(Calendar.DAY_OF_YEAR, -i-1);
+				cd2.set(Calendar.HOUR_OF_DAY, 0);
+				cd2.set(Calendar.MINUTE, 0);
+				cd2.set(Calendar.SECOND, 0);
+				query = em.createQuery("FROM MeterLog WHERE createDate <= :cd1 and createDate >= :cd2 ORDER BY createDate ASC");
+				query.setParameter("cd1", cd1.getTime());
+				query.setParameter("cd2", cd2.getTime());
+				query.setMaxResults(1);
+			}
+			List<MeterLog> meterLogs = query.getResultList();
+			meterLogs.forEach(li -> {
+				fileNames.add(li.getFileName());
+			});
+		}
+		Pi pi = piRepository.findByUuid(uuid).orElse(null);
+		if (pi != null) {
+			query = em.createQuery("FROM MeterFileData WHERE pi_id = :cd ORDER BY createDate desc");
+			query.setParameter("cd", pi.getId());
+			List<MeterFileData> meterFileDatas = query.getResultList();
+			meterFileDatas.forEach(li -> {
+				String[] names = li.getFilename().split("/");
+				try {
+					if(!names[5].isEmpty()) {				
+						if(fileNames.contains(names[5].toString())) {
+							if(StringUtils.equals(li.getFtpResStatus(), "SUCCESS")) {
+								fileNames.remove(names[5]);
+							}
+						}						
+					}
+				} catch(Exception e) {
+					e.printStackTrace();
+				}
+			});
+		}
+		return fileNames;
+	}
+	
+	@Override
+	@Transactional
+	public File getMeterFile(String fileName) {
+		File fileResult = null;
+		File dir = new File(evsDataFolder + "/meter_file");
+		File[] files = dir.listFiles();
+		for(File file : files) {
+			if(StringUtils.equals(file.getName(), fileName)) {
+				fileResult = file;
+			}
+		}	
+		return fileResult;
+	}  
+	
 }

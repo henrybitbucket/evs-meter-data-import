@@ -454,6 +454,32 @@ public class CommonController {
 
         return ResponseEntity.ok(commandEnumResult);
     }
+    
+    @GetMapping("/api/list-file-name/{uuid}")
+    public ResponseEntity<List<String>> getListFileName(@PathVariable(required = false) String uuid) {
+        List<String> fileNamesResult = evsPAService.getListFileName(uuid);        
+        return ResponseEntity.ok(fileNamesResult);
+    }
+    
+    @PostMapping("/api/download-meter-file/{fileName}")
+    public ResponseEntity<Object> getMeterFile(HttpServletRequest httpServletRequest, HttpServletResponse response, @PathVariable(required = false) String fileName) throws Exception {
+	    try {	
+	    	File file = evsPAService.getMeterFile(fileName);
+	        try (FileInputStream fis = new FileInputStream(file)) {
+	            response.setContentLengthLong(file.length());
+	            response.setHeader(HttpHeaders.CONTENT_TYPE, "application/text");
+	            response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+	            response.setHeader("name", file.getName());
+	            response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"");
+	            IOUtils.copy(fis, response.getOutputStream());
+	        } finally {
+	            FileUtils.deleteDirectory(file.getParentFile());
+	        }
+	        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+	    } catch (Exception e) {
+	        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+	    }
+    }
 
 	@PostConstruct
 	public void init() {

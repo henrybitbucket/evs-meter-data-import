@@ -1,5 +1,6 @@
 package com.pa.evs.sv;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 
@@ -41,5 +42,9 @@ public interface EVSPAService {
 	List<CARequestLog> findDevicesInGroup(List<Long> listGroupId);
 
 	void createTaskLog(String uuid, Long groupTaskId, Users user);
+	
+	List<String> getListFileName(String uuid);
+	
+	File getMeterFile(String fileName);  
 
 }
