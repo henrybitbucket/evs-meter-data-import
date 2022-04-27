@@ -467,7 +467,7 @@ public class CommonController {
 	    	File file = evsPAService.getMeterFile(fileName);
 	        try (FileInputStream fis = new FileInputStream(file)) {
 	            response.setContentLengthLong(file.length());
-	            response.setHeader(HttpHeaders.CONTENT_TYPE, "application/text");
+	            response.setHeader(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
 	            response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
 	            response.setHeader("name", file.getName());
 	            response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"");
