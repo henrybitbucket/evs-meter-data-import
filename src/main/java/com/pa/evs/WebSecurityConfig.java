@@ -104,7 +104,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/api/test-link-msn").permitAll()
 	            .antMatchers("/actuator/shutdown").permitAll()
 	            .antMatchers("/shutdownContext").permitAll()
-	            .antMatchers("/api/list-file-name/**").permitAll()
+	            .antMatchers("/api/file-name/**").permitAll()
 	            .antMatchers("/api/download-meter-file/**").permitAll()
 				.anyRequest().authenticated();
 
