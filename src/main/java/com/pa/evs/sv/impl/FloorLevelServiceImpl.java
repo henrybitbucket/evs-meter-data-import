@@ -79,7 +79,7 @@ public class FloorLevelServiceImpl implements FloorLevelService {
 	public void search(PaginDto<FloorLevelDto> pagin) {
 
 		if (pagin.getLimit() == null) {
-			pagin.setLimit(10);
+			pagin.setLimit(10000);
 		}
 		if (pagin.getOffset() == null) {
 			pagin.setOffset(0);
