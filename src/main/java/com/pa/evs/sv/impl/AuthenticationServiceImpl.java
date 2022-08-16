@@ -392,7 +392,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	}
 	
 	@Override
+	@Transactional
 	public void removeUserById(Long userId) {
+		em.createQuery("UPDATE CARequestLog c set installer = null where c.installer.userId = " + userId).executeUpdate();
+		em.createQuery("UPDATE Log c set user = null where c.user.userId = " + userId).executeUpdate();
+		em.createQuery("UPDATE LogBatch c set user = null where c.user.userId = " + userId).executeUpdate();
+		em.createQuery("UPDATE GroupTask c set user = null where c.user.userId = " + userId).executeUpdate();
+		em.flush();
 		userRepository.deleteById(userId);
 	}
 
