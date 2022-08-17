@@ -169,9 +169,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	//@Value("${evs.pa.local.data.resp.topic}") private String evsMeterLocalDataRespTopic;
 
-	@Value("${evs.pa.mqtt.address}") private static String evsPAMQTTAddress;
+	@Value("${evs.pa.mqtt.address}") private String evsPAMQTTAddress;
 
-	@Value("${evs.pa.mqtt.client.id}") private static String mqttClientId;
+	@Value("${evs.pa.mqtt.client.id}") private String mqttClientId;
 
 	@Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 	
@@ -1165,6 +1165,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 				"    }\n" +
 				"}";
 
+		String evsPAMQTTAddress = null;
+		String mqttClientId = "";
 		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "Meter/Grp30/Req", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
 
 		/*SimpleDateFormat sf = new SimpleDateFormat();

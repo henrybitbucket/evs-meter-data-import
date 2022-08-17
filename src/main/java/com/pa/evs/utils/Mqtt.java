@@ -1,18 +1,22 @@
 package com.pa.evs.utils;
 
-import java.io.Serializable;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.ssl.SSLContexts;
 import org.eclipse.paho.client.mqttv3.IMqttClient;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import javax.net.ssl.SSLContext;
+import java.io.Serializable;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 
 /**
 <pre>
@@ -21,31 +25,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 	    <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
 	    <version>1.2.0</version>
 	</dependency>
-	<!--https://www.arubacloud.com/tutorial/how-to-install-and-secure-mosquitto-on-ubuntu-20-04.aspx-->
-	#http://www.steves-internet-guide.com/mosquitto-tls/
-	
-	################################
-	#>sudo chmod -R 777 /etc/mosquitto/certs/
-	
-	################################
-	#>sudo nano /etc/mosquitto/mosquitto.conf
-	# Place your local configuration in /etc/mosquitto/conf.d/
-	#
-	# A full description of the configuration file is at
-	# /usr/share/doc/mosquitto/examples/mosquitto.conf.example
-	port 8883
-	cafile /etc/mosquitto/certs/ca.crt
-	keyfile /etc/mosquitto/certs/server.key
-	certfile /etc/mosquitto/certs/server.crt
-	tls_version tlsv1.2
-
 </pre>
  *
  */
 public class Mqtt {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(Mqtt.class);
-	private static final String MQTT_SERVER_ADDRESS = "ssl://localhost:8883";//ssl: "ssl://localhost:8883", none-ssl: "tcp://3.1.87.138:8883"
+	private static final String MQTT_SERVER_ADDRESS = "ssl://3.1.87.138:8883";//ssl: "ssl://localhost:8883", none-ssl: "tcp://3.1.87.138:8883"
 	
 	private static final Map<String, Lock> LOCKS = new ConcurrentHashMap<>();
 	private static final Map<String, IMqttClient> INSTANCES = new ConcurrentHashMap<>();
@@ -81,18 +67,12 @@ public class Mqtt {
 				options.setCleanSession(true);
 				options.setConnectionTimeout(10);
 				if (serverAddress.startsWith("ssl://")) {
-					
-					java.security.KeyStore trustStore = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
-					trustStore.load(null,null);
-					trustStore.setCertificateEntry("Custom CA", (java.security.cert.X509Certificate) java.security.cert.CertificateFactory.getInstance("X509")
-							.generateCertificate(new java.io.FileInputStream("/home/henry/mosquitto_ca/ca.crt")));
-					javax.net.ssl.TrustManagerFactory tmf = javax.net.ssl.TrustManagerFactory.getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
-					tmf.init(trustStore);
-					javax.net.ssl.TrustManager[] trustManagers = tmf.getTrustManagers();
-					javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("TLSv1.2");
-					sslContext.init(null, trustManagers, null);
-					
-//					javax.net.ssl.SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom().loadTrustMaterial(null, (o1, o2) -> true).build();
+					TrustStrategy acceptingTrustStrategy = new TrustStrategy() {
+						public boolean isTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+							return true;
+						}
+					};
+					SSLContext sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
 					options.setSocketFactory(sslContext.getSocketFactory());
 				}
 				options.setUserName("admin");
@@ -238,7 +218,7 @@ public class Mqtt {
 	
 	public static void main(String[] args) throws Exception {
 
-		Mqtt.subscribe("evs/pa/data", o -> {
+		/*Mqtt.subscribe("evs/pa/data", o -> {
 			MqttMessage mqttMessage = (MqttMessage) o;
 			LOG.info("1 -> " + new String(mqttMessage.getPayload()));
 			return null;
@@ -256,14 +236,13 @@ public class Mqtt {
 			return null;
 		});
 
-		/*
-		 * while (true) { Mqtt.publish("test", new Payload<>("Key1", new
-		 * java.util.ArrayList<>()), 2, true); Mqtt.publish("test2", new
-		 * Payload<>("Key2", new java.util.ArrayList<>()), 2, true);
-		 * Thread.sleep(1000l); }
-		 */
+		while (true) {
+			Mqtt.publish("test", new Payload<>("Key1", new ArrayList<>()), 2, true);
+			Mqtt.publish("test2", new Payload<>("Key2", new ArrayList<>()), 2, true);
+			Thread.sleep(1000l);
+		}*/
 		System.out.println("start");
-		Mqtt.publish("evs/pa/data", "Hello", 0, false);
+		Mqtt.publish("dev/evs/pa/data", "", 0, false);
 		System.out.println("finish");
 
 	}
