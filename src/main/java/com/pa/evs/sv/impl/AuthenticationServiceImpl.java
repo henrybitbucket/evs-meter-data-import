@@ -399,6 +399,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		em.createQuery("UPDATE Log c set user = null where c.user.userId = " + userId).executeUpdate();
 		em.createQuery("UPDATE LogBatch c set user = null where c.user.userId = " + userId).executeUpdate();
 		em.createQuery("UPDATE GroupTask c set user = null where c.user.userId = " + userId).executeUpdate();
+		em.createQuery("DELETE FROM UserGroup c where c.user.userId = " + userId).executeUpdate();
+		em.createQuery("DELETE FROM UserPermission c where c.user.userId = " + userId).executeUpdate();
+		em.createQuery("DELETE FROM UserRole c where c.user.userId = " + userId).executeUpdate();
 		em.flush();
 		userRepository.deleteById(userId);
 	}
