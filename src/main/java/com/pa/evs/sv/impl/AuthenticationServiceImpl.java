@@ -843,10 +843,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				List<Permission> permissions = query.getResultList();
 				permissions.forEach(permission -> {
 
-					PermissionDto dto = PermissionDto.builder().id(permission.getId()).name(permission.getName())
+					PermissionDto dto = PermissionDto.builder().id(permission.getId()).name(permission.getName()).fixed(true)
 							.description(permission.getDescription()).build();
 					pagin.getResults().add(dto);
 				});
+				pagin.getOptions().remove("allIn");
+				pagin.getOptions().put("fixed", true);
 			} else {
 				StringBuilder sqlBuilder = new StringBuilder("FROM UserPermission up");
 				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM UserPermission up");
@@ -885,6 +887,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 							.description(permission.getPermission().getDescription()).build();
 					pagin.getResults().add(dto);
 				});
+				
+				if (pagin.getOffset() == 0 && "true".equalsIgnoreCase(pagin.getOptions().get("allIn") + "")) {
+					List<PermissionDto> allIn = new ArrayList<>();
+					query = em.createQuery(sqlBuilder.toString());
+					query.setFirstResult(0);
+
+					userPermissions = query.getResultList();
+					userPermissions.forEach(permission -> {
+
+						PermissionDto dto = PermissionDto.builder().id(permission.getPermission().getId())
+								.name(permission.getPermission().getName())
+								.description(permission.getPermission().getDescription()).build();
+						allIn.add(dto);
+					});
+					pagin.getOptions().put("allIn", allIn);
+				}
 			}
 		}
 	}
