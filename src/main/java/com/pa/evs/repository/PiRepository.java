@@ -16,4 +16,6 @@ public interface PiRepository extends JpaRepository<Pi, Long> {
 	
 	@Query("FROM Pi WHERE email is not null and (hide is null or hide = false)")
 	List<Pi> findExists();
+
+	Optional<Pi> findByIeiId(String ieiId);
 }

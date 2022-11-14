@@ -29,4 +29,9 @@ public class Pi extends BaseEntity {
     private Boolean hide;
     
     private String email;
+    
+	@Column(name = "iei_id", unique = true)
+	private String ieiId;
+	
+	private String location;
 }

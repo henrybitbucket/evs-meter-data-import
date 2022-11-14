@@ -11,6 +11,7 @@ import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
 import com.pa.evs.model.Log;
+import com.pa.evs.model.Pi;
 import com.pa.evs.model.Users;
 
 public interface EVSPAService {
@@ -25,13 +26,13 @@ public interface EVSPAService {
 
 	String getS3URL(String objectKey);
 
-	void ping(String uuid, String hide);
+	void ping(Pi pi) throws Exception;
 
 	void searchPi(PaginDto<?> pagin);
 
 	List<PiLogDto> searchPiLog(Long piId, String msn, Long mid);
 
-	void ftpRes(String msn, Long mid, String piUuid, String status, String fileName);
+	void ftpRes(String msn, Long mid, String piUuid, String status, String fileName) throws Exception;
 
 	Log publish(String topic, Object message, String type, String batchId) throws Exception;
 
@@ -45,6 +46,6 @@ public interface EVSPAService {
 	
 	String getFileName(String uuid);
 	
-	File getMeterFile(String fileName);  
+	File getMeterFile(String fileName);
 
 }

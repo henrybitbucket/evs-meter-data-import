@@ -35,6 +35,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -69,6 +70,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
+import com.pa.evs.constant.Message;
 import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
@@ -1192,33 +1194,45 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public void ping(String uuid, String hide) {
+	public void ping(Pi pi) throws Exception {
 		
-		if (StringUtils.isBlank(uuid)) {
-			return;
-		}
-		Pi pi = piRepository.findByUuid(uuid).orElse(Pi.builder().uuid(uuid).build());
-		if ("true".equalsIgnoreCase(hide)) {
-			if (pi.getId() != null) {
-				pi.setHide(true);
-				piRepository.save(pi);
-			}
+		if (StringUtils.isBlank(pi.getUuid())) {
 			return;
 		}
 		
-		pi.setHide(false);
-		String email = SecurityUtils.getEmail();
-		if (email != null) {
-			pi.setEmail(email);
+		Optional<Pi> existingPiOpt = piRepository.findByUuid(pi.getUuid());
+		
+		if (existingPiOpt.isPresent()) {
+			Pi existingPi = existingPiOpt.get();
+			existingPi.setLastPing(System.currentTimeMillis());
+			existingPi.setLocation(pi.getLocation());
+			existingPi.setUuid(pi.getUuid());
+			existingPi.setIeiId(pi.getIeiId());
+			existingPi.setHide(BooleanUtils.isTrue(pi.getHide()) ? true : false);
+			piRepository.save(existingPi);
 		} else {
-			pi.setLastPing(System.currentTimeMillis());
+			if (StringUtils.isNotBlank(pi.getIeiId())) {
+				Optional<Pi> piOpt = piRepository.findByIeiId(pi.getIeiId());
+				if (piOpt.isPresent()) {
+					throw new Exception(String.format("IEI ID: %s already exist!", pi.getIeiId()));
+				}
+			}
+			
+			String email = SecurityUtils.getEmail();
+			if (email != null) {
+				pi.setEmail(email);
+			} else {
+				pi.setLastPing(System.currentTimeMillis());
+			}
+			pi.setHide(BooleanUtils.isTrue(pi.getHide()) ? true : false);
+			pi.setIeiId(pi.getIeiId());
+			piRepository.save(pi);
 		}
-		piRepository.save(pi);
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public void ftpRes(String msn, Long mid, String piUuid, String status, String fileName) {
+	public void ftpRes(String msn, Long mid, String piUuid, String status, String fileName) throws Exception {
 		//logMDTSent(msn, mid);
 		if (StringUtils.isBlank(fileName) || "null".equalsIgnoreCase(fileName)) {
 			List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiUuid(msn, mid, piUuid);
@@ -1235,7 +1249,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 				meterFileDataRepository.save(m);
 			}
 		}
-		this.ping(piUuid, null);
+		Pi pi = new Pi();
+		pi.setUuid(piUuid);
+		pi.setHide(null);
+		this.ping(pi);
 	}
 	
 	@SuppressWarnings("rawtypes")

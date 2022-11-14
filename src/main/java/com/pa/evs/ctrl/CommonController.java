@@ -50,6 +50,7 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Pi;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
@@ -359,7 +360,9 @@ public class CommonController {
     		@RequestParam(required = false) Long mid,
     		@RequestParam(required = false) String status,
     		@RequestParam(required = false) String fileName,
-    		@RequestParam(required = false) String hide
+    		@RequestParam(required = false) String hide,
+    		@RequestParam(required = false) String ieiId,
+    		@RequestParam(required = false) String location
     		) throws Exception {
         try {
         	
@@ -369,7 +372,12 @@ public class CommonController {
             		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message("uuid is required").build());
             	}
             	LOG.info("PI Ping1: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
-            	evsPAService.ping(uuid, hide);
+            	Pi pi = new Pi();
+            	pi.setHide(BooleanUtils.toBoolean(hide));
+            	pi.setUuid(uuid);
+            	pi.setIeiId(ieiId);
+            	pi.setLocation(location);
+            	evsPAService.ping(pi);
             } else if ("ftpRes".equalsIgnoreCase(type)) {
             	LOG.info("PI Ping2: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
             	evsPAService.ftpRes(msn, mid, uuid, status, fileName);
