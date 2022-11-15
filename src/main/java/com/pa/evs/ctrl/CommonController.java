@@ -362,7 +362,8 @@ public class CommonController {
     		@RequestParam(required = false) String fileName,
     		@RequestParam(required = false) String hide,
     		@RequestParam(required = false) String ieiId,
-    		@RequestParam(required = false) String location
+    		@RequestParam(required = false) String location,
+    		@RequestParam(required = false) Boolean isEdit
     		) throws Exception {
         try {
         	
@@ -377,10 +378,10 @@ public class CommonController {
             	pi.setUuid(uuid);
             	pi.setIeiId(ieiId);
             	pi.setLocation(location);
-            	evsPAService.ping(pi);
+            	evsPAService.ping(pi, isEdit);
             } else if ("ftpRes".equalsIgnoreCase(type)) {
             	LOG.info("PI Ping2: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
-            	evsPAService.ftpRes(msn, mid, uuid, status, fileName);
+            	evsPAService.ftpRes(msn, mid, uuid, ieiId, status, fileName);
             }
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
@@ -463,9 +464,9 @@ public class CommonController {
         return ResponseEntity.ok(commandEnumResult);
     }
     
-    @GetMapping("/api/file-name/{uuid}")
-    public ResponseEntity<String> getListFileName(@PathVariable(required = false) String uuid) {
-        String fileNamesResult = evsPAService.getFileName(uuid);        
+    @GetMapping("/api/file-name/{ieiId}")
+    public ResponseEntity<String> getListFileName(@PathVariable(required = false) String ieiId) {
+        String fileNamesResult = evsPAService.getFileName(ieiId);        
         return ResponseEntity.ok(fileNamesResult);
     }
     

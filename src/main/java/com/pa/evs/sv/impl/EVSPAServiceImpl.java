@@ -1194,28 +1194,34 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public void ping(Pi pi) throws Exception {
+	public void ping(Pi pi, Boolean isEdit) throws Exception {
 		
-		if (StringUtils.isBlank(pi.getUuid())) {
+		if (StringUtils.isBlank(pi.getUuid()) && StringUtils.isBlank(pi.getIeiId())) {
 			return;
 		}
 		
-		Optional<Pi> existingPiOpt = piRepository.findByUuid(pi.getUuid());
+		Optional<Pi> existingPiOpt = null;
 		
-		if (existingPiOpt.isPresent()) {
-			Pi existingPi = existingPiOpt.get();
-			existingPi.setLastPing(System.currentTimeMillis());
-			existingPi.setLocation(pi.getLocation());
-			existingPi.setUuid(pi.getUuid());
-			existingPi.setIeiId(pi.getIeiId());
-			existingPi.setHide(BooleanUtils.isTrue(pi.getHide()) ? true : false);
-			piRepository.save(existingPi);
-		} else {
+		if (BooleanUtils.isTrue(isEdit)) {
 			if (StringUtils.isNotBlank(pi.getIeiId())) {
-				Optional<Pi> piOpt = piRepository.findByIeiId(pi.getIeiId());
-				if (piOpt.isPresent()) {
-					throw new Exception(String.format("IEI ID: %s already exist!", pi.getIeiId()));
-				}
+				existingPiOpt = piRepository.findByIeiId(pi.getIeiId());
+			}
+			if (existingPiOpt == null || !existingPiOpt.isPresent()) {
+				existingPiOpt = piRepository.findByUuid(pi.getUuid());
+			}
+			if (existingPiOpt.isPresent()) {
+				Pi existingPi = existingPiOpt.get();
+				existingPi.setLastPing(System.currentTimeMillis());
+				existingPi.setLocation(StringUtils.isNotBlank(pi.getLocation()) ? pi.getLocation() : "");
+				existingPi.setUuid(pi.getUuid());
+				existingPi.setIeiId(pi.getIeiId());
+				existingPi.setHide(BooleanUtils.isTrue(pi.getHide()) ? true : false);
+				piRepository.save(existingPi);
+			}
+		} else {
+			existingPiOpt = piRepository.findByIeiId(pi.getIeiId());
+			if (existingPiOpt.isPresent()) {
+				throw new Exception(String.format("IEI ID: %s already exist!", pi.getIeiId()));
 			}
 			
 			String email = SecurityUtils.getEmail();
@@ -1225,24 +1231,23 @@ public class EVSPAServiceImpl implements EVSPAService {
 				pi.setLastPing(System.currentTimeMillis());
 			}
 			pi.setHide(BooleanUtils.isTrue(pi.getHide()) ? true : false);
-			pi.setIeiId(pi.getIeiId());
 			piRepository.save(pi);
 		}
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public void ftpRes(String msn, Long mid, String piUuid, String status, String fileName) throws Exception {
+	public void ftpRes(String msn, Long mid, String piUuid, String ieiId, String status, String fileName) throws Exception {
 		//logMDTSent(msn, mid);
 		if (StringUtils.isBlank(fileName) || "null".equalsIgnoreCase(fileName)) {
-			List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiUuid(msn, mid, piUuid);
-			LOG.info("PI Ping3: ftpRes,  " + piUuid + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
+			List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiIeiId(msn, mid, ieiId);
+			LOG.info("PI Ping3: ftpRes,  " + ieiId + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
 			logs.forEach(log -> {
 				log.setFtpResStatus(status);
 				piLogRepository.save(log);
 			});
 		} else {
-			Pi pi = piRepository.findByUuid(piUuid).orElse(null);
+			Pi pi = piRepository.findByIeiId(ieiId).orElse(null);
 			if (pi != null) {
 				MeterFileData m = MeterFileData.builder().filename(fileName).ftpResStatus(status).pi(pi).build();
 				m.setCreateDate(new Date());
@@ -1251,8 +1256,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		Pi pi = new Pi();
 		pi.setUuid(piUuid);
+		pi.setIeiId(ieiId);
 		pi.setHide(null);
-		this.ping(pi);
+		this.ping(pi, true);
 	}
 	
 	@SuppressWarnings("rawtypes")
@@ -1403,10 +1409,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Override
 	@Transactional
-	public String getFileName(String uuid) {
+	public String getFileName(String ieiId) {
 		String fileName = "";
 		Query query = null;
-		Pi pi = piRepository.findByUuid(uuid).orElse(null);
+		Pi pi = piRepository.findByIeiId(ieiId).orElse(null);
 		
 		if (pi != null) {
 			Calendar cd1 = Calendar.getInstance();

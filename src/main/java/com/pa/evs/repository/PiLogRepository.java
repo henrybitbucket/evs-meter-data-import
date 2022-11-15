@@ -15,4 +15,6 @@ public interface PiLogRepository extends JpaRepository<PiLog, Long> {
 	List<PiLog> findByMsnAndMidAndPiId(String msn, Long mid, Long piId);
 	
 	List<PiLog> findByMsnAndMidAndPiUuid(String msn, Long mid, String piUuid);
+
+	List<PiLog> findByMsnAndMidAndPiIeiId(String msn, Long mid, String ieiId);
 }

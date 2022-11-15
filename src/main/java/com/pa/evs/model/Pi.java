@@ -21,7 +21,6 @@ public class Pi extends BaseEntity {
 
 	private String name;
 	
-	@Column(name = "uuid", unique = true)
 	private String uuid;
 
     private Long lastPing;
