@@ -26,13 +26,13 @@ public interface EVSPAService {
 
 	String getS3URL(String objectKey);
 
-	void ping(Pi pi, Boolean isEdit) throws Exception;
+	void ping(Pi pi, Boolean isEdit, Boolean isFE) throws Exception;
 
 	void searchPi(PaginDto<?> pagin);
 
 	List<PiLogDto> searchPiLog(Long piId, String msn, Long mid);
 
-	void ftpRes(String msn, Long mid, String piUuid, String ieiId, String status, String fileName) throws Exception;
+	void ftpRes(String msn, Long mid, String piUuid, String status, String fileName) throws Exception;
 
 	Log publish(String topic, Object message, String type, String batchId) throws Exception;
 

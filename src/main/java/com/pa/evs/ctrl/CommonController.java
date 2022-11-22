@@ -351,7 +351,7 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
-    //http://localhost:7770/api/ping?type=ftpRes&uuid=192.168.1.4&status=NEW&msn=201906000021&mid=9054
+    //http://localhost:7770/api/ping?type=ftpRes&uuid=MMS-IEI-EVS03-Standby&status=NEW&msn=201906000021&mid=9054
     @GetMapping("/api/ping")
     public ResponseEntity<Object> ping(HttpServletRequest httpServletRequest,
     		@RequestParam(required = true) String type,
@@ -367,21 +367,21 @@ public class CommonController {
     		) throws Exception {
         try {
         	
-        	LOG.info("PI Ping0: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
+        	LOG.info("PI Ping0: " + type + ",  " + ieiId + ", " + uuid + ", " + msn + ", " + status + ", " + mid);
             if ("ping".equalsIgnoreCase(type)) {
-            	if (StringUtils.isBlank(uuid)) {
-            		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message("uuid is required").build());
+            	if (StringUtils.isBlank(ieiId)) {
+            		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message("ieiId is required").build());
             	}
-            	LOG.info("PI Ping1: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
+            	LOG.info("PI Ping1: " + type + ",  " + ieiId + ", " + uuid + ", " + msn + ", " + status + ", " + mid);
             	Pi pi = new Pi();
             	pi.setHide(BooleanUtils.toBoolean(hide));
             	pi.setUuid(uuid);
             	pi.setIeiId(ieiId);
             	pi.setLocation(location);
-            	evsPAService.ping(pi, isEdit);
+            	evsPAService.ping(pi, isEdit, true);
             } else if ("ftpRes".equalsIgnoreCase(type)) {
             	LOG.info("PI Ping2: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
-            	evsPAService.ftpRes(msn, mid, uuid, ieiId, status, fileName);
+            	evsPAService.ftpRes(msn, mid, uuid, status, fileName);
             }
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());

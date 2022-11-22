@@ -1194,32 +1194,28 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public void ping(Pi pi, Boolean isEdit) throws Exception {
+	public void ping(Pi pi, Boolean isEdit, Boolean isFE) throws Exception {
 		
-		if (StringUtils.isBlank(pi.getUuid()) && StringUtils.isBlank(pi.getIeiId())) {
-			return;
+		if (StringUtils.isBlank(pi.getIeiId())) {
+			throw new Exception("IEI ID cannot be null!");
 		}
 		
-		Optional<Pi> existingPiOpt = null;
-		
 		if (BooleanUtils.isTrue(isEdit)) {
-			if (StringUtils.isNotBlank(pi.getIeiId())) {
-				existingPiOpt = piRepository.findByIeiId(pi.getIeiId());
-			}
-			if (existingPiOpt == null || !existingPiOpt.isPresent()) {
-				existingPiOpt = piRepository.findByUuid(pi.getUuid());
-			}
+			Optional<Pi> existingPiOpt = piRepository.findByIeiId(pi.getIeiId());
 			if (existingPiOpt.isPresent()) {
 				Pi existingPi = existingPiOpt.get();
 				existingPi.setLastPing(System.currentTimeMillis());
-				existingPi.setLocation(StringUtils.isNotBlank(pi.getLocation()) ? pi.getLocation() : "");
-				existingPi.setUuid(pi.getUuid());
-				existingPi.setIeiId(pi.getIeiId());
 				existingPi.setHide(BooleanUtils.isTrue(pi.getHide()) ? true : false);
+				if (BooleanUtils.isTrue(isFE)) {
+					existingPi.setLocation(StringUtils.isNotBlank(pi.getLocation()) ? pi.getLocation() : "");
+					existingPi.setUuid(pi.getUuid());
+					existingPi.setIeiId(pi.getIeiId());
+				}
+				
 				piRepository.save(existingPi);
 			}
 		} else {
-			existingPiOpt = piRepository.findByIeiId(pi.getIeiId());
+			Optional<Pi> existingPiOpt = piRepository.findByIeiId(pi.getIeiId());
 			if (existingPiOpt.isPresent()) {
 				throw new Exception(String.format("IEI ID: %s already exist!", pi.getIeiId()));
 			}
@@ -1237,17 +1233,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public void ftpRes(String msn, Long mid, String piUuid, String ieiId, String status, String fileName) throws Exception {
+	public void ftpRes(String msn, Long mid, String piUuid, String status, String fileName) throws Exception {
 		//logMDTSent(msn, mid);
 		if (StringUtils.isBlank(fileName) || "null".equalsIgnoreCase(fileName)) {
-			List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiIeiId(msn, mid, ieiId);
-			LOG.info("PI Ping3: ftpRes,  " + ieiId + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
+			List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiIeiId(msn, mid, piUuid);
+			LOG.info("PI Ping3: ftpRes,  " + piUuid + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
 			logs.forEach(log -> {
 				log.setFtpResStatus(status);
 				piLogRepository.save(log);
 			});
 		} else {
-			Pi pi = piRepository.findByIeiId(ieiId).orElse(null);
+			Pi pi = piRepository.findByIeiId(piUuid).orElse(null);
 			if (pi != null) {
 				MeterFileData m = MeterFileData.builder().filename(fileName).ftpResStatus(status).pi(pi).build();
 				m.setCreateDate(new Date());
@@ -1255,10 +1251,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 		}
 		Pi pi = new Pi();
-		pi.setUuid(piUuid);
-		pi.setIeiId(ieiId);
+ 		pi.setIeiId(piUuid);
 		pi.setHide(null);
-		this.ping(pi, true);
+		this.ping(pi, true, false);
 	}
 	
 	@SuppressWarnings("rawtypes")
