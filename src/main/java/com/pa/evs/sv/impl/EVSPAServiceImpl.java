@@ -2,14 +2,11 @@ package com.pa.evs.sv.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.sql.Blob;
-import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -24,8 +21,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TimeZone;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -34,12 +29,10 @@ import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -48,6 +41,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,7 +65,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
-import com.pa.evs.constant.Message;
 import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
@@ -115,6 +109,7 @@ import com.pa.evs.utils.ZipUtils;
 
 @Component
 @SuppressWarnings("unchecked")
+@EnableScheduling
 public class EVSPAServiceImpl implements EVSPAService {
 
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
@@ -260,6 +255,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		return null;
 	}
 
+	@SuppressWarnings("rawtypes")
 	private void publish(String topic, Object message) {
 		try {
 			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, message, QUALITY_OF_SERVICE, false);
@@ -839,6 +835,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} catch (Exception e) {/**/}
 	}
 	
+	@Scheduled(cron = "${cron.schedule.subscribe:0 0/5 * * * ?}")
+	public void scheduleSubscribe() {
+		LOG.info("cron subscribe");
+		subscribe();
+	}
+	
 	@PostConstruct
 	public void init() {
 
@@ -847,12 +849,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		try {
 			subscribe();
-			new Timer().schedule(new TimerTask() {
-				@Override
-				public void run() {
-					subscribe();
-				}
-			}, 5 * 60l * 1000l);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
