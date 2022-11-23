@@ -351,7 +351,7 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
-    //http://localhost:7770/api/ping?type=ftpRes&uuid=MMS-IEI-EVS03-Standby&status=NEW&msn=201906000021&mid=9054
+    //http://localhost:7770/api/ping?type=ftpRes&uuid=192.168.1.2&ieiId=MMS-IEI-EVS03-Standby&status=NEW&msn=201906000021&mid=9054
     @GetMapping("/api/ping")
     public ResponseEntity<Object> ping(HttpServletRequest httpServletRequest,
     		@RequestParam(required = true) String type,
