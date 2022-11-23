@@ -380,8 +380,8 @@ public class CommonController {
             	pi.setLocation(location);
             	evsPAService.ping(pi, isEdit, true);
             } else if ("ftpRes".equalsIgnoreCase(type)) {
-            	LOG.info("PI Ping2: " + type + ",  " + uuid + ", " + msn + ", " + status + ", " + mid);
-            	evsPAService.ftpRes(msn, mid, uuid, status, fileName);
+            	LOG.info("PI Ping2: " + type + ",  " + ieiId + ", " + msn + ", " + status + ", " + mid);
+            	evsPAService.ftpRes(msn, mid, uuid, ieiId, status, fileName);
             }
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());

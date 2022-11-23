@@ -1196,16 +1196,22 @@ public class EVSPAServiceImpl implements EVSPAService {
 			throw new Exception("IEI ID cannot be null!");
 		}
 		
+		String email = SecurityUtils.getEmail();
 		if (BooleanUtils.isTrue(isEdit)) {
 			Optional<Pi> existingPiOpt = piRepository.findByIeiId(pi.getIeiId());
 			if (existingPiOpt.isPresent()) {
 				Pi existingPi = existingPiOpt.get();
-				existingPi.setLastPing(System.currentTimeMillis());
-				existingPi.setHide(BooleanUtils.isTrue(pi.getHide()) ? true : false);
-				if (BooleanUtils.isTrue(isFE)) {
+				if (SecurityUtils.getEmail() != null) {
 					existingPi.setLocation(StringUtils.isNotBlank(pi.getLocation()) ? pi.getLocation() : "");
-					existingPi.setUuid(pi.getUuid());
-					existingPi.setIeiId(pi.getIeiId());
+					existingPi.setHide(BooleanUtils.isTrue(pi.getHide()));
+					if (existingPi.getEmail() != null) {
+						existingPi.setEmail(email);
+					}
+				} else {
+					existingPi.setLastPing(System.currentTimeMillis());
+					if (StringUtils.isNotBlank(pi.getUuid())) {
+						existingPi.setUuid(pi.getUuid());
+					}
 				}
 				
 				piRepository.save(existingPi);
@@ -1216,30 +1222,29 @@ public class EVSPAServiceImpl implements EVSPAService {
 				throw new Exception(String.format("IEI ID: %s already exist!", pi.getIeiId()));
 			}
 			
-			String email = SecurityUtils.getEmail();
 			if (email != null) {
 				pi.setEmail(email);
 			} else {
 				pi.setLastPing(System.currentTimeMillis());
 			}
-			pi.setHide(BooleanUtils.isTrue(pi.getHide()) ? true : false);
+			pi.setHide(BooleanUtils.isTrue(pi.getHide()));
 			piRepository.save(pi);
 		}
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public void ftpRes(String msn, Long mid, String piUuid, String status, String fileName) throws Exception {
+	public void ftpRes(String msn, Long mid, String piUuid, String ieiId, String status, String fileName) throws Exception {
 		//logMDTSent(msn, mid);
 		if (StringUtils.isBlank(fileName) || "null".equalsIgnoreCase(fileName)) {
-			List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiIeiId(msn, mid, piUuid);
-			LOG.info("PI Ping3: ftpRes,  " + piUuid + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
+			List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiIeiId(msn, mid, ieiId);
+			LOG.info("PI Ping3: ftpRes,  " + ieiId + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
 			logs.forEach(log -> {
 				log.setFtpResStatus(status);
 				piLogRepository.save(log);
 			});
 		} else {
-			Pi pi = piRepository.findByIeiId(piUuid).orElse(null);
+			Pi pi = piRepository.findByIeiId(ieiId).orElse(null);
 			if (pi != null) {
 				MeterFileData m = MeterFileData.builder().filename(fileName).ftpResStatus(status).pi(pi).build();
 				m.setCreateDate(new Date());
@@ -1247,7 +1252,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 		}
 		Pi pi = new Pi();
- 		pi.setIeiId(piUuid);
+ 		pi.setIeiId(ieiId);
+ 		pi.setUuid(piUuid);
 		pi.setHide(null);
 		this.ping(pi, true, false);
 	}
