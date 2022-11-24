@@ -106,6 +106,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers("/shutdownContext").permitAll()
 	            .antMatchers("/api/file-name/**").permitAll()
 	            .antMatchers("/api/download-meter-file/**").permitAll()
+	            .antMatchers("/api/settings").permitAll()
+	            .antMatchers("/api/setting/**").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

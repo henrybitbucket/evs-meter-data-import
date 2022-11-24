@@ -1,21 +1,25 @@
 package com.pa.evs.security.jwt;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Clock;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.impl.DefaultClock;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Component;
-
-import com.pa.evs.security.user.JwtUser;
-
 import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
+import com.pa.evs.dto.SettingDto;
+import com.pa.evs.security.user.JwtUser;
+import com.pa.evs.sv.SettingService;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Clock;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.impl.DefaultClock;
 
 @Component
 public class JwtTokenUtil implements Serializable {
@@ -24,12 +28,19 @@ public class JwtTokenUtil implements Serializable {
     static final String CLAIM_KEY_CREATED = "iat";
     private static final long serialVersionUID = -3301605591108950415L;
     private Clock clock = DefaultClock.INSTANCE;
+    
+    @Autowired SettingService settingService;
 
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration}")
-    private Long expiration;
+    public Long getExpiration() {
+    	SettingDto dto = settingService.findByKey("TIME_LOGIN_EXPIRED");
+    	if (dto == null || dto.getValue() == null || !dto.getValue().matches("^[0-9]+$")) {
+    		return 3600l;
+    	}
+    	return Long.valueOf(dto.getValue());
+    };
 
     public String getUsernameFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
@@ -121,6 +132,6 @@ public class JwtTokenUtil implements Serializable {
     }
 
     private Date calculateExpirationDate(Date createdDate) {
-        return new Date(createdDate.getTime() + expiration * 1000);
+        return new Date(createdDate.getTime() + getExpiration() * 1000);
     }
 }
