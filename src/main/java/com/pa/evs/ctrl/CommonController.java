@@ -52,7 +52,6 @@ import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
-import com.pa.evs.model.PiLog;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;

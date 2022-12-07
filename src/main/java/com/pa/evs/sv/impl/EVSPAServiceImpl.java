@@ -1441,10 +1441,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	@Override
+	@Transactional(readOnly = true)
 	public List<Log> getMDTMessage(Integer limit, String ieiId, String status) {
-		StringBuilder sqlBuilder = new StringBuilder("From Log l join fetch PiLog pl on (l.msn = pl.msn and l.mid = pl.mid) "
-				+ " where pl.pi.ieiId = '" + ieiId + "' and (pl.pi.hide = false or pl.pi.hide is null) "
-				+ " and l.pType = 'MDT' and l.type = 'SUBSCRIBE' ");
+		StringBuilder sqlBuilder = new StringBuilder("Select l From Log l ");
+		sqlBuilder.append(" join PiLog pl on (l.msn = pl.msn and l.mid = pl.mid) ");
+		sqlBuilder.append(" where pl.pi.ieiId = '" + ieiId + "' and (pl.pi.hide = false or pl.pi.hide is null) ");
+		sqlBuilder.append(" and l.pType = 'MDT' and l.type = 'SUBSCRIBE' ");
 		if (StringUtils.isNotBlank(status)) {
 			sqlBuilder.append(" and pl.ftpResStatus = '" + status + "' ");
 		}

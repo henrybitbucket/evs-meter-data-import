@@ -4,15 +4,14 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 
-import com.pa.evs.model.CARequestLog;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
+import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
-import com.pa.evs.model.PiLog;
 import com.pa.evs.model.Users;
 
 public interface EVSPAService {
