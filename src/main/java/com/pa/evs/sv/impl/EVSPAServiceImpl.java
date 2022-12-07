@@ -1441,6 +1441,22 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	@Override
+	public List<Log> getMDTMessage(Integer limit, String ieiId, String status) {
+		StringBuilder sqlBuilder = new StringBuilder("From Log l join fetch PiLog pl on (l.msn = pl.msn and l.mid = pl.mid) "
+				+ " where pl.pi.ieiId = '" + ieiId + "' and (pl.pi.hide = false or pl.pi.hide is null) "
+				+ " and l.pType = 'MDT' and l.type = 'SUBSCRIBE' ");
+		if (StringUtils.isNotBlank(status)) {
+			sqlBuilder.append(" and pl.ftpResStatus = '" + status + "' ");
+		}
+		sqlBuilder.append(" order by l.createDate asc");
+		
+		Query query = em.createQuery(sqlBuilder.toString());
+		query.setFirstResult(0);
+		query.setMaxResults(limit != null ? limit : 100);
+		return query.getResultList();
+	} 
+	
+	@Override
 	@Transactional
 	public File getMeterFile(String fileName) {
 		File fileResult = null;
@@ -1450,8 +1466,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if(StringUtils.equals(file.getName(), fileName)) {
 				fileResult = file;
 			}
-		}	
+		}
 		return fileResult;
-	}  
-	
+	}
+
 }

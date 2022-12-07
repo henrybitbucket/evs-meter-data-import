@@ -50,7 +50,9 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
+import com.pa.evs.model.PiLog;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
@@ -489,6 +491,19 @@ public class CommonController {
 	        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
 	    }
     }
+    
+    @GetMapping("/api/getMDTMessage")
+    public ResponseEntity<Object> getMDTMessage(@RequestParam(required = false) Integer limit, @RequestParam String ieiId, @RequestParam(required = false) String status) {
+    	if (StringUtils.isBlank(ieiId)) {
+    		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message("ieiId is required!").build());
+    	}
+    	try {
+    		List<Log> mdtMessages = evsPAService.getMDTMessage(limit, ieiId, status);
+    		return ResponseEntity.ok(mdtMessages);
+    	} catch (Exception e) {
+    		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+    	}
+    } 
 
 	@PostConstruct
 	public void init() {

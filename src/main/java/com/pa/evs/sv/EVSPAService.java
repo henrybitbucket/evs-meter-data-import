@@ -12,6 +12,7 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
+import com.pa.evs.model.PiLog;
 import com.pa.evs.model.Users;
 
 public interface EVSPAService {
@@ -47,5 +48,7 @@ public interface EVSPAService {
 	String getFileName(String ieiId);
 	
 	File getMeterFile(String fileName);
+
+	List<Log> getMDTMessage(Integer limit, String ieiId, String status);
 
 }

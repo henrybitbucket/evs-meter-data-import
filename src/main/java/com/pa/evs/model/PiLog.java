@@ -7,6 +7,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -42,5 +44,6 @@ public class PiLog extends BaseEntity {
 	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "pi_id")
+	@JsonIgnore
 	private Pi pi;
 }
