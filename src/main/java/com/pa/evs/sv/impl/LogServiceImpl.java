@@ -74,7 +74,7 @@ public class LogServiceImpl implements LogService {
         StringBuilder sqlCommonBuilder = new StringBuilder("FROM Log l ");
         
         if (piId != null) {
-        	sqlCommonBuilder.append(" JOIN PiLog pl on (pl.pi.id = " + piId + " and l.msn = pl.msn and l.mid = pl.mid and l.type = 'PUBLISH') ");
+        	sqlCommonBuilder.append(" JOIN PiLog pl on (pl.pi.id = " + piId + " and l.id = pl.publishLogId) ");
         }
         
         sqlCommonBuilder.append(" LEFT JOIN CARequestLog cl on (cl.msn = cl.msn and cl.uid = l.uid)");
@@ -197,7 +197,7 @@ public class LogServiceImpl implements LogService {
     }
     
     @Override
-    public void searchLog (PaginDto<LogDto> pagin) {
+    public void searchLog(PaginDto<LogDto> pagin) {
     	
     	Map<String, Object> map = pagin.getOptions();
     	

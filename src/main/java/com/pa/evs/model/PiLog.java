@@ -28,6 +28,12 @@ public class PiLog extends BaseEntity {
 	
 	private String msn;
 	
+	@Column(name = "log_id")
+	private Long logId;
+	
+	@Column(name = "publish_log_id")
+	private Long publishLogId;
+	
 	private Long mid;
 	
     @Column(name = "ftp_res_status")

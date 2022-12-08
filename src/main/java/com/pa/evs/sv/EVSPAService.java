@@ -32,7 +32,7 @@ public interface EVSPAService {
 
 	List<PiLogDto> searchPiLog(Long piId, String msn, Long mid);
 
-	void ftpRes(String msn, Long mid, String piUuid, String ieiId, String status, String fileName) throws Exception;
+	void ftpRes(String msn, Long mid, String piUuid, String ieiId, String status, String fileName, Long logId) throws Exception;
 
 	Log publish(String topic, Object message, String type, String batchId) throws Exception;
 
@@ -49,5 +49,7 @@ public interface EVSPAService {
 	File getMeterFile(String fileName);
 
 	List<Log> getMDTMessage(Integer limit, String ieiId, String status);
+
+	void updateMissingFileName();
 
 }

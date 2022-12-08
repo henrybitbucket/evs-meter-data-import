@@ -63,6 +63,7 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.ctrl.CommonController;
@@ -276,10 +277,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 	}
 	
-	private void sendToMeterClient(Map<String, Object> src, String type) throws Exception {
+	private void sendToMeterClient(Map<String, Object> src, String type, Log msgLog) throws Exception {
 
 		SimpleDateFormat sf = new SimpleDateFormat();
-		sf.setTimeZone(UTC);
 		sf.applyPattern("yyyyMMdd");
 
 		Map<String, Object> header = (Map<String, Object>) src.get("header");
@@ -287,14 +287,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 		List<Map<String, Object>> data = (List<Map<String, Object>>) payload.get("data");
 
 		File file = null;
+		String fName = null;
 		for (Map<String, Object> o : data) {
-			String dt = ((String) o.get("dt")).replace(".000", "") + "Z";
-			sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-			Date datetime = sf.parse(dt);
-			
-			sf.applyPattern("yyyy-MM-dd HH:mm:ss");
-
+			sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
+			Date datetime = sf.parse(((String) o.get("dt")).replace(".000", ""));
 			sf.applyPattern("yyyyMMdd");
+
 			Map<String, Object> tmp = new HashMap<>(o);
 			tmp.put("uid", payload.get("id"));
 			tmp.put("dt", datetime.getTime());
@@ -303,50 +301,61 @@ public class EVSPAServiceImpl implements EVSPAService {
 			MeterLog log = MeterLog.build(tmp);
 			
             try {
+            	if (fName == null) {
+            		fName = "evsv3ga100_" + header.get("msn") + "_" + sf.format(datetime) + ".txt";
+                }
             	file = createFile(header, data);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+            
             meterLogRepository.save(log);
 		}
 		
+		Log publishLog = publish(evsMeterLocalDataSendTopic, src, type);
+		
 		try {
-			logMDTSent((String)header.get("msn"), (Integer)header.get("mid"), file);
+			logMDTSent((String)header.get("msn"), (Integer)header.get("mid"), file, msgLog, publishLog, fName);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
-		publish(evsMeterLocalDataSendTopic, src, type);
 	}
 	
-	private synchronized File createFile (Map<String, Object> header, List<Map<String, Object>> data) {
+	private synchronized File createFile(Map<String, Object> header, List<Map<String, Object>> data) {
 		SimpleDateFormat sf = new SimpleDateFormat();
 		File file = null;
 		try {
 			for (Map<String, Object> o : data) {
-				sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
-				Date dt_date = sf.parse((String) o.get("dt"));
+				sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
+				Date datetime = sf.parse(((String) o.get("dt")).replace(".000", ""));
 				sf.applyPattern("yyyyMMdd");
-				file = new File(evsDataFolder + "/meter_file/evsv3ga100_" + header.get("msn") + "_" + sf.format(dt_date) + ".txt");
+				file = new File(evsDataFolder + "/meter_file/evsv3ga100_" + header.get("msn") + "_" + sf.format(datetime) + ".txt");
 				if (!file.exists()) {
 					Files.createFile(file.toPath());
 				}
 				try (FileOutputStream fos = new FileOutputStream(file, true)) {
 					sf.applyPattern("yyyy-MM-dd HH:mm:ss");
-					fos.write((sf.format(dt_date) + "," + o.get("msn") + "," + o.get("kwh") + "," + "\r\n")
+					fos.write((sf.format(datetime) + "," + o.get("msn") + "," + o.get("kwh") + "," + "\r\n")
 							.getBytes(StandardCharsets.UTF_8));
 				}
 			}
 		} catch (Exception e) {
+			e.printStackTrace();
+			LOG.error(e.getMessage(), e);
 		}
 		return file;
 	}
 	
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
-	private void logMDTSent(String msn, Integer mid, File file) {
+	private void logMDTSent(String msn, Integer mid, File file, Log log, Log publishLog, String defaultFname) {
 		piRepository.findExists()
 		.forEach(pi -> {
 			PiLog piLog = new PiLog();
 			piLog.setPi(pi);
+			piLog.setLogId(log.getId());
+			if (publishLog != null) {
+				piLog.setPublishLogId(publishLog.getId());
+			}
 			piLog.setMsn(msn);
 			piLog.setMid(Long.valueOf(mid));
 			piLog.setType("MDT");
@@ -355,12 +364,59 @@ public class EVSPAServiceImpl implements EVSPAService {
 				piLog.setFileName(file.getName());
 				piLog.setPiDownloaded(false);
 				piLog.setPiFileName("/home/pi/evs-data/FTP_LOG/" + file.getName());
+			} else if (defaultFname != null) {
+				piLog.setFileName(defaultFname);
+				piLog.setPiDownloaded(false);
+				piLog.setPiFileName("/home/pi/evs-data/FTP_LOG/" + defaultFname);
 			}
 			piLogRepository.save(piLog);
 			piLogRepository.flush();
 		});
 	}
 
+	@Override
+	@Transactional
+	public void updateMissingFileName() {
+		SimpleDateFormat sf = new SimpleDateFormat();
+		List<PiLog> piLogs = piLogRepository.findByFileNameIsNull();
+		piLogs
+		.forEach(piLog -> {
+			Log log = logRepository.findById(piLog.getLogId()).orElse(null);
+			if (log != null) {
+				String raw = log.getRaw();
+				try {
+					Map<String, Object> src = MAPPER.readValue(raw, Map.class);
+					Map<String, Object> header = (Map<String, Object>) src.get("header");
+					Map<String, Object> payload = (Map<String, Object>) src.get("payload");
+					List<Map<String, Object>> data = (List<Map<String, Object>>) payload.get("data");
+					String fName = null;
+					for (Map<String, Object> o : data) {
+						sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
+						Date datetime = sf.parse(((String) o.get("dt")).replace(".000", ""));
+						sf.applyPattern("yyyyMMdd");
+
+			            try {
+			            	if (fName == null) {
+			            		fName = "evsv3ga100_" + header.get("msn") + "_" + sf.format(datetime) + ".txt";
+			            		break;
+			                }
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+			            
+					}
+					piLog.setFileName(fName);
+					piLogRepository.save(piLog);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			} else {
+				System.out.println("LOL");
+			}
+			
+		});
+	}
+	
 	@Override
 	public Long nextvalMID() {
 		Number mid = logRepository.nextvalMID().longValue();
@@ -387,7 +443,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		
 		if (status == 0) {
-			sendToMeterClient(data, type);
+			sendToMeterClient(data, type, log);
 		}
 
 		updateLastMDTSubscribe(log);
@@ -1234,11 +1290,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Override
-	public void ftpRes(String msn, Long mid, String piUuid, String ieiId, String status, String fileName) throws Exception {
+	public void ftpRes(String msn, Long mid, String piUuid, String ieiId, String status, String fileName, Long logId) throws Exception {
 		//logMDTSent(msn, mid);
 		if (StringUtils.isBlank(fileName) || "null".equalsIgnoreCase(fileName)) {
-			List<PiLog> logs = piLogRepository.findByMsnAndMidAndPiIeiId(msn, mid, ieiId);
-			LOG.info("PI Ping3: ftpRes,  " + ieiId + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
+			List<PiLog> logs;
+			
+			if (logId == null) {
+				logs = piLogRepository.findByMsnAndMidAndPiIeiId(msn, mid, ieiId);
+			} else {
+				logs = piLogRepository.findByMsnAndMidAndPiIeiIdAndLogId(msn, mid, ieiId, logId);
+			}
+			
+			LOG.info("PI Ping3: ftpRes,  " + logId + " " + ieiId + ", " + msn + ", " + status + ", " + mid + ", " + logs.size());
 			logs.forEach(log -> {
 				log.setFtpResStatus(status);
 				piLogRepository.save(log);
@@ -1444,7 +1507,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Transactional(readOnly = true)
 	public List<Log> getMDTMessage(Integer limit, String ieiId, String status) {
 		StringBuilder sqlBuilder = new StringBuilder("Select l From Log l ");
-		sqlBuilder.append(" join PiLog pl on (l.msn = pl.msn and l.mid = pl.mid) ");
+		sqlBuilder.append(" join PiLog pl on (l.id = pl.logId) ");
 		sqlBuilder.append(" where pl.pi.ieiId = '" + ieiId + "' and (pl.pi.hide = false or pl.pi.hide is null) ");
 		sqlBuilder.append(" and l.pType = 'MDT' and l.type = 'SUBSCRIBE' ");
 		if (StringUtils.isNotBlank(status)) {

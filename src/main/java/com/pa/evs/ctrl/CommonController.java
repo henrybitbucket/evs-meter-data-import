@@ -60,8 +60,10 @@ import com.pa.evs.sv.LogService;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.RSAUtil;
+import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.TimeZoneHolder;
+import com.pa.evs.utils.ZipUtils;
 
 @RestController
 public class CommonController {
@@ -364,7 +366,8 @@ public class CommonController {
     		@RequestParam(required = false) String hide,
     		@RequestParam(required = false) String ieiId,
     		@RequestParam(required = false) String location,
-    		@RequestParam(required = false) Boolean isEdit
+    		@RequestParam(required = false) Boolean isEdit,
+    		@RequestParam(required = false) Long logId
     		) throws Exception {
         try {
         	
@@ -382,7 +385,7 @@ public class CommonController {
             	evsPAService.ping(pi, isEdit, true);
             } else if ("ftpRes".equalsIgnoreCase(type)) {
             	LOG.info("PI Ping2: " + type + ",  " + ieiId + ", " + msn + ", " + status + ", " + mid);
-            	evsPAService.ftpRes(msn, mid, uuid, ieiId, status, fileName);
+            	evsPAService.ftpRes(msn, mid, uuid, ieiId, status, fileName, logId);
             }
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
@@ -531,5 +534,7 @@ public class CommonController {
 				LOG.error(e.getMessage(), e);
 			}
 		}
+		
+		SchedulerHelper.scheduleJob("0 1/10 * * * ? *",  evsPAService::updateMissingFileName, "UPDATE_PI_LOG_FILE_NAME");
 	}
 }
