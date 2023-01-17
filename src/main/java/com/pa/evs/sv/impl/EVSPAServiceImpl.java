@@ -63,7 +63,6 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.ctrl.CommonController;
@@ -117,7 +116,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
-	private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
+	static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 	
 	private static final int QUALITY_OF_SERVICE = 2;
 
@@ -238,10 +237,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
 			
-			//wait 5s
-			LOG.debug("sleep 5s");
-			TimeUnit.SECONDS.sleep(5);
-			
 			//save log
 			Map<String, Object> publishData = new HashMap<>((Map) message);
 			publishData.put("type", type);
@@ -249,6 +244,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 			logP.setTopic(topic);
 			logP.setMqttAddress(evsPAMQTTAddress);
 			logRepository.save(logP);
+			
+			//wait 5s
+			LOG.debug("sleep 5s");
+			TimeUnit.SECONDS.sleep(5);
+			
 			return logP;
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
@@ -262,16 +262,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, message, QUALITY_OF_SERVICE, false);
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
 
-			//wait 5s
-			LOG.debug("sleep 5s");
-			TimeUnit.SECONDS.sleep(5);
-
 			//save log
 			Map<String, Object> publishData = new HashMap<>((Map) message);
 			Log logP = Log.build(publishData, "PUBLISH");
 			logP.setTopic(topic);
 			logP.setMqttAddress(evsPAMQTTAddress);
 			logRepository.save(logP);
+			
+			//wait 5s
+			LOG.debug("sleep 5s");
+			TimeUnit.SECONDS.sleep(5);
+			
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
