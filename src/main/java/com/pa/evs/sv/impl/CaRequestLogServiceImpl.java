@@ -243,6 +243,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Boolean deactivationDate = BooleanUtils.toBoolean((String) options.get("queryDeactivationDate"));
             Boolean allDate = BooleanUtils.toBoolean((String) options.get("queryAllDate"));
             
+            String queryBuilding = (String) options.get("queryBuilding");
+            String queryFloorLevel = (String) options.get("queryFloorLevel");
+            String queryBuildingUnit = (String) options.get("queryBuildingUnit");
+            String queryPostalCode = (String) options.get("queryPostalCode");
+            
             sqlCommonBuilder.append(" WHERE     ");
             
             if (BooleanUtils.isTrue(allDate)) {
@@ -342,6 +347,20 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (queryGroup != null) {
                 sqlCommonBuilder.append(" group = " + queryGroup + " AND ");
             }
+            
+            if (StringUtils.isNotBlank(queryBuilding)) {
+                sqlCommonBuilder.append(" building.id= '" + queryBuilding + "' AND ");
+            }
+            if (StringUtils.isNotBlank(queryFloorLevel)) {
+                sqlCommonBuilder.append(" floorLevel.id= '" + queryFloorLevel + "' AND ");
+            }
+            if (StringUtils.isNotBlank(queryBuildingUnit)) {
+                sqlCommonBuilder.append(" buildingUnit.id= '" + queryBuildingUnit + "' AND ");
+            }
+            if (StringUtils.isNotBlank(queryPostalCode)) {
+                sqlCommonBuilder.append(" upper(address.postalCode) = '" + queryPostalCode + "' AND ");
+            }
+            
             sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
         }
         
