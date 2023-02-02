@@ -25,6 +25,8 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	
 	Optional<CARequestLog> findBySn(String sn);
 	
+	Optional<CARequestLog> findByCid(String cid);
+	
 	@Query("SELECT certificate FROM CARequestLog WHERE uid = ?1")
 	List<String> findCAByUid(String uid);
 	

@@ -48,4 +48,8 @@ public interface CaRequestLogService {
     void searchCaRequestLog (PaginDto<CaRequestLogDto> pagin);
 
 	void removePiLlog();
+
+	void removeDevice(String eId);
+
+	void unLinkMsn(String eId);
 }

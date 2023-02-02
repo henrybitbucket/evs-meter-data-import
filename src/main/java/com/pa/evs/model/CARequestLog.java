@@ -128,6 +128,8 @@ public class CARequestLog extends BaseEntity {
 	@Transient
 	private String profile;
 	
+	private String oldMsn;
+	
 	public static CARequestLog build(Map<String, Object> data) throws Exception {
 		
 		return builder()

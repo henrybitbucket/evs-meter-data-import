@@ -664,4 +664,25 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		query.setParameter("cd", c.getTime());
 		query.executeUpdate();
 	}
+
+    @Transactional
+	@Override
+	public void removeDevice(String eId) {
+		CARequestLog caRequestLog = caRequestLogRepository.findByCid(eId).orElse(null);
+		if (caRequestLog != null && caRequestLog.getStatus() == DeviceStatus.NOT_COUPLED) {
+			caRequestLogRepository.delete(caRequestLog);
+		}
+	}
+
+	@Transactional
+	@Override
+	public void unLinkMsn(String eId) {
+		CARequestLog caRequestLog = caRequestLogRepository.findByCid(eId).orElse(null);
+		if (caRequestLog != null && caRequestLog.getStatus() == DeviceStatus.COUPLED) {
+			caRequestLog.setStatus(DeviceStatus.NOT_COUPLED);
+			caRequestLog.setOldMsn(caRequestLog.getMsn());
+			caRequestLog.setMsn(null);
+			caRequestLogRepository.save(caRequestLog);
+		}
+	}
 }
