@@ -117,11 +117,11 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "last_mtd_date")
 	private Long lastMdtDate;
 
-	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.ALL})
+	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.MERGE})
 	@JoinColumn(name = "installer")
 	private Users installer;
 
-	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.ALL})
+	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.MERGE})
 	@JoinColumn(name = "group_id")
 	private Group group;
 	

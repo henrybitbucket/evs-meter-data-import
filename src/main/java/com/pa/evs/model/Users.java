@@ -60,7 +60,7 @@ public class Users extends Base1Entity {
 	@Column(name = "status")
     private String status;
 
-	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.ALL)
+	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserRole> roles;
     
     @Column(name = "avatar")

@@ -669,7 +669,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@Override
 	public void removeDevice(String eId) {
 		CARequestLog caRequestLog = caRequestLogRepository.findByCid(eId).orElse(null);
-		if (caRequestLog != null && caRequestLog.getStatus() == DeviceStatus.NOT_COUPLED) {
+		if (caRequestLog != null && caRequestLog.getStatus() == DeviceStatus.NOT_COUPLED) {//8931070521315025237F
 			caRequestLogRepository.delete(caRequestLog);
 		}
 	}
@@ -678,10 +678,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@Override
 	public void unLinkMsn(String eId) {
 		CARequestLog caRequestLog = caRequestLogRepository.findByCid(eId).orElse(null);
-		if (caRequestLog != null && caRequestLog.getStatus() == DeviceStatus.COUPLED) {
+		if (caRequestLog != null) {
 			caRequestLog.setStatus(DeviceStatus.NOT_COUPLED);
 			caRequestLog.setOldMsn(caRequestLog.getMsn());
 			caRequestLog.setMsn(null);
+			caRequestLog.setCoupledDatetime(null);
 			caRequestLogRepository.save(caRequestLog);
 		}
 	}
