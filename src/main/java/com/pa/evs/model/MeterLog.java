@@ -6,8 +6,10 @@ import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.Lob;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,7 +23,10 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "meter_log")
+@Table(name = "meter_log", indexes = {
+		@Index(name = "idx_meter_log_uid", columnList="uid", unique = false),
+		@Index(name = "idx_meter_log_uid_dt", columnList="uid,dt", unique = false)
+})
 public class MeterLog extends BaseEntity {
 
     private String uid;
@@ -42,6 +47,8 @@ public class MeterLog extends BaseEntity {
 	
 	private Date dtd;
 	
+	private String rawdt;
+	
 	private Integer dtn;
 	
 	@Column(name = "file_name")
@@ -49,6 +56,9 @@ public class MeterLog extends BaseEntity {
 	
 	@Column(name = "pi_file_name")
 	private String piFileName;
+	
+	@Transient
+	private String mDt;
 	
 	@Lob
 	@Column(name = "file_content")
@@ -68,6 +78,7 @@ public class MeterLog extends BaseEntity {
 				.v((String)data.get("v"))
 				.pf((String)data.get("pf"))
 				.dt((Long)data.get("dt"))
+				.rawdt((String)data.get("rawdt"))
 				.dtd((Date)data.get("dtd"))
 				.dtn((Integer)data.get("dtn"))
 				.build();

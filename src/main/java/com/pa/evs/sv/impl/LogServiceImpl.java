@@ -296,7 +296,7 @@ public class LogServiceImpl implements LogService {
 		}
 		
 		if (to == null) {
-			to = System.currentTimeMillis();
+			to = System.currentTimeMillis() + 12 * 60 * 60 * 1000l;
 		}
 		
 		StringBuilder sqlBuilder = new StringBuilder("FROM MeterLog where uid='" + uid + "' and dt <= " + to + " and dt >= " + from + " order by dt " + order);
@@ -308,7 +308,13 @@ public class LogServiceImpl implements LogService {
 		if (limit != null && limit.intValue() > 0) {
 			query.setMaxResults(limit.intValue());
 		}
-		return query.getResultList();
+		@SuppressWarnings("unchecked")
+		List<MeterLog> logs = query.getResultList();
+		SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+		logs.forEach(ml -> {
+			ml.setMDt(ml.getDtd() != null ? sf.format(ml.getDtd()) : null);
+		});
+		return logs;
 	}
 
     @Override

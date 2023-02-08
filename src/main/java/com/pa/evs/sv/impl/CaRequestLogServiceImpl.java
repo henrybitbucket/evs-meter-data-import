@@ -11,7 +11,6 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -30,16 +29,15 @@ import org.springframework.util.CollectionUtils;
 
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
-import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.DeviceType;
 import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.Address;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
-import com.pa.evs.model.LogBatch;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.AddressRepository;
@@ -54,6 +52,7 @@ import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.CsvUtils;
+import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.Utils;
 
 @Component
@@ -209,6 +208,22 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             ca.setGroup(null);
         }
         
+        
+        // status, type
+        if (StringUtils.isBlank(ca.getMsn()) || StringUtils.isBlank(ca.getSn())) {
+        	ca.setType(DeviceType.NOT_COUPLED);
+        	ca.setCoupledDatetime(System.currentTimeMillis());
+    		ca.setCoupledUser(SecurityUtils.getUsername());
+        } else {
+        	if (ca.getType() != DeviceType.COUPLED) {
+        		ca.setCoupledDatetime(System.currentTimeMillis());
+        		ca.setCoupledUser(SecurityUtils.getUsername());
+        	}
+        	ca.setType(DeviceType.COUPLED);
+        }
+        if (ca.getStatus() == null) {
+        	ca.setStatus(DeviceStatus.OFFLINE);
+        }
         caRequestLogRepository.save(ca);
         
     }
@@ -230,6 +245,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Long fromDate = (Long) options.get("fromDate");
             Long toDate = (Long) options.get("toDate");
             String status = (String) options.get("status");
+            String type = (String) options.get("type");
             String querySn = (String) options.get("querySn");
             String queryMsn = (String) options.get("queryMsn");
             String querySnOrCid = (String) options.get("querySnOrCid");
@@ -331,6 +347,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 sqlCommonBuilder.append(" status = '" + status + "' AND ");
             }
             
+            if (StringUtils.isNotBlank(type)) {
+                sqlCommonBuilder.append(" type = '" + type + "' AND ");
+            }
+            
             if (!CollectionUtils.isEmpty(cids)) {
                 sqlCommonBuilder.append(" (cid = '" + cids.get(0) + "'");
                 for (int i = 1; i < cids.size(); i++) {
@@ -425,8 +445,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                         ca.setGroup(group.get());
         			}
         			ca.setMsn((String)map.get("msn"));
-        			ca.setStatus(DeviceStatus.COUPLED);
+        			// ca.setStatus(DeviceStatus.COUPLED);
+        			ca.setType(DeviceType.COUPLED);
     				ca.setCoupledDatetime(System.currentTimeMillis());
+    				ca.setCoupledUser(SecurityUtils.getUsername());
         			//ca.setAddress((String)map.get("address"));
         			if (map.get("request") instanceof HttpServletRequest) {
         				ResponseDto<JwtUser> us = authenticationService.getUser((HttpServletRequest) map.get("request"));
@@ -497,6 +519,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         Arrays.asList(DeviceStatus.values()).forEach(status -> {
             Integer count = caRequestLogRepository.getCountDevicesByStatus(status);
             result.put(status.name(), count);
+        });
+        Arrays.asList(DeviceType.values()).forEach(type -> {
+            Integer count = caRequestLogRepository.getCountDevicesByType(type);
+            result.put(type.name(), count);
         });
         return result;
     }
@@ -669,7 +695,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@Override
 	public void removeDevice(String eId) {
 		CARequestLog caRequestLog = caRequestLogRepository.findByCid(eId).orElse(null);
-		if (caRequestLog != null && caRequestLog.getStatus() == DeviceStatus.NOT_COUPLED) {//8931070521315025237F
+		if (caRequestLog != null && caRequestLog.getType() == DeviceType.NOT_COUPLED) {//8931070521315025237F
 			caRequestLogRepository.delete(caRequestLog);
 		}
 	}
@@ -679,7 +705,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	public void unLinkMsn(String eId) {
 		CARequestLog caRequestLog = caRequestLogRepository.findByCid(eId).orElse(null);
 		if (caRequestLog != null) {
-			caRequestLog.setStatus(DeviceStatus.NOT_COUPLED);
+			// caRequestLog.setStatus(DeviceStatus.NOT_COUPLED);
+			caRequestLog.setType(DeviceType.NOT_COUPLED);
 			caRequestLog.setOldMsn(caRequestLog.getMsn());
 			caRequestLog.setMsn(null);
 			caRequestLog.setCoupledDatetime(null);

@@ -28,4 +28,23 @@ public final class SecurityUtils {
 		}
 		return null;
 	}
+	
+	public static String getUsername() {
+		
+		try {
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+			Object obj = auth.getPrincipal();
+			
+			if (obj instanceof String) {
+				return null;
+			}
+			
+			if (obj instanceof JwtUser) {
+				return ((JwtUser)obj).getUsername();
+			}
+		} catch (Exception e) {
+			//
+		}
+		return null;
+	}
 }

@@ -70,6 +70,7 @@ import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
 import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.DeviceType;
 import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.CARequestLog;
@@ -299,6 +300,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			tmp.put("dt", datetime.getTime());
 			tmp.put("dtd", datetime);
 			tmp.put("dtn", Integer.parseInt(sf.format(datetime)));
+			tmp.put("rawdt", o.get("dt"));
 			MeterLog log = MeterLog.build(tmp);
 			
             try {
@@ -976,7 +978,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 						//caLog.setStartDate((Long)data.get("startDate"));
 						//caLog.setEndDate((Long)data.get("endDate"));
 						caLog.setMsn(null);
-						caLog.setStatus(DeviceStatus.NOT_COUPLED);
+						caLog.setStatus(DeviceStatus.OFFLINE);
+						caLog.setType(DeviceType.NOT_COUPLED);
 						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
 						caLog.setRequireRefresh(false);
 						caRequestLogRepository.save(caLog);

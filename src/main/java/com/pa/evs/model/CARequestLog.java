@@ -1,6 +1,7 @@
 package com.pa.evs.model;
 
 import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.DeviceType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -41,6 +42,10 @@ public class CARequestLog extends BaseEntity {
     @Column(name = "status")
 	@Enumerated(EnumType.STRING)
 	private DeviceStatus status;
+    
+    @Column(name = "d_type")
+	@Enumerated(EnumType.STRING)
+	private DeviceType type;
 
     @Column(name = "certificate", length = 20000)
     private String certificate;
@@ -93,6 +98,9 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "coupled_datetime")
 	private Long coupledDatetime;
 
+	@Column(name = "coupled_user")
+	private String coupledUser;
+	
 	@Column(name = "onboarding_datetime")
 	private Long onboardingDatetime;
 

@@ -1,6 +1,7 @@
 package com.pa.evs.dto;
 
 import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.DeviceType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,6 +51,10 @@ public class CaRequestLogDto {
     private Long buildingUnitId;
     
     private DeviceStatus status;
+    
+    private DeviceType type;
+    
+	private String coupledUser;
     
     private BuildingDto building;
     
