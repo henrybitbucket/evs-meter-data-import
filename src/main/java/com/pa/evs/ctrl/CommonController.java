@@ -190,14 +190,14 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
 
-    @PostMapping("/api/un-link-msn/{eId}")
+    @PostMapping("/api/un-link-msn/{uId}")
     public ResponseEntity<?> unLinkMsn(
     		HttpServletRequest httpServletRequest,
-    		@PathVariable final String eId
+    		@PathVariable final String uId
     		) throws Exception {
     	
 		try {
-			caRequestLogService.unLinkMsn(eId);
+			caRequestLogService.unLinkMsn(uId);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build());
@@ -205,14 +205,14 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
-    @DeleteMapping("/api/remove-device/{eId}")
+    @DeleteMapping("/api/remove-device/{uId}")
     public ResponseEntity<?> removeDevice(
     		HttpServletRequest httpServletRequest,
-    		@PathVariable final String eId
+    		@PathVariable final String uId
     		) throws Exception {
     	
 		try {
-			caRequestLogService.removeDevice(eId);
+			caRequestLogService.removeDevice(uId);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build());
