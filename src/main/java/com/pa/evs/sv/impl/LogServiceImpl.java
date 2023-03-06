@@ -54,6 +54,8 @@ public class LogServiceImpl implements LogService {
         String uid = (String) map.get("uid");
         String msn = (String) map.get("msn");
         String ptype = (String) map.get("ptype");
+        String type = (String) map.get("type");
+        String topic = (String) map.get("topic");
         String midString = (String) map.get("mid");
         Long fromDate = (Long) map.get("fromDate");
         Long toDate = (Long) map.get("toDate");
@@ -92,7 +94,13 @@ public class LogServiceImpl implements LogService {
         }
         if (msn != null) {
         	sqlCommonBuilder.append(" AND l.msn = '" + msn + "'");
-        }        
+        } 
+        if (StringUtils.isNotBlank(type)) {
+        	sqlCommonBuilder.append(" AND l.type = '" + type + "'");
+        } 
+        if (StringUtils.isNotBlank(topic)) {
+        	sqlCommonBuilder.append(" AND l.topic = '" + topic + "'");
+        } 
         if (StringUtils.isNotBlank(ptype)) {
         	if (ptype.trim().startsWith("(") && ptype.trim().endsWith(")")) {
         		sqlCommonBuilder.append(" AND l.pType IN " + ptype.toUpperCase() + "");

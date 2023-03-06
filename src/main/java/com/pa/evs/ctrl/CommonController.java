@@ -526,6 +526,7 @@ public class CommonController {
     
     @GetMapping("/api/getMDTMessage")
     public ResponseEntity<Object> getMDTMessage(@RequestParam(required = false) Integer limit, @RequestParam String ieiId, @RequestParam(required = false) String status) {
+    	LOG.debug("/api/getMDTMessage: " + ieiId);
     	if (StringUtils.isBlank(ieiId)) {
     		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message("ieiId is required!").build());
     	}
