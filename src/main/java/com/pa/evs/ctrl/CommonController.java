@@ -130,7 +130,11 @@ public class CommonController {
         
         try {
             Optional<CARequestLog> ca = caRequestLogService.findByUid(command.getUid());
-            if(!ca.isPresent()) {
+            if (!ca.isPresent()) {
+            	ca = caRequestLogService.findByMsn(command.getMsn());
+            }
+            
+            if (!ca.isPresent()) {
                 return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).build());
             }
 

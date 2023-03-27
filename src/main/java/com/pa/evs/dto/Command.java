@@ -2,6 +2,8 @@ package com.pa.evs.dto;
 
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +20,9 @@ import lombok.Setter;
 public class Command {
 
 	private String uid;
+	
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	private String msn;
 
 	private String cmd;
 	

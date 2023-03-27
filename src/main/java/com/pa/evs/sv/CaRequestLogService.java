@@ -52,4 +52,6 @@ public interface CaRequestLogService {
 	void removeDevice(String eId);
 
 	void unLinkMsn(String eId);
+
+	Optional<CARequestLog> findByMsn(String msn);
 }

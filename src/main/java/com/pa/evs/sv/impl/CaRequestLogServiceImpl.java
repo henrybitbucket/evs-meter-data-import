@@ -103,6 +103,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	public Optional<CARequestLog> findByUid(String uid) {
 		return caRequestLogRepository.findByUid(uid);
 	}
+	
+	@Override
+	public Optional<CARequestLog> findByMsn(String msn) {
+		return caRequestLogRepository.findByMsn(msn);
+	}
 
     @Override
     public void save(CaRequestLogDto dto) throws Exception {
