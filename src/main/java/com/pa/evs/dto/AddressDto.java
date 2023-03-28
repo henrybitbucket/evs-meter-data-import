@@ -4,7 +4,6 @@ import java.util.Date;
 
 import com.pa.evs.model.Address;
 
-
 public class AddressDto {
 	private Long id;
 	private String country;
@@ -12,20 +11,23 @@ public class AddressDto {
 	private String town;
 	private String street;
 	private String postalCode;
+	private String building;
 	private String block;
+	private String level;
 	private String unitNumber;
 	private String displayName;
 	private Date createDate;
 	private Date modifyDate;
 	private String createdBy;
 	private String updatedBy;
+	private String remark;
 
 	private String streetNumber;
 
 	public AddressDto() {
-		
+
 	}
-	
+
 	public AddressDto(Address fr) {
 		if (fr != null) {
 			this.id = fr.getId();
@@ -37,7 +39,7 @@ public class AddressDto {
 			this.postalCode = fr.getPostalCode();
 		}
 	}
-	
+
 	public Long getId() {
 		return id;
 	}
@@ -148,6 +150,30 @@ public class AddressDto {
 
 	public void setStreetNumber(String streetNumber) {
 		this.streetNumber = streetNumber;
+	}
+
+	public String getLevel() {
+		return level;
+	}
+
+	public void setLevel(String level) {
+		this.level = level;
+	}
+
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
+
+	public String getBuilding() {
+		return building;
+	}
+
+	public void setBuilding(String building) {
+		this.building = building;
 	}
 
 }

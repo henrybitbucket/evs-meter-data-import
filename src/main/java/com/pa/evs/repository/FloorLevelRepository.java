@@ -1,6 +1,7 @@
 package com.pa.evs.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -16,4 +17,8 @@ import com.pa.evs.model.FloorLevel;
 public interface FloorLevelRepository extends JpaRepository<FloorLevel, Long> {
 	List<FloorLevel> findAllByBlock (Block block);
 	List<FloorLevel> findAllByBuilding (Building building);
+	
+	Optional<FloorLevel> findByBuildingIdAndName(Long buildingId, String name);
+	
+	Optional<FloorLevel> findByBuildingIdAndBlockIdAndName(Long buildingId, Long blockId, String name);
 }

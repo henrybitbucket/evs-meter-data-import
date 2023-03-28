@@ -1,6 +1,7 @@
 package com.pa.evs.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -17,5 +18,7 @@ public interface BuildingUnitRepository extends JpaRepository<BuildingUnit, Long
 
 	List<BuildingUnit> findAllByFloorLevel (FloorLevel floorLevel);
 	void save(Building buildingUnit);
+	
+	Optional<BuildingUnit> findByFloorLevelIdAndName(Long fId, String name);
 
 }

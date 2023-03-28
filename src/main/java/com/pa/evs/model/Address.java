@@ -46,5 +46,11 @@ public class Address extends BaseEntity {
 
 	@Column(name = "unit_number", length = 50)
 	private String unitNumber;
+	
+	@Column(name = "remark", length = 500)
+	private String remark;
+	
+	@Column(name = "coupled", length = 10)
+	private String coupled;
 
 }

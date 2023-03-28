@@ -52,6 +52,7 @@ import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
+import com.pa.evs.sv.AddressService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
@@ -82,6 +83,8 @@ public class CommonController {
 	@Autowired LogService logService;
 	
 	@Autowired GroupService groupService;
+	
+	@Autowired AddressService addressService;
 
 	@Value("${evs.pa.privatekey.path}")
 	private String pkPath;
@@ -542,6 +545,31 @@ public class CommonController {
     	}
     } 
 
+    @PostMapping("/api/address/upload")
+    public ResponseEntity<Object> updateAddress(
+            HttpServletRequest httpServletRequest,
+            @PathVariable final String version,
+            @RequestParam(value = "file") final MultipartFile file) throws Exception {
+        
+        try {
+        	addressService.handleUpload(file);
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @GetMapping("/api/address/test-upload")
+    public Object testupdateAddress(
+            HttpServletRequest httpServletRequest) throws Exception {
+        
+        try {
+            addressService.handleUpload(null);
+        } catch (Exception e) {
+        }
+        return "OK";
+    }
+    
 	@PostConstruct
 	public void init() {
 		
