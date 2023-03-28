@@ -169,7 +169,7 @@ public class AddressServiceImpl implements AddressService {
 				}
 				count++;
 			}
-			if (dto != null) {
+			if (dto != null && StringUtils.isNotBlank(dto.getPostalCode()) && StringUtils.isNotBlank(dto.getCity())) {
 				rs.add(dto);
 			}
 		}
