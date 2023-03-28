@@ -149,21 +149,21 @@ public class AddressServiceImpl implements AddressService {
 					if (dto == null) {
 						dto = new AddressDto();
 					}
-					if (head.computeIfAbsent("Building", k -> -1) == count) {
+					if (head.computeIfAbsent("Building", k->-1) == count) {
 						dto.setBuilding(it);
-					} else if (head.computeIfAbsent("Block", k -> -1) == count) {
+					} else if (head.computeIfAbsent("Block", k->-1) == count) {
 						dto.setBlock(it);
-					} else if (head.computeIfAbsent("Level", k -> -1) == count) {
+					} else if (head.computeIfAbsent("Level", k->-1) == count) {
 						dto.setLevel(it);
-					} else if (head.computeIfAbsent("Unit", k -> -1) == count) {
+					} else if (head.computeIfAbsent("Unit", k->-1) == count) {
 						dto.setUnitNumber(it);
-					} else if (head.computeIfAbsent("Postcode", k -> -1) == count) {
+					} else if (head.computeIfAbsent("Postcode", k->-1) == count) {
 						dto.setPostalCode(it);
-					} else if (head.computeIfAbsent("Street Address", k -> -1) == count) {
+					} else if (head.computeIfAbsent("Street Address", k->-1) == count) {
 						dto.setStreet(it);
-					} else if (head.computeIfAbsent("State.City", k -> -1) == count) {
+					} else if (head.computeIfAbsent("State.City", k->-1) == count) {
 						dto.setCity(it);
-					} else if (head.computeIfAbsent("Remark", k -> -1) == count) {
+					} else if (head.computeIfAbsent("Remark", k->-1) == count) {
 						dto.setRemark(it);
 					}
 				}
