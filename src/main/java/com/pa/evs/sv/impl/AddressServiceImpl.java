@@ -163,7 +163,7 @@ public class AddressServiceImpl implements AddressService {
 					} else if (head.computeIfAbsent("State.City", k -> -1) == count) {
 						dto.setCity(it);
 					} else if (head.computeIfAbsent("Remark", k -> -1) == count) {
-						dto.setCity(it);
+						dto.setRemark(it);
 					}
 				}
 				count++;
