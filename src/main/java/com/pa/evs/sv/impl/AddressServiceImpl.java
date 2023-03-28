@@ -109,11 +109,12 @@ public class AddressServiceImpl implements AddressService {
 					floor.setName(lvl);
 				}
 				
-				if (StringUtils.isNotBlank(unit)) {
-					buildingUnit = floor.getId() == null ? new BuildingUnit() : buildingUnitRepository.findByFloorLevelIdAndName(floor.getId(), unit).orElse(new BuildingUnit());
-					buildingUnit.setName(unit);
-					buildingUnit.setFloorLevel(floor);
-				}
+			}
+
+			if (StringUtils.isNotBlank(unit) && floor != null) {
+				buildingUnit = floor.getId() == null ? new BuildingUnit() : buildingUnitRepository.findByFloorLevelIdAndName(floor.getId(), unit).orElse(new BuildingUnit());
+				buildingUnit.setName(unit);
+				buildingUnit.setFloorLevel(floor);
 			}
 			
 			addressRepository.save(add);
