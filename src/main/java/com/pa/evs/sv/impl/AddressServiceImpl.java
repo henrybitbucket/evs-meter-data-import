@@ -149,7 +149,7 @@ public class AddressServiceImpl implements AddressService {
 					if (dto == null) {
 						dto = new AddressDto();
 					}
-					if (head.computeIfAbsent("Building", k->-1) == count) {
+					if (head.computeIfAbsent("Building", k->-1) == count || head.computeIfAbsent("Building Name", k->-1) == count) {
 						dto.setBuilding(it);
 					} else if (head.computeIfAbsent("Block", k->-1) == count) {
 						dto.setBlock(it);
