@@ -14,5 +14,5 @@ public interface BuildingService {
 
 	void save(BuildingDto dto) throws ApiException;
 
-	void updateBuildingFullText();
+//	void updateBuildingFullText();
 }

@@ -54,8 +54,8 @@ public class BuildingController {
         }	
 	}
 	
-	@PostConstruct
-    public void init() {
-    	new Thread(() -> buildingService.updateBuildingFullText()).start();
-    }
+//	@PostConstruct
+//    public void init() {
+//    	new Thread(() -> buildingService.updateBuildingFullText()).start();
+//    }
 }

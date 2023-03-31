@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -66,6 +68,9 @@ public class BuildingServiceImpl implements BuildingService {
 			
 			Building entity = new Building();
 			Address address = new Address();
+			List<BlockDto> blocks;
+			List<FloorLevelDto> levels;
+			List<BuildingUnitDto> units;
 			AddressDto addressDto = dto.getAddress();
 			address.setCity(addressDto.getCity());
 			address.setCountry(addressDto.getCountry());
@@ -86,25 +91,31 @@ public class BuildingServiceImpl implements BuildingService {
 			entity.setName(dto.getName());
 			entity.setType(BuildingType.from(dto.getType()));
 			entity.setAddress(address);
-			buildingRepository.save(entity);
-			entity.setFullText1(entity);
-			buildingRepository.save(entity);
 			
 			if(Objects.nonNull(dto.getBlocks())) {
-				for(BlockDto blockDto : dto.getBlocks()) {
+				blocks = dto.getBlocks();
+				String strBlocks = blocks.stream().map(bl -> bl.getName()).collect(Collectors.joining(", "));
+				dto.getAddress().setBlock(strBlocks);
+				for(BlockDto blockDto : blocks) {
 					Block block = new Block();				
 					block.setName(blockDto.getName());
 					block.setBuilding(entity);
 					blockRepository.save(block);
 					if(Objects.nonNull(blockDto.getLevels())) {
-						for(FloorLevelDto floorDto : blockDto.getLevels()) {
+						levels = blockDto.getLevels();
+						String strLevels = levels.stream().map(bl -> bl.getName()).collect(Collectors.joining(", "));
+						dto.getAddress().setLevel(strLevels);
+						for(FloorLevelDto floorDto : levels) {
 							FloorLevel floorLevel = new FloorLevel();
 							floorLevel.setName(floorDto.getName());
 							floorLevel.setBlock(block);;
 							floorLevel.setBuilding(entity);
 							floorLevelRepository.save(floorLevel);
 							if(Objects.nonNull(floorDto.getUnits())) {
-								for(BuildingUnitDto buildingUnitDto : floorDto.getUnits()) {
+								units = floorDto.getUnits();
+								String strUnits = units.stream().map(bl -> bl.getName()).collect(Collectors.joining(", "));
+								dto.getAddress().setUnitNumber(strUnits);
+								for(BuildingUnitDto buildingUnitDto : units) {
 									BuildingUnit buildingUnit = new BuildingUnit();
 									buildingUnit.setName(buildingUnitDto.getName());
 									buildingUnit.setFloorLevel(floorLevel);
@@ -115,6 +126,8 @@ public class BuildingServiceImpl implements BuildingService {
 					}
 				}
 			}
+			entity.setFullText1(dto);
+			buildingRepository.save(entity);
 		}
 	}
 
@@ -131,8 +144,8 @@ public class BuildingServiceImpl implements BuildingService {
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlBuilder.append(" and (b.name like '%" + pagin.getKeyword() + "%' or a.display_name like '%" + pagin.getKeyword() + "%')");
 		}
-		if (search != null) {
-			sqlBuilder.append(" and (b.full_text like '%" + search.toLowerCase().replaceAll("[ \t]+", " | ") + "%')");
+		if (StringUtils.isNotBlank(search)) {
+			sqlBuilder.append(" and (b.full_text like '%" + search.toLowerCase() + "%')");
 		}
 		
 		sqlBuilder.append(" order by b.id asc  ");
@@ -148,8 +161,8 @@ public class BuildingServiceImpl implements BuildingService {
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlCountBuilder.append(" and (b.name like '%" + pagin.getKeyword() + "%' or a.display_name like '%" + pagin.getKeyword() + "%')");
 		}
-		if (search != null) {
-			sqlCountBuilder.append(" and (b.full_text like '%" + search.toLowerCase().replaceAll("[ \t]+", " | ") + "%')");
+		if (StringUtils.isNotBlank(search)) {
+			sqlCountBuilder.append(" and (b.full_text like '%" + search.toLowerCase() + "%')");
 		}
 
 		Query qr = em.createNativeQuery(sqlCountBuilder.toString());
@@ -247,13 +260,37 @@ public class BuildingServiceImpl implements BuildingService {
 		building.setName(buildingDto.getName());
 		building.setType(BuildingType.from(buildingDto.getType()));
 		building.setAddress(address);
-		buildingRepository.save(building);
-		building.setFullText1(building);
+		
+		List<BuildingUnit> units = new ArrayList<>();
+		List<Block> blocks = blockRepository.findAllByBuilding(building);
+		List<FloorLevel> levels = floorLevelRepository.findAllByBuilding(building);
+		
+		for (FloorLevel lvl : levels) {
+			List<BuildingUnit> listUnit = buildingUnitRepository.findAllByFloorLevel(lvl);
+			units = Stream.concat(units.stream(), listUnit.stream()).collect(Collectors.toList());
+		};
+		
+		if (!blocks.isEmpty()) {
+			String strBlocks = blocks.stream().map(bl -> bl.getName()).collect(Collectors.joining(", "));
+			buildingDto.getAddress().setBlock(strBlocks);
+		}
+		
+		if (!levels.isEmpty()) {
+			String strLevels = levels.stream().map(bl -> bl.getName()).collect(Collectors.joining(", "));
+			buildingDto.getAddress().setLevel(strLevels);
+		}
+		
+		if (!units.isEmpty()) {
+			String strUnits = units.stream().map(bl -> bl.getName()).collect(Collectors.joining(", "));
+			buildingDto.getAddress().setUnitNumber(strUnits);
+		}
+		
+		building.setFullText1(buildingDto);
 		buildingRepository.save(building);
 	}
 	
-	@Override
-	public void updateBuildingFullText() {
-		buildingRepository.findAll().forEach(bd -> bd.setFullText1(bd));
-	}
+//	@Override
+//	public void updateBuildingFullText() {
+//		buildingRepository.findAll().forEach(bd -> bd.setFullText1(bd));
+//	}
 }

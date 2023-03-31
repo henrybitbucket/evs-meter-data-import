@@ -6,10 +6,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -55,7 +58,7 @@ public class AddressServiceImpl implements AddressService {
 		
 		List<AddressDto> dtos = parseCsv(file.getInputStream());
 		Map<String, AddressDto> mapA = new LinkedHashMap<>();
-		dtos.forEach(a -> mapA.put(a.getStreet(), a));
+		dtos.forEach(a -> mapA.put(a.getUnitNumber(), a));
 		List<Address> ens = addressRepository.findAllByStreet(mapA.keySet());
 		Map<String, Address> mapAE = new LinkedHashMap<>();
 		ens.forEach(e -> mapAE.put(e.getStreet() + "__" + e.getPostalCode() + "__" + e.getCity(), e));
@@ -88,6 +91,8 @@ public class AddressServiceImpl implements AddressService {
 				if (building.getId() == null) {
 					building.setName(StringUtils.isBlank(bd) ? add.getStreet() : bd);
 				}
+				add.setBlock(bl);
+				add.setLevel(lvl);
 				building.setAddress(add);
 				
 				if (StringUtils.isNotBlank(bl)) {
@@ -119,7 +124,26 @@ public class AddressServiceImpl implements AddressService {
 			
 			addressRepository.save(add);
 			if (building != null) {
-				building.setFullText1(building);
+				String str1 = building.getFullText();
+				if (StringUtils.isNotBlank(str1)) {
+					String str2 = building.getName() 
+							+ '-' + building.getAddress().getBlock()
+							+ '-' + building.getAddress().getLevel()
+							+ '-' + building.getAddress().getUnitNumber()
+							+ '-' + building.getAddress().getStreet() 
+							+ '-' + building.getAddress().getPostalCode() 
+							+ '-' + building.getAddress().getCity();
+					List<String> list1 = Arrays.asList(str1.split("-"));
+					List<String> list2 = Arrays.asList(str2.toLowerCase().split("-"));
+					List<String> unique = list2.stream().filter(l2 -> list1.indexOf(l2) == -1).collect(Collectors.toList());
+					unique.forEach(uni -> {
+						list1.remove(uni);
+					});
+
+					building.setFullText(Stream.concat(list1.stream(), unique.stream()).map(blo -> blo).collect(Collectors.joining("-")));
+				} else {
+					building.setFullText1(building);
+				}
 				buildingRepository.save(building);
 			}
 			if (block != null) {

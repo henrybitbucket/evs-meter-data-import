@@ -548,7 +548,6 @@ public class CommonController {
     @PostMapping("/api/address/upload")
     public ResponseEntity<Object> updateAddress(
             HttpServletRequest httpServletRequest,
-            @PathVariable final String version,
             @RequestParam(value = "file") final MultipartFile file) throws Exception {
         
         try {

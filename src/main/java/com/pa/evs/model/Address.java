@@ -43,6 +43,9 @@ public class Address extends BaseEntity {
 
 	@Column(name = "block", length = 10)
 	private String block;
+	
+	@Column(name = "level", length = 500)
+	private String level;
 
 	@Column(name = "unit_number", length = 50)
 	private String unitNumber;

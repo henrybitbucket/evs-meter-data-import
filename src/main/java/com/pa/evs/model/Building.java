@@ -1,11 +1,5 @@
 package com.pa.evs.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -13,6 +7,14 @@ import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+
+import com.pa.evs.dto.BuildingDto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -57,7 +59,24 @@ public class Building extends BaseEntity {
 	private String fullText;
 	
 	public void setFullText1(Building bd) {
-		String fullText = bd.getName() + '-' + bd.getAddress().getStreet() + '-' + bd.getAddress().getPostalCode() + '-' + bd.getAddress().getCity();
+		String fullText = bd.getName() 
+				+ '-' + bd.getAddress().getBlock()
+				+ '-' + bd.getAddress().getLevel()
+				+ '-' + bd.getAddress().getUnitNumber()
+				+ '-' + bd.getAddress().getStreet() 
+				+ '-' + bd.getAddress().getPostalCode() 
+				+ '-' + bd.getAddress().getCity();
+		setFullText(fullText.toLowerCase());
+	}
+	
+	public void setFullText1(BuildingDto dto) {
+		String fullText = dto.getName() 
+				+ '-' + dto.getAddress().getBlock()
+				+ '-' + dto.getAddress().getLevel()
+				+ '-' + dto.getAddress().getUnitNumber()
+				+ '-' + dto.getAddress().getStreet() 
+				+ '-' + dto.getAddress().getPostalCode() 
+				+ '-' + dto.getAddress().getCity();
 		setFullText(fullText.toLowerCase());
 	}
 }
