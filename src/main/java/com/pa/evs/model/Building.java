@@ -8,6 +8,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.pa.evs.dto.BuildingDto;
 
 import lombok.AllArgsConstructor;
@@ -58,6 +59,7 @@ public class Building extends BaseEntity {
 	@Column(name = "full_text")
 	private String fullText;
 	
+	@JsonIgnore
 	public void setFullText1(Building bd) {
 		String fullText = bd.getName() 
 				+ '-' + bd.getAddress().getBlock()
@@ -69,6 +71,7 @@ public class Building extends BaseEntity {
 		setFullText(fullText.toLowerCase());
 	}
 	
+	@JsonIgnore
 	public void setFullText1(BuildingDto dto) {
 		String fullText = dto.getName() 
 				+ '-' + dto.getAddress().getBlock()

@@ -340,7 +340,7 @@ public final class ApiUtils {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static <T> ResponseEntity<T> handle4xx(HttpServerErrorException ex, Class<T> clazz) {
+	public static <T> ResponseEntity<T> handle5xx(HttpServerErrorException ex, Class<T> clazz) {
 		HttpHeaders httpHeaders = ex.getResponseHeaders();
 		T body = null;
 		if (MediaType.APPLICATION_JSON.equals(httpHeaders.getContentType())) {
