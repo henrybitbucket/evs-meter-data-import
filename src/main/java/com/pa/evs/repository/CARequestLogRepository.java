@@ -7,6 +7,7 @@ import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.enums.DeviceStatus;
@@ -49,6 +50,7 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	@Query(value = "update {h-schema}ca_request_log set activation_date = ?1 WHERE id in (?2)", nativeQuery = true)
 	void setActivationDate(Long activationDate, Set<Long> ids);
 
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Modifying
 	@Query(value = "update {h-schema}ca_request_log set status = 'OFFLINE' where (msn is null or msn = '') or sn is not null and (EXTRACT(EPOCH FROM (SELECT NOW())) * 1000 - COALESCE(last_subscribe_datetime, 0)) > (COALESCE(interval, 60) * 60 * 1000)", nativeQuery = true)
 	void checkDevicesOffline();
