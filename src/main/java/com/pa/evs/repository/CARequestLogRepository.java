@@ -77,5 +77,13 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 
     @Query(value = "select * from {h-schema}ca_request_log where group_id in (?1)", nativeQuery = true)
     List<CARequestLog> findDevicesInGroup(List<Long> listGroupId);
-
+    
+    @Query(value = "SELECT * from {h-schema}ca_request_log where building_id = ?1 and floor_level_id = ?2 and building_unit_id = ?3", nativeQuery = true)
+    List<CARequestLog> findByBuildingAndFloorLevelAndBuildingUnit(Long buildingId, Long floorLevelId, Long buildingUnitId);
+    
+    @Query(value = "SELECT * from {h-schema}ca_request_log where building_id = ?1 and floor_level_id = ?2 and building_unit_id is null", nativeQuery = true)
+	List<CARequestLog> findByBuildingAndFloorLevel(Long buildingId, Long floorLevelId);
+    
+    @Query(value = "SELECT * from {h-schema}ca_request_log where building_id = ?1 and floor_level_id is null and building_unit_id is null", nativeQuery = true)
+	List<CARequestLog> findByBuilding(Long buildingId);
 }

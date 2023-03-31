@@ -141,14 +141,28 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         ca.setStartDate(dto.getStartDate());
         ca.setEndDate(dto.getEndDate());
         
+        List<CARequestLog> list = null;
+    	if (dto.getBuildingId() != null && dto.getFloorLevelId() != null && dto.getBuildingUnitId() != null) {
+    		list = caRequestLogRepository.findByBuildingAndFloorLevelAndBuildingUnit(dto.getBuildingId(), dto.getFloorLevelId(), dto.getBuildingUnitId());
+    	} else if (dto.getBuildingId() != null && dto.getFloorLevelId() != null && dto.getBuildingUnitId() == null) {
+    		list = caRequestLogRepository.findByBuildingAndFloorLevel(dto.getBuildingId(), dto.getFloorLevelId());
+    	} else if (dto.getBuildingId() != null && dto.getFloorLevelId() == null && dto.getBuildingUnitId() == null) {
+    		list = caRequestLogRepository.findByBuilding(dto.getBuildingId());
+    	}
+    	
+    	if (list.size() > 0) {
+    		throw new Exception(Message.ADDRESS_IS_ASSIGNED);
+    	}
+        
         try {
+        	
         	if(StringUtils.isNotEmpty(dto.getHomeAddress())) {
 				ca.setHomeAddress(dto.getHomeAddress());
 			}
 			
 			if (dto.getBuildingId() == null) {
 				ca.setBuilding(null);
-			} else {
+			} else {	
 				ca.setBuilding(buildingRepository.findById(dto.getBuildingId()).orElse(null));
 				ca.setAddress(null);
 			}
