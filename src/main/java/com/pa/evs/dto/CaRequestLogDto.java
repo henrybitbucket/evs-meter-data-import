@@ -63,4 +63,7 @@ public class CaRequestLogDto {
     private BuildingUnitDto buildingUnit;
     
     private AddressDto address;
+    
+    @Builder.Default
+    private Boolean unCoupleAddress = false;
 }

@@ -140,6 +140,7 @@ public class CommonController {
             if (!ca.isPresent()) {
                 return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).build());
             }
+            command.setUid(ca.get().getUid());
 
             Long mid = evsPAService.nextvalMID();
             Map<String, Object> data = command.getData();

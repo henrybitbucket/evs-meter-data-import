@@ -150,7 +150,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     		list = caRequestLogRepository.findByBuilding(dto.getBuildingId());
     	}
     	
-    	if (list.size() > 0) {
+    	if (list != null && !list.isEmpty()) {
     		throw new Exception(Message.ADDRESS_IS_ASSIGNED);
     	}
         
