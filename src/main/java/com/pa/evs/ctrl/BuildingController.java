@@ -1,8 +1,20 @@
 package com.pa.evs.ctrl;
 
-import javax.annotation.PostConstruct;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,7 +27,9 @@ import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
+import com.pa.evs.model.CARequestLog;
 import com.pa.evs.sv.BuildingService;
+import com.pa.evs.utils.CsvUtils;
 
 
 @SuppressWarnings("rawtypes")
@@ -39,9 +53,28 @@ public class BuildingController {
 	}
 	
 	@PostMapping("/api/buildings")
-	public PaginDto<BuildingDto> search(@RequestBody PaginDto<BuildingDto> pagin, @RequestParam(required = false) String search) {
-		buildingService.search(pagin, search);
-		return pagin;
+	public ResponseEntity<?> search(@RequestBody PaginDto<BuildingDto> pagin, @RequestParam(required = false) String search, HttpServletResponse response) throws IOException {
+		try {
+			buildingService.search(pagin, search);
+			if ("true".equals(pagin.getOptions().get("exportCSV") + "")) {
+				File file = CsvUtils.writeAddressCsv(pagin.getResults(), "address_" + System.currentTimeMillis() + ".csv");
+	            String fileName = file.getName();
+	            
+	            try (FileInputStream fis = new FileInputStream(file)) {
+	                response.setContentLengthLong(file.length());
+	                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+	                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+	                response.setHeader("name", fileName);
+	                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+	                IOUtils.copy(fis, response.getOutputStream());
+	            } finally {
+	                FileUtils.deleteDirectory(file.getParentFile());
+	            }
+	        }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ResponseEntity.<Object>ok(pagin);
 	}
 	
 	@DeleteMapping("/api/building/{id}")

@@ -46,6 +46,7 @@ import com.pa.evs.repository.BuildingUnitRepository;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.repository.GroupRepository;
+import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.security.user.JwtUser;
@@ -84,6 +85,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	BuildingUnitRepository buildingUnitRepository;
+
+	@Autowired
+	LogRepository logRepository;
 	
 	@Autowired
 	EntityManager em;
@@ -442,8 +446,20 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         list.forEach(ca -> ca.setHomeAddress(Utils.formatHomeAddress(ca)));
         
         pagin.setResults(list);
+        getRLSLog(list);
         return pagin;
         
+    }
+    
+    private void getRLSLog(List<CARequestLog> list) {
+    	try {
+    		list.forEach(l -> {
+        		l.setLogs(Arrays.asList(logRepository.findRawByUidAndPType(l.getUid(), "RLS")));
+        	});
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+    	
     }
 
     @Transactional

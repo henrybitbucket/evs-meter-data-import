@@ -2,6 +2,7 @@ package com.pa.evs.sv.impl;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -134,12 +135,29 @@ public class BuildingServiceImpl implements BuildingService {
 	@Override
 	public void search(PaginDto<BuildingDto> pagin, String search) {
 
+		if (pagin.getOptions() == null) {
+			pagin.setOptions(new HashMap<>());
+		}
+		
+		String coupleState = (String) pagin.getOptions().get("coupleState");
+		boolean exportCsv = "true".equals(pagin.getOptions().get("exportCSV"));
+		
 		StringBuilder sqlBuilder = new StringBuilder();
 		sqlBuilder.append(" select b.id, b.name, b.type, b.description, b.has_tenant, ");
 		sqlBuilder.append(" b.create_date, b.modify_date, ");
 		sqlBuilder.append(" a.id as address_id, a.country, a.city, a.town, a.street, a.display_name, ");
-		sqlBuilder.append(" a.postal_code, a.unit_number, a.block");
-		sqlBuilder.append(" from {h-schema}building b " + "left join {h-schema}address a on b.address_id = a.id ");
+		sqlBuilder.append(" a.postal_code, a.unit_number, ");
+		sqlBuilder.append(" (select crl.building_id || '_' || crl.floor_level_id || '_' || crl.building_unit_id from {h-schema}ca_request_log crl where crl.building_id = b.id limit 1) crlId ");
+		if (exportCsv) {
+			sqlBuilder.append(" ,bl.name blName, fl.name fName, bu.name buName, b.id bId, fl.id fId, bu.id buId ");
+		}
+		sqlBuilder.append(" from {h-schema}building b ");
+		if (exportCsv) {
+			sqlBuilder.append(" left join {h-schema}block bl on bl.building_id = b.id ");
+			sqlBuilder.append(" left join {h-schema}floor_level fl on (fl.building_id = b.id and (fl.block_id is null or fl.block_id = bl.id)) ");
+			sqlBuilder.append(" left join {h-schema}building_unit bu on bu.floor_level_id = fl.id ");
+		}
+		sqlBuilder.append(" left join {h-schema}address a on b.address_id = a.id ");
 		sqlBuilder.append(" where 1=1 ");
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlBuilder.append(" and (b.name like '%" + pagin.getKeyword() + "%' or a.display_name like '%" + pagin.getKeyword() + "%')");
@@ -147,10 +165,18 @@ public class BuildingServiceImpl implements BuildingService {
 		if (StringUtils.isNotBlank(search)) {
 			sqlBuilder.append(" and (b.full_text like '%" + search.toLowerCase() + "%')");
 		}
+		if ("coupled".equalsIgnoreCase(coupleState)) {
+			sqlBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
+		} else if ("not_couple".equalsIgnoreCase(coupleState)) {
+			sqlBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
+		}
 		
 		sqlBuilder.append(" order by b.id asc  ");
 		
-		sqlBuilder.append(" offset " + pagin.getOffset() + " limit " + pagin.getLimit());
+		if (!exportCsv) {
+			sqlBuilder.append(" offset " + pagin.getOffset() + " limit " + pagin.getLimit());	
+		}
+		
 		Query q = em.createNativeQuery(sqlBuilder.toString());
 
 		StringBuilder sqlCountBuilder = new StringBuilder();
@@ -163,6 +189,11 @@ public class BuildingServiceImpl implements BuildingService {
 		}
 		if (StringUtils.isNotBlank(search)) {
 			sqlCountBuilder.append(" and (b.full_text like '%" + search.toLowerCase() + "%')");
+		}
+		if ("coupled".equalsIgnoreCase(coupleState)) {
+			sqlCountBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
+		} else if ("not_couple".equalsIgnoreCase(coupleState)) {
+			sqlCountBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
 		}
 
 		Query qr = em.createNativeQuery(sqlCountBuilder.toString());
@@ -187,14 +218,29 @@ public class BuildingServiceImpl implements BuildingService {
 			Number ida = (Number) o[7];
 			address.setId(ida.longValue());
 			address.setCountry((String) o[8]);
+			address.setBuilding((String) o[1]);
 			address.setCity((String) o[9]);
 			address.setTown((String) o[10]);
 			address.setStreet((String) o[11]);
 			address.setDisplayName((String) o[12]);
 			address.setPostalCode((String) o[13]);
 			address.setUnitNumber((String) o[14]);
-			address.setBlock((String) o[15]);
 
+			Object crlId = o[15];
+			address.setCoupleState(crlId == null ? "N" : "Y");
+			
+			if (exportCsv) {
+				address.setBlock((String) o[16]);
+				address.setLevel((String) o[17]);
+				address.setUnitNumber((String) o[18]);
+				address.setCoupleState((o[19] + "_" + o[20] + "_" + o[21]).equals(crlId) ? "Y" : "N");
+				
+				if ("coupled".equalsIgnoreCase(coupleState) && !"Y".equals(address.getCoupleState()) 
+						|| "not_couple".equalsIgnoreCase(coupleState) && !"N".equals(address.getCoupleState())) {
+					continue;
+				}
+			}
+			
 			a.setAddress(address);
 			a.setLabel(Utils.formatHomeAddress(a.getName(), address));
 			results.add(a);

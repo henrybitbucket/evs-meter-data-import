@@ -58,14 +58,15 @@ public class AddressServiceImpl implements AddressService {
 		
 		List<AddressDto> dtos = parseCsv(file.getInputStream());
 		Map<String, AddressDto> mapA = new LinkedHashMap<>();
-		dtos.forEach(a -> mapA.put(a.getUnitNumber(), a));
-		List<Address> ens = addressRepository.findAllByStreet(mapA.keySet());
+		dtos.forEach(a -> mapA.put(a.getStreet(), a));
+		List<Building> buildings = buildingRepository.findAllByAddressStreet(mapA.keySet());
 		Map<String, Address> mapAE = new LinkedHashMap<>();
-		ens.forEach(e -> mapAE.put(e.getStreet() + "__" + e.getPostalCode() + "__" + e.getCity(), e));
-		mapA.forEach((k, a) -> {
-			
-			String combineKey = a.getStreet() + "__" + a.getPostalCode() + "__" + a.getCity();
-			
+		buildings.forEach(b -> {
+			Address e = b.getAddress();
+			mapAE.put((e.getStreet() + "__" + e.getPostalCode() + "__" + e.getCity() + "__" + b.getName()).trim().replaceAll(" *__ *", "__"), e);
+		});
+		dtos.forEach(a -> {
+			String combineKey = (a.getStreet() + "__" + a.getPostalCode() + "__" + a.getCity() + "__" + a.getBuilding()).trim().replaceAll(" *__ *", "__");
 			Address add = mapAE.computeIfAbsent(combineKey, st -> new Address());
 			
 			add.setStreet(a.getStreet());
@@ -84,8 +85,7 @@ public class AddressServiceImpl implements AddressService {
 			String bl = a.getBlock();
 			String lvl = a.getLevel();
 			String unit = a.getUnitNumber();
-			
-			
+
 			if (StringUtils.isNotBlank(lvl) || StringUtils.isNotBlank(bl)) {
 				building = add.getId() == null ? new Building() : buildingRepository.findByAddressId(add.getId()).orElse(new Building());
 				if (building.getId() == null) {
@@ -155,6 +155,7 @@ public class AddressServiceImpl implements AddressService {
 			if (buildingUnit != null) {
 				buildingUnitRepository.save(buildingUnit);
 			}
+			addressRepository.flush();
 		});
 	}
 	

@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.model.CARequestLog;
 
@@ -44,6 +45,14 @@ public class CsvUtils {
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
     }
     
+    // ID (Key),Building,Block,Level,Unit,Postcode,,Street Address,State.City,Coupled,UpdatedTime,Remark
+    public static File writeAddressCsv(List<BuildingDto> listInput, String fileName) throws IOException{
+        List<String> headers = Arrays.asList(
+				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled", "UpdatedTime", "Remark");
+        return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
+    }
+    
+    
     public static File writeAlarmsLogCsv(List<LogDto> listInput, String fileName, Long activateDate) throws IOException{
         List<String> headers = Arrays.asList(
                 "TIME", "TYPE", "TOPIC", "MID", "MSN", "SN", "COMMAND", "RAW MESSAGE", "STATUS", "ADDRESS");
@@ -64,6 +73,24 @@ public class CsvUtils {
         record.add(log.getRaw());
         record.add(log.getRepStatusDesc());
         record.add(log.getAddress());
+        return postProcessCsv(record);
+    }
+    
+    private static List<String> toCSVRecord(int idx, BuildingDto log, Long activateDate) {
+        List<String> record = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+        sdf.setTimeZone(TimeZoneHolder.get());
+//        record.add(log.getAddress().getId().toString());
+        record.add(log.getAddress().getBuilding());
+        record.add(log.getAddress().getBlock());
+        record.add(log.getAddress().getLevel());
+        record.add(log.getAddress().getUnitNumber());
+        record.add(log.getAddress().getPostalCode());
+        record.add(log.getAddress().getStreet());
+        record.add(log.getAddress().getCity());
+        record.add(log.getAddress().getCoupleState());
+        record.add("");
+        record.add(log.getAddress().getRemark());
         return postProcessCsv(record);
     }
     

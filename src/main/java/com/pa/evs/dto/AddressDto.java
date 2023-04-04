@@ -21,6 +21,7 @@ public class AddressDto {
 	private String createdBy;
 	private String updatedBy;
 	private String remark;
+	private String coupleState;
 
 	private String streetNumber;
 
@@ -176,4 +177,14 @@ public class AddressDto {
 		this.building = building;
 	}
 
+	public String getCoupleState() {
+		if (coupleState == null) {
+			coupleState = "N";
+		}
+		return coupleState;
+	}
+
+	public void setCoupleState(String coupleState) {
+		this.coupleState = coupleState;
+	}
 }

@@ -1,13 +1,7 @@
 package com.pa.evs.model;
 
-import com.pa.evs.enums.DeviceStatus;
-import com.pa.evs.enums.DeviceType;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import java.util.List;
+import java.util.Map;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -20,7 +14,15 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
-import java.util.Map;
+
+import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.DeviceType;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -137,6 +139,9 @@ public class CARequestLog extends BaseEntity {
 	private String profile;
 	
 	private String oldMsn;
+	
+	@Transient
+	private List<String> logs;
 	
 	public static CARequestLog build(Map<String, Object> data) throws Exception {
 		
