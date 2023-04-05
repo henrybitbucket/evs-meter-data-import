@@ -9,6 +9,7 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SimpleMap;
 
 import org.apache.commons.io.FileUtils;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
@@ -37,6 +39,8 @@ import java.util.stream.Collectors;
 public class CaRequestLogController {
 
 	private Date lastReboot = new Date();
+	
+	Number countAlarms = 0;
 
     @Autowired
     CaRequestLogService caRequestLogService;
@@ -96,7 +100,6 @@ public class CaRequestLogController {
     
     @GetMapping(RestPath.CA_CAL_DASHBOARD)
     public ResponseEntity<?> calDashboard(HttpServletRequest httpServletRequest) {
-        Number countAlarms = caRequestLogService.countAlarms();
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(
         		SimpleMap.init("countAlarms", countAlarms)
         		.more("critical", 0)
@@ -131,5 +134,12 @@ public class CaRequestLogController {
             return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
         }
         return ResponseEntity.ok(ResponseDto.builder().success(true).response(pagin).build());
+    }
+    
+    @PostConstruct
+    public void init() {
+    	SchedulerHelper.scheduleJob("0/10 * * * * ? *", () -> {
+    		countAlarms = caRequestLogService.countAlarms();
+    	}, "COUNT_ALARMNS");
     }
 }
