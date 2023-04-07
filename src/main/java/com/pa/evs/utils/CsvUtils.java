@@ -49,6 +49,8 @@ public class CsvUtils {
     public static File writeAddressCsv(List<BuildingDto> listInput, String fileName) throws IOException{
         List<String> headers = Arrays.asList(
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled", "UpdatedTime", "Remark");
+        headers = Arrays.asList(
+				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled UID");
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
     }
     
@@ -88,9 +90,9 @@ public class CsvUtils {
         record.add(log.getAddress().getPostalCode());
         record.add(log.getAddress().getStreet());
         record.add(log.getAddress().getCity());
-        record.add(log.getAddress().getCoupleState());
-        record.add("");
-        record.add(log.getAddress().getRemark());
+        record.add(log.getAddress().getCoupleUid());
+//        record.add("");
+//        record.add(log.getAddress().getRemark());
         return postProcessCsv(record);
     }
     

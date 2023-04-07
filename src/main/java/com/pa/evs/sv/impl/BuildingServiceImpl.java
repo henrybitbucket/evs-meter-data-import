@@ -141,18 +141,22 @@ public class BuildingServiceImpl implements BuildingService {
 		
 		String coupleState = (String) pagin.getOptions().get("coupleState");
 		boolean exportCsv = "true".equals(pagin.getOptions().get("exportCSV"));
+		boolean detailUnit = "true".equals(pagin.getOptions().get("detailUnit"));
 		
 		StringBuilder sqlBuilder = new StringBuilder();
 		sqlBuilder.append(" select b.id, b.name, b.type, b.description, b.has_tenant, ");
 		sqlBuilder.append(" b.create_date, b.modify_date, ");
 		sqlBuilder.append(" a.id as address_id, a.country, a.city, a.town, a.street, a.display_name, ");
 		sqlBuilder.append(" a.postal_code, a.unit_number, ");
-		sqlBuilder.append(" (select crl.building_id || '_' || crl.floor_level_id || '_' || crl.building_unit_id from {h-schema}ca_request_log crl where crl.building_id = b.id limit 1) crlId ");
-		if (exportCsv) {
+		
+		if ((exportCsv || detailUnit)) {
+			sqlBuilder.append(" (select crl.building_id || '_' || crl.floor_level_id || '_' || crl.building_unit_id || '_' || crl.uid from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id and crl.building_id = b.id limit 1) crlId ");
 			sqlBuilder.append(" ,bl.name blName, fl.name fName, bu.name buName, b.id bId, fl.id fId, bu.id buId ");
+		} else {
+			sqlBuilder.append(" (select crl.building_id || '_' || crl.floor_level_id || '_' || crl.building_unit_id || '_' || crl.uid from {h-schema}ca_request_log crl where crl.building_id = b.id limit 1) crlId ");
 		}
 		sqlBuilder.append(" from {h-schema}building b ");
-		if (exportCsv) {
+		if ((exportCsv || detailUnit)) {
 			sqlBuilder.append(" left join {h-schema}block bl on bl.building_id = b.id ");
 			sqlBuilder.append(" left join {h-schema}floor_level fl on (fl.building_id = b.id and (fl.block_id is null or fl.block_id = bl.id)) ");
 			sqlBuilder.append(" left join {h-schema}building_unit bu on bu.floor_level_id = fl.id ");
@@ -163,7 +167,9 @@ public class BuildingServiceImpl implements BuildingService {
 			sqlBuilder.append(" and (b.name like '%" + pagin.getKeyword() + "%' or a.display_name like '%" + pagin.getKeyword() + "%')");
 		}
 		if (StringUtils.isNotBlank(search)) {
-			sqlBuilder.append(" and (b.full_text like '%" + search.toLowerCase() + "%')");
+			for (String it : search.split(" *[,&] *")) {
+				sqlBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%')");	
+			}
 		}
 		if ("coupled".equalsIgnoreCase(coupleState)) {
 			sqlBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
@@ -171,7 +177,12 @@ public class BuildingServiceImpl implements BuildingService {
 			sqlBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
 		}
 		
-		sqlBuilder.append(" order by b.id asc  ");
+		if ((exportCsv || detailUnit)) {
+			sqlBuilder.append(" order by b.name asc, bl.name asc, fl.name asc, bu.name asc");
+		} else {
+			sqlBuilder.append(" order by b.id asc  ");	
+		}
+		
 		
 		if (!exportCsv) {
 			sqlBuilder.append(" offset " + pagin.getOffset() + " limit " + pagin.getLimit());	
@@ -182,13 +193,20 @@ public class BuildingServiceImpl implements BuildingService {
 		StringBuilder sqlCountBuilder = new StringBuilder();
 		sqlCountBuilder.append(" select count(b.id)  ");
 		sqlCountBuilder.append(" from {h-schema}building b ");
+		if ((exportCsv || detailUnit)) {
+			sqlCountBuilder.append(" left join {h-schema}block bl on bl.building_id = b.id ");
+			sqlCountBuilder.append(" left join {h-schema}floor_level fl on (fl.building_id = b.id and (fl.block_id is null or fl.block_id = bl.id)) ");
+			sqlCountBuilder.append(" left join {h-schema}building_unit bu on bu.floor_level_id = fl.id ");
+		}
 		sqlCountBuilder.append(" left join {h-schema}address a on b.address_id = a.id ");
 		sqlCountBuilder.append(" where 1=1 ");
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlCountBuilder.append(" and (b.name like '%" + pagin.getKeyword() + "%' or a.display_name like '%" + pagin.getKeyword() + "%')");
 		}
 		if (StringUtils.isNotBlank(search)) {
-			sqlCountBuilder.append(" and (b.full_text like '%" + search.toLowerCase() + "%')");
+			for (String it : search.split(" *[,&] *")) {
+				sqlCountBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%')");	
+			}
 		}
 		if ("coupled".equalsIgnoreCase(coupleState)) {
 			sqlCountBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
@@ -227,13 +245,27 @@ public class BuildingServiceImpl implements BuildingService {
 			address.setUnitNumber((String) o[14]);
 
 			Object crlId = o[15];
+
+			String coupleUid = null;
+			if (crlId != null) {
+				coupleUid = (crlId + "").replaceAll(".*_([^_]*)$", "$1");
+				crlId = (crlId + "").replaceAll("(.*)_([^_]*)$", "$1");
+			}
+			
 			address.setCoupleState(crlId == null ? "N" : "Y");
 			
-			if (exportCsv) {
+			if ("null".equalsIgnoreCase(coupleUid) || StringUtils.isBlank(coupleUid)) {
+				coupleUid = null;
+			}
+			
+			address.setCoupleUid(coupleUid);
+			
+			if ((exportCsv || detailUnit)) {
+				
 				address.setBlock((String) o[16]);
 				address.setLevel((String) o[17]);
 				address.setUnitNumber((String) o[18]);
-				address.setCoupleState((o[19] + "_" + o[20] + "_" + o[21]).equals(crlId) ? "Y" : "N");
+//				address.setCoupleState((o[19] + "_" + o[20] + "_" + o[21]).equals(crlId) ? "Y" : "N");
 				
 				if ("coupled".equalsIgnoreCase(coupleState) && !"Y".equals(address.getCoupleState()) 
 						|| "not_couple".equalsIgnoreCase(coupleState) && !"N".equals(address.getCoupleState())) {
