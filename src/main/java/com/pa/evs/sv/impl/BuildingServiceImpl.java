@@ -172,9 +172,17 @@ public class BuildingServiceImpl implements BuildingService {
 			}
 		}
 		if ("coupled".equalsIgnoreCase(coupleState)) {
-			sqlBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
+			if ((exportCsv || detailUnit)) {
+				sqlBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id)");
+			} else {
+				sqlBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");	
+			}
 		} else if ("not_couple".equalsIgnoreCase(coupleState)) {
-			sqlBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
+			if ((exportCsv || detailUnit)) {
+				sqlBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id)");
+			} else {
+				sqlBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");	
+			}
 		}
 		
 		if ((exportCsv || detailUnit)) {
@@ -208,12 +216,21 @@ public class BuildingServiceImpl implements BuildingService {
 				sqlCountBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%')");	
 			}
 		}
+		
 		if ("coupled".equalsIgnoreCase(coupleState)) {
-			sqlCountBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
+			if ((exportCsv || detailUnit)) {
+				sqlCountBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id)");
+			} else {
+				sqlCountBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");	
+			}
 		} else if ("not_couple".equalsIgnoreCase(coupleState)) {
-			sqlCountBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
+			if ((exportCsv || detailUnit)) {
+				sqlCountBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id)");
+			} else {
+				sqlCountBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");	
+			}
 		}
-
+		
 		Query qr = em.createNativeQuery(sqlCountBuilder.toString());
 		Number totalRows = (Number) qr.getSingleResult();
 		pagin.setTotalRows(totalRows.longValue());
