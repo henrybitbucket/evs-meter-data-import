@@ -150,10 +150,10 @@ public class BuildingServiceImpl implements BuildingService {
 		sqlBuilder.append(" a.postal_code, a.unit_number, ");
 		
 		if ((exportCsv || detailUnit)) {
-			sqlBuilder.append(" (select crl.building_id || '_' || crl.floor_level_id || '_' || crl.building_unit_id || '_' || crl.uid from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id and crl.building_id = b.id limit 1) crlId ");
+			sqlBuilder.append(" (select crl.sn || '_' || crl.msn from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id and crl.building_id = b.id limit 1) crlId ");
 			sqlBuilder.append(" ,bl.name blName, fl.name fName, bu.name buName, b.id bId, fl.id fId, bu.id buId ");
 		} else {
-			sqlBuilder.append(" (select crl.building_id || '_' || crl.floor_level_id || '_' || crl.building_unit_id || '_' || crl.uid from {h-schema}ca_request_log crl where crl.building_id = b.id limit 1) crlId ");
+			sqlBuilder.append(" (select crl.sn || '_' || crl.msn from {h-schema}ca_request_log crl where crl.building_id = b.id limit 1) crlId ");
 		}
 		sqlBuilder.append(" from {h-schema}building b ");
 		if ((exportCsv || detailUnit)) {
@@ -261,21 +261,22 @@ public class BuildingServiceImpl implements BuildingService {
 			address.setPostalCode((String) o[13]);
 			address.setUnitNumber((String) o[14]);
 
-			Object crlId = o[15];
+			Object crlSn = o[15];
 
-			String coupleUid = null;
-			if (crlId != null) {
-				coupleUid = (crlId + "").replaceAll(".*_([^_]*)$", "$1");
-				crlId = (crlId + "").replaceAll("(.*)_([^_]*)$", "$1");
+			String coupleMsn = null;
+			if (crlSn != null) {
+				coupleMsn = (crlSn + "").replaceAll(".*_([^_]*)$", "$1");
+				crlSn = (crlSn + "").replaceAll("(.*)_([^_]*)$", "$1");
 			}
 			
-			address.setCoupleState(crlId == null ? "N" : "Y");
+			address.setCoupleState(crlSn == null ? "N" : "Y");
 			
-			if ("null".equalsIgnoreCase(coupleUid) || StringUtils.isBlank(coupleUid)) {
-				coupleUid = null;
+			if ("null".equalsIgnoreCase(coupleMsn) || StringUtils.isBlank(coupleMsn)) {
+				coupleMsn = null;
 			}
 			
-			address.setCoupleUid(coupleUid);
+			address.setCoupleMsn(coupleMsn);
+			address.setCoupleSn((String) crlSn);
 			
 			if ((exportCsv || detailUnit)) {
 				

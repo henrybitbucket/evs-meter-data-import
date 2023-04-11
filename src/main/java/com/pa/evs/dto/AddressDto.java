@@ -23,7 +23,9 @@ public class AddressDto {
 	private String remark;
 	private String coupleState;
 	private String coupleMsn;
-	
+
+	private String coupleSn;
+
 	private String coupleUid;
 
 	private String streetNumber;
@@ -207,5 +209,12 @@ public class AddressDto {
 		this.coupleUid = coupleUid;
 	}
 
-	
+	public String getCoupleSn() {
+		return coupleSn;
+	}
+
+	public void setCoupleSn(String coupleSn) {
+		this.coupleSn = coupleSn;
+	}
+
 }

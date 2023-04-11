@@ -50,7 +50,7 @@ public class CsvUtils {
         List<String> headers = Arrays.asList(
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled", "UpdatedTime", "Remark");
         headers = Arrays.asList(
-				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled Meter No. (UID)");
+				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled Meter No.", "Coupled MCU SN");
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
     }
     
@@ -90,7 +90,8 @@ public class CsvUtils {
         record.add(log.getAddress().getPostalCode());
         record.add(log.getAddress().getStreet());
         record.add(log.getAddress().getCity());
-        record.add(log.getAddress().getCoupleUid());
+        record.add(log.getAddress().getCoupleMsn());
+        record.add(log.getAddress().getCoupleSn());
 //        record.add("");
 //        record.add(log.getAddress().getRemark());
         return postProcessCsv(record);
