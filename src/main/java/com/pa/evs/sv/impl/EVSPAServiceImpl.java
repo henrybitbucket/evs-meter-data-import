@@ -246,9 +246,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 			logP.setMqttAddress(evsPAMQTTAddress);
 			logRepository.save(logP);
 			
-			//wait 5s
-			LOG.debug("sleep 5s");
-			TimeUnit.SECONDS.sleep(5);
+			//wait 2s
+			LOG.debug("sleep 2s");
+			TimeUnit.SECONDS.sleep(2);
 			
 			return logP;
 		} catch (Exception e) {
@@ -270,9 +270,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 			logP.setMqttAddress(evsPAMQTTAddress);
 			logRepository.save(logP);
 			
-			//wait 5s
-			LOG.debug("sleep 5s");
-			TimeUnit.SECONDS.sleep(5);
+			//wait 2s
+			LOG.debug("sleep 2s");
+			TimeUnit.SECONDS.sleep(2);
 			
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
@@ -315,7 +315,8 @@ public class EVSPAServiceImpl implements EVSPAService {
             meterLogRepository.save(log);
 		}
 		
-		Log publishLog = publish(evsMeterLocalDataSendTopic, src, type);
+		// un publish
+		Log publishLog = null; //publish(evsMeterLocalDataSendTopic, src, type);
 		
 		try {
 			logMDTSent((String)header.get("msn"), (Integer)header.get("mid"), file, msgLog, publishLog, fName);
