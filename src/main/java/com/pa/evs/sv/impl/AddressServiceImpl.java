@@ -120,6 +120,7 @@ public class AddressServiceImpl implements AddressService {
 				buildingUnit = floor.getId() == null ? new BuildingUnit() : buildingUnitRepository.findByFloorLevelIdAndName(floor.getId(), unit).orElse(new BuildingUnit());
 				buildingUnit.setName(unit);
 				buildingUnit.setFloorLevel(floor);
+				buildingUnit.setRemark(a.getRemark());
 			}
 			
 			addressRepository.save(add);

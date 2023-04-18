@@ -14,7 +14,9 @@ public class AddressDto {
 	private String building;
 	private String block;
 	private String level;
+	private Long levelId;
 	private String unitNumber;
+	private Long unitId;
 	private String displayName;
 	private Date createDate;
 	private Date modifyDate;
@@ -29,6 +31,8 @@ public class AddressDto {
 	private String coupleUid;
 
 	private String streetNumber;
+
+	private Date coupleTime;
 
 	public AddressDto() {
 
@@ -215,6 +219,30 @@ public class AddressDto {
 
 	public void setCoupleSn(String coupleSn) {
 		this.coupleSn = coupleSn;
+	}
+
+	public Date getCoupleTime() {
+		return coupleTime;
+	}
+
+	public void setCoupleTime(Date coupleTime) {
+		this.coupleTime = coupleTime;
+	}
+
+	public Long getUnitId() {
+		return unitId;
+	}
+
+	public void setUnitId(Long unitId) {
+		this.unitId = unitId;
+	}
+
+	public Long getLevelId() {
+		return levelId;
+	}
+
+	public void setLevelId(Long levelId) {
+		this.levelId = levelId;
 	}
 
 }

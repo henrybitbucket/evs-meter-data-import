@@ -17,6 +17,7 @@ import com.pa.evs.dto.SettingDto;
 import com.pa.evs.model.Setting;
 import com.pa.evs.repository.SettingRepository;
 import com.pa.evs.sv.SettingService;
+import com.pa.evs.utils.AppProps;
 
 @Service
 public class SettingsServiceImpl implements SettingService {
@@ -74,6 +75,7 @@ public class SettingsServiceImpl implements SettingService {
 		en.setStatus("ACTIVE");
 		en.setModifyDate(new Date());
 		settingRepository.save(en);
+		AppProps.set(en.getKey(), en.getValue());
 	}
 
 	@Override

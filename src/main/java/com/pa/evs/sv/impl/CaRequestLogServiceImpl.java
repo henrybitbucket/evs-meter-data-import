@@ -36,6 +36,7 @@ import com.pa.evs.enums.DeviceType;
 import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.Address;
+import com.pa.evs.model.BuildingUnit;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.ScreenMonitoring;
@@ -178,9 +179,24 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			}
 			
 			if (dto.getBuildingUnitId() == null) {
+				if (ca.getBuildingUnit() != null) {
+					ca.getBuildingUnit().setCoupledDate(null);
+					buildingUnitRepository.save(ca.getBuildingUnit());
+				}
 				ca.setBuildingUnit(null);
 			} else {
-				ca.setBuildingUnit(buildingUnitRepository.findById(dto.getBuildingUnitId()).orElse(null));
+				
+				BuildingUnit next = buildingUnitRepository.findById(dto.getBuildingUnitId()).orElse(null);
+				BuildingUnit old = ca.getBuildingUnit();
+				if (old != null && (next == null || next.getId().longValue() != old.getId().longValue())) {
+					old.setCoupledDate(null);
+					buildingUnitRepository.save(old);
+				}
+				if (next != null && (old == null || next.getId().longValue() != old.getId().longValue())) {
+					next.setCoupledDate(new Date());
+					buildingUnitRepository.save(next);
+				}
+				ca.setBuildingUnit(next);
 			}
 			
 			if (dto.getAddress() == null) {

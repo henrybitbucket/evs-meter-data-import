@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.pa.evs.model.BuildingUnit;
 
-
 public class BuildingUnitDto {
 	private Long id;
 	private String name;
@@ -19,11 +18,12 @@ public class BuildingUnitDto {
 	private Date createdDate;
 	private Date modifiedDate;
 	private List<String> names;
-	
+	private String remark;
+
 	public BuildingUnitDto() {
-		
+
 	}
-	
+
 	public BuildingUnitDto(BuildingUnit fr) {
 		if (fr != null) {
 			this.id = fr.getId();
@@ -109,7 +109,7 @@ public class BuildingUnitDto {
 	public void setUnit(String unit) {
 		this.unit = unit;
 	}
-	
+
 	public List<String> getNames() {
 		return names;
 	}
@@ -118,5 +118,12 @@ public class BuildingUnitDto {
 		this.names = names;
 	}
 
+	public String getRemark() {
+		return remark;
+	}
+
+	public void setRemark(String remark) {
+		this.remark = remark;
+	}
 
 }

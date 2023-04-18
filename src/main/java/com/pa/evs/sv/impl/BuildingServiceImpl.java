@@ -151,7 +151,7 @@ public class BuildingServiceImpl implements BuildingService {
 		
 		if ((exportCsv || detailUnit)) {
 			sqlBuilder.append(" (select crl.sn || '_' || crl.msn from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id and crl.building_id = b.id limit 1) crlId ");
-			sqlBuilder.append(" ,bl.name blName, fl.name fName, bu.name buName, b.id bId, fl.id fId, bu.id buId ");
+			sqlBuilder.append(" ,bl.name blName, fl.name fName, bu.name buName, b.id bId, fl.id fId, bu.id buId, bu.remark, bu.coupled_date, bu.modify_date bu_modify_date ");
 		} else {
 			sqlBuilder.append(" (select crl.sn || '_' || crl.msn from {h-schema}ca_request_log crl where crl.building_id = b.id limit 1) crlId ");
 		}
@@ -159,7 +159,7 @@ public class BuildingServiceImpl implements BuildingService {
 		if ((exportCsv || detailUnit)) {
 			sqlBuilder.append(" left join {h-schema}block bl on bl.building_id = b.id ");
 			sqlBuilder.append(" left join {h-schema}floor_level fl on (fl.building_id = b.id and (fl.block_id is null or fl.block_id = bl.id)) ");
-			sqlBuilder.append(" left join {h-schema}building_unit bu on bu.floor_level_id = fl.id ");
+			sqlBuilder.append(" inner join {h-schema}building_unit bu on bu.floor_level_id = fl.id ");
 		}
 		sqlBuilder.append(" left join {h-schema}address a on b.address_id = a.id ");
 		sqlBuilder.append(" where 1=1 ");
@@ -168,7 +168,11 @@ public class BuildingServiceImpl implements BuildingService {
 		}
 		if (StringUtils.isNotBlank(search)) {
 			for (String it : search.split(" *[,&] *")) {
-				sqlBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%')");	
+				if ((exportCsv || detailUnit)) {
+					sqlBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%' or bu.remark like '%" + it.trim().toLowerCase() + "%')");
+				} else {
+					sqlBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%')");					
+				}
 			}
 		}
 		if ("coupled".equalsIgnoreCase(coupleState)) {
@@ -204,7 +208,7 @@ public class BuildingServiceImpl implements BuildingService {
 		if ((exportCsv || detailUnit)) {
 			sqlCountBuilder.append(" left join {h-schema}block bl on bl.building_id = b.id ");
 			sqlCountBuilder.append(" left join {h-schema}floor_level fl on (fl.building_id = b.id and (fl.block_id is null or fl.block_id = bl.id)) ");
-			sqlCountBuilder.append(" left join {h-schema}building_unit bu on bu.floor_level_id = fl.id ");
+			sqlCountBuilder.append(" inner join {h-schema}building_unit bu on bu.floor_level_id = fl.id ");
 		}
 		sqlCountBuilder.append(" left join {h-schema}address a on b.address_id = a.id ");
 		sqlCountBuilder.append(" where 1=1 ");
@@ -283,8 +287,12 @@ public class BuildingServiceImpl implements BuildingService {
 				address.setBlock((String) o[16]);
 				address.setLevel((String) o[17]);
 				address.setUnitNumber((String) o[18]);
+				address.setUnitId(((Number) o[21]).longValue());
+				address.setLevelId(((Number) o[20]).longValue());
 //				address.setCoupleState((o[19] + "_" + o[20] + "_" + o[21]).equals(crlId) ? "Y" : "N");
 				
+				address.setRemark((String) o[22]);
+				address.setCoupleTime((Date) o[(crlSn == null || o[23] == null) ? 24 : 23]);
 				if ("coupled".equalsIgnoreCase(coupleState) && !"Y".equals(address.getCoupleState()) 
 						|| "not_couple".equalsIgnoreCase(coupleState) && !"N".equals(address.getCoupleState())) {
 					continue;

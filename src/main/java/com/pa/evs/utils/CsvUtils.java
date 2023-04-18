@@ -24,6 +24,7 @@ import org.springframework.util.CollectionUtils;
 import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.sv.SettingService;
 
 public class CsvUtils {
     
@@ -51,6 +52,7 @@ public class CsvUtils {
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled", "UpdatedTime", "Remark");
         headers = Arrays.asList(
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled Meter No.", "Coupled MCU SN");
+        headers = Arrays.stream(AppProps.get(SettingService.EXPORT_ADDRESS_HEADER).trim().split(" *, *")).collect(Collectors.toList());
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
     }
     
@@ -80,9 +82,8 @@ public class CsvUtils {
     
     private static List<String> toCSVRecord(int idx, BuildingDto log, Long activateDate) {
         List<String> record = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         sdf.setTimeZone(TimeZoneHolder.get());
-//        record.add(log.getAddress().getId().toString());
         record.add(log.getAddress().getBuilding());
         record.add(log.getAddress().getBlock());
         record.add(log.getAddress().getLevel());
@@ -92,8 +93,8 @@ public class CsvUtils {
         record.add(log.getAddress().getCity());
         record.add(log.getAddress().getCoupleMsn());
         record.add(log.getAddress().getCoupleSn());
-//        record.add("");
-//        record.add(log.getAddress().getRemark());
+        record.add(log.getAddress().getCoupleTime() != null ? sdf.format(log.getAddress().getCoupleTime()) : "");
+        record.add(log.getAddress().getRemark());
         return postProcessCsv(record);
     }
     

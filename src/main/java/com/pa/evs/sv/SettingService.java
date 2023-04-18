@@ -11,6 +11,8 @@ public interface SettingService {
 	
 	String TIME_LOGIN_EXPIRED  = "TIME_LOGIN_EXPIRED";
 	
+	String EXPORT_ADDRESS_HEADER  = "EXPORT_ADDRESS_HEADER";
+	
 	List<SettingDto> findAll();
 	
 	SettingDto findByKey(String key);

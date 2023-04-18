@@ -166,6 +166,9 @@ public class BuildingUnitServiceImpl implements BuildingUnitService {
 		en.setUnit(dto.getUnit());
 		en.setDisplayName(dto.getDisplayName());
 		en.setFloorLevel(f);
+		if (dto.getRemark() != null) {
+			en.setRemark(dto.getRemark());
+		}
 		buildingUnitRepository.save(en);
 	}
 }

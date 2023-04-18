@@ -2,6 +2,7 @@ package com.pa.evs.ctrl;
 
 import javax.annotation.PostConstruct;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -15,6 +16,7 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.SettingDto;
 import com.pa.evs.sv.SettingService;
+import com.pa.evs.utils.AppProps;
 
 @Controller
 public class SettingsController {
@@ -76,6 +78,13 @@ public class SettingsController {
 			SettingDto st1 = settingService.findByKey(SettingService.TIME_LOGIN_EXPIRED);
 			if (st1 == null || st1.getValue() == null || !st1.getValue().matches("^[0-9]+$")) {
 				settingService.save(SettingDto.builder().key(SettingService.TIME_LOGIN_EXPIRED).value("3600").build());
+			}
+			
+			SettingDto st2 = settingService.findByKey(SettingService.EXPORT_ADDRESS_HEADER);
+			if (st2 == null) {
+				settingService.save(SettingDto.builder().key(SettingService.EXPORT_ADDRESS_HEADER).value("Building,Block,Level,Unit,Postcode,Street Address,State.City,Coupled Meter No.,Coupled MCU SN,UpdatedTime,Remark").build());
+			} else {
+				AppProps.set(SettingService.EXPORT_ADDRESS_HEADER, st2.getValue());
 			}
 		} catch (Exception e) {
 			//
