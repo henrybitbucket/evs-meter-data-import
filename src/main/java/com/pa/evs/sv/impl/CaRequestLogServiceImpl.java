@@ -270,8 +270,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     @Override
     @Transactional(readOnly = true)
     public PaginDto<CARequestLog> search(PaginDto<CARequestLog> pagin) {
-        StringBuilder sqlBuilder = new StringBuilder("FROM CARequestLog");
-        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM CARequestLog");
+        StringBuilder sqlBuilder = new StringBuilder("FROM CARequestLog ca ");
+        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM CARequestLog ca");
         
         StringBuilder sqlCommonBuilder = new StringBuilder();
         if (CollectionUtils.isEmpty(pagin.getOptions()) || (
@@ -417,7 +417,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 sqlCommonBuilder.append(" buildingUnit.id= '" + queryBuildingUnit + "' AND ");
             }
             if (StringUtils.isNotBlank(queryPostalCode)) {
-                sqlCommonBuilder.append(" upper(address.postalCode) = '" + queryPostalCode + "' AND ");
+                sqlCommonBuilder.append(" ((exists (select 1 from Building bd where bd.id = ca.building.id and upper(bd.address.postalCode) = '" + queryPostalCode.toUpperCase() + "') ");
+                sqlCommonBuilder.append(" or (exists (select 1 FROM Address add1 where add1.id = ca.address.id and upper(add1.postalCode) = '" + queryPostalCode.toUpperCase() + "') ))) AND ");
             }
             
             sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
