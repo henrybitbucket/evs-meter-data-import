@@ -3,15 +3,11 @@ package com.pa.evs.ctrl;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.Set;
-import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +23,6 @@ import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
-import com.pa.evs.model.CARequestLog;
 import com.pa.evs.sv.BuildingService;
 import com.pa.evs.utils.CsvUtils;
 

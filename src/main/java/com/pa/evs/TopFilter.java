@@ -10,9 +10,12 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+
+import com.pa.evs.utils.TimeZoneHolder;
 
 @Order(value = Ordered.HIGHEST_PRECEDENCE)
 @Component
@@ -32,7 +35,15 @@ public class TopFilter implements Filter {
 		response.setHeader("Access-Control-Allow-Methods", "*");
 		response.setHeader("Access-Control-Allow-Headers", "*");
 
-		chain.doFilter(req, res);
+		try {
+			String timeZone = request.getParameter("timeZone");
+			if (StringUtils.isNotBlank(timeZone)) {
+    			TimeZoneHolder.set(timeZone);
+    		} 
+			chain.doFilter(req, res);			
+		} finally {
+			TimeZoneHolder.remove();
+		}
 	}
 
 	@Override
