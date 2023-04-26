@@ -61,6 +61,7 @@ public class LogServiceImpl implements LogService {
         Long toDate = (Long) map.get("toDate");
         Object piId = (Object) map.get("piId");
         Object groupId = (Object) map.get("groupId");
+        String ftpStatus = (String) map.get("ftpResStatus");
         
         Object markView = (Object) map.get("markView");
         
@@ -76,7 +77,7 @@ public class LogServiceImpl implements LogService {
         StringBuilder sqlCommonBuilder = new StringBuilder("FROM Log l ");
         
         if (piId != null) {
-        	sqlCommonBuilder.append(" JOIN PiLog pl on (pl.pi.id = " + piId + " and l.id = pl.publishLogId) ");
+        	sqlCommonBuilder.append(" JOIN PiLog pl on (pl.pi.id = " + piId + " and l.id = pl.logId) ");
         }
         
         sqlCommonBuilder.append(" LEFT JOIN CARequestLog cl on (cl.msn = cl.msn and cl.uid = l.uid)");
@@ -101,6 +102,10 @@ public class LogServiceImpl implements LogService {
         if (StringUtils.isNotBlank(topic)) {
         	sqlCommonBuilder.append(" AND l.topic = '" + topic + "'");
         } 
+        if (StringUtils.isNotBlank(ftpStatus)) {
+        	sqlCommonBuilder.append(" AND pl.ftpResStatus = '" + ftpStatus + "'");
+        }         
+        
         if (StringUtils.isNotBlank(ptype)) {
         	if (ptype.trim().startsWith("(") && ptype.trim().endsWith(")")) {
         		sqlCommonBuilder.append(" AND l.pType IN " + ptype.toUpperCase() + "");
