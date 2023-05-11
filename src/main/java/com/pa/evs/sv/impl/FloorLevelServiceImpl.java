@@ -85,33 +85,31 @@ public class FloorLevelServiceImpl implements FloorLevelService {
 			pagin.setOffset(0);
 		}
 		
-		StringBuilder sqlBuilder = new StringBuilder("FROM FloorLevel where 1=1");
+		StringBuilder sqlBuilder = new StringBuilder(" select fl ");
+		StringBuilder cmmBuilder = new StringBuilder(" FROM FloorLevel fl left join Block bl on fl.block.id = bl.id where 1=1");
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
-			sqlBuilder.append(" AND displayName like '%" + pagin.getKeyword() + "%'");
+			cmmBuilder.append(" AND fl.displayName like '%" + pagin.getKeyword() + "%'");
 		}
 		
 		if (pagin.getOptions().get("buildingId") != null) {
-			sqlBuilder.append(" AND building.id = ").append(pagin.getOptions().get("buildingId"));
+			cmmBuilder.append(" AND fl.building.id = ").append(pagin.getOptions().get("buildingId"));
 		}
 		
 		if (pagin.getOptions().get("blockId") != null) {
-			sqlBuilder.append(" AND block.id = ").append(pagin.getOptions().get("blockId"));
+			cmmBuilder.append(" AND bl.id = ").append(pagin.getOptions().get("blockId"));
+		} else {
+			cmmBuilder.append(" AND (bl.id is null or bl.name = '-' or bl.name = '') ");
 		}
 		
-		sqlBuilder.append(" ORDER BY modifyDate DESC ");
+		sqlBuilder.append(cmmBuilder);
+		sqlBuilder.append(" ORDER BY fl.modifyDate DESC ");
 		
 		Query q = em.createQuery(sqlBuilder.toString(), FloorLevel.class);
 		q.setFirstResult(pagin.getOffset());
 		q.setMaxResults(pagin.getLimit());
 		
-		StringBuilder sqlCountBuilder = new StringBuilder("SELECT COUNT(*) FROM FloorLevel where 1=1");
-		if (StringUtils.isNotBlank(pagin.getKeyword())) {
-			sqlCountBuilder.append(" AND displayName like '%" + pagin.getKeyword() + "%'");
-		}
-		
-		if (pagin.getOptions().get("buildingId") != null) {
-			sqlCountBuilder.append(" AND building.id = ").append(pagin.getOptions().get("buildingId"));
-		}
+		StringBuilder sqlCountBuilder = new StringBuilder("SELECT COUNT(*) ");
+		sqlCountBuilder.append(cmmBuilder);
 		
 		Query qCount = em.createQuery(sqlCountBuilder.toString());
 		

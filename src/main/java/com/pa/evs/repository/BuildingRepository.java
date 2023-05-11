@@ -19,4 +19,10 @@ public interface BuildingRepository extends JpaRepository<Building, Long> {
 	Optional<Building> findByAddressId(Long addressId);
 	@Query("FROM Building bd where bd.address.street in (?1) ")
 	List<Building> findAllByAddressStreet(Set<String> streets);
+	
+	@Query("FROM Building bd where upper(bd.name || '__' || bd.address.city) in (?1) ")
+	List<Building> findAllByBuingNameAndCity(Set<String> buildingCity);
+
+	@Query("FROM Building bd where bd.name in (?1) ")
+	List<Building> findAllByName(Set<String> names);
 }

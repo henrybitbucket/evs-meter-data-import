@@ -21,16 +21,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.pa.evs.constant.Message;
 import com.pa.evs.dto.AddressDto;
 import com.pa.evs.model.Address;
 import com.pa.evs.model.Block;
 import com.pa.evs.model.Building;
 import com.pa.evs.model.BuildingUnit;
+import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.FloorLevel;
 import com.pa.evs.repository.AddressRepository;
 import com.pa.evs.repository.BlockRepository;
 import com.pa.evs.repository.BuildingRepository;
 import com.pa.evs.repository.BuildingUnitRepository;
+import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.sv.AddressService;
 
@@ -39,6 +42,9 @@ public class AddressServiceImpl implements AddressService {
 
 	@Autowired
 	AddressRepository addressRepository;
+	
+	@Autowired
+	CARequestLogRepository caRequestLogRepository;
 	
 	@Autowired
 	BuildingRepository buildingRepository;
@@ -54,27 +60,43 @@ public class AddressServiceImpl implements AddressService {
 	
 	@Override
 	@Transactional
-	public void handleUpload(MultipartFile file) throws IOException {
-		
+	public List<AddressDto> handleUpload(MultipartFile file) throws IOException {
+
 		List<AddressDto> dtos = parseCsv(file.getInputStream());
+		updateNullBlock();
 		Map<String, AddressDto> mapA = new LinkedHashMap<>();
-		dtos.forEach(a -> mapA.put(a.getStreet(), a));
-		List<Building> buildings = buildingRepository.findAllByAddressStreet(mapA.keySet());
+		Map<String, CARequestLog> msnCA = new LinkedHashMap<>();
+		dtos.forEach(a -> {
+			 mapA.put((a.getBuilding().trim() + "__" + a.getCity().trim()).toUpperCase(), a);
+			 if (StringUtils.isNotBlank(a.getCoupleMsn())) {
+				 msnCA.put(a.getCoupleMsn(), null);	 
+			 }
+		});
+		List<Building> buildings = buildingRepository.findAllByBuingNameAndCity(mapA.keySet());
+		caRequestLogRepository.findByMsnIn(msnCA.keySet())
+		.forEach(ca -> msnCA.put(ca.getMsn(), ca));
+		
 		Map<String, Address> mapAE = new LinkedHashMap<>();
+		
 		buildings.forEach(b -> {
 			Address e = b.getAddress();
-			mapAE.put((e.getStreet() + "__" + e.getPostalCode() + "__" + e.getCity() + "__" + b.getName()).trim().replaceAll(" *__ *", "__"), e);
+			mapAE.put((e.getPostalCode() + "__" + e.getCity() + "__" + b.getName()).trim().replaceAll(" *__ *", "__"), e);
 		});
 		dtos.forEach(a -> {
-			String combineKey = (a.getStreet() + "__" + a.getPostalCode() + "__" + a.getCity() + "__" + a.getBuilding()).trim().replaceAll(" *__ *", "__");
+			if (StringUtils.isNotBlank(a.getMessage())) {
+				// ignore
+				return;
+			}
+			String combineKey = (a.getPostalCode() + "__" + a.getCity() + "__" + a.getBuilding()).trim().replaceAll(" *__ *", "__");
 			Address add = mapAE.computeIfAbsent(combineKey, st -> new Address());
 			
-			add.setStreet(a.getStreet());
+			add.setStreet(StringUtils.isBlank(a.getStreet()) ? "-" : a.getStreet());
 			add.setCity(a.getCity());
 			add.setUnitNumber(a.getUnitNumber());
 			add.setPostalCode(a.getPostalCode());
 			add.setRemark(a.getRemark());
 			add.setModifyDate(new Date());
+			addressRepository.save(add);
 			
 			Building building = null;
 			Block block = null;
@@ -91,14 +113,19 @@ public class AddressServiceImpl implements AddressService {
 				if (building.getId() == null) {
 					building.setName(StringUtils.isBlank(bd) ? add.getStreet() : bd);
 				}
-				add.setBlock(bl);
-				add.setLevel(lvl);
+
 				building.setAddress(add);
+				buildingRepository.save(building);
+				buildingRepository.flush();
 				
 				if (StringUtils.isNotBlank(bl)) {
 					block = building.getId() == null ? new Block() : blockRepository.findByBuildingIdAndName(building.getId(), bl).orElse(new Block());
 					block.setName(bl);
 					block.setBuilding(building);
+					add.setBlock(bl);
+					add.setLevel(lvl);
+					blockRepository.save(block);
+					blockRepository.flush();
 				}
 				
 				if (StringUtils.isNotBlank(lvl)) {
@@ -112,6 +139,8 @@ public class AddressServiceImpl implements AddressService {
 					floor.setBuilding(building);
 					floor.setBlock(block);
 					floor.setName(lvl);
+					floorLevelRepository.save(floor);
+					floorLevelRepository.flush();
 				}
 				
 			}
@@ -121,9 +150,10 @@ public class AddressServiceImpl implements AddressService {
 				buildingUnit.setName(unit);
 				buildingUnit.setFloorLevel(floor);
 				buildingUnit.setRemark(a.getRemark());
+				buildingUnitRepository.save(buildingUnit);
+				buildingUnitRepository.flush();
 			}
 			
-			addressRepository.save(add);
 			if (building != null) {
 				String str1 = building.getFullText();
 				if (StringUtils.isNotBlank(str1)) {
@@ -147,17 +177,44 @@ public class AddressServiceImpl implements AddressService {
 				}
 				buildingRepository.save(building);
 			}
-			if (block != null) {
-				blockRepository.save(block);
-			}
-			if (floor != null) {
-				floorLevelRepository.save(floor);
-			}
-			if (buildingUnit != null) {
+
+			String msn = a.getCoupleMsn();
+			if (StringUtils.isNotBlank(a.getCoupleMsn())) {
+
+				CARequestLog caUnitCoupled = caRequestLogRepository.findByBuildingUnitId(buildingUnit.getId()).orElse(null);
+				
+				if (caUnitCoupled != null && "de-couple".equalsIgnoreCase(msn)) {
+					caUnitCoupled.setBuildingUnit(null);
+					caUnitCoupled.setFloorLevel(null);
+					caUnitCoupled.setBlock(null);
+					caUnitCoupled.setBuilding(null);
+					caUnitCoupled.setAddress(null);
+					caRequestLogRepository.save(caUnitCoupled);
+					return;
+				}
+				
+				if (caUnitCoupled != null && caUnitCoupled.getBuildingUnit() != null && !msn.equalsIgnoreCase(caUnitCoupled.getMsn())) {
+					a.setMessage(Message.ADDRESS_IS_ASSIGNED);
+					return;
+				}
+				
+				CARequestLog ca = msnCA.get(a.getCoupleMsn());
+				if (ca == null) {
+					a.setMessage("Meter SN doe'nt exists!");
+					return;
+				}
+
+				ca.setBuilding(building);
+				ca.setBlock(block);
+				ca.setFloorLevel(floor);
+				ca.setBuildingUnit(buildingUnit);
+				buildingUnit.setCoupledDate(new Date());
 				buildingUnitRepository.save(buildingUnit);
+				caRequestLogRepository.save(ca);
 			}
-			addressRepository.flush();
 		});
+		
+		return dtos;
 	}
 	
 	private static List<AddressDto> parseCsv(InputStream file) throws IOException {
@@ -176,30 +233,57 @@ public class AddressServiceImpl implements AddressService {
 						dto = new AddressDto();
 					}
 					if (head.computeIfAbsent("Building", k->-1) == count || head.computeIfAbsent("Building Name", k->-1) == count) {
-						dto.setBuilding(it);
+						dto.setBuilding(StringUtils.isBlank(it) ? "NA" : it);
 					} else if (head.computeIfAbsent("Block", k->-1) == count) {
-						dto.setBlock(it);
+						dto.setBlock(StringUtils.isBlank(it) ? "NA" : it);
 					} else if (head.computeIfAbsent("Level", k->-1) == count) {
-						dto.setLevel(it);
+						dto.setLevel(StringUtils.isBlank(it) ? "NA" : it);
 					} else if (head.computeIfAbsent("Unit", k->-1) == count) {
 						dto.setUnitNumber(it);
 					} else if (head.computeIfAbsent("Postcode", k->-1) == count) {
 						dto.setPostalCode(it);
 					} else if (head.computeIfAbsent("Street Address", k->-1) == count) {
-						dto.setStreet(it);
+						dto.setStreet(StringUtils.isBlank(it) ? "-" : it);
 					} else if (head.computeIfAbsent("State.City", k->-1) == count) {
 						dto.setCity(it);
 					} else if (head.computeIfAbsent("Remark", k->-1) == count) {
 						dto.setRemark(it);
+					} else if (head.computeIfAbsent("Coupled MCU SN", k->-1) == count) {
+						dto.setCoupleSn(it);
+					} else if (head.computeIfAbsent("Coupled Meter No.", k->-1) == count) {
+						dto.setCoupleMsn(it);
 					}
 				}
 				count++;
 			}
-			if (dto != null && StringUtils.isNotBlank(dto.getPostalCode()) && StringUtils.isNotBlank(dto.getCity())) {
-				rs.add(dto);
+			head.computeIfAbsent("Message", k -> 100);
+			if (dto != null) {
+				dto.setLine(count);
+				dto.setHead(head);
+				rs.add(dto);				
+			}
+
+			if (dto != null && StringUtils.isBlank(dto.getPostalCode())) {
+				dto.setMessage("postalCode is required");
+			} else if (dto != null && StringUtils.isBlank(dto.getCity()))
+			if (dto != null && StringUtils.isNotBlank(dto.getUnitNumber()) && StringUtils.isNotBlank(dto.getPostalCode()) && StringUtils.isNotBlank(dto.getCity())) {
+				dto.setMessage("city is required");
 			}
 		}
 		return rs;
+	}
+	
+	public void updateNullBlock() {
+		List<FloorLevel> fls = floorLevelRepository.findAllByBlockIsNull();
+		fls.forEach(fl -> {
+			Block block = blockRepository.findByBuildingIdAndName(fl.getBuilding().getId(), "NA").orElse(new Block());
+			block.setName("NA");
+			block.setBuilding(fl.getBuilding());
+			blockRepository.save(block);
+			blockRepository.flush();
+			fl.setBlock(block);
+			floorLevelRepository.save(fl);
+		});
 	}
 	
 //	ID (Key),Building,Block,Level,Unit,Postcode,,Street Address,State.City,Coupled,UpdatedTime,Remark

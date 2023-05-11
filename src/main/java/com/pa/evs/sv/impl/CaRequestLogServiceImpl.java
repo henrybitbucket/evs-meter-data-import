@@ -38,6 +38,7 @@ import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.Address;
 import com.pa.evs.model.BuildingUnit;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
@@ -155,7 +156,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     		list = caRequestLogRepository.findByBuilding(dto.getBuildingId());
     	}
     	
-    	if (list != null && !list.isEmpty()) {
+    	if (list != null && !list.isEmpty() && (list.size() > 1 || ca.getId() == null || (list.get(0).getId().longValue() != ca.getId().longValue()))) {
     		throw new Exception(Message.ADDRESS_IS_ASSIGNED);
     	}
         
@@ -175,7 +176,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			if (dto.getFloorLevelId() == null) {
 				ca.setFloorLevel(null);
 			} else {
-				ca.setFloorLevel(floorLevelRepository.findById(dto.getFloorLevelId()).orElse(null));
+				FloorLevel fl = floorLevelRepository.findById(dto.getFloorLevelId()).orElse(null);
+				ca.setFloorLevel(fl);
+				if (fl != null) {
+					ca.setBlock(fl.getBlock());
+				}
 			}
 			
 			if (dto.getBuildingUnitId() == null) {

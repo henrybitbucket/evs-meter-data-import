@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.model.CARequestLog;
@@ -53,6 +54,16 @@ public class CsvUtils {
         headers = Arrays.asList(
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled Meter No.", "Coupled MCU SN");
         headers = Arrays.stream(AppProps.get(SettingService.EXPORT_ADDRESS_HEADER).trim().split(" *, *")).collect(Collectors.toList());
+        return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
+    }
+    
+    public static File writeImportAddressCsv(List<AddressDto> listInput, String fileName) throws IOException{
+        List<String> headers = Arrays.asList(
+				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled", "UpdatedTime", "Remark");
+        headers = Arrays.asList(
+				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled Meter No.", "Coupled MCU SN");
+        headers = Arrays.stream(AppProps.get(SettingService.EXPORT_ADDRESS_HEADER).trim().split(" *, *")).collect(Collectors.toList());
+        headers.add("Message");
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
     }
     
@@ -95,6 +106,25 @@ public class CsvUtils {
         record.add(log.getAddress().getCoupleSn());
         record.add(log.getAddress().getCoupleTime() != null ? sdf.format(log.getAddress().getCoupleTime()) : "");
         record.add(log.getAddress().getRemark());
+        return postProcessCsv(record);
+    }
+    
+    private static List<String> toCSVRecord(int idx, AddressDto log, Long activateDate) {
+        List<String> record = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        sdf.setTimeZone(TimeZoneHolder.get());
+        record.add(log.getBuilding());
+        record.add(log.getBlock());
+        record.add(log.getLevel());
+        record.add(log.getUnitNumber());
+        record.add(log.getPostalCode());
+        record.add(log.getStreet());
+        record.add(log.getCity());
+        record.add(log.getCoupleMsn());
+        record.add(log.getCoupleSn());
+        record.add(log.getCoupleTime() != null ? sdf.format(log.getCoupleTime()) : "");
+        record.add(log.getRemark());
+        record.add(StringUtils.isBlank(log.getMessage()) ? "success" : log.getMessage());
         return postProcessCsv(record);
     }
     

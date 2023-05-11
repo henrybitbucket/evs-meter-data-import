@@ -1,5 +1,6 @@
 package com.pa.evs.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -18,6 +19,10 @@ import com.pa.evs.model.CARequestLog;
 public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long> {
 
 	Optional<CARequestLog> findByUid(String uid);
+	
+	Optional<CARequestLog> findByBuildingUnitId(Long unitId);
+	List<CARequestLog> findByMsnIn(Collection<String> msn);
+	
 	Optional<CARequestLog> findByMsn(String msn);
 	
 	@Query(value = "SELECT * FROM ca_request_log WHERE msn = ?1 limit 1", nativeQuery = true)

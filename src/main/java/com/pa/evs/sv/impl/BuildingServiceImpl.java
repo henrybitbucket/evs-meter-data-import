@@ -150,15 +150,15 @@ public class BuildingServiceImpl implements BuildingService {
 		sqlBuilder.append(" a.postal_code, a.unit_number, ");
 		
 		if ((exportCsv || detailUnit)) {
-			sqlBuilder.append(" (select crl.sn || '_' || crl.msn from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id and crl.building_id = b.id limit 1) crlId ");
+			sqlBuilder.append(" (select crl.sn || '_' || coalesce(crl.msn, '') from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id and crl.building_id = b.id limit 1) crlId ");
 			sqlBuilder.append(" ,bl.name blName, fl.name fName, bu.name buName, b.id bId, fl.id fId, bu.id buId, bu.remark, bu.coupled_date, bu.modify_date bu_modify_date ");
 		} else {
-			sqlBuilder.append(" (select crl.sn || '_' || crl.msn from {h-schema}ca_request_log crl where crl.building_id = b.id limit 1) crlId ");
+			sqlBuilder.append(" (select crl.sn || '_' || coalesce(crl.msn, '') from {h-schema}ca_request_log crl where crl.building_id = b.id limit 1) crlId ");
 		}
 		sqlBuilder.append(" from {h-schema}building b ");
 		if ((exportCsv || detailUnit)) {
-			sqlBuilder.append(" left join {h-schema}block bl on bl.building_id = b.id ");
-			sqlBuilder.append(" left join {h-schema}floor_level fl on (fl.building_id = b.id and (fl.block_id is null or fl.block_id = bl.id)) ");
+			sqlBuilder.append(" left join {h-schema}floor_level fl on (fl.building_id = b.id) ");
+			sqlBuilder.append(" left join {h-schema}block bl on (fl.block_id = bl.id and (bl.id is null or bl.building_id = b.id)) ");
 			sqlBuilder.append(" inner join {h-schema}building_unit bu on bu.floor_level_id = fl.id ");
 		}
 		sqlBuilder.append(" left join {h-schema}address a on b.address_id = a.id ");
@@ -206,8 +206,8 @@ public class BuildingServiceImpl implements BuildingService {
 		sqlCountBuilder.append(" select count(b.id)  ");
 		sqlCountBuilder.append(" from {h-schema}building b ");
 		if ((exportCsv || detailUnit)) {
-			sqlCountBuilder.append(" left join {h-schema}block bl on bl.building_id = b.id ");
-			sqlCountBuilder.append(" left join {h-schema}floor_level fl on (fl.building_id = b.id and (fl.block_id is null or fl.block_id = bl.id)) ");
+			sqlCountBuilder.append(" left join {h-schema}floor_level fl on (fl.building_id = b.id) ");
+			sqlCountBuilder.append(" left join {h-schema}block bl on (fl.block_id = bl.id and (bl.id is null or bl.building_id = b.id)) ");
 			sqlCountBuilder.append(" inner join {h-schema}building_unit bu on bu.floor_level_id = fl.id ");
 		}
 		sqlCountBuilder.append(" left join {h-schema}address a on b.address_id = a.id ");

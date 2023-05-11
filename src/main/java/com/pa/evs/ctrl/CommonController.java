@@ -549,10 +549,22 @@ public class CommonController {
     @PostMapping("/api/address/upload")
     public ResponseEntity<Object> updateAddress(
             HttpServletRequest httpServletRequest,
-            @RequestParam(value = "file") final MultipartFile file) throws Exception {
+            @RequestParam(value = "file") final MultipartFile file, HttpServletResponse response) throws Exception {
         
         try {
-        	addressService.handleUpload(file);
+        	File csv = CsvUtils.writeImportAddressCsv(addressService.handleUpload(file), "import_result_" + System.currentTimeMillis() + ".csv");
+            String fileName = file.getName();
+            
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }

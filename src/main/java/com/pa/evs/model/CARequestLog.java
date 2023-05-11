@@ -86,6 +86,10 @@ public class CARequestLog extends BaseEntity {
 	private Building building;
 	
 	@ManyToOne
+	@JoinColumn(name = "block_id")
+	private Block block;
+	
+	@ManyToOne
 	@JoinColumn(name = "floor_level_id")
 	private FloorLevel floorLevel;
 

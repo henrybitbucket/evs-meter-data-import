@@ -1,9 +1,14 @@
 package com.pa.evs.dto;
 
 import java.util.Date;
+import java.util.Map;
 
 import com.pa.evs.model.Address;
 
+/**
+ * @author tonyk
+ *
+ */
 public class AddressDto {
 	private Long id;
 	private String country;
@@ -33,6 +38,12 @@ public class AddressDto {
 	private String streetNumber;
 
 	private Date coupleTime;
+
+	private String message;
+
+	private int line;
+
+	private Map<String, Integer> head;
 
 	public AddressDto() {
 
@@ -243,6 +254,30 @@ public class AddressDto {
 
 	public void setLevelId(Long levelId) {
 		this.levelId = levelId;
+	}
+
+	public String getMessage() {
+		return message;
+	}
+
+	public void setMessage(String message) {
+		this.message = message;
+	}
+
+	public int getLine() {
+		return line;
+	}
+
+	public void setLine(int line) {
+		this.line = line;
+	}
+
+	public Map<String, Integer> getHead() {
+		return head;
+	}
+
+	public void setHead(Map<String, Integer> head) {
+		this.head = head;
 	}
 
 }
