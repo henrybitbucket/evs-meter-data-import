@@ -59,6 +59,10 @@ public class BuildingUnitServiceImpl implements BuildingUnitService {
 				entity.setFloorLevel(f);
 				entity.setDisplayName(dto.getDisplayName());
 				entity.setUnit(dto.getUnit());
+				if (dto.getRemark() != null) {
+					entity.setRemark(dto.getRemark());
+				}
+				entity.setFullText1(entity);
 				buildingUnitRepository.save(entity);
 			}
 		}
@@ -169,6 +173,7 @@ public class BuildingUnitServiceImpl implements BuildingUnitService {
 		if (dto.getRemark() != null) {
 			en.setRemark(dto.getRemark());
 		}
+		en.setFullText1(en);
 		buildingUnitRepository.save(en);
 	}
 }

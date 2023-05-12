@@ -12,6 +12,8 @@ import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -71,5 +73,22 @@ public class BuildingUnit extends BaseEntity {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "coupled_date")
     private Date coupledDate;
+    
+	@Column(name = "full_text")
+	private String fullText;
+	
+	@JsonIgnore
+	public void setFullText1(BuildingUnit buildingUnit) {
+		FloorLevel floor = buildingUnit.getFloorLevel();
+		if (floor == null) {
+			return;
+		}
+		Block block = floor.getBlock();
+		Building building = floor.getBuilding();
+		if (building == null) {
+			return;
+		}
+		buildingUnit.setFullText((building.getFullText() + "-" + (block == null ? "" : block.getName()) + "-" + (floor == null ? "" : floor.getName()) + "-" + buildingUnit.getName() + "-" + buildingUnit.getRemark()).toLowerCase());
+	}
 
 }

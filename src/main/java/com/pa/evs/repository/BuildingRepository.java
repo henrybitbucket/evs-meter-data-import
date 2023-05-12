@@ -22,6 +22,9 @@ public interface BuildingRepository extends JpaRepository<Building, Long> {
 	
 	@Query("FROM Building bd where upper(bd.name || '__' || bd.address.city) in (?1) ")
 	List<Building> findAllByBuingNameAndCity(Set<String> buildingCity);
+	
+	@Query("FROM Building bd where upper(bd.address.postalCode || '__' || bd.address.city || '__' || bd.name) in (?1) ")
+	List<Building> findAllByPostalCodeAndCityAndName(Set<String> cityPostalCodeName);
 
 	@Query("FROM Building bd where bd.name in (?1) ")
 	List<Building> findAllByName(Set<String> names);

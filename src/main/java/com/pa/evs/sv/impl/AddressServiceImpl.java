@@ -67,12 +67,12 @@ public class AddressServiceImpl implements AddressService {
 		Map<String, AddressDto> mapA = new LinkedHashMap<>();
 		Map<String, CARequestLog> msnCA = new LinkedHashMap<>();
 		dtos.forEach(a -> {
-			 mapA.put((a.getBuilding().trim() + "__" + a.getCity().trim()).toUpperCase(), a);
+			 mapA.put((a.getPostalCode() + "__" + a.getCity() + "__" + a.getBuilding()).toUpperCase(), a);
 			 if (StringUtils.isNotBlank(a.getCoupleMsn())) {
 				 msnCA.put(a.getCoupleMsn(), null);	 
 			 }
 		});
-		List<Building> buildings = buildingRepository.findAllByBuingNameAndCity(mapA.keySet());
+		List<Building> buildings = buildingRepository.findAllByPostalCodeAndCityAndName(mapA.keySet());
 		caRequestLogRepository.findByMsnIn(msnCA.keySet())
 		.forEach(ca -> msnCA.put(ca.getMsn(), ca));
 		
@@ -92,7 +92,7 @@ public class AddressServiceImpl implements AddressService {
 			
 			add.setStreet(StringUtils.isBlank(a.getStreet()) ? "-" : a.getStreet());
 			add.setCity(a.getCity());
-			add.setUnitNumber(a.getUnitNumber());
+			add.setUnitNumber("");
 			add.setPostalCode(a.getPostalCode());
 			add.setRemark(a.getRemark());
 			add.setModifyDate(new Date());
@@ -155,10 +155,10 @@ public class AddressServiceImpl implements AddressService {
 			}
 			
 			if (building != null) {
+				building.setFullText1(building);
 				String str1 = building.getFullText();
 				if (StringUtils.isNotBlank(str1)) {
 					String str2 = building.getName() 
-							+ '-' + a.getRemark()
 							+ '-' + building.getAddress().getBlock()
 							+ '-' + building.getAddress().getLevel()
 							+ '-' + building.getAddress().getUnitNumber()
@@ -175,6 +175,10 @@ public class AddressServiceImpl implements AddressService {
 					building.setFullText(Stream.concat(list1.stream(), unique.stream()).map(blo -> blo).collect(Collectors.joining("-")));
 				} else {
 					building.setFullText1(building);
+				}
+				if (buildingUnit != null) {
+					buildingUnit.setFullText1(buildingUnit);
+					buildingUnitRepository.save(buildingUnit);
 				}
 				buildingRepository.save(building);
 			}
@@ -283,6 +287,17 @@ public class AddressServiceImpl implements AddressService {
 			blockRepository.flush();
 			fl.setBlock(block);
 			floorLevelRepository.save(fl);
+		});
+		buildingUnitRepository.findAll()
+		.forEach(bu -> {
+			if (StringUtils.isBlank(bu.getFullText())) {
+				try {
+					bu.setFullText1(bu);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				buildingUnitRepository.save(bu);				
+			}
 		});
 	}
 	

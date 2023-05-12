@@ -169,7 +169,7 @@ public class BuildingServiceImpl implements BuildingService {
 		if (StringUtils.isNotBlank(search)) {
 			for (String it : search.split(" *[,&] *")) {
 				if ((exportCsv || detailUnit)) {
-					sqlBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%' or bu.remark like '%" + it.trim().toLowerCase() + "%')");
+					sqlBuilder.append(" and (bu.full_text like '%" + it.trim().toLowerCase() + "%')");
 				} else {
 					sqlBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%')");					
 				}
@@ -217,7 +217,11 @@ public class BuildingServiceImpl implements BuildingService {
 		}
 		if (StringUtils.isNotBlank(search)) {
 			for (String it : search.split(" *[,&] *")) {
-				sqlCountBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%')");	
+				if ((exportCsv || detailUnit)) {
+					sqlCountBuilder.append(" and (bu.full_text like '%" + it.trim().toLowerCase() + "%')");
+				} else {
+					sqlCountBuilder.append(" and (b.full_text like '%" + it.trim().toLowerCase() + "%')");					
+				}
 			}
 		}
 		
