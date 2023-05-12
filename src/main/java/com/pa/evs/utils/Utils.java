@@ -55,9 +55,17 @@ public class Utils {
         	}
         	
         	if (caRqlog.getBuildingUnit() != null && caRqlog.getFloorLevel() != null) {
-        		address.append(caRqlog.getFloorLevel().getLevel()).append("-").append(caRqlog.getBuildingUnit().getUnit()).append(" ");
+        		String fName = caRqlog.getFloorLevel().getName();
+        		if (fName == null) {
+        			fName = caRqlog.getFloorLevel().getLevel();
+        		}
+        		String uName = caRqlog.getBuildingUnit().getName();
+        		if (uName == null) {
+        			uName = caRqlog.getBuildingUnit().getUnit();
+        		}
+        		address.append(fName).append("-").append(uName).append(" ");
         	} else if (caRqlog.getFloorLevel() != null) {
-        		address.append(caRqlog.getFloorLevel().getLevel()).append(" ");
+        		address.append(caRqlog.getFloorLevel().getName()).append(" ");
         	}
         	
             address.append(caRqlog.getBuilding().getName()).append(", ")

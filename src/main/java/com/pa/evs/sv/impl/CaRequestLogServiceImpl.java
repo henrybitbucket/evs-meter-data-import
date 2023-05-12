@@ -304,6 +304,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Boolean allDate = BooleanUtils.toBoolean((String) options.get("queryAllDate"));
             
             String queryBuilding = (String) options.get("queryBuilding");
+            String queryBlock = (String) options.get("queryBlock");
             String queryFloorLevel = (String) options.get("queryFloorLevel");
             String queryBuildingUnit = (String) options.get("queryBuildingUnit");
             String queryPostalCode = (String) options.get("queryPostalCode");
@@ -414,6 +415,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             
             if (StringUtils.isNotBlank(queryBuilding)) {
                 sqlCommonBuilder.append(" building.id= '" + queryBuilding + "' AND ");
+            }
+            if (StringUtils.isNotBlank(queryBlock)) {
+                sqlCommonBuilder.append(" block.id= '" + queryBlock + "' AND ");
             }
             if (StringUtils.isNotBlank(queryFloorLevel)) {
                 sqlCommonBuilder.append(" floorLevel.id= '" + queryFloorLevel + "' AND ");
