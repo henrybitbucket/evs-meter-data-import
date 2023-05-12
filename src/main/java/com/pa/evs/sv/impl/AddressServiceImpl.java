@@ -158,6 +158,7 @@ public class AddressServiceImpl implements AddressService {
 				String str1 = building.getFullText();
 				if (StringUtils.isNotBlank(str1)) {
 					String str2 = building.getName() 
+							+ '-' + a.getRemark()
 							+ '-' + building.getAddress().getBlock()
 							+ '-' + building.getAddress().getLevel()
 							+ '-' + building.getAddress().getUnitNumber()
@@ -265,8 +266,7 @@ public class AddressServiceImpl implements AddressService {
 
 			if (dto != null && StringUtils.isBlank(dto.getPostalCode())) {
 				dto.setMessage("postalCode is required");
-			} else if (dto != null && StringUtils.isBlank(dto.getCity()))
-			if (dto != null && StringUtils.isNotBlank(dto.getUnitNumber()) && StringUtils.isNotBlank(dto.getPostalCode()) && StringUtils.isNotBlank(dto.getCity())) {
+			} else if (dto != null && StringUtils.isBlank(dto.getCity())) {
 				dto.setMessage("city is required");
 			}
 		}
