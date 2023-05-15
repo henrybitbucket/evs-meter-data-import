@@ -64,7 +64,6 @@ import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.TimeZoneHolder;
-import com.pa.evs.utils.ZipUtils;
 
 @RestController
 public class CommonController {
@@ -549,10 +548,11 @@ public class CommonController {
     @PostMapping("/api/address/upload")
     public ResponseEntity<Object> updateAddress(
             HttpServletRequest httpServletRequest,
+            @RequestParam String importType,
             @RequestParam(value = "file") final MultipartFile file, HttpServletResponse response) throws Exception {
         
         try {
-        	File csv = CsvUtils.writeImportAddressCsv(addressService.handleUpload(file), "import_result_" + System.currentTimeMillis() + ".csv");
+        	File csv = CsvUtils.writeImportAddressCsv(addressService.handleUpload(file, importType), importType, "import_result_" + System.currentTimeMillis() + ".csv");
             String fileName = file.getName();
             
             try (FileInputStream fis = new FileInputStream(csv)) {
@@ -569,17 +569,6 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
-    }
-    
-    @GetMapping("/api/address/test-upload")
-    public Object testupdateAddress(
-            HttpServletRequest httpServletRequest) throws Exception {
-        
-        try {
-            addressService.handleUpload(null);
-        } catch (Exception e) {
-        }
-        return "OK";
     }
     
 	@PostConstruct

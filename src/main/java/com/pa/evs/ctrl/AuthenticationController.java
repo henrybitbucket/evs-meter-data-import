@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +29,7 @@ import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
+import com.pa.evs.dto.PlatformUserLoginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
@@ -55,8 +57,12 @@ public class AuthenticationController {
     ApplicationContext applicationContext;
 
     @PostMapping(value = {RestPath.LOGIN1, RestPath.LOGIN})
-    public ResponseDto<LoginResponseDto> createAuthenticationToken(@RequestBody LoginRequestDto loginRequestDTO) {
-        return authenticationService.login(loginRequestDTO);
+    public ResponseDto<? extends Object> createAuthenticationToken(@RequestBody LoginRequestDto loginRequestDTO) {
+        try {
+        	return authenticationService.login(loginRequestDTO);
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
     }
 
     @PostMapping(value = {RestPath.USERS})
@@ -81,6 +87,24 @@ public class AuthenticationController {
     public Object getRoleOfUser(@RequestBody PaginDto<RoleDto> pagin) {
         authenticationService.getRoleOfUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
+    @Secured(value = "SUPER_ADMIN")
+    @GetMapping(value = {RestPath.USERPLATFORM})
+    public Object getPfOfUser(@RequestParam(required = true) String email) {
+        Object pfs = authenticationService.getPfOfUser(email);
+        return ResponseDto.<Object>builder().success(true).response(pfs).build();
+    }
+    
+    @Secured(value = "SUPER_ADMIN")
+    @PostMapping(value = {RestPath.USERPLATFORM})
+    public Object savePfOfUser(@RequestBody PlatformUserLoginDto dto) {
+        try {
+        	authenticationService.savePfOfUser(dto);
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
+        return ResponseDto.<Object>builder().success(true).build();
     }
     
     @PostMapping(value = {RestPath.USERGROUP})

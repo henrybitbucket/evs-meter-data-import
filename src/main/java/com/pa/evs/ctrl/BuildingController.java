@@ -52,7 +52,8 @@ public class BuildingController {
 		try {
 			buildingService.search(pagin, search);
 			if ("true".equals(pagin.getOptions().get("exportCSV") + "")) {
-				File file = CsvUtils.writeAddressCsv(pagin.getResults(), "address_" + System.currentTimeMillis() + ".csv");
+				String exportType = (String) pagin.getOptions().get("exportType");
+				File file = CsvUtils.writeAddressCsv(pagin.getResults(), exportType, "address_" + System.currentTimeMillis() + ".csv");
 	            String fileName = file.getName();
 	            
 	            try (FileInputStream fis = new FileInputStream(file)) {

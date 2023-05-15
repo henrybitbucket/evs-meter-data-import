@@ -28,9 +28,8 @@ public class JwtUserDetailsService implements UserDetailsService {
         
         if (user == null) {
             return null;
-        } else {
-        	
-            return JwtUserFactory.create(user);
         }
+        
+        return JwtUserFactory.create(user);
     }
 }

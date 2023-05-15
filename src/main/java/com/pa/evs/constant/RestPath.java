@@ -14,6 +14,7 @@ public interface RestPath {
 	String USERPERMISSION = API + "/user/permission";
 	String USERROLELOGGING = API + "/user/role/logging";
 	String USERROLE = API + "/user/role";
+	String USERPLATFORM = API + "/user/pf";
 	String USERGROUP = API + "/user/group";
 	String EACHUSERPERMISSION = API + "/each-user/permission";
 	String UPDATEROLE = API + "/update/role";

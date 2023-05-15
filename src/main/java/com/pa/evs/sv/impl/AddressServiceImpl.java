@@ -60,7 +60,7 @@ public class AddressServiceImpl implements AddressService {
 	
 	@Override
 	@Transactional
-	public List<AddressDto> handleUpload(MultipartFile file) throws IOException {
+	public List<AddressDto> handleUpload(MultipartFile file, String importType) throws IOException {
 
 		List<AddressDto> dtos = parseCsv(file.getInputStream());
 		updateNullBlock();
@@ -183,39 +183,45 @@ public class AddressServiceImpl implements AddressService {
 				buildingRepository.save(building);
 			}
 
-			String msn = a.getCoupleMsn();
-			if (StringUtils.isNotBlank(a.getCoupleMsn())) {
+			if ("couple-with-msn".equalsIgnoreCase(importType)) {
+				String msn = a.getCoupleMsn();
+				if (StringUtils.isNotBlank(a.getCoupleMsn())) {
 
-				CARequestLog caUnitCoupled = caRequestLogRepository.findByBuildingUnitId(buildingUnit.getId()).orElse(null);
-				
-				if (caUnitCoupled != null && "de-couple".equalsIgnoreCase(msn)) {
-					caUnitCoupled.setBuildingUnit(null);
-					caUnitCoupled.setFloorLevel(null);
-					caUnitCoupled.setBlock(null);
-					caUnitCoupled.setBuilding(null);
-					caUnitCoupled.setAddress(null);
-					caRequestLogRepository.save(caUnitCoupled);
-					return;
-				}
-				
-				if (caUnitCoupled != null && caUnitCoupled.getBuildingUnit() != null && !msn.equalsIgnoreCase(caUnitCoupled.getMsn())) {
-					a.setMessage(Message.ADDRESS_IS_ASSIGNED);
-					return;
-				}
-				
-				CARequestLog ca = msnCA.get(a.getCoupleMsn());
-				if (ca == null) {
-					a.setMessage("Meter SN doe'nt exists!");
-					return;
-				}
+					CARequestLog caUnitCoupled = caRequestLogRepository.findByBuildingUnitId(buildingUnit.getId()).orElse(null);
+					
+					if (caUnitCoupled != null && "de-couple".equalsIgnoreCase(msn)) {
+						caUnitCoupled.setBuildingUnit(null);
+						caUnitCoupled.setFloorLevel(null);
+						caUnitCoupled.setBlock(null);
+						caUnitCoupled.setBuilding(null);
+						caUnitCoupled.setAddress(null);
+						caRequestLogRepository.save(caUnitCoupled);
+						return;
+					}
+					
+					if (caUnitCoupled != null && caUnitCoupled.getBuildingUnit() != null && !msn.equalsIgnoreCase(caUnitCoupled.getMsn())) {
+						a.setMessage(Message.ADDRESS_IS_ASSIGNED);
+						return;
+					}
+					
+					CARequestLog ca = msnCA.get(a.getCoupleMsn());
+					if (ca == null) {
+						a.setMessage("Meter SN doe'nt exists!");
+						return;
+					}
 
-				ca.setBuilding(building);
-				ca.setBlock(block);
-				ca.setFloorLevel(floor);
-				ca.setBuildingUnit(buildingUnit);
-				buildingUnit.setCoupledDate(new Date());
-				buildingUnitRepository.save(buildingUnit);
-				caRequestLogRepository.save(ca);
+					ca.setBuilding(building);
+					ca.setBlock(block);
+					ca.setFloorLevel(floor);
+					if (ca.getBuildingUnit() == null || ca.getBuildingUnit().getId().longValue() != buildingUnit.getId().longValue()) {
+						ca.setBuildingUnit(buildingUnit);
+						buildingUnit.setCoupledDate(new Date());
+					}
+					
+					a.setCoupleTime(buildingUnit.getCoupledDate() == null ? buildingUnit.getCreateDate() : buildingUnit.getCoupledDate());
+					buildingUnitRepository.save(buildingUnit);
+					caRequestLogRepository.save(ca);
+				}
 			}
 		});
 		

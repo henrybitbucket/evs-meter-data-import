@@ -9,6 +9,6 @@ import com.pa.evs.dto.AddressDto;
 
 public interface AddressService {
 
-	List<AddressDto> handleUpload(MultipartFile file) throws IOException;
+	List<AddressDto> handleUpload(MultipartFile file, String importType) throws IOException;
 
 }

@@ -32,6 +32,8 @@ public class CsvUtils {
     private static final Logger logger = LoggerFactory.getLogger(CsvUtils.class);
     public static final String EXPORT_TEMP = System.getProperty("user.home") + '/' + "ca-request-log";
     
+    private static final ThreadLocal<String> KEY_PASS = new ThreadLocal<>();
+    
     static {
         try {
             Files.createDirectories(Paths.get(EXPORT_TEMP));
@@ -48,23 +50,42 @@ public class CsvUtils {
     }
     
     // ID (Key),Building,Block,Level,Unit,Postcode,,Street Address,State.City,Coupled,UpdatedTime,Remark
-    public static File writeAddressCsv(List<BuildingDto> listInput, String fileName) throws IOException{
+    public static File writeAddressCsv(List<BuildingDto> listInput, String exportType, String fileName) throws IOException{
         List<String> headers = Arrays.asList(
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled", "UpdatedTime", "Remark");
         headers = Arrays.asList(
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled Meter No.", "Coupled MCU SN");
+
         headers = Arrays.stream(AppProps.get(SettingService.EXPORT_ADDRESS_HEADER).trim().split(" *, *")).collect(Collectors.toList());
-        return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
+        if ("address-only".equalsIgnoreCase(exportType)) {
+        	headers = Arrays.stream("Building,Block,Level,Unit,Postcode,Street Address,State.City,UpdatedTime,Remark".trim().split(" *, *")).collect(Collectors.toList());
+        }
+        
+        try {
+        	KEY_PASS.set(exportType);
+        	return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
+		} finally {
+			KEY_PASS.remove();
+		}
     }
     
-    public static File writeImportAddressCsv(List<AddressDto> listInput, String fileName) throws IOException{
+    public static File writeImportAddressCsv(List<AddressDto> listInput, String exportType, String fileName) throws IOException{
         List<String> headers = Arrays.asList(
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled", "UpdatedTime", "Remark");
         headers = Arrays.asList(
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled Meter No.", "Coupled MCU SN");
         headers = Arrays.stream(AppProps.get(SettingService.EXPORT_ADDRESS_HEADER).trim().split(" *, *")).collect(Collectors.toList());
+        if ("address-only".equalsIgnoreCase(exportType)) {
+        	headers = Arrays.stream("Building,Block,Level,Unit,Postcode,Street Address,State.City,UpdatedTime,Remark".trim().split(" *, *")).collect(Collectors.toList());
+        }
         headers.add("Message");
-        return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
+        try {
+        	KEY_PASS.set(exportType);
+        	return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), null);
+		} finally {
+			KEY_PASS.remove();
+		}
+        
     }
     
     
@@ -102,8 +123,12 @@ public class CsvUtils {
         record.add(log.getAddress().getPostalCode());
         record.add(log.getAddress().getStreet());
         record.add(log.getAddress().getCity());
-        record.add(log.getAddress().getCoupleMsn());
-        record.add(log.getAddress().getCoupleSn());
+        
+        if (!"address-only".equalsIgnoreCase(KEY_PASS.get())) {
+            record.add(log.getAddress().getCoupleMsn());
+            record.add(log.getAddress().getCoupleSn());        	
+        }
+
         record.add(log.getAddress().getCoupleTime() != null ? sdf.format(log.getAddress().getCoupleTime()) : "");
         record.add(log.getAddress().getRemark());
         return postProcessCsv(record);
@@ -120,8 +145,12 @@ public class CsvUtils {
         record.add(log.getPostalCode());
         record.add(log.getStreet());
         record.add(log.getCity());
-        record.add(log.getCoupleMsn());
-        record.add(log.getCoupleSn());
+
+        if (!"address-only".equalsIgnoreCase(KEY_PASS.get())) {
+            record.add(log.getCoupleMsn());
+            record.add(log.getCoupleSn());      	
+        }
+        
         record.add(log.getCoupleTime() != null ? sdf.format(log.getCoupleTime()) : "");
         record.add(log.getRemark());
         record.add(StringUtils.isBlank(log.getMessage()) ? "success" : log.getMessage());

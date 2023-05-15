@@ -2,6 +2,7 @@ package com.pa.evs.sv.impl;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,13 +43,16 @@ import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
+import com.pa.evs.dto.PlatformUserLoginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
+import com.pa.evs.exception.ApiException;
 import com.pa.evs.exception.customException.AuthenticationException;
 import com.pa.evs.exception.customException.DuplicateUserException;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.Permission;
+import com.pa.evs.model.PlatformUserLogin;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.RolePermission;
 import com.pa.evs.model.UserGroup;
@@ -57,6 +61,7 @@ import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.PermissionRepository;
+import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.repository.RolePermissionRepository;
 import com.pa.evs.repository.RoleRepository;
 import com.pa.evs.repository.UserGroupRepository;
@@ -100,6 +105,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Autowired
 	private UserPermissionRepository userPermissionRepository;
+	
+	@Autowired
+	private PlatformUserLoginRepository platformUserLoginRepository;
 
 	@Autowired
 	AuthorityService authorityService;
@@ -121,7 +129,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Autowired
 	EntityManager em;
-
+	
 	@Value("${jwt.header}")
 	private String tokenHeader;
 
@@ -146,7 +154,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 
 		// Reload password post-security so we can generate the token
-		final UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+		final JwtUser userDetails = (JwtUser) userDetailsService.loadUserByUsername(email);
+		
+		PlatformUserLoginDto pf = this.getPfOfUser(userDetails.getEmail())
+				.stream()
+				.filter(it -> it.getName().equals(StringUtils.isBlank(loginRequestDTO.getPf()) ? "OTHER" : loginRequestDTO.getPf()))
+				.findFirst()
+				.orElse(null);
+		
+		if (pf == null || pf.getActive() != Boolean.TRUE 
+				|| pf.getStartTime() == null 
+				|| pf.getEndTime() == null 
+				|| pf.getStartTime() > System.currentTimeMillis() 
+				|| pf.getEndTime() < System.currentTimeMillis()) {
+			throw new AuthenticationException(Message.USER_IS_DISABLE, new RuntimeException(Message.USER_IS_DISABLE));
+		}
+		
 		final String token = jwtTokenUtil.generateToken(userDetails);
 		this.updateLastLogin(email);
 		this.loadRoleAndPermission();
@@ -905,5 +928,44 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				}
 			}
 		}
+	}
+
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Override
+	public List<PlatformUserLoginDto> getPfOfUser(String email) {
+		
+		List<PlatformUserLogin> pfs = platformUserLoginRepository.findByEmail(email);
+		if (pfs.isEmpty()) {
+			Calendar c = Calendar.getInstance();
+			c.add(Calendar.YEAR, 1);
+			pfs.add(platformUserLoginRepository.save(PlatformUserLogin.builder().active(true).email(email).name("MOBILE").startTime(System.currentTimeMillis()).endTime(c.getTimeInMillis()).build()));
+			c.add(Calendar.YEAR, 99);
+			pfs.add(platformUserLoginRepository.save(PlatformUserLogin.builder().active(true).email(email).name("OTHER").startTime(System.currentTimeMillis()).endTime(c.getTimeInMillis()).build()));
+		}
+		return pfs
+				.stream()
+				.map(pf -> PlatformUserLoginDto.builder()
+						.id(pf.getId())
+						.active(pf.getActive())
+						.name(pf.getName())
+						.description(pf.getDescription())
+						.email(pf.getEmail())
+						.startTime(pf.getStartTime())
+						.endTime(pf.getEndTime())
+						.build())
+				.collect(Collectors.toList());
+	}
+
+	@Transactional
+	@Override
+	public void savePfOfUser(PlatformUserLoginDto dto) {
+		PlatformUserLogin pf = platformUserLoginRepository.findByEmailAndName(dto.getEmail(), dto.getName());
+		if (pf == null) {
+			throw new ApiException("user notfound!");
+		}
+		pf.setStartTime(dto.getStartTime());
+		pf.setEndTime(dto.getEndTime());
+		pf.setActive(dto.getActive() == null ? true : dto.getActive());
+		platformUserLoginRepository.save(pf);
 	}
 }

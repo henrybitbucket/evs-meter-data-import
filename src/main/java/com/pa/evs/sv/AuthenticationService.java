@@ -1,5 +1,7 @@
 package com.pa.evs.sv;
 
+import java.util.List;
+
 import javax.servlet.http.HttpServletRequest;
 
 import com.pa.evs.dto.GroupUserDto;
@@ -7,6 +9,7 @@ import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
+import com.pa.evs.dto.PlatformUserLoginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
@@ -31,4 +34,6 @@ public interface AuthenticationService {
 	void getGroupOfUser(PaginDto<GroupUserDto> pagin);
 	void getPermissionsEachUser(PaginDto<PermissionDto> pagin);
 	void removeUserById(Long userId);
+	List<PlatformUserLoginDto> getPfOfUser(String email);
+	void savePfOfUser(PlatformUserLoginDto dto);
 }
