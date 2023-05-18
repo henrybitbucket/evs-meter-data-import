@@ -1,5 +1,6 @@
 package com.pa.evs.sv.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -15,7 +16,9 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,6 +27,11 @@ import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.CRC32;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
@@ -84,6 +92,7 @@ import com.pa.evs.model.Pi;
 import com.pa.evs.model.PiLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
+import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.GroupTaskRepository;
 import com.pa.evs.repository.LogBatchGroupTaskRepository;
@@ -95,6 +104,7 @@ import com.pa.evs.repository.PiLogRepository;
 import com.pa.evs.repository.PiRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
 import com.pa.evs.repository.UserRepository;
+import com.pa.evs.repository.VendorRepository;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
@@ -152,6 +162,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired private ScreenMonitoringRepository screenMonitoringRepository;
 	
     @Autowired private UserRepository userRepository;
+    
+    @Autowired private VendorRepository vendorRepository;
 	
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
 	
@@ -198,9 +210,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private AmazonS3Client s3Client = null;
 	
 	@Override
-	public void uploadDeviceCsr(MultipartFile file) {
+	public void uploadDeviceCsr(MultipartFile file, Long vendor) {
 		
-		File f = new File(evsDataFolder + "/" + file.getOriginalFilename());
+		File f = new File(evsDataFolder + "/" + vendor + "-" + file.getOriginalFilename());
 		try {
 			Files.deleteIfExists(f.toPath());
 			Files.createFile(f.toPath());
@@ -481,15 +493,21 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	private void handleINFRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
 		// chua validate resp signature
+		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+		
 		if (status == 0) {
 			Map<String, Object> payload1 = (Map<String, Object>) data.get("payload");
 			Map<String, Object> data1 = (Map<String, Object>) payload1.get("data");
-			if (firmwareService.getLatestFirmware().getVersion().equals(data1.get("ver"))) {
-				status = -1;
+			
+			if (opt.isPresent()) {
+				Long vendor = opt.get().getVendor().getId();
+				if (firmwareService.getLatestFirmware().get(vendor).getVersion().equals(data1.get("ver"))) {
+					status = -1;
+				}
+				LOG.debug("handleINFRes - vendor: {}, firmware: {}", vendor, firmwareService.getLatestFirmware().get(vendor));
 			}
 			if (data1.get("ver") != null) {
 				LOG.debug("handleINFRes saving resp");
-				Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 				if (opt.isPresent()) {
 					opt.get().setVer(data1.get("ver") + "");
 					if (data1.get("rdti") != null) {
@@ -515,7 +533,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (status == 0) {
 			LOG.debug("sleep 15s");
 			TimeUnit.SECONDS.sleep(15);
-			String urlS3 = getS3URL(firmwareService.getLatestFirmware().getFileName());
+			String urlS3 = "";
+			Map<String, Object> mapPl = new LinkedHashMap<>();
+			if (opt.isPresent()) {
+				Long vendor = opt.get().getVendor().getId();
+				urlS3 = getS3URL(vendor, firmwareService.getLatestFirmware().get(vendor).getFileName());
+				mapPl.put("ver", firmwareService.getLatestFirmware().get(vendor).getVersion());
+				mapPl.put("hash", firmwareService.getLatestFirmware().get(vendor).getHashCode());
+				mapPl.put("url", urlS3);
+				LOG.debug("handleINFRes - vendor: {}, firmware: {}", vendor, firmwareService.getLatestFirmware().get(vendor));
+			}
+			
 			if (log.getMid() == null) {
 				log.setMid(nextvalMID());
 			}
@@ -532,21 +560,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
-			payload.put("p1", SimpleMap.init("ver", firmwareService.getLatestFirmware().getVersion()).more("hash",
-					firmwareService.getLatestFirmware().getHashCode()).more("url", urlS3));
+			payload.put("p1", mapPl);
 			
 			header.put("sig", RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload)));
 			publish(alias + log.getUid(), data, type);
 
 			//update last OTA time
-			Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 			if (opt.isPresent()) {
 				opt.get().setIsOta(true);
 				opt.get().setLastOtaDate(Calendar.getInstance().getTimeInMillis());
 				caRequestLogRepository.save(opt.get());
 			}
 			localMap.getOtaMap().put(log.getMid(), Calendar.getInstance().getTimeInMillis());
-
 		}
 	}
 	
@@ -934,7 +959,39 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if (fs == null) return;
 			for (File f : fs) {
 				if (f.exists() && f.isFile() && f.getName().endsWith(".zip")) {
-					ZipUtils.unzip(f.getAbsolutePath(), evsDataFolder + "/IN_CSR");
+					File tempFile = null;
+					try {
+						tempFile = File.createTempFile("temp", ".zip");
+					} catch (IOException e2) {
+						e2.printStackTrace();
+					}
+					String name = f.getName();
+					String vendor = name.substring(0, name.indexOf("-"));
+					
+					try (ZipFile zipFile = new ZipFile(f.getAbsolutePath())) {
+					    Enumeration<? extends ZipEntry> entries = zipFile.entries();
+					    try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(tempFile.getAbsolutePath()))) {
+					        while (entries.hasMoreElements()) {
+					            ZipEntry entry = entries.nextElement();
+					            String currentName = entry.getName();
+					            ZipEntry newEntry = new ZipEntry(vendor + "-" + currentName);
+				                InputStream in = zipFile.getInputStream(entry);
+				                out.putNextEntry(newEntry);
+				                byte[] buffer = new byte[1024];
+				                int len;
+				                while ((len = in.read(buffer)) > 0) {
+				                    out.write(buffer, 0, len);
+				                }
+				                in.close();
+					        }
+					    } catch (IOException e) {
+							e.printStackTrace();
+						}
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+					
+					ZipUtils.unzip(tempFile.getAbsolutePath(), evsDataFolder + "/IN_CSR");
 					File out = new File(evsDataFolder + "/OUT_CSR/" + f.getName() + '.' + System.currentTimeMillis());
 					f.renameTo(out);
 				}
@@ -946,7 +1003,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if (f.listFiles() == null) return;
 			for (File ful : f.listFiles()) {
 				if (ful.isFile() && ful.getName().endsWith(".csv")) {
-					try {
+					String name = ful.getName();						
+					Long vId = Long.parseLong(name.substring(0, name.indexOf("-")));
+					Optional<Vendor> vendorOpt = vendorRepository.findById(vId);
+					
+					if (!vendorOpt.isPresent()) {
+						continue;
+					}
+					try {						
 						String[] lines = new String(Files.readAllBytes(ful.toPath()), StandardCharsets.UTF_8).split("\r*\n");
 						for (int i = 1; i < lines.length; i++) {
 							String[] details = lines[i].split(" *, *");
@@ -958,6 +1022,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 								caLog.setSn(details[0]);
 								caLog.setCid(details[2]);
 								caLog.setRequireRefresh(false);
+								caLog.setVendor(vendorOpt.get());
 								caRequestLogRepository.save(caLog);
 							}
 						}
@@ -968,6 +1033,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 					
 				}
 				if (ful.isFile() && ful.getName().endsWith(".csr")) {
+					String name = ful.getName();						
+					Long vId = Long.parseLong(name.substring(0, name.indexOf("-")));
+					Optional<Vendor> vendorOpt = vendorRepository.findById(vId);
+					
+					if (!vendorOpt.isPresent()) {
+						continue;
+					}
 					try {
 						String uuid = ful.getName().replaceAll("\\.csr$", "");
 						Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
@@ -983,6 +1055,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 						caLog.setType(DeviceType.NOT_COUPLED);
 						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
 						caLog.setRequireRefresh(false);
+						caLog.setVendor(vendorOpt.get());
 						caRequestLogRepository.save(caLog);
 						File out = new File(ful.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));
 						Files.deleteIfExists(out.toPath());
@@ -1100,12 +1173,15 @@ public class EVSPAServiceImpl implements EVSPAService {
         s3Client.setRegion(Region.getRegion(Regions.AP_SOUTHEAST_1));
 	}
 	
-	public String getS3URL(String objectKey) {
+	public String getS3URL(Long vendor, String objectKey) {
 		if (fakeS3Url) {
 			LOG.debug("Using fake s3 url");
 			return "http://gridhutautomation.com/pa-meter-2.bin";
 		}
-		String bcName = bucketName + "/" + firmwareService.getLatestFirmware().getVersion() + "/" + objectKey;
+		if (vendor == null) {
+			vendor = 1l; //Default vendor
+		}
+		String bcName = bucketName + "/" + firmwareService.getLatestFirmware().get(vendor).getVersion() + "/" + objectKey;
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		CMD.exec("/usr/local/aws/bin/aws s3 presign s3://" + bcName + " --expires-in " + (60 * expireTime), null, bos);
 		String rs = new String(bos.toByteArray(), StandardCharsets.UTF_8).replaceAll("[\n\r]", "");
@@ -1198,7 +1274,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.info("1 -> " + new String(mqttMessage.getPayload()));
 			return null;
 		});*/
-		
+
 		//String json = "{\"header\":{\"mid\":1001,\"uid\":\"BIERWXAABMAB2AEBAA\",\"gid\":\"BIERWXAAA4AFBABABXX\",\"msn\":\"201906000032\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"id\":\"BIERWXAABMAB2AEBAA\",\"type\":\"OBR\",\"data\":\"201906000137\"}}";
 		//Mqtt.publish("dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
 		//Mqtt.publish("dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
@@ -1232,7 +1308,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		sf.setTimeZone(UTC);
 		sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 		Date newDate = sf.parse("2021-07-07T13:44:25Z");
-		
+
 		Calendar c = Calendar.getInstance();
 		c.setTime(newDate);
 

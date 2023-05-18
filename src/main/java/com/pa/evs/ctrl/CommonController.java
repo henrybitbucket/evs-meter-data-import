@@ -58,6 +58,7 @@ import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.GroupService;
 import com.pa.evs.sv.LogService;
+import com.pa.evs.sv.VendorService;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.RSAUtil;
@@ -96,6 +97,8 @@ public class CommonController {
 	private String caFolder;
 
     @Autowired LocalMapStorage localMap;
+    
+    @Autowired VendorService vendorService;
 	
 	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
@@ -244,16 +247,17 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
-    @PostMapping("/api/firm-ware/upload/{version}/{hashCode}")
+    @PostMapping("/api/firm-ware/upload/{version}/{hashCode}/{vendor}")
     public ResponseEntity<Object> uploadFirmware(
             HttpServletRequest httpServletRequest,
             @PathVariable final String version,
             @PathVariable final String hashCode,
+            @PathVariable final Long vendor,
             @RequestParam(value = "file") final MultipartFile file) throws Exception {
         
         try {
 
-            firmwareService.upload(version, hashCode, file);
+            firmwareService.upload(version, hashCode, vendor, file);
             evsPAService.upload(file.getOriginalFilename(), version, hashCode, file.getInputStream());
             
         } catch (Exception e) {
@@ -262,7 +266,7 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
-    @PutMapping("/api/firm-ware/upload/{id}/{version}/{hashCode}")
+    @PutMapping("/api/firm-ware/upload/{id}/{version}/{hashCode}/{vendor}")
     public ResponseEntity<Object> editFirmware(
             HttpServletRequest httpServletRequest,
             @PathVariable final Long id,
@@ -297,13 +301,14 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
 
-    @PostMapping("/api/device-csr/upload")
+    @PostMapping("/api/device-csr/upload/{vendor}")
     public ResponseEntity<Object> uploadDeviceCsr(
             HttpServletRequest httpServletRequest,
+            @PathVariable final Long vendor,
             @RequestParam(value = "file") final MultipartFile file) throws Exception {
 
         try {
-            evsPAService.uploadDeviceCsr(file);
+            evsPAService.uploadDeviceCsr(file, vendor);
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
@@ -571,6 +576,11 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
+    @GetMapping("/api/vendors")
+    public ResponseEntity<Object> getVendors(HttpServletRequest httpServletRequest) throws Exception {
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(vendorService.getVendors()).success(true).build());
+    }
+    
 	@PostConstruct
 	public void init() {
 		
@@ -593,7 +603,7 @@ public class CommonController {
 		if (!CMD.isWindow()) {
 			CMD.exec("cd " + caFolder + " && sh aw-install.sh", null);
 	        try {
-	        	LOG.info("Test get S3 {}", evsPAService.getS3URL("pa-meter-2.bin"));
+	        	LOG.info("Test get S3 {}", evsPAService.getS3URL(null, "pa-meter-2.bin"));
 			} catch (Exception e) {
 				LOG.error(e.getMessage(), e);
 			}

@@ -8,6 +8,7 @@ import java.util.Set;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import com.pa.evs.enums.DeviceType;
 import com.pa.evs.model.CARequestLog;
 
 @Transactional
+@Repository
 public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long> {
 
 	Optional<CARequestLog> findByUid(String uid);
@@ -91,4 +93,8 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
     
     @Query(value = "SELECT * from {h-schema}ca_request_log where building_id = ?1 and floor_level_id is null and building_unit_id is null", nativeQuery = true)
 	List<CARequestLog> findByBuilding(Long buildingId);
+    
+	@Modifying
+	@Query(value = "update {h-schema}ca_request_log set vendor_id = 1 where vendor_id is null", nativeQuery = true)
+	void updateVendor();
 }

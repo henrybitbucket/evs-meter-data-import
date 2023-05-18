@@ -24,4 +24,6 @@ public class FirmwareDto {
     private byte[] file;
     
     private String fileName;
+    
+    private VendorDto vendor;
 }

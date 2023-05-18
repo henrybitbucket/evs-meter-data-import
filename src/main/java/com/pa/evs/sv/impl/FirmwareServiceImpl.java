@@ -1,8 +1,9 @@
 package com.pa.evs.sv.impl;
 
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.annotation.PostConstruct;
@@ -19,8 +20,11 @@ import org.springframework.web.multipart.MultipartFile;
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.FirmwareDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.VendorDto;
 import com.pa.evs.model.Firmware;
+import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.FirmwareRepository;
+import com.pa.evs.repository.VendorRepository;
 import com.pa.evs.sv.FirmwareService;
 
 @Service
@@ -33,8 +37,11 @@ public class FirmwareServiceImpl implements FirmwareService {
     
     @Autowired
     private EntityManager em;
+    
+    @Autowired
+    private VendorRepository vendorRepository;
 
-    private Firmware cache = null;
+    private Map<Long, Firmware> cache = null;
 
     @Value("${evs.pa.firmware.version}")
     private String firmwareVersion;
@@ -47,23 +54,36 @@ public class FirmwareServiceImpl implements FirmwareService {
     
     @PostConstruct
     public void init() {
-        cache = firmwareRepository.findTopByOrderByIdDesc();
+    	List<Firmware> firmware = firmwareRepository.findTopByVendorOrderByIdDesc();
         if (cache == null) {
-            cache = new Firmware();
-            cache.setVersion(firmwareVersion);
-            cache.setFileName(firmwareObjectKey);
-            cache.setHashCode(firmwareHash);
+        	cache = new LinkedHashMap<>();
+        	firmware.forEach(fw -> {
+            	cache.put(fw.getVendor().getId(), fw);
+            });
         }
+        firmwareRepository.updateVendor();
     }
 
     @Override
-    public void upload(String version, String hashCode, MultipartFile file) throws IOException {
+    public void upload(String version, String hashCode, Long vendor, MultipartFile file) throws Exception {
         Firmware entity = new Firmware();
         entity.setVersion(version);
         entity.setHashCode(hashCode);
         entity.setFileName(file.getOriginalFilename());
+        
+        Optional<Vendor> vendorOpt = vendorRepository.findById(vendor);
+        
+        if (!vendorOpt.isPresent()) {
+        	throw new Exception(Message.VENDOR_NOT_FOUND);
+        }
+        
+        entity.setVendor(vendorOpt.get());
+        
         firmwareRepository.save(entity);
-        cache = firmwareRepository.findTopByOrderByIdDesc();
+        List<Firmware> firmware = firmwareRepository.findTopByVendorOrderByIdDesc();
+        firmware.forEach(fw -> {
+        	cache.put(fw.getVendor().getId(), fw);
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -106,6 +126,7 @@ public class FirmwareServiceImpl implements FirmwareService {
                     .version(li.getVersion())
                     .hashCode(li.getHashCode())
                     .fileName(li.getFileName())
+                    .vendor(new VendorDto(li.getVendor()))
                     .build();
             pagin.getResults().add(dto);
         });
@@ -134,7 +155,7 @@ public class FirmwareServiceImpl implements FirmwareService {
     }
 
     @Override
-    public Firmware getLatestFirmware() {
+    public Map<Long, Firmware> getLatestFirmware() {
         return cache;
     }
 

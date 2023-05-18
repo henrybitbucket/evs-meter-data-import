@@ -2,6 +2,8 @@ package com.pa.evs.model;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import lombok.AllArgsConstructor;
@@ -27,5 +29,9 @@ public class Firmware extends BaseEntity{
     
     @Column(name = "file_name")
     private String fileName;
+    
+	@ManyToOne
+	@JoinColumn(name = "vendor_id")
+	private Vendor vendor;
     
 }

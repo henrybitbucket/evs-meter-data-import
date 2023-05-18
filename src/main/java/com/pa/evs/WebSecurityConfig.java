@@ -87,7 +87,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/api/firm-ware/upload/**").permitAll()
 				.antMatchers("/api/firm-wares**").permitAll()
 				.antMatchers("/api/firm-ware**").permitAll()
-				.antMatchers("/api/device-csr/upload").permitAll()
+				.antMatchers("/api/device-csr/upload/**").permitAll()
 				.antMatchers("/api/meter/logs").permitAll()
 				.antMatchers("/api//ca-request-logs").permitAll()
 				.antMatchers("/api/device-groups").permitAll()

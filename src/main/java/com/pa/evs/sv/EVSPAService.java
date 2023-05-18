@@ -22,9 +22,9 @@ public interface EVSPAService {
 
     boolean upload(String fileName, String version, String hashCode, InputStream in);
 
-	void uploadDeviceCsr(MultipartFile file);
+	void uploadDeviceCsr(MultipartFile file, Long vendor);
 
-	String getS3URL(String objectKey);
+	String getS3URL(Long vendor, String objectKey);
 
 	void ping(Pi pi, Boolean isEdit, Boolean isFE) throws Exception;
 

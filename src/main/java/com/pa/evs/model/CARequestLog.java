@@ -139,6 +139,10 @@ public class CARequestLog extends BaseEntity {
 	@JoinColumn(name = "group_id")
 	private Group group;
 	
+	@ManyToOne
+	@JoinColumn(name = "vendor_id")
+	private Vendor vendor;
+	
 	@Transient
 	private String profile;
 	
