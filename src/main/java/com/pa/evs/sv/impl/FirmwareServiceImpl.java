@@ -61,7 +61,6 @@ public class FirmwareServiceImpl implements FirmwareService {
             	cache.put(fw.getVendor().getId(), fw);
             });
         }
-        firmwareRepository.updateVendor();
     }
 
     @Override

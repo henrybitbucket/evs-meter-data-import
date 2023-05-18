@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.model.Vendor;
+import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.FirmwareRepository;
 import com.pa.evs.repository.VendorRepository;
 import com.pa.evs.sv.VendorService;
 
@@ -18,15 +20,23 @@ public class VendorServiceIplm implements VendorService {
 
 	@Autowired
 	VendorRepository vendorRepository;
+	
+	@Autowired
+	CARequestLogRepository caRequestLogRepository;
+	
+	@Autowired
+	FirmwareRepository firmwareRepository;
 
 	@PostConstruct
 	public void init() {
-		Vendor vendor = vendorRepository.findTopByOrderByIdDesc();
+		Vendor vendor = vendorRepository.findByName("Default");
 		if (vendor == null) {
 			vendor = new Vendor();
 			vendor.setName("Default");
-			vendorRepository.save(vendor);
+			vendor = vendorRepository.save(vendor);
 		}
+		caRequestLogRepository.updateVendor(vendor.getId());
+		firmwareRepository.updateVendor(vendor.getId());
 	}
 
 	@Override

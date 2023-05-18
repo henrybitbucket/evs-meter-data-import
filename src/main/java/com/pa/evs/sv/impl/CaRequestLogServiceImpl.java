@@ -103,7 +103,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     public void init() {
         LOG.debug("Loading CID into cache");
         cacheCids = caRequestLogRepository.getCids();
-        caRequestLogRepository.updateVendor();
     }
 
 	@Override
