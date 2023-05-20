@@ -42,6 +42,7 @@ import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
+import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.AddressRepository;
 import com.pa.evs.repository.BuildingRepository;
 import com.pa.evs.repository.BuildingUnitRepository;
@@ -51,6 +52,7 @@ import com.pa.evs.repository.GroupRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
 import com.pa.evs.repository.UserRepository;
+import com.pa.evs.repository.VendorRepository;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
@@ -90,6 +92,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 
 	@Autowired
 	LogRepository logRepository;
+	
+	@Autowired
+	private VendorRepository vendorRepository;
 	
 	@Autowired
 	EntityManager em;
@@ -251,6 +256,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         } else {
             ca.setGroup(null);
         }
+        if (dto.getVendor() != null) {
+            Optional<Vendor> vendorOpt = vendorRepository.findById(dto.getVendor().longValue());
+            if (vendorOpt.isPresent()) {
+                ca.setVendor(vendorOpt.get());
+            }
+        } else {
+            ca.setVendor(null);
+        }
         
         
         // status, type
@@ -308,6 +321,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             String queryFloorLevel = (String) options.get("queryFloorLevel");
             String queryBuildingUnit = (String) options.get("queryBuildingUnit");
             String queryPostalCode = (String) options.get("queryPostalCode");
+            Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor")) ? Long.parseLong((String) options.get("queryVendor")) : null;
             
             sqlCommonBuilder.append(" WHERE     ");
             
@@ -412,7 +426,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (queryGroup != null) {
                 sqlCommonBuilder.append(" group = " + queryGroup + " AND ");
             }
-            
             if (StringUtils.isNotBlank(queryBuilding)) {
                 sqlCommonBuilder.append(" building.id= '" + queryBuilding + "' AND ");
             }
@@ -428,6 +441,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (StringUtils.isNotBlank(queryPostalCode)) {
                 sqlCommonBuilder.append(" ((exists (select 1 from Building bd where bd.id = ca.building.id and upper(bd.address.postalCode) = '" + queryPostalCode.toUpperCase() + "') ");
                 sqlCommonBuilder.append(" or (exists (select 1 FROM Address add1 where add1.id = ca.address.id and upper(add1.postalCode) = '" + queryPostalCode.toUpperCase() + "') ))) AND ");
+            }
+            if (queryVendor != null) {
+                sqlCommonBuilder.append(" vendor.id = " + queryVendor + " AND ");
             }
             
             sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());

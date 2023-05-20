@@ -64,6 +64,8 @@ public class CaRequestLogDto {
     
     private AddressDto address;
     
+    private Long vendor;
+    
     @Builder.Default
     private Boolean unCoupleAddress = false;
 }
