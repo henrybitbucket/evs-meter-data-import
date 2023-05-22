@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -199,15 +200,39 @@ public class AddressServiceImpl implements AddressService {
 						return;
 					}
 					
-					if (caUnitCoupled != null && caUnitCoupled.getBuildingUnit() != null && !msn.equalsIgnoreCase(caUnitCoupled.getMsn())) {
+					if (caUnitCoupled != null && caUnitCoupled.getBuildingUnit() != null) {
 						a.setMessage(Message.ADDRESS_IS_ASSIGNED);
 						return;
 					}
 					
 					CARequestLog ca = msnCA.get(a.getCoupleMsn());
 					if (ca == null) {
-						a.setMessage("Meter SN doe'nt exists!");
+						a.setMessage("Meter SN doesn't exists!");
 						return;
+					}
+					
+					if (StringUtils.isNotBlank(a.getCoupleSn()) && !ca.getSn().equalsIgnoreCase(a.getCoupleSn())) {
+						Optional<CARequestLog> caBySnOpt = caRequestLogRepository.findBySn(a.getCoupleSn());
+						if (!caBySnOpt.isPresent()) {
+							a.setMessage("MCU SN doesn't exists!");
+							return;
+						}
+				    	
+				    	CARequestLog caBySn = caBySnOpt.get();
+				    	caBySn.setBuilding(building);
+				    	caBySn.setFloorLevel(floor);
+				    	caBySn.setBlock(block);
+				    	
+				    	if (caBySn.getBuildingUnit() == null || caBySn.getBuildingUnit().getId().longValue() != buildingUnit.getId().longValue()) {
+				    		caBySn.setBuildingUnit(buildingUnit);
+							buildingUnit.setCoupledDate(new Date());
+						}
+						
+						a.setCoupleTime(buildingUnit.getCoupledDate() == null ? buildingUnit.getCreateDate() : buildingUnit.getCoupledDate());
+						buildingUnitRepository.save(buildingUnit);
+						caBySn.setBuildingUnit(buildingUnit);
+				    	caRequestLogRepository.save(caBySn);
+				    	return;
 					}
 
 					ca.setBuilding(building);
@@ -220,7 +245,10 @@ public class AddressServiceImpl implements AddressService {
 					
 					a.setCoupleTime(buildingUnit.getCoupledDate() == null ? buildingUnit.getCreateDate() : buildingUnit.getCoupledDate());
 					buildingUnitRepository.save(buildingUnit);
+					ca.setBuildingUnit(buildingUnit);
 					caRequestLogRepository.save(ca);
+				} else {
+					a.setMessage("Meter SN is required!");
 				}
 			}
 		});
