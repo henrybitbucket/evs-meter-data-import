@@ -24,12 +24,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.AddressDto;
+import com.pa.evs.enums.DeviceType;
 import com.pa.evs.model.Address;
+import com.pa.evs.model.AddressLog;
 import com.pa.evs.model.Block;
 import com.pa.evs.model.Building;
 import com.pa.evs.model.BuildingUnit;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.FloorLevel;
+import com.pa.evs.repository.AddressLogRepository;
 import com.pa.evs.repository.AddressRepository;
 import com.pa.evs.repository.BlockRepository;
 import com.pa.evs.repository.BuildingRepository;
@@ -37,6 +40,7 @@ import com.pa.evs.repository.BuildingUnitRepository;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.sv.AddressService;
+import com.pa.evs.utils.SecurityUtils;
 
 @Service
 public class AddressServiceImpl implements AddressService {
@@ -58,6 +62,9 @@ public class AddressServiceImpl implements AddressService {
 	
 	@Autowired
 	BuildingUnitRepository buildingUnitRepository;
+	
+	@Autowired
+	AddressLogRepository addressLogRepository;
 	
 	@Override
 	@Transactional
@@ -191,6 +198,13 @@ public class AddressServiceImpl implements AddressService {
 					CARequestLog caUnitCoupled = caRequestLogRepository.findByBuildingUnitId(buildingUnit.getId()).orElse(null);
 					
 					if (caUnitCoupled != null && "de-couple".equalsIgnoreCase(msn)) {
+						
+						// Add new log to address_log that this address is unlinked to this device
+						AddressLog addrLog = AddressLog.build(caUnitCoupled);
+						addrLog.setType(DeviceType.NOT_COUPLED);
+						addrLog.setUpdatedBy(SecurityUtils.getUsername());
+						addressLogRepository.save(addrLog);
+						
 						caUnitCoupled.setBuildingUnit(null);
 						caUnitCoupled.setFloorLevel(null);
 						caUnitCoupled.setBlock(null);
@@ -219,6 +233,14 @@ public class AddressServiceImpl implements AddressService {
 						}
 				    	
 				    	CARequestLog caBySn = caBySnOpt.get();
+				    	
+				    	if (caBySn.getBuildingUnit() != null) {
+				    		// Add new log to address_log that unlinked exists address to this device
+							AddressLog addrLog = AddressLog.build(caBySn);
+							addrLog.setType(DeviceType.NOT_COUPLED);
+							addressLogRepository.save(addrLog);
+				    	}
+				    	
 				    	caBySn.setBuilding(building);
 				    	caBySn.setFloorLevel(floor);
 				    	caBySn.setBlock(block);
@@ -232,8 +254,21 @@ public class AddressServiceImpl implements AddressService {
 						buildingUnitRepository.save(buildingUnit);
 						caBySn.setBuildingUnit(buildingUnit);
 				    	caRequestLogRepository.save(caBySn);
+				    	
+				    	// Add new log to address_log that linked new address to this device
+						AddressLog newAddrLog = AddressLog.build(caBySn);
+						newAddrLog.setType(DeviceType.COUPLED);
+						addressLogRepository.save(newAddrLog);
+						
 				    	return;
 					}
+					
+					if (ca.getBuildingUnit() != null) {
+			    		// Add new log to address_log that unlinked exists address to this device
+						AddressLog addrLog = AddressLog.build(ca);
+						addrLog.setType(DeviceType.NOT_COUPLED);
+						addressLogRepository.save(addrLog);
+			    	}
 
 					ca.setBuilding(building);
 					ca.setBlock(block);
@@ -247,6 +282,11 @@ public class AddressServiceImpl implements AddressService {
 					buildingUnitRepository.save(buildingUnit);
 					ca.setBuildingUnit(buildingUnit);
 					caRequestLogRepository.save(ca);
+					
+					// Add new log to address_log that linked new address to this device
+					AddressLog newAddrLog = AddressLog.build(ca);
+					newAddrLog.setType(DeviceType.COUPLED);
+					addressLogRepository.save(newAddrLog);
 				} else {
 					a.setMessage("Meter SN is required!");
 				}

@@ -36,6 +36,7 @@ import com.pa.evs.enums.DeviceType;
 import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.Address;
+import com.pa.evs.model.AddressLog;
 import com.pa.evs.model.BuildingUnit;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.FloorLevel;
@@ -43,6 +44,7 @@ import com.pa.evs.model.Group;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.model.Vendor;
+import com.pa.evs.repository.AddressLogRepository;
 import com.pa.evs.repository.AddressRepository;
 import com.pa.evs.repository.BuildingRepository;
 import com.pa.evs.repository.BuildingUnitRepository;
@@ -101,6 +103,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 
 	@Autowired
 	private ScreenMonitoringRepository screenMonitoringRepository;
+	
+	@Autowired
+	private AddressLogRepository addressLogRepository;
 
     private List<String> cacheCids = Collections.EMPTY_LIST;
 
@@ -163,6 +168,18 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     	
     	if (list != null && !list.isEmpty() && (list.size() > 1 || ca.getId() == null || (list.get(0).getId().longValue() != ca.getId().longValue()))) {
     		throw new Exception(Message.ADDRESS_IS_ASSIGNED);
+    	}
+    	
+    	boolean isCoupledAddress = (ca.getBuildingUnit() != null && dto.getBuildingUnitId() != null && !ca.getBuildingUnit().getId().equals(dto.getBuildingUnitId()))
+    			|| (ca.getBuildingUnit() == null && dto.getBuildingUnitId() != null);
+    	
+    	if ((ca.getBuildingUnit() != null && dto.getBuildingUnitId() != null && !ca.getBuildingUnit().getId().equals(dto.getBuildingUnitId()))
+    			|| (ca.getBuildingUnit() != null && dto.getBuildingUnitId() == null)) {
+    		
+    		// Add new log to address_log that this address is unlinked to this device
+			AddressLog addrLog = AddressLog.build(ca);
+			addrLog.setType(DeviceType.NOT_COUPLED);
+			addressLogRepository.save(addrLog);
     	}
         
         try {
@@ -265,7 +282,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             ca.setVendor(null);
         }
         
-        
         // status, type
         if (StringUtils.isBlank(ca.getMsn()) || StringUtils.isBlank(ca.getSn())) {
         	ca.setType(DeviceType.NOT_COUPLED);
@@ -283,6 +299,13 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         }
         caRequestLogRepository.save(ca);
         
+        if (isCoupledAddress) {
+
+        	// Add new log to address_log that this new address is linked to this device
+    		AddressLog addrLog = AddressLog.build(ca);
+    		addrLog.setType(DeviceType.COUPLED);
+    		addressLogRepository.save(addrLog);
+        }
     }
 
     @Override

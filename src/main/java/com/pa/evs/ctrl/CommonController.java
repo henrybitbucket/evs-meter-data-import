@@ -41,6 +41,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.converter.ExceptionConvertor;
+import com.pa.evs.dto.AddressLogDto;
 import com.pa.evs.dto.Command;
 import com.pa.evs.dto.FirmwareDto;
 import com.pa.evs.dto.GroupDto;
@@ -52,6 +53,7 @@ import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
+import com.pa.evs.sv.AddressLogService;
 import com.pa.evs.sv.AddressService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
@@ -85,6 +87,8 @@ public class CommonController {
 	@Autowired GroupService groupService;
 	
 	@Autowired AddressService addressService;
+	
+	@Autowired AddressLogService addressLogService;
 
 	@Value("${evs.pa.privatekey.path}")
 	private String pkPath;
@@ -579,6 +583,16 @@ public class CommonController {
     @GetMapping("/api/vendors")
     public ResponseEntity<Object> getVendors(HttpServletRequest httpServletRequest) throws Exception {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(vendorService.getVendors()).success(true).build());
+    }
+    
+    @PostMapping("/api/address-logs")
+    public ResponseEntity<Object> getAddressLogs(HttpServletRequest httpServletRequest, @RequestBody PaginDto<AddressLogDto> pagin) throws Exception {
+        try {
+            addressLogService.getAddressLogs(pagin);
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     
 	@PostConstruct

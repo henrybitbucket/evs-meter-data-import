@@ -112,6 +112,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers("/api/getMDTMessage**").permitAll()
 	            .antMatchers("/api/address/upload").permitAll()
 	            .antMatchers("/api/vendors").permitAll()
+	            .antMatchers("/api/address-logs").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
