@@ -54,6 +54,9 @@ public class Utils {
         		streetNumber = streetNumber + " ";
         	}
         	
+        	if (caRqlog.getBlock() != null) {
+        		address.append("Block ").append(caRqlog.getBlock().getName()).append(", ");
+        	}
         	if (caRqlog.getBuildingUnit() != null && caRqlog.getFloorLevel() != null) {
         		String fName = caRqlog.getFloorLevel().getName();
         		if (fName == null) {
@@ -73,7 +76,7 @@ public class Utils {
                     .append(StringUtils.isBlank(caRqlog.getBuilding().getAddress().getStreet()) ? "" : (caRqlog.getBuilding().getAddress().getStreet() + ", "))
                     .append(StringUtils.isBlank(caRqlog.getBuilding().getAddress().getTown()) ? "" : (caRqlog.getBuilding().getAddress().getTown() + ", "))
                     .append(StringUtils.isNotBlank(caRqlog.getBuilding().getAddress().getCity()) ? (caRqlog.getBuilding().getAddress().getCity() + ", ") : "")
-                    .append(caRqlog.getBuilding().getAddress().getCountry()).append(", ")
+                    .append(StringUtils.isNotBlank(caRqlog.getBuilding().getAddress().getCountry()) ? (caRqlog.getBuilding().getAddress().getCountry() + ", ") : "")
                     .append(caRqlog.getBuilding().getAddress().getPostalCode());
         } else if (caRqlog.getAddress() != null) {
         	return formatHomeAddress(null, caRqlog.getAddress());
