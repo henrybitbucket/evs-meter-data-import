@@ -71,26 +71,6 @@ public class AuthenticationController {
 		}
     }
     
-    @PostMapping(value = {"/api/user/changePassword"})
-    public ResponseDto<? extends Object> changePassword(@RequestBody ChangePasswordDto changePasswordDto) {
-        try {
-        	authenticationService.changePwd(changePasswordDto);
-		} catch (Exception e) {
-			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
-		}
-        return ResponseDto.<Object>builder().success(true).build();
-    }
-    
-    @PostMapping(value = {"/api/user/resetPassword"})
-    public ResponseDto<? extends Object> resetPassword(@RequestBody ResetPasswordDto resetPasswordDto) {
-        try {
-        	authenticationService.resetPwd(resetPasswordDto);
-		} catch (Exception e) {
-			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
-		}
-        return ResponseDto.<Object>builder().success(true).build();
-    }
-
     @PostMapping(value = {RestPath.USERS})
     public Object getUsers(@RequestBody PaginDto<UserDto> pagin) {
         authenticationService.getUsers(pagin);
@@ -218,6 +198,26 @@ public class AuthenticationController {
         		.success(true)
         		.response(authenticationService.getUserById(userId))
         		.build());
+    }
+    
+    @PostMapping(value = {"/api/user/changePassword"})
+    public ResponseDto<? extends Object> changePassword(@RequestBody ChangePasswordDto changePasswordDto) {
+        try {
+        	authenticationService.changePwd(changePasswordDto);
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
+        return ResponseDto.<Object>builder().success(true).build();
+    }
+    
+    @PostMapping(value = {"/api/user/resetPassword"})
+    public ResponseDto<? extends Object> resetPassword(@RequestBody ResetPasswordDto resetPasswordDto) {
+        try {
+        	authenticationService.resetPwd(resetPasswordDto);
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
+        return ResponseDto.<Object>builder().success(true).build();
     }
     
     @PostMapping(value = {"/api/otp"})
