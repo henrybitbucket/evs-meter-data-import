@@ -220,6 +220,7 @@ public class AuthenticationController {
         return ResponseDto.<Object>builder().success(true).build();
     }
     
+    // {"email": "henry@gmail.com", "otpType": "sms", "actionType": "reset_pwd"}
     @PostMapping(value = {"/api/otp"})
     public ResponseEntity<Object> sendOtp(@RequestBody Map<String, Object> dto) throws IOException {
         try {
