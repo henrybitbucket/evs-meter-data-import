@@ -1,6 +1,5 @@
 package com.pa.evs.sv.impl;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -27,10 +26,8 @@ import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import javax.annotation.PostConstruct;
@@ -109,6 +106,7 @@ import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.LogService;
+import com.pa.evs.sv.SettingService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.Mqtt;
@@ -117,6 +115,8 @@ import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
+
+import software.amazon.awssdk.services.sns.model.SnsException;
 
 @Component
 @SuppressWarnings("unchecked")
@@ -208,6 +208,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private static final ExecutorService EX = Executors.newFixedThreadPool(10);
 	
 	private AmazonS3Client s3Client = null;
+	
+	software.amazon.awssdk.services.sns.SnsClient snsClient = null;
 	
 	@Override
 	public void uploadDeviceCsr(MultipartFile file, Long vendor) {
@@ -1162,6 +1164,20 @@ public class EVSPAServiceImpl implements EVSPAService {
 		 * https://904734893309.signin.aws.amazon.com/console
 		 * password henry/P0wer!23
 		 */
+		
+        try {
+    		software.amazon.awssdk.auth.credentials.AwsCredentialsProvider a = new software.amazon.awssdk.auth.credentials.AwsCredentialsProvider() {
+    			@Override
+    			public software.amazon.awssdk.auth.credentials.AwsCredentials resolveCredentials() {
+    				return software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create(accessID, accessKey);
+    			}};
+    		snsClient = software.amazon.awssdk.services.sns.SnsClient.builder().region(software.amazon.awssdk.regions.Region.AP_SOUTHEAST_1)
+    				.credentialsProvider(a).build();
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+        // pubTextSMS(snsClient, "OTP: 123456", "+84909123456");
+        
 		AWSCredentials credentials = new BasicAWSCredentials(accessID, accessKey);
 		ClientConfiguration clientconfig = new ClientConfiguration();
         clientconfig.setProtocol(Protocol.HTTPS);
@@ -1171,6 +1187,7 @@ public class EVSPAServiceImpl implements EVSPAService {
         AwsSdkMetrics.disableMetrics();        
         s3Client = new AmazonS3Client(credentials, clientconfig);
         s3Client.setRegion(Region.getRegion(Regions.AP_SOUTHEAST_1));
+        
 	}
 	
 	public String getS3URL(Long vendor, String objectKey) {
@@ -1266,7 +1283,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
     }
 	
-	public static void main(String[] args) throws Exception {
+	public static void main1(String[] args) throws Exception {
 		/**System.out.println(requestCA("http://54.254.171.4:8880/api/evs-ca-request", new ClassPathResource("sv-ca/server.csr"), null));*/
 
 		/*Mqtt.subscribe(null, "dev/evs/pa/data", QUALITY_OF_SERVICE, o -> {
@@ -1614,6 +1631,46 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 		}
 		return fileResult;
+	}
+	
+	public static void main(String[] args) {
+
+		args = new String[] {"Test aws sms", "+84909123456"};
+		final String usage = "\n" + "Usage: " + "   <message> <phoneNumber>\n\n" + "Where:\n"
+				+ "   message - The message text to send.\n\n"
+				+ "   phoneNumber - The mobile phone number to which a message is sent (for example, +1XXX5550100). \n\n";
+
+		if (args.length != 2) {
+			System.out.println(usage);
+			System.exit(1);
+		}
+
+		String message = args[0];
+		String phoneNumber = args[1];
+		software.amazon.awssdk.auth.credentials.AwsCredentialsProvider a = new software.amazon.awssdk.auth.credentials.AwsCredentialsProvider() {
+			@Override
+			public software.amazon.awssdk.auth.credentials.AwsCredentials resolveCredentials() {
+				return software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create("AKIA5FJTG4T6ZDPEV2BF", "TibawYe6iwYdd+HfDr0nr1u3V5f0SjUl47VspU2a");
+			}};
+		software.amazon.awssdk.services.sns.SnsClient snsClient = software.amazon.awssdk.services.sns.SnsClient.builder().region(software.amazon.awssdk.regions.Region.AP_SOUTHEAST_1)
+				.credentialsProvider(a).build();
+		new EVSPAServiceImpl().sendSMS(message, phoneNumber);
+		snsClient.close();
+	}
+
+	// https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javav2/example_code/sns/src/main/java/com/example/sns/PublishTextSMS.java
+	@Override
+	public String sendSMS(String message, String phoneNumber) {
+		try {
+			software.amazon.awssdk.services.sns.model.PublishRequest request = software.amazon.awssdk.services.sns.model.PublishRequest.builder().message(message).phoneNumber(phoneNumber).build();
+			software.amazon.awssdk.services.sns.model.PublishResponse result = snsClient.publish(request);
+			LOG.info("SMS -> " + phoneNumber + " -> " + result.messageId() + " Message sent. Status was " + result.sdkHttpResponse().statusCode());
+			return result.messageId();
+		} catch (SnsException e) {
+			LOG.info("SMS -> " + phoneNumber + " -> " + e.awsErrorDetails().errorMessage());
+			LOG.error(e.getMessage(), e);
+			throw e;
+		}
 	}
 
 }

@@ -3,7 +3,6 @@ package com.pa.evs.sv.impl;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import javax.persistence.EntityManager;
@@ -38,6 +37,7 @@ public class SettingsServiceImpl implements SettingService {
 			SettingDto dto = SettingDto.from(rm);
 			dto.setOrder(dto.getOrder() == null ? Integer.MAX_VALUE : dto.getOrder());
 			rp.add(dto);
+			AppProps.set(dto.getKey(), dto.getValue());
 		});
 		
 		return rp;
@@ -118,5 +118,4 @@ public class SettingsServiceImpl implements SettingService {
 		pagin.setTotalRows(((Number)qCount.getSingleResult()).longValue());
 		return pagin;
 	}
-
 }

@@ -86,6 +86,7 @@ public class SettingsController {
 			} else {
 				AppProps.set(SettingService.EXPORT_ADDRESS_HEADER, st2.getValue());
 			}
+			settingService.findAll();
 		} catch (Exception e) {
 			//
 		}

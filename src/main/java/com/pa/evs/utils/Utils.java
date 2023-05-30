@@ -1,6 +1,7 @@
 package com.pa.evs.utils;
 
 import java.io.File;
+import java.util.Random;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -170,6 +171,18 @@ public class Utils {
         	}
         }
 		return networkId.toString();
+	}
+	
+	public static String randomOtp(int length) {
+		if (length <= 0) {
+			return "";
+		}
+		StringBuilder rs = new StringBuilder();
+		Random random = new Random();
+		for (int i = 0; i < length; i++) {
+			rs.append(random.nextInt(9) + "");
+		}
+		return rs.toString();
 	}
 }
 

@@ -12,10 +12,8 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class LoginRequestDto {
-    private String email;
+public class ChangePasswordDto {
     private String password;
     @Builder.Default
-    private String pf = "OTHER";
     private String otp = null;
 }

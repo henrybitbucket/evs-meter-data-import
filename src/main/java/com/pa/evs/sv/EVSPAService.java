@@ -52,4 +52,6 @@ public interface EVSPAService {
 
 	void updateMissingFileName();
 
+	String sendSMS(String message, String phoneNumber);
+
 }

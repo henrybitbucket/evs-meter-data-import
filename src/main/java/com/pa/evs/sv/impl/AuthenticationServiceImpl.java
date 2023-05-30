@@ -38,12 +38,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.constant.Message;
 import com.pa.evs.constant.ValueConstant;
+import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.PlatformUserLoginDto;
+import com.pa.evs.dto.ResetPasswordDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
@@ -51,10 +53,12 @@ import com.pa.evs.exception.ApiException;
 import com.pa.evs.exception.customException.AuthenticationException;
 import com.pa.evs.exception.customException.DuplicateUserException;
 import com.pa.evs.model.GroupUser;
+import com.pa.evs.model.OTP;
 import com.pa.evs.model.Permission;
 import com.pa.evs.model.PlatformUserLogin;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.RolePermission;
+import com.pa.evs.model.Token;
 import com.pa.evs.model.UserGroup;
 import com.pa.evs.model.UserPermission;
 import com.pa.evs.model.UserRole;
@@ -72,9 +76,13 @@ import com.pa.evs.security.jwt.JwtTokenUtil;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.AuthorityService;
+import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.SettingService;
 import com.pa.evs.utils.ApiResponse;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
+import com.pa.evs.utils.Utils;
 
 @Service
 @SuppressWarnings("unchecked")
@@ -126,6 +134,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Autowired
 	PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	EVSPAService evsPAService;
+	
+	@Autowired
+	SettingService settingService;
 
 	@Autowired
 	EntityManager em;
@@ -141,6 +155,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	static Map<String, List<Permission>> map = new HashMap<String, List<Permission>>();
 
+	@Transactional
 	@Override
 	public ResponseDto<LoginResponseDto> login(LoginRequestDto loginRequestDTO) {
 		String email = loginRequestDTO.getEmail();
@@ -169,6 +184,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				|| pf.getEndTime() < System.currentTimeMillis()) {
 			throw new AuthenticationException(Message.USER_IS_DISABLE, new RuntimeException(Message.USER_IS_DISABLE));
 		}
+		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_LOGIN")) && "mobile".equalsIgnoreCase(pf.getName())) {
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' ORDER BY createDate DESC ").getResultList();
+			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
+				throw new RuntimeException("otp invalid!");
+			}
+			invalidOtp(email, loginRequestDTO.getOtp());
+		}			
 		
 		final String token = jwtTokenUtil.generateToken(userDetails);
 		this.updateLastLogin(email);
@@ -179,6 +201,52 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 						.build());
 	}
 
+	@Override
+	@Transactional
+	public void changePwd(ChangePasswordDto changePasswordDto) {
+		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_CHANGE_PWD"))) {
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + SecurityUtils.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' ORDER BY createDate DESC ").getResultList();
+			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
+				throw new RuntimeException("otp invalid!");
+			}
+			invalidOtp(SecurityUtils.getEmail(), changePasswordDto.getOtp());
+		}
+		if (StringUtils.isBlank(changePasswordDto.getPassword())) {
+			throw new RuntimeException("password invalid!");
+		}
+		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+		user.setPassword(passwordEncoder.encode(changePasswordDto.getPassword()));
+		userRepository.save(user);
+	}
+	
+	@Override
+	@Transactional
+	public void resetPwd(ResetPasswordDto changePasswordDto) {
+		
+		if (StringUtils.isNotBlank(changePasswordDto.getToken())) {
+			List<Token> tokens = em.createQuery("FROM Token where token = '" + changePasswordDto.getToken() + "'").getResultList();
+			if (tokens.isEmpty() || tokens.get(0).getStartTime() > System.currentTimeMillis() || tokens.get(0).getEndTime() < System.currentTimeMillis()) {
+				throw new RuntimeException("token invalid!");
+			}
+			invalidToken(tokens.get(0).getToken());
+			changePasswordDto.setEmail(tokens.get(0).getEmail());
+		}
+		
+		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_RESET_PWD"))) {
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + changePasswordDto.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' ORDER BY createDate DESC ").getResultList();
+			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
+				throw new RuntimeException("otp invalid!");
+			}
+			invalidOtp(SecurityUtils.getEmail(), changePasswordDto.getOtp());
+		}
+		if (StringUtils.isBlank(changePasswordDto.getPassword())) {
+			throw new RuntimeException("password invalid!");
+		}
+		Users user = userRepository.findByEmail(changePasswordDto.getEmail());
+		user.setPassword(passwordEncoder.encode(changePasswordDto.getPassword()));
+		userRepository.save(user);
+	}
+	
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	void updateLastLogin(String email) {
 		Users user = userRepository.findByEmail(email);
@@ -967,5 +1035,62 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		pf.setEndTime(dto.getEndTime());
 		pf.setActive(dto.getActive() == null ? true : dto.getActive());
 		platformUserLoginRepository.save(pf);
+	}
+
+	@Transactional
+	@Override
+	public void sendOtp(Map<String, Object> dto) {
+		String email = (String) dto.get("email");
+		if (StringUtils.isBlank(email)) {
+			throw new ApiException("email is required");
+		}
+		
+		Users user = userRepository.findByEmail(email);
+		String phone = user == null ? null : user.getPhoneNumber();
+		String otpType = (String) dto.get("otpType");
+		String actionType = (String) dto.get("actionType");
+		if ("sms".equalsIgnoreCase(otpType) && StringUtils.isBlank(phone)) {
+			throw new ApiException("phone is required");
+		}
+		OTP otp = OTP.builder().actionType(actionType).otpType(otpType).phone(phone).email(email).build();
+		int otpLenth = 6;
+		try {
+			otpLenth = Integer.parseInt(AppProps.get("otp_length", "6"));
+			if (otpLenth < 4) {
+				otpLenth = 4;
+			}
+		} catch (Exception e) {
+			otpLenth = 6;
+		}
+		otp.setOtp(Utils.randomOtp(otpLenth));
+		if ("sms".equalsIgnoreCase(otpType) && !"TEST".equalsIgnoreCase(AppProps.get("OTP_MODE"))) {
+			String msgId = evsPAService.sendSMS("OTP: " + otp.getOtp(), phone);
+			otp.setTrack(msgId);	
+		}
+		
+		otp.setStartTime(System.currentTimeMillis());
+		String exp = AppProps.get("otp_expiry_in_mls", (30 * 60 * 1000l) + "");
+		if ("reset_pwd".equalsIgnoreCase(actionType)) {
+			exp = AppProps.get("otp_reset_pwd_expiry_in_mls", (1 * 60 * 60 * 1000l) + "");
+		}
+		if ("registry".equalsIgnoreCase(actionType)) {
+			exp = AppProps.get("otp_registry_expiry_in_mls", (1 * 60 * 60 * 1000l) + "");
+		}
+		try {
+			otp.setEndTime(otp.getStartTime() + Long.parseLong(exp));
+		} catch (Exception e) {
+			otp.setEndTime(otp.getStartTime() + (30 * 60 * 1000l));
+		}
+		em.createQuery("UPDATE OTP set endTime = startTime where email = '" + email + "' AND actionType = '" + actionType + "'").executeUpdate();
+		em.flush();
+		em.persist(otp);
+	}
+	
+	void invalidOtp(String email, String otp) {
+		em.createQuery("UPDATE OTP set endTime = startTime where email = '" + email + "' AND otp = '" + otp + "'").executeUpdate();
+	}
+	
+	void invalidToken(String token) {
+		em.createQuery("UPDATE OTP set endTime = startTime where token = '" + token + "'").executeUpdate();
 	}
 }

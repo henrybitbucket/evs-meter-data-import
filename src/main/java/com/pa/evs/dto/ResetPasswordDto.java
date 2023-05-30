@@ -12,10 +12,12 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class LoginRequestDto {
-    private String email;
+public class ResetPasswordDto {
     private String password;
     @Builder.Default
-    private String pf = "OTHER";
+    private String token = null;
+    @Builder.Default
+    private String email = null;
+    @Builder.Default
     private String otp = null;
 }

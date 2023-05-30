@@ -61,7 +61,7 @@ public class SpringFoxConfig {
           .securityContexts(Arrays.asList(securityContext()))
           .securitySchemes(Arrays.asList(apiKey()))
           .select()
-          .apis(RequestHandlerSelectors.basePackage("com.pa.admin"))              
+          .apis(RequestHandlerSelectors.basePackage("com.pa.evs"))              
           .paths(PathSelectors.any())                          
           .build();                                           
     }

@@ -2,6 +2,7 @@ package com.pa.evs.ctrl;
 
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -24,17 +25,19 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pa.evs.constant.RestPath;
+import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
-import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.PlatformUserLoginDto;
+import com.pa.evs.dto.ResetPasswordDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
+import com.pa.evs.sv.EVSPAService;
 
 @RestController
 public class AuthenticationController {
@@ -54,6 +57,9 @@ public class AuthenticationController {
     private AuthenticationService authenticationService;
     
     @Autowired
+    private EVSPAService evspaService;
+    
+    @Autowired
     ApplicationContext applicationContext;
 
     @PostMapping(value = {RestPath.LOGIN1, RestPath.LOGIN})
@@ -63,6 +69,26 @@ public class AuthenticationController {
 		} catch (Exception e) {
 			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
 		}
+    }
+    
+    @PostMapping(value = {"/api/user/changePassword"})
+    public ResponseDto<? extends Object> changePassword(@RequestBody ChangePasswordDto changePasswordDto) {
+        try {
+        	authenticationService.changePwd(changePasswordDto);
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
+        return ResponseDto.<Object>builder().success(true).build();
+    }
+    
+    @PostMapping(value = {"/api/user/resetPassword"})
+    public ResponseDto<? extends Object> resetPassword(@RequestBody ResetPasswordDto resetPasswordDto) {
+        try {
+        	authenticationService.resetPwd(resetPasswordDto);
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
+        return ResponseDto.<Object>builder().success(true).build();
     }
 
     @PostMapping(value = {RestPath.USERS})
@@ -192,6 +218,16 @@ public class AuthenticationController {
         		.success(true)
         		.response(authenticationService.getUserById(userId))
         		.build());
+    }
+    
+    @PostMapping(value = {"/api/otp"})
+    public ResponseEntity<Object> sendOtp(@RequestBody Map<String, Object> dto) throws IOException {
+        try {
+        	authenticationService.sendOtp(dto);
+        } catch (Exception e) {
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).build());
     }
     
     @PostConstruct
