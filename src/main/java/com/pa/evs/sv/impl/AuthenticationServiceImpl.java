@@ -185,7 +185,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new AuthenticationException(Message.USER_IS_DISABLE, new RuntimeException(Message.USER_IS_DISABLE));
 		}
 		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_LOGIN")) && "mobile".equalsIgnoreCase(pf.getName())) {
-			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' ORDER BY createDate DESC ").getResultList();
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY createDate DESC ").getResultList();
 			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 				throw new RuntimeException("otp invalid!");
 			}
@@ -205,7 +205,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	@Transactional
 	public void changePwd(ChangePasswordDto changePasswordDto) {
 		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_CHANGE_PWD"))) {
-			List<OTP> otps = em.createQuery("FROM OTP where email = '" + SecurityUtils.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' ORDER BY createDate DESC ").getResultList();
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + SecurityUtils.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY createDate DESC ").getResultList();
 			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 				throw new RuntimeException("otp invalid!");
 			}
@@ -232,13 +232,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			changePasswordDto.setEmail(tokens.get(0).getEmail());
 		}
 		
-		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_RESET_PWD"))) {
-			List<OTP> otps = em.createQuery("FROM OTP where email = '" + changePasswordDto.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' ORDER BY createDate DESC ").getResultList();
-			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
-				throw new RuntimeException("otp invalid!");
-			}
-			invalidOtp(SecurityUtils.getEmail(), changePasswordDto.getOtp());
+		List<OTP> otps = em.createQuery("FROM OTP where email = '" + changePasswordDto.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l ORDER BY createDate DESC ").getResultList();
+		if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
+			throw new RuntimeException("otp invalid!");
 		}
+		invalidOtp(changePasswordDto.getEmail(), changePasswordDto.getOtp());
+		
 		if (StringUtils.isBlank(changePasswordDto.getPassword())) {
 			throw new RuntimeException("password invalid!");
 		}
@@ -1044,11 +1043,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (StringUtils.isBlank(email)) {
 			throw new ApiException("email is required");
 		}
-		
-		Users user = userRepository.findByEmail(email);
-		String phone = user == null ? null : user.getPhoneNumber();
 		String otpType = (String) dto.get("otpType");
-		String actionType = (String) dto.get("actionType");
+		String actionType = (String) dto.get("actionType");		
+		Users user = userRepository.findByEmail(email);
+		if ("reset_pwd".equalsIgnoreCase(actionType) && user == null) {
+			throw new ApiException("email doesn't exists!");
+		}
+		String phone = user == null ? null : user.getPhoneNumber();
+
 		if ("sms".equalsIgnoreCase(otpType) && StringUtils.isBlank(phone)) {
 			throw new ApiException("phone is required");
 		}
@@ -1063,9 +1065,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			otpLenth = 6;
 		}
 		otp.setOtp(Utils.randomOtp(otpLenth));
-		if ("sms".equalsIgnoreCase(otpType) && !"TEST".equalsIgnoreCase(AppProps.get("OTP_MODE"))) {
-			String msgId = evsPAService.sendSMS("OTP: " + otp.getOtp(), phone);
-			otp.setTrack(msgId);	
+		if ("sms".equalsIgnoreCase(otpType) /* && !"TEST".equalsIgnoreCase(AppProps.get("OTP_MODE")) */) {
+			String msgId = evsPAService.sendSMS("MMS- " + otp.getOtp(), phone.trim());
+			otp.setTrack("AWS SNS: " + msgId + " SMS: " + "MMS-" + otp.getOtp());	
 		}
 		
 		otp.setStartTime(System.currentTimeMillis());

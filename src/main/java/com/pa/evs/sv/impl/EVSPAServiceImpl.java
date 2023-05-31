@@ -1635,7 +1635,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	public static void main(String[] args) {
 
-		args = new String[] {"Test aws sms", "+84909123456"};
+		args = new String[] {"Test aws sms", "+84933520892"};
 		final String usage = "\n" + "Usage: " + "   <message> <phoneNumber>\n\n" + "Where:\n"
 				+ "   message - The message text to send.\n\n"
 				+ "   phoneNumber - The mobile phone number to which a message is sent (for example, +1XXX5550100). \n\n";
@@ -1650,11 +1650,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 		software.amazon.awssdk.auth.credentials.AwsCredentialsProvider a = new software.amazon.awssdk.auth.credentials.AwsCredentialsProvider() {
 			@Override
 			public software.amazon.awssdk.auth.credentials.AwsCredentials resolveCredentials() {
-				return software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create("AKIA5FJTG4T6ZDPEV2BF", "TibawYe6iwYdd+HfDr0nr1u3V5f0SjUl47VspU2a");
+				return software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create("AKIA5FJTG4T6ZJXTTU5I", "+D8Z177y+t29cybFj4elx4D6l2dUUZyDWXFXPAw7");
 			}};
 		software.amazon.awssdk.services.sns.SnsClient snsClient = software.amazon.awssdk.services.sns.SnsClient.builder().region(software.amazon.awssdk.regions.Region.AP_SOUTHEAST_1)
 				.credentialsProvider(a).build();
-		new EVSPAServiceImpl().sendSMS(message, phoneNumber);
+		EVSPAServiceImpl sv = new EVSPAServiceImpl();
+		sv.snsClient = snsClient;
+		sv.sendSMS(message, phoneNumber);
 		snsClient.close();
 	}
 

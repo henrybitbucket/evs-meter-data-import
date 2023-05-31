@@ -23,6 +23,14 @@ public class AppProps {
 		if (rs != null) {
 			return rs;
 		}
+		rs = (String) properties.get(key.toUpperCase());
+		if (rs != null) {
+			return rs;
+		}
+		rs = (String) properties.get(key.toLowerCase());
+		if (rs != null) {
+			return rs;
+		}
 		return defaultValue;
 	}
 	
