@@ -57,9 +57,6 @@ public class AuthenticationController {
     private AuthenticationService authenticationService;
     
     @Autowired
-    private EVSPAService evspaService;
-    
-    @Autowired
     ApplicationContext applicationContext;
 
     @PostMapping(value = {RestPath.LOGIN1, RestPath.LOGIN})
@@ -214,6 +211,17 @@ public class AuthenticationController {
     public ResponseDto<? extends Object> resetPassword(@RequestBody ResetPasswordDto resetPasswordDto) {
         try {
         	authenticationService.resetPwd(resetPasswordDto);
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
+        return ResponseDto.<Object>builder().success(true).build();
+    }
+    
+    @PostMapping(value = {"/api/user/updatePhoneNumber"})
+    public ResponseDto<? extends Object> updatePhoneNumber(@RequestBody Map<String, Object> dto) {
+        try {
+        	String phoneNumber = (String) dto.get("phoneNumber");
+        	authenticationService.updatePhoneNumber(phoneNumber);
 		} catch (Exception e) {
 			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
 		}

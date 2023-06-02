@@ -19,6 +19,9 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.pa.evs.constant.RestPath;
+import com.pa.evs.security.user.JwtUser;
+
 import io.jsonwebtoken.ExpiredJwtException;
 
 @Component
@@ -68,6 +71,17 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
             // For simple validation it is completely sufficient to just check the token integrity. You don't have to call
             // the database compellingly. Again it's up to you ;)
             if (jwtTokenUtil.validateToken(authToken, userDetails)) {
+            	if (!RestPath.LOGIN.equalsIgnoreCase(request.getRequestURI())
+            			&& !RestPath.LOGIN1.equalsIgnoreCase(request.getRequestURI())
+            			&& "/api/otp".equalsIgnoreCase(request.getRequestURI())
+            			&& "/api/user/changePassword".equalsIgnoreCase(request.getRequestURI())
+            			&& !RestPath.WHOAMI.equalsIgnoreCase(request.getRequestURI())) {
+            		JwtUser u = (JwtUser) userDetails;
+            		if (u.getChangePwdRequire() == Boolean.TRUE) {
+            			response.sendRedirect(RestPath.WHOAMI);
+            			return;
+            		}
+            	}
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);

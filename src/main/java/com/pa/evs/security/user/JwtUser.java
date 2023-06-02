@@ -50,6 +50,10 @@ public class JwtUser implements UserDetails {
     private String lastName;
     
     private Date birthDay;
+    
+    private Boolean changePwdRequire = false;
+    
+    private String phoneNumber;
 
     private  Collection<? extends GrantedAuthority> authorities;
 
@@ -124,5 +128,9 @@ public class JwtUser implements UserDetails {
     public Long getId() {
         return id;
     }
+
+	public void setChangePwdRequire(Boolean changePwdRequire) {
+		this.changePwdRequire = changePwdRequire;
+	}
 
 }

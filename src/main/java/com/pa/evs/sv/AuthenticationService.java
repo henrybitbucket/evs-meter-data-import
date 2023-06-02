@@ -42,4 +42,5 @@ public interface AuthenticationService {
 	void sendOtp(Map<String, Object> dto);
 	void changePwd(ChangePasswordDto changePasswordDto);
 	void resetPwd(ResetPasswordDto resetPasswordDto);
+	void updatePhoneNumber(String phoneNumber);
 }

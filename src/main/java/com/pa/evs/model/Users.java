@@ -72,4 +72,8 @@ public class Users extends Base1Entity {
     @Column(name = "last_login")
     private Date lastLogin;
     
+    @Builder.Default
+    @Column(name = "change_pwd_require", columnDefinition = "boolean default false not null")
+    private Boolean changePwdRequire = false;
+    
 }

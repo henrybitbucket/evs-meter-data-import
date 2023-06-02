@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import lombok.AllArgsConstructor;
@@ -45,5 +46,7 @@ public class UserDto {
     private List<GroupUserDto> groupUsers;
     
     private List<PermissionDto> permissions;
+
+    private Boolean changePwdRequire;
     
 }

@@ -185,7 +185,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new AuthenticationException(Message.USER_IS_DISABLE, new RuntimeException(Message.USER_IS_DISABLE));
 		}
 		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_LOGIN")) && "mobile".equalsIgnoreCase(pf.getName())) {
-			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY createDate DESC ").getResultList();
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
 			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 				throw new RuntimeException("otp invalid!");
 			}
@@ -198,6 +198,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE,
 				LoginResponseDto.builder().token(token).authorities(
 						userDetails.getAuthorities().stream().map(au -> au.getAuthority()).collect(Collectors.toList()))
+						.changePwdRequire(userDetails.getChangePwdRequire())
+						.phoneNumber(userDetails.getPhoneNumber())
+						.email(userDetails.getEmail())
 						.build());
 	}
 
@@ -205,7 +208,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	@Transactional
 	public void changePwd(ChangePasswordDto changePasswordDto) {
 		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_CHANGE_PWD"))) {
-			List<OTP> otps = em.createQuery("FROM OTP where email = '" + SecurityUtils.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY createDate DESC ").getResultList();
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + SecurityUtils.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
 			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 				throw new RuntimeException("otp invalid!");
 			}
@@ -216,6 +219,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
 		user.setPassword(passwordEncoder.encode(changePasswordDto.getPassword()));
+		user.setChangePwdRequire(false);
 		userRepository.save(user);
 	}
 	
@@ -232,7 +236,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			changePasswordDto.setEmail(tokens.get(0).getEmail());
 		}
 		
-		List<OTP> otps = em.createQuery("FROM OTP where email = '" + changePasswordDto.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l ORDER BY createDate DESC ").getResultList();
+		List<OTP> otps = em.createQuery("FROM OTP where email = '" + changePasswordDto.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l ORDER BY id DESC ").getResultList();
 		if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 			throw new RuntimeException("otp invalid!");
 		}
@@ -290,11 +294,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				en = new Users();
 				en.setUsername(dto.getUsername());
 				en.setEmail(dto.getEmail());
+				en.setChangePwdRequire(true);
 			}
 		} else {
 			en = new Users();
 			en.setUsername(dto.getUsername());
 			en.setEmail(dto.getEmail());
+			en.setChangePwdRequire(true);
+		}
+		
+		if (en.getUserId() != null && dto.getChangePwdRequire() != null) {
+			en.setChangePwdRequire(dto.getChangePwdRequire());
 		}
 
 		en.setFirstName(dto.getFirstName());
@@ -571,6 +581,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					.fullName(user.getFullName()).firstName(user.getFirstName()).lastName(user.getLastName())
 					.phoneNumber(user.getPhoneNumber()).avatar(user.getAvatar())
 					.fullName(user.getFirstName() + " " + user.getLastName()).status(user.getStatus())
+					.changePwdRequire(user.getChangePwdRequire())
 					.roleDescs(user.getRoles().stream().map(authority -> {
 						roles.add(authority.getRole().getName());
 						return SimpleMap.init("name", authority.getRole().getName()).more("desc",
@@ -1066,7 +1077,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		otp.setOtp(Utils.randomOtp(otpLenth));
 		if ("sms".equalsIgnoreCase(otpType) /* && !"TEST".equalsIgnoreCase(AppProps.get("OTP_MODE")) */) {
-			String msgId = evsPAService.sendSMS("MMS- " + otp.getOtp(), phone.trim());
+			String msgId = evsPAService.sendSMS("MMS-" + otp.getOtp(), phone.trim());
 			otp.setTrack("AWS SNS: " + msgId + " SMS: " + "MMS-" + otp.getOtp());	
 		}
 		
@@ -1074,6 +1085,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		String exp = AppProps.get("otp_expiry_in_mls", (30 * 60 * 1000l) + "");
 		if ("reset_pwd".equalsIgnoreCase(actionType)) {
 			exp = AppProps.get("otp_reset_pwd_expiry_in_mls", (1 * 60 * 60 * 1000l) + "");
+		}
+		if ("change_pwd".equalsIgnoreCase(actionType)) {
+			exp = AppProps.get("otp_change_pwd_expiry_in_mls", (1 * 60 * 60 * 1000l) + "");
 		}
 		if ("registry".equalsIgnoreCase(actionType)) {
 			exp = AppProps.get("otp_registry_expiry_in_mls", (1 * 60 * 60 * 1000l) + "");
@@ -1094,5 +1108,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	
 	void invalidToken(String token) {
 		em.createQuery("UPDATE OTP set endTime = startTime where token = '" + token + "'").executeUpdate();
+	}
+
+	@Override
+	@Transactional
+	public void updatePhoneNumber(String phoneNumber) {
+		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+		user.setPhoneNumber(phoneNumber);
+		userRepository.save(user);
 	}
 }
