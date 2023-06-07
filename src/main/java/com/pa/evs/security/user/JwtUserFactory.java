@@ -28,6 +28,8 @@ public final class JwtUserFactory {
                 .password(user.getPassword())
                 .authorities(mapToGrantedAuthorities(user.getRoles()))
                 .enabled(true)
+                .changePwdRequire(user.getChangePwdRequire())
+                .phoneNumber(user.getPhoneNumber())
                 .lastPasswordResetDate(new Date())
                 .build();
 

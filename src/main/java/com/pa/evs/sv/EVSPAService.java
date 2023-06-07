@@ -54,4 +54,6 @@ public interface EVSPAService {
 
 	String sendSMS(String message, String phoneNumber);
 
+	String sendEmail(String message, String email, String subject);
+
 }

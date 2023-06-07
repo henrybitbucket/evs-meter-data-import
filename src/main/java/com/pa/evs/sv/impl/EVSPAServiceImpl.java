@@ -60,6 +60,7 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.http.IdleConnectionReaper;
 import com.amazonaws.metrics.AwsSdkMetrics;
@@ -68,6 +69,11 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.simpleemail.model.Body;
+import com.amazonaws.services.simpleemail.model.Content;
+import com.amazonaws.services.simpleemail.model.Destination;
+import com.amazonaws.services.simpleemail.model.Message;
+import com.amazonaws.services.simpleemail.model.SendEmailRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.ctrl.CommonController;
@@ -106,8 +112,8 @@ import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.LogService;
-import com.pa.evs.sv.SettingService;
 import com.pa.evs.utils.ApiUtils;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.RSAUtil;
@@ -210,6 +216,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private AmazonS3Client s3Client = null;
 	
 	software.amazon.awssdk.services.sns.SnsClient snsClient = null;
+	
+	com.amazonaws.services.simpleemail.AmazonSimpleEmailService sesClient = null;
 	
 	@Override
 	public void uploadDeviceCsr(MultipartFile file, Long vendor) {
@@ -1176,6 +1184,25 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
+        
+        try {
+        	com.amazonaws.auth.AWSCredentialsProvider a = new com.amazonaws.auth.AWSCredentialsProvider() {
+
+				@Override
+				public AWSCredentials getCredentials() {
+					return new BasicAWSCredentials(accessID, accessKey);
+				}
+
+				@Override
+				public void refresh() {
+				}
+        	};
+        	sesClient = com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder.standard()
+        			.withCredentials(a)
+        	        .withRegion(com.amazonaws.regions.Regions.AP_SOUTHEAST_1).build();
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
         // pubTextSMS(snsClient, "OTP: 123456", "+84909123456");
         
 		AWSCredentials credentials = new BasicAWSCredentials(accessID, accessKey);
@@ -1633,7 +1660,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		return fileResult;
 	}
 	
-	public static void main(String[] args) {
+	public static void main2(String[] args) {
 
 		args = new String[] {"Test aws sms", "+84933520892"};
 		final String usage = "\n" + "Usage: " + "   <message> <phoneNumber>\n\n" + "Where:\n"
@@ -1659,6 +1686,25 @@ public class EVSPAServiceImpl implements EVSPAService {
 		sv.sendSMS(message, phoneNumber);
 		snsClient.close();
 	}
+	
+	public static void main(String[] args) {
+
+		String message = "<html><body>MMS-1234576</body></html>";
+		String email = "ttx.pipo.uit@gmail.com";
+		com.amazonaws.services.simpleemail.model.SendEmailRequest request = new com.amazonaws.services.simpleemail.model.SendEmailRequest()
+				.withDestination(new com.amazonaws.services.simpleemail.model.Destination().withToAddresses(email))
+				.withMessage(new com.amazonaws.services.simpleemail.model.Message()
+						.withBody(new com.amazonaws.services.simpleemail.model.Body().withHtml(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(message)))
+//		                  .withText(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(TEXTBODY)))
+						.withSubject(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData("MMS")))
+		 .withSource("evs2ops@evs.com.sg")
+		;
+		
+    	com.amazonaws.services.simpleemail.AmazonSimpleEmailService sesClient = com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder.standard()
+    			.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials("AKIA5FJTG4T6ZJXTTU5I", "+D8Z177y+t29cybFj4elx4D6l2dUUZyDWXFXPAw7")))
+    	        .withRegion(com.amazonaws.regions.Regions.AP_SOUTHEAST_1).build();
+		sesClient.sendEmail(request).getSdkResponseMetadata().getRequestId();
+	}
 
 	// https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javav2/example_code/sns/src/main/java/com/example/sns/PublishTextSMS.java
 	@Override
@@ -1670,6 +1716,25 @@ public class EVSPAServiceImpl implements EVSPAService {
 			return result.messageId();
 		} catch (SnsException e) {
 			LOG.info("SMS -> " + phoneNumber + " -> " + e.awsErrorDetails().errorMessage());
+			LOG.error(e.getMessage(), e);
+			throw e;
+		}
+	}
+	
+	@Override
+	public String sendEmail(String message, String email, String subject) {
+		try {
+			com.amazonaws.services.simpleemail.model.SendEmailRequest request = new com.amazonaws.services.simpleemail.model.SendEmailRequest()
+					.withDestination(new com.amazonaws.services.simpleemail.model.Destination().withToAddresses(email))
+					.withMessage(new com.amazonaws.services.simpleemail.model.Message()
+							.withBody(new com.amazonaws.services.simpleemail.model.Body().withHtml(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(message)))
+//			                  .withText(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(TEXTBODY)))
+							.withSubject(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(subject)))
+			.withSource(AppProps.get("AWS_SES_FROM", "evs2ops@evs.com.sg"))
+			;
+			return sesClient.sendEmail(request).getSdkResponseMetadata().getRequestId();
+
+		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 			throw e;
 		}

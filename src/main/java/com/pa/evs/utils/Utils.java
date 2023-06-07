@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.Random;
 
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.pa.evs.dto.AddressDto;
 import com.pa.evs.model.Address;
@@ -183,6 +184,32 @@ public class Utils {
 			rs.append(random.nextInt(9) + "");
 		}
 		return rs.toString();
+	}
+	
+	public static void validatePwd(String pwd, String lastPwd) {
+		
+		
+		if (StringUtils.isBlank(pwd)) {
+			throw new RuntimeException(AppProps.get("MSG_PWD_ERROR_EMPTY", "password invalid(empty)!"));
+		}
+		
+		if (pwd.length() < 8 || !pwd.matches(".*[a-z].*") || !pwd.matches(".*[A-Z].*") || !pwd.matches(".*[0-9].*") || !pwd.matches(".*[!@#\\$%^&*\\(\\)\\|\\[\\]].*")) {
+			throw new RuntimeException(AppProps.get("MSG_PWD_ERROR_FORMAT", "password invalid(password must contain lowercase, uppercase, numeric, special characters and at least 8 characters, ex: aA1!@#$%^&*()[])!"));
+		}
+		
+		PasswordEncoder passwordEncoder = AppProps.getContext().getBean(PasswordEncoder.class);
+		if (StringUtils.isNotBlank(lastPwd)/* lastPwd != null && lastPwd.contains("[" + enc + "]") */) {
+			for (String oldPwd : lastPwd.split("[\\[\\]]+")) {
+				if (StringUtils.isNotBlank(lastPwd) && passwordEncoder.matches(pwd, oldPwd)) {
+					throw new RuntimeException(AppProps.get("MSG_PWD_ERROR_SAME_OLD", "password invalid(same as old password)!"));		
+				}
+			}
+			
+		}
+	}
+	
+	public static void main(String[] args) {
+		System.out.println("a".matches("[a-z]"));
 	}
 }
 

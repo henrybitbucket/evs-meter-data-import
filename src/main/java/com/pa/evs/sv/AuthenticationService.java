@@ -39,7 +39,8 @@ public interface AuthenticationService {
 	void removeUserById(Long userId);
 	List<PlatformUserLoginDto> getPfOfUser(String email);
 	void savePfOfUser(PlatformUserLoginDto dto);
-	void sendOtp(Map<String, Object> dto);
+	ResponseDto<? extends Object> sendOtp(Map<String, Object> dto);
 	void changePwd(ChangePasswordDto changePasswordDto);
 	void resetPwd(ResetPasswordDto resetPasswordDto);
+	void updatePhoneNumber(String phoneNumber);
 }

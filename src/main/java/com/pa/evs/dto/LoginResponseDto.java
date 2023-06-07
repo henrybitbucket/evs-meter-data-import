@@ -11,6 +11,12 @@ import lombok.*;
 @Builder
 @Data
 public class LoginResponseDto {
-    private  String token;
+    private String token;
     private List<String> authorities;
+    @Builder.Default
+    private Boolean changePwdRequire = false;
+    private String phoneNumber;
+    private String email;
+    private String firstName;
+    private String lastName;
 }

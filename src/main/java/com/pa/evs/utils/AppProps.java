@@ -12,6 +12,8 @@ public class AppProps {
 
 	static Properties properties = new Properties();
 	
+	public static ApplicationContext context = null;
+	
 	public static String get(String key) {
 		
 		return (String) properties.get(key);
@@ -40,8 +42,13 @@ public class AppProps {
 		}
 	}
 	
+	public static ApplicationContext getContext() {
+		return context;
+	}
+	
 	@SuppressWarnings("rawtypes")
 	public static void load(ApplicationContext applicationContext) {
+		context = applicationContext;
 		((AbstractEnvironment) applicationContext.getEnvironment()).getPropertySources().forEach(ps -> {
 			if (ps instanceof EnumerablePropertySource && ps instanceof OriginTrackedMapPropertySource) {
 				Arrays.stream(((EnumerablePropertySource) ps).getPropertyNames()).forEach(key -> properties.put(key, applicationContext.getEnvironment().getProperty(key)));

@@ -13,6 +13,8 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import org.apache.commons.lang3.StringUtils;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -36,7 +38,7 @@ public class Users extends Base1Entity {
 	@Column(name = "username")
     private String username;
 	
-	@Column(name = "email")
+	@Column(name = "email", unique = true)
     private String email;
 	
 	@Column(name = "full_name")
@@ -51,7 +53,7 @@ public class Users extends Base1Entity {
 	@Column(name = "password")
     private String password;
 	
-	@Column(name = "phone_number")
+	@Column(name = "phone_number", unique = true)
     private String phoneNumber;
 	
 	@Column(name = "approved")
@@ -69,7 +71,42 @@ public class Users extends Base1Entity {
     @Column(name = "token")
     private String token;
     
+    @Column(name = "last_pwd", length = 1000, nullable = true)
+    private String lastPwd;
+    
     @Column(name = "last_login")
     private Date lastLogin;
+    
+    @Builder.Default
+    @Column(name = "change_pwd_require", columnDefinition = "boolean default false not null")
+    private Boolean changePwdRequire = false;
+
+    @Column(name = "last_change_pwd")
+    private Long lastChangePwd;
+    
+    public String getLastPwd() {
+    	if (StringUtils.isBlank(lastPwd)) {
+			lastPwd = "";
+		}
+		if (StringUtils.isBlank(lastPwd) && StringUtils.isNotBlank(this.password)) {
+			lastPwd = "[" + password + "]" + lastPwd;
+		}
+    	return lastPwd;
+    }
+    
+    public void setPassword(String password) {
+    	try {
+			if (StringUtils.isBlank(lastPwd)) {
+				lastPwd = "[" + this.password + "]";
+			}
+			if (StringUtils.isNotBlank(password)) {
+				lastPwd = "[" + password + "]" + lastPwd;
+			}
+			lastPwd = lastPwd.replaceAll("^((?:(\\[[^\\[\\]]+\\])){3}).*$", "$1");
+		} catch (Exception e) {
+			//
+		}
+    	this.password = password;
+    }
     
 }

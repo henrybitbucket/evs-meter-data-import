@@ -185,12 +185,30 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new AuthenticationException(Message.USER_IS_DISABLE, new RuntimeException(Message.USER_IS_DISABLE));
 		}
 		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_LOGIN")) && "mobile".equalsIgnoreCase(pf.getName())) {
-			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY createDate DESC ").getResultList();
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
 			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 				throw new RuntimeException("otp invalid!");
 			}
 			invalidOtp(email, loginRequestDTO.getOtp());
 		}			
+		
+		Users user = userRepository.findByEmail(userDetails.getEmail());
+		if (user.getLastChangePwd() == null || user.getLastChangePwd() <= 0l) {
+			user.setLastChangePwd(System.currentTimeMillis());
+		}
+		Long pwdValidTimeRange = 90 * 24 * 60 * 60 * 1000l;
+		try {
+			pwdValidTimeRange = Long.parseLong(AppProps.get("PWD_VALID_IN_MLS", pwdValidTimeRange + ""));
+		} catch (Exception e) {
+			pwdValidTimeRange = 90 * 24 * 60 * 60 * 1000l;
+			LOGGER.error(e.getMessage(), e);
+		}
+		
+		if ((user.getLastChangePwd() + pwdValidTimeRange) < System.currentTimeMillis()) {
+			user.setChangePwdRequire(true);
+			userDetails.setChangePwdRequire(true);
+			userRepository.save(user);
+		}
 		
 		final String token = jwtTokenUtil.generateToken(userDetails);
 		this.updateLastLogin(email);
@@ -198,24 +216,31 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE,
 				LoginResponseDto.builder().token(token).authorities(
 						userDetails.getAuthorities().stream().map(au -> au.getAuthority()).collect(Collectors.toList()))
+						.changePwdRequire(userDetails.getChangePwdRequire())
+						.phoneNumber(userDetails.getPhoneNumber())
+						.email(userDetails.getEmail())
+						.firstName(user.getFirstName())
+						.lastName(user.getLastName())
 						.build());
 	}
 
 	@Override
 	@Transactional
 	public void changePwd(ChangePasswordDto changePasswordDto) {
-		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_CHANGE_PWD"))) {
-			List<OTP> otps = em.createQuery("FROM OTP where email = '" + SecurityUtils.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY createDate DESC ").getResultList();
+		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+		if (user.getChangePwdRequire() == Boolean.TRUE && "ON".equalsIgnoreCase(AppProps.get("OTP_MODE_CHANGE_PWD"))) {
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + SecurityUtils.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
 			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 				throw new RuntimeException("otp invalid!");
 			}
 			invalidOtp(SecurityUtils.getEmail(), changePasswordDto.getOtp());
 		}
-		if (StringUtils.isBlank(changePasswordDto.getPassword())) {
-			throw new RuntimeException("password invalid!");
-		}
-		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+		
+		
+		Utils.validatePwd(changePasswordDto.getPassword(), user.getLastPwd());
 		user.setPassword(passwordEncoder.encode(changePasswordDto.getPassword()));
+		user.setChangePwdRequire(false);
+		user.setLastChangePwd(System.currentTimeMillis());
 		userRepository.save(user);
 	}
 	
@@ -232,17 +257,19 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			changePasswordDto.setEmail(tokens.get(0).getEmail());
 		}
 		
-		List<OTP> otps = em.createQuery("FROM OTP where email = '" + changePasswordDto.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l ORDER BY createDate DESC ").getResultList();
+		List<OTP> otps = em.createQuery("FROM OTP where email = '" + changePasswordDto.getEmail() + "' AND otp = '" + changePasswordDto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l ORDER BY id DESC ").getResultList();
 		if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 			throw new RuntimeException("otp invalid!");
 		}
 		invalidOtp(changePasswordDto.getEmail(), changePasswordDto.getOtp());
 		
-		if (StringUtils.isBlank(changePasswordDto.getPassword())) {
-			throw new RuntimeException("password invalid!");
-		}
 		Users user = userRepository.findByEmail(changePasswordDto.getEmail());
+		
+		Utils.validatePwd(changePasswordDto.getPassword(), user.getLastPwd());
+		
 		user.setPassword(passwordEncoder.encode(changePasswordDto.getPassword()));
+		user.setLastChangePwd(System.currentTimeMillis());
+		user.setChangePwdRequire(false);
 		userRepository.save(user);
 	}
 	
@@ -290,11 +317,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				en = new Users();
 				en.setUsername(dto.getUsername());
 				en.setEmail(dto.getEmail());
+				en.setChangePwdRequire(true);
 			}
 		} else {
 			en = new Users();
 			en.setUsername(dto.getUsername());
 			en.setEmail(dto.getEmail());
+			en.setChangePwdRequire(true);
+		}
+		
+		if (en.getUserId() != null && dto.getChangePwdRequire() != null) {
+			en.setChangePwdRequire(dto.getChangePwdRequire());
 		}
 
 		en.setFirstName(dto.getFirstName());
@@ -303,9 +336,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		en.setStatus(dto.getStatus());
 
 		if (StringUtils.isNotBlank(dto.getPassword())) {
+			
+			Utils.validatePwd(dto.getPassword(), en.getLastPwd());
 			en.setPassword(passwordEncoder.encode(dto.getPassword()));
+			en.setLastChangePwd(System.currentTimeMillis());
+			
 		} else if (dto.getId() == null && StringUtils.isBlank(dto.getPassword())) {
 			en.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+			en.setLastChangePwd(System.currentTimeMillis());
 		}
 
 		userRepository.save(en);
@@ -571,6 +609,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					.fullName(user.getFullName()).firstName(user.getFirstName()).lastName(user.getLastName())
 					.phoneNumber(user.getPhoneNumber()).avatar(user.getAvatar())
 					.fullName(user.getFirstName() + " " + user.getLastName()).status(user.getStatus())
+					.changePwdRequire(user.getChangePwdRequire())
 					.roleDescs(user.getRoles().stream().map(authority -> {
 						roles.add(authority.getRole().getName());
 						return SimpleMap.init("name", authority.getRole().getName()).more("desc",
@@ -1038,7 +1077,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Transactional
 	@Override
-	public void sendOtp(Map<String, Object> dto) {
+	public ResponseDto<? extends Object> sendOtp(Map<String, Object> dto) {
 		String email = (String) dto.get("email");
 		if (StringUtils.isBlank(email)) {
 			throw new ApiException("email is required");
@@ -1052,9 +1091,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		String phone = user == null ? null : user.getPhoneNumber();
 
 		if ("sms".equalsIgnoreCase(otpType) && StringUtils.isBlank(phone)) {
-			throw new ApiException("phone is required");
+			otpType = "email";
+			// throw new ApiException("phone is required");
 		}
-		OTP otp = OTP.builder().actionType(actionType).otpType(otpType).phone(phone).email(email).build();
+		OTP otp = OTP.builder().actionType(actionType).phone(phone).email(email).build();
 		int otpLenth = 6;
 		try {
 			otpLenth = Integer.parseInt(AppProps.get("otp_length", "6"));
@@ -1065,15 +1105,28 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			otpLenth = 6;
 		}
 		otp.setOtp(Utils.randomOtp(otpLenth));
-		if ("sms".equalsIgnoreCase(otpType) /* && !"TEST".equalsIgnoreCase(AppProps.get("OTP_MODE")) */) {
-			String msgId = evsPAService.sendSMS("MMS- " + otp.getOtp(), phone.trim());
+		String msgId = null;
+		String reMsg = null;
+		if ("sms".equalsIgnoreCase(otpType)) {
+			msgId = evsPAService.sendSMS("MMS-" + otp.getOtp(), phone.trim());
 			otp.setTrack("AWS SNS: " + msgId + " SMS: " + "MMS-" + otp.getOtp());	
+			reMsg = "OTP has been sent to " + phone;
 		}
+		if ("email".equalsIgnoreCase(otpType)) {
+			msgId = evsPAService.sendEmail("<html><body>" + "MMS-" + otp.getOtp() + "</body></html>", email.trim(), AppProps.get("EMAIL_OTP_SUBJECT", "MMS-OTP"));
+			otp.setTrack("AWS SES: " + msgId + " EMAIL: " + "<html><body>" + "MMS-" + otp.getOtp() + "</body></html>");	
+			reMsg = "OTP has been sent to email " + email;
+		}
+		
+		otp.setOtpType(otpType);
 		
 		otp.setStartTime(System.currentTimeMillis());
 		String exp = AppProps.get("otp_expiry_in_mls", (30 * 60 * 1000l) + "");
 		if ("reset_pwd".equalsIgnoreCase(actionType)) {
 			exp = AppProps.get("otp_reset_pwd_expiry_in_mls", (1 * 60 * 60 * 1000l) + "");
+		}
+		if ("change_pwd".equalsIgnoreCase(actionType)) {
+			exp = AppProps.get("otp_change_pwd_expiry_in_mls", (1 * 60 * 60 * 1000l) + "");
 		}
 		if ("registry".equalsIgnoreCase(actionType)) {
 			exp = AppProps.get("otp_registry_expiry_in_mls", (1 * 60 * 60 * 1000l) + "");
@@ -1086,6 +1139,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		em.createQuery("UPDATE OTP set endTime = startTime where email = '" + email + "' AND actionType = '" + actionType + "'").executeUpdate();
 		em.flush();
 		em.persist(otp);
+		return ResponseDto.builder().success(true).message(reMsg).build();
 	}
 	
 	void invalidOtp(String email, String otp) {
@@ -1093,6 +1147,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	}
 	
 	void invalidToken(String token) {
-		em.createQuery("UPDATE OTP set endTime = startTime where token = '" + token + "'").executeUpdate();
+		em.createQuery("UPDATE Token set endTime = startTime where token = '" + token + "'").executeUpdate();
+	}
+
+	@Override
+	@Transactional
+	public void updatePhoneNumber(String phoneNumber) {
+		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+		user.setPhoneNumber(phoneNumber);
+		userRepository.save(user);
 	}
 }
