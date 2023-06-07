@@ -326,6 +326,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			en.setChangePwdRequire(true);
 		}
 
+		if (en.getUserId() == null && userRepository.findByEmail(dto.getEmail()) != null) {
+			throw new RuntimeException("Email already exists!");
+		}
+		
+		if (dto.getPhoneNumber() != null) {
+			Users existsUser = userRepository.findByPhoneNumber(dto.getPhoneNumber());
+			if (existsUser != null && en.getUserId() != null && existsUser.getUserId().longValue() != en.getUserId().longValue()) {
+				throw new RuntimeException("Phone already exists!");
+			}
+		}
+		
 		if (en.getUserId() != null && dto.getChangePwdRequire() != null) {
 			en.setChangePwdRequire(dto.getChangePwdRequire());
 		}
