@@ -73,7 +73,7 @@ public class Users extends Base1Entity {
     
     @Column(name = "last_pwd", length = 1000, nullable = true)
     private String lastPwd;
-    
+
     @Column(name = "last_login")
     private Date lastLogin;
     
@@ -83,7 +83,7 @@ public class Users extends Base1Entity {
 
     @Column(name = "last_change_pwd")
     private Long lastChangePwd;
-    
+
     public String getLastPwd() {
     	if (StringUtils.isBlank(lastPwd)) {
 			lastPwd = "";
@@ -93,7 +93,7 @@ public class Users extends Base1Entity {
 		}
     	return lastPwd;
     }
-    
+
     public void setPassword(String password) {
     	try {
 			if (StringUtils.isBlank(lastPwd)) {
@@ -108,5 +108,5 @@ public class Users extends Base1Entity {
 		}
     	this.password = password;
     }
-    
+
 }

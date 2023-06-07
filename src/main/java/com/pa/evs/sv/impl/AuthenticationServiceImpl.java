@@ -203,13 +203,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			pwdValidTimeRange = 90 * 24 * 60 * 60 * 1000l;
 			LOGGER.error(e.getMessage(), e);
 		}
-		
+
 		if ((user.getLastChangePwd() + pwdValidTimeRange) < System.currentTimeMillis()) {
 			user.setChangePwdRequire(true);
 			userDetails.setChangePwdRequire(true);
 			userRepository.save(user);
 		}
-		
+
 		final String token = jwtTokenUtil.generateToken(userDetails);
 		this.updateLastLogin(email);
 		this.loadRoleAndPermission();
@@ -235,8 +235,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 			invalidOtp(SecurityUtils.getEmail(), changePasswordDto.getOtp());
 		}
-		
-		
+
+
 		Utils.validatePwd(changePasswordDto.getPassword(), user.getLastPwd());
 		user.setPassword(passwordEncoder.encode(changePasswordDto.getPassword()));
 		user.setChangePwdRequire(false);
@@ -262,11 +262,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new RuntimeException("otp invalid!");
 		}
 		invalidOtp(changePasswordDto.getEmail(), changePasswordDto.getOtp());
-		
+
 		Users user = userRepository.findByEmail(changePasswordDto.getEmail());
-		
+
 		Utils.validatePwd(changePasswordDto.getPassword(), user.getLastPwd());
-		
+
 		user.setPassword(passwordEncoder.encode(changePasswordDto.getPassword()));
 		user.setLastChangePwd(System.currentTimeMillis());
 		user.setChangePwdRequire(false);
@@ -325,7 +325,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			en.setEmail(dto.getEmail());
 			en.setChangePwdRequire(true);
 		}
-		
+
 		if (en.getUserId() != null && dto.getChangePwdRequire() != null) {
 			en.setChangePwdRequire(dto.getChangePwdRequire());
 		}
@@ -336,11 +336,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		en.setStatus(dto.getStatus());
 
 		if (StringUtils.isNotBlank(dto.getPassword())) {
-			
+
 			Utils.validatePwd(dto.getPassword(), en.getLastPwd());
 			en.setPassword(passwordEncoder.encode(dto.getPassword()));
 			en.setLastChangePwd(System.currentTimeMillis());
-			
+
 		} else if (dto.getId() == null && StringUtils.isBlank(dto.getPassword())) {
 			en.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
 			en.setLastChangePwd(System.currentTimeMillis());
@@ -1114,12 +1114,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		if ("email".equalsIgnoreCase(otpType)) {
 			msgId = evsPAService.sendEmail("<html><body>" + "MMS-" + otp.getOtp() + "</body></html>", email.trim(), AppProps.get("EMAIL_OTP_SUBJECT", "MMS-OTP"));
-			otp.setTrack("AWS SES: " + msgId + " EMAIL: " + "<html><body>" + "MMS-" + otp.getOtp() + "</body></html>");	
+			otp.setTrack("AWS SES: " + msgId + " EMAIL: " + "<html><body>" + "MMS-" + otp.getOtp() + "</body></html>");
 			reMsg = "OTP has been sent to email " + email;
 		}
-		
+
 		otp.setOtpType(otpType);
-		
+
 		otp.setStartTime(System.currentTimeMillis());
 		String exp = AppProps.get("otp_expiry_in_mls", (30 * 60 * 1000l) + "");
 		if ("reset_pwd".equalsIgnoreCase(actionType)) {
