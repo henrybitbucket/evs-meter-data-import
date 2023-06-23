@@ -148,6 +148,14 @@ public class CARequestLog extends BaseEntity {
 	
 	private String oldMsn;
 	
+	private String p1Online;
+	
+	private String p1OnlineLastUserSent;
+	
+	private Long p1OnlineLastSent;
+	
+	private Long p1OnlineLastReceived;
+	
 	@Transient
 	private List<String> logs;
 	

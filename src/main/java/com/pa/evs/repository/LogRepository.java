@@ -29,6 +29,8 @@ public interface LogRepository extends JpaRepository<Log, Long> {
 
 	List<Log> findByMsnAndMid(String msn, Long mId);
 	
+	List<Log> findByUidAndMid(String uid, Long mId);
+	
 	@Query(value = "select raw from {h-schema}log where uid = ?1 and type='SUBSCRIBE' and p_type=?2 order by create_date desc limit 1", nativeQuery = true)
 	String findRawByUidAndPType(String uid, String pType);
 

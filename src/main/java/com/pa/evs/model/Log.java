@@ -87,6 +87,9 @@ public class Log extends BaseEntity {
     @Transient
     private GroupDto group;
     
+    @Column(name = "cmd_desc")
+    private String cmdDesc;
+    
     @JsonIgnore
     public String getRepStatusDesc() {
 		if (repStatus == null) return "NO RESPONSE";

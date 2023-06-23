@@ -263,6 +263,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			logP.setMqttAddress(evsPAMQTTAddress);
 			logRepository.save(logP);
 			
+			handlePublishType(logP);
+			
 			//wait 2s
 			LOG.debug("sleep 2s");
 			TimeUnit.SECONDS.sleep(2);
@@ -293,6 +295,29 @@ public class EVSPAServiceImpl implements EVSPAService {
 			
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
+		}
+	}
+	
+	private void handlePublishType(Log log) {
+		if (CommonController.CMD_DESC.get() != null) {
+			// ECH_P1_ONLINE_TEST
+			String cmdType = CommonController.CMD_DESC.get().get(log.getUid() + "_" + log.getMid()) + "";
+			if (StringUtils.isNotBlank(cmdType)) {
+				// "ECH_P1_ONLINE_TEST".equals(cmdType)
+				log.setCmdDesc(cmdType);
+				logRepository.save(log);
+			}
+		}
+		CommonController.CMD_DESC.remove();
+		
+		if ("ECH_P1_ONLINE_TEST".equals(log.getCmdDesc())) {
+			Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+			if (opt.isPresent()) {
+				opt.get().setP1Online("Offline");
+				opt.get().setP1OnlineLastUserSent(SecurityUtils.getEmail());
+				opt.get().setP1OnlineLastSent(System.currentTimeMillis());
+				caRequestLogRepository.save(opt.get());
+			}
 		}
 	}
 	
@@ -481,6 +506,45 @@ public class EVSPAServiceImpl implements EVSPAService {
 		publish(alias + log.getUid(), data, type);
 
 	}
+
+	private void checkECH(Map<String, Object> data, String type, Log log, int status) throws Exception {
+
+		if (!"true".equalsIgnoreCase(AppProps.get("ECH_P1_ONLINE_TEST", "false"))) {
+			return;
+		}
+		try {
+			// P1 Provisioning
+			if ("ECH".equals(log.getPType())) {
+				// receive from evs/pa/data
+				// MCU -> MMS
+				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+				if (opt.isPresent()) {
+					opt.get().setP1Online("Online");
+					opt.get().setP1OnlineLastReceived(System.currentTimeMillis());
+					caRequestLogRepository.save(opt.get());
+				}
+			} else {
+				// check MMS send ECH
+				// receive from evs/pa/resp
+				// MMS -> MCU -> MMS
+				List<Log> logs = logRepository.findByUidAndMid(log.getUid(), log.getMid() == null ? log.getOid() : log.getMid());
+				boolean isECHP1OnlineTest = logs.stream().anyMatch(l -> "ECH_P1_ONLINE_TEST".equalsIgnoreCase(l.getCmdDesc()));
+				LOG.info("> checkECHP1OnlineTest for uuid=" + log.getUid() + " mid=" + (log.getMid() == null ? log.getOid() : log.getMid()) + " isECHP1OnlineTest=" + isECHP1OnlineTest);
+				if (isECHP1OnlineTest) {
+					Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+					if (opt.isPresent()) {
+						opt.get().setP1Online("Online");
+						opt.get().setP1OnlineLastReceived(System.currentTimeMillis());
+						caRequestLogRepository.save(opt.get());
+					}
+				}				
+			}
+
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+
+	}
 	
 	private void handleRLSRes(Map<String, Object> data, String type, Log log) throws Exception {
 		//Publish
@@ -666,6 +730,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 				handleMDT(data, type, log, status);
 			}
 			
+			checkECH(data, type, log, status);
+			
 			if ("OBR".equalsIgnoreCase(type)) {
 				handleOBR(type, log, status);
 			}
@@ -712,6 +778,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if ("OTA".equalsIgnoreCase(type)) {
 				handleOTARes(data, type, log, status);
 			}
+			
+			checkECH(data, type, log, status);
 
 			if (localMap.getLocalMap().get(log.getOid()) != null && !"RLS".equalsIgnoreCase(type)) {
 				LOG.debug("Handle LocalMap resp .... ");

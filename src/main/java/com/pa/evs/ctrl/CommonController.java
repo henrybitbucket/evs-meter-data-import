@@ -106,6 +106,8 @@ public class CommonController {
 	
 	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
+	public static final ThreadLocal<Map<String, Object>> CMD_DESC = new ThreadLocal<>();
+	
     @GetMapping("/api/message/publish")//http://localhost:8080/api/message/publish?topic=a&messageKey=1&message=a
     public ResponseEntity<?> sendGMessage(
     		HttpServletRequest httpServletRequest,
@@ -173,6 +175,11 @@ public class CommonController {
                 }
             }
 
+            LOG.info("> Calling api send cmd: " + command.getCmd() + " type: " + command.getType() + " for uid: " + command.getUid() + " mid: " + mid);
+            if (StringUtils.isNotBlank(command.getType())) {
+            	// Ex: ECH_P1_ONLINE_TEST
+            	CMD_DESC.set(SimpleMap.init(command.getUid() + "_" + mid, command.getType()));
+            }
             evsPAService.publish(alias + command.getUid(), SimpleMap.init(
                     "header", SimpleMap.init("uid", command.getUid()).more("mid", mid).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
                 ).more(

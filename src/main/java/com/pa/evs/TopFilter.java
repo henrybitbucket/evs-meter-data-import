@@ -15,6 +15,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.utils.TimeZoneHolder;
 
 @Order(value = Ordered.HIGHEST_PRECEDENCE)
@@ -43,6 +44,7 @@ public class TopFilter implements Filter {
 			chain.doFilter(req, res);			
 		} finally {
 			TimeZoneHolder.remove();
+			CommonController.CMD_DESC.remove();
 		}
 	}
 
