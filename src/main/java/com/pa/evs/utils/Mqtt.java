@@ -75,8 +75,8 @@ public class Mqtt {
 					SSLContext sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
 					options.setSocketFactory(sslContext.getSocketFactory());
 				}
-				options.setUserName("admin");
-				options.setPassword("1234567".toCharArray());
+				options.setUserName("LinksField");
+				options.setPassword("Linksp@ss1234".toCharArray());
 				
 				instance.connect(options);
 			}
@@ -161,7 +161,7 @@ public class Mqtt {
 			if (instance == null) {
 				instance = Mqtt.getInstance();
 			}
-			instance.subscribe(topic, qos, (s, mqttMessage) -> {
+			instance.subscribeWithResponse(topic, qos, (s, mqttMessage) -> {
 				for (Function<Object, Object> fn : fns) {
 					fn.apply(mqttMessage);
 				}

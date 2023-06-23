@@ -69,11 +69,6 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.simpleemail.model.Body;
-import com.amazonaws.services.simpleemail.model.Content;
-import com.amazonaws.services.simpleemail.model.Destination;
-import com.amazonaws.services.simpleemail.model.Message;
-import com.amazonaws.services.simpleemail.model.SendEmailRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.ctrl.CommonController;
@@ -1028,6 +1023,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 								String uuid = details[1];
 								Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
 								CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
+								if (caLog.getStatus() == null) {
+									caLog.setStatus(DeviceStatus.OFFLINE);	
+								}
+								if (caLog.getType() == null) {
+									caLog.setType(DeviceType.NOT_COUPLED);	
+								}
 								caLog.setUid(uuid);
 								caLog.setSn(details[0]);
 								caLog.setCid(details[2]);
@@ -1051,7 +1052,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 						continue;
 					}
 					try {
-						String uuid = ful.getName().replaceAll("\\.csr$", "");
+						String uuid = ful.getName().replaceAll("\\.csr$", "").replaceAll("(^[0-9]+-)", "");
+						
 						Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
 						CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
 						//Map<String, Object> data = requestCA(caRequestUrl, new FileSystemResource(ful), uuid);
@@ -1060,9 +1062,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 						//caLog.setRaw((String)data.get("cas"));
 						//caLog.setStartDate((Long)data.get("startDate"));
 						//caLog.setEndDate((Long)data.get("endDate"));
-						caLog.setMsn(null);
-						caLog.setStatus(DeviceStatus.OFFLINE);
-						caLog.setType(DeviceType.NOT_COUPLED);
+//						caLog.setMsn(null);
+						if (caLog.getStatus() == null) {
+							caLog.setStatus(DeviceStatus.OFFLINE);	
+						}
+						if (caLog.getType() == null) {
+							caLog.setType(DeviceType.NOT_COUPLED);	
+						}
 						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
 						caLog.setRequireRefresh(false);
 						caLog.setVendor(vendorOpt.get());
@@ -1310,7 +1316,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
     }
 	
-	public static void main1(String[] args) throws Exception {
+	public static void main(String[] args) throws Exception {
 		/**System.out.println(requestCA("http://54.254.171.4:8880/api/evs-ca-request", new ClassPathResource("sv-ca/server.csr"), null));*/
 
 		/*Mqtt.subscribe(null, "dev/evs/pa/data", QUALITY_OF_SERVICE, o -> {
@@ -1331,22 +1337,20 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\n" +
-				"    \"header\": {\n" +
-				"        \"mid\": 888001,\n" +
-				"        \"msn\": \"201906000020\"\n" +
-				"    },\n" +
-				"    \"payload\": {\n" +
-				"        \"id\": \"201906000018\",\n" +
-				"        \"cmd\": \"PW0\",\n" +
-				"        \"p1\": \"0\",\n" +
-				"        \"p2\": \"0\"\n" +
-				"    }\n" +
-				"}";
+		String json = "{\"header\":{\"mid\":234002,\"eid\":\"893107042131440629\",\"sn\":\"212306999999\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"type\":\"RunningData\",\"datetime\":\"2023-06-20 16:11:11\",\"data\":[{\"ACVol\":242.2,\"OutVol\":32.5,\"ACFreq\":50,\"OutCur\":0.4,\"BatVol\":32.5,\"LoadCur\":0.4,\"InnerTmp\":45,\"BatState\":2,\"BatTmp\":-999,\"BatCur\":0}]}}";
 
 		String evsPAMQTTAddress = null;
-		String mqttClientId = "";
-		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "Meter/Grp30/Req", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
+		String mqttClientId = System.currentTimeMillis() + "";
+		evsPAMQTTAddress = "tcp://13.212.16.224:1883";
+		
+		String topic = "LinksField/bms/data";
+
+		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, 2, o -> {
+			final MqttMessage mqttMessage = (MqttMessage) o;
+			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+			return null;
+		});
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, new ObjectMapper().readValue(json, Map.class), 2, false);
 
 		/*SimpleDateFormat sf = new SimpleDateFormat();
 		sf.setTimeZone(UTC);
@@ -1687,7 +1691,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		snsClient.close();
 	}
 	
-	public static void main(String[] args) {
+	public static void main1(String[] args) {
 
 		String message = "<html><body>MMS-1234576</body></html>";
 		String email = "ttx.pipo.uit@gmail.com";
