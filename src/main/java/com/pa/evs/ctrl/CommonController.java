@@ -57,6 +57,7 @@ import com.pa.evs.sv.AddressLogService;
 import com.pa.evs.sv.AddressService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.FileService;
 import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.GroupService;
 import com.pa.evs.sv.LogService;
@@ -103,6 +104,8 @@ public class CommonController {
     @Autowired LocalMapStorage localMap;
     
     @Autowired VendorService vendorService;
+
+    @Autowired FileService fileService;
 	
 	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
@@ -601,6 +604,45 @@ public class CommonController {
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
+    
+    // curl -X POST -H "Content-Type: multipart/form-data" -F "uid=BIERWXAABMAKWAEAAA" -F "type=MMS_P2_TEST" -F "altName=P2_TEST_BIERWXAABMAKWAEAAA" -F "files=@C:/Users/tonyk/Downloads/P2_meter_data.PNG" http://localhost:7770/api/file-upload
+    @PostMapping("/api/file-upload")
+	public Object fileUpload(@RequestParam MultipartFile[] files, 
+			HttpServletRequest req, HttpServletResponse res,
+			@RequestParam(required = false) String type,
+			@RequestParam(required = false) String altName,
+			@RequestParam(required = false) String desc,
+			@RequestParam(required = true) String uid) throws IOException {
+    	LOG.debug("Invoke fileUpload uid: {}", uid);
+    	fileService.saveFile(files, type, altName, uid, desc);
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+	}
+    
+    // http://localhost:7770/api/files?uids=BIERWXAABMAKWAEAAA,BIERWXAABMAKWAEAAA&types=MMS_P1_TEST,MMS_P2_TEST
+    @GetMapping("/api/files")
+	public Object getFileUploads(
+			HttpServletRequest req, HttpServletResponse res,
+			@RequestParam(required = false) String types,// A,B
+			@RequestParam(required = false) String altNames,// A,B
+			@RequestParam(required = false) String uids// A, B
+			) throws IOException {
+    	LOG.debug("Invoke getFileUploads uid: {}", uids);
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(fileService.getFiles(types, altNames, uids)).build());
+	}
+    
+    // http://localhost:7770/api/file?id=1
+    @GetMapping("/api/file")
+	public void downloadFile(HttpServletResponse response, 
+			@RequestParam(required = false) Long id) throws Exception {
+    	fileService.downloadFile(id, response);
+	}
+    
+    // http://localhost:7770/api/file/P2_TEST_BIERWXAABMAKWAEAAA
+    @GetMapping("/api/file/{altName}")
+	public void downloadFile(HttpServletResponse response, 
+			@PathVariable(required = true) String altName) throws Exception {
+    	fileService.downloadFile(altName, response);
+	}
     
 	@PostConstruct
 	public void init() {
