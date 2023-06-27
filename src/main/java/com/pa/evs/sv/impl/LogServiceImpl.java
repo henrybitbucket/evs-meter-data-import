@@ -80,7 +80,7 @@ public class LogServiceImpl implements LogService {
         	sqlCommonBuilder.append(" JOIN PiLog pl on (pl.pi.id = " + piId + " and l.id = pl.logId) ");
         }
         
-        sqlCommonBuilder.append(" LEFT JOIN CARequestLog cl on (cl.msn = cl.msn and cl.uid = l.uid)");
+        sqlCommonBuilder.append(" LEFT JOIN CARequestLog cl on (cl.uid = l.uid)");
         
         sqlCommonBuilder.append(" WHERE 1=1 ");
 
@@ -93,7 +93,7 @@ public class LogServiceImpl implements LogService {
         if (StringUtils.isNotBlank(batchId)) {
         	sqlCommonBuilder.append(" AND (l.batchId = '" + batchId + "' or exists(select l1.id from Log l1 where l1.batchId = '" + batchId + "' and l1.pType = l.pType and l1.msn = l.msn and l1.mid = l.oid )) ");
         }
-        if (StringUtils.isNotBlank(msn)) {
+        if (StringUtils.isBlank(uid) && StringUtils.isNotBlank(msn)) {
         	sqlCommonBuilder.append(" AND l.msn like '%" + msn + "%'");
         } 
         if (StringUtils.isNotBlank(type)) {

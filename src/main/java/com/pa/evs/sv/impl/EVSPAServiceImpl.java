@@ -514,22 +514,36 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		try {
 			// P1 Provisioning
-			if ("ECH".equals(log.getPType())) {
+			if ("ECH".equals(log.getPType()) && evsPASubscribeTopic.equalsIgnoreCase(log.getTopic())) {
 				// receive from evs/pa/data
 				// MCU -> MMS
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
 				if (opt.isPresent()) {
 					opt.get().setP1Online("Online");
+					opt.get().setP1OnlineLastUserSent("MCU");
+					
+					// reply -> MCU
+					// publish
+					Map<String, Object> dataP = new HashMap<>();
+					Map<String, Object> header = new HashMap<>();
+					dataP.put("header", header);
+					header.put("oid", log.getMid());
+					header.put("uid", log.getUid());
+					header.put("gid", log.getGid());
+					header.put("status", 0);
+					publish(alias + log.getUid(), dataP, type);
+					opt.get().setP1OnlineLastSent(System.currentTimeMillis());
 					opt.get().setP1OnlineLastReceived(System.currentTimeMillis());
 					caRequestLogRepository.save(opt.get());
 				}
-			} else {
+				LOG.info("> check ECH evs/pa/data ECHP1OnlineTest for uuid=" + log.getUid() + " mid=" + (log.getMid() == null ? log.getOid() : log.getMid()));
+			} else if (evsPARespSubscribeTopic.equalsIgnoreCase(log.getTopic())) {
 				// check MMS send ECH
 				// receive from evs/pa/resp
 				// MMS -> MCU -> MMS
 				List<Log> logs = logRepository.findByUidAndMid(log.getUid(), log.getMid() == null ? log.getOid() : log.getMid());
 				boolean isECHP1OnlineTest = logs.stream().anyMatch(l -> "ECH_P1_ONLINE_TEST".equalsIgnoreCase(l.getCmdDesc()));
-				LOG.info("> checkECHP1OnlineTest for uuid=" + log.getUid() + " mid=" + (log.getMid() == null ? log.getOid() : log.getMid()) + " isECHP1OnlineTest=" + isECHP1OnlineTest);
+				LOG.info("> check ECH evs/pa/resp ECHP1OnlineTest for uuid=" + log.getUid() + " mid=" + (log.getMid() == null ? log.getOid() : log.getMid()) + " isECHP1OnlineTest=" + isECHP1OnlineTest);
 				if (isECHP1OnlineTest) {
 					Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
 					if (opt.isPresent()) {
@@ -1376,7 +1390,7 @@ public class EVSPAServiceImpl implements EVSPAService {
     	try {
     		Long status = log.getStatus();
         	if (status != null) {
-        		Long mId = log.getOid();
+        		Long mId = log.getOid() == null ? log.getMid() : log.getOid();
         		logRepository.updateStatus(status, mId);
         	}
 		} catch (Exception e) {
@@ -1405,19 +1419,19 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\"header\":{\"mid\":234002,\"eid\":\"893107042131440629\",\"sn\":\"212306999999\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"type\":\"RunningData\",\"datetime\":\"2023-06-20 16:11:11\",\"data\":[{\"ACVol\":242.2,\"OutVol\":32.5,\"ACFreq\":50,\"OutCur\":0.4,\"BatVol\":32.5,\"LoadCur\":0.4,\"InnerTmp\":45,\"BatState\":2,\"BatTmp\":-999,\"BatCur\":0}]}}";
+		String json = "{\"header\":{\"uid\":\"BIE2IEYAAMAEYABJAA\",\"gid\":null,\"msn\":null,\"mid\":1234,\"status\":0},\"payload\":{\"id\":\"BIE2IEYAAMAEYABJAA\",\"cmd\":\"ECH\"}}";
 
 		String evsPAMQTTAddress = null;
 		String mqttClientId = System.currentTimeMillis() + "";
-		evsPAMQTTAddress = "tcp://13.212.16.224:1883";
+		evsPAMQTTAddress = "ssl://3.1.87.138:8883";
 		
-		String topic = "LinksField/bms/data";
+		String topic = "evs/pa/data";
 
-		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, 2, o -> {
-			final MqttMessage mqttMessage = (MqttMessage) o;
-			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
-			return null;
-		});
+//		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, 2, o -> {
+//			final MqttMessage mqttMessage = (MqttMessage) o;
+//			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+//			return null;
+//		});
 		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, new ObjectMapper().readValue(json, Map.class), 2, false);
 
 		/*SimpleDateFormat sf = new SimpleDateFormat();
