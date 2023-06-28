@@ -269,7 +269,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			
 			handlePublishType(logP);
 			
-			if ("INF".equals(type) && CommonController.CMD_OPTIONS.get() != null) {
+			if ("INF".equals(type) && CommonController.CMD_OPTIONS.get() != null && CommonController.CMD_OPTIONS.get().get("selectVersion") != null) {
 				LOG.info("> INF request update firmwave " + logP.getUid() + " -> " + CommonController.CMD_OPTIONS.get().get("selectVersion"));
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(logP.getUid());
 				if (opt.isPresent()) {
