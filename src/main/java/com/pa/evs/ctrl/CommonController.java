@@ -111,6 +111,8 @@ public class CommonController {
 	
 	public static final ThreadLocal<Map<String, Object>> CMD_DESC = new ThreadLocal<>();
 	
+	public static final ThreadLocal<Map<String, Object>> CMD_OPTIONS = new ThreadLocal<>();
+	
     @GetMapping("/api/message/publish")//http://localhost:8080/api/message/publish?topic=a&messageKey=1&message=a
     public ResponseEntity<?> sendGMessage(
     		HttpServletRequest httpServletRequest,
@@ -152,6 +154,7 @@ public class CommonController {
                 return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).build());
             }
             command.setUid(ca.get().getUid());
+            CMD_OPTIONS.set(command.getOptions());
 
             Long mid = evsPAService.nextvalMID();
             Map<String, Object> data = command.getData();
@@ -194,7 +197,10 @@ public class CommonController {
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
             return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
-        }
+        } finally {
+        	CMD_OPTIONS.remove();
+        	CMD_DESC.remove();
+		}
     }
     
     @PostMapping("/api/link-msn")

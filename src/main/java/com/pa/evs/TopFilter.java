@@ -45,6 +45,7 @@ public class TopFilter implements Filter {
 		} finally {
 			TimeZoneHolder.remove();
 			CommonController.CMD_DESC.remove();
+			CommonController.CMD_OPTIONS.remove();
 		}
 	}
 

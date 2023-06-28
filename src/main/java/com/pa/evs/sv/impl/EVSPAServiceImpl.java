@@ -80,6 +80,7 @@ import com.pa.evs.enums.DeviceType;
 import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Firmware;
 import com.pa.evs.model.GroupTask;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.LogBatch;
@@ -92,6 +93,7 @@ import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.FirmwareRepository;
 import com.pa.evs.repository.GroupTaskRepository;
 import com.pa.evs.repository.LogBatchGroupTaskRepository;
 import com.pa.evs.repository.LogBatchRepository;
@@ -165,7 +167,9 @@ public class EVSPAServiceImpl implements EVSPAService {
     @Autowired private UserRepository userRepository;
     
     @Autowired private VendorRepository vendorRepository;
-	
+    
+    @Autowired private FirmwareRepository firmwareRepository;
+    
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
 	
 	@Value("${evs.pa.subscribe.send.topic}") private String evsPASubscribeTopic;
@@ -264,6 +268,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 			logRepository.save(logP);
 			
 			handlePublishType(logP);
+			
+			if ("INF".equals(type) && CommonController.CMD_OPTIONS.get() != null) {
+				LOG.info("> INF request update firmwave " + logP.getUid() + " -> " + CommonController.CMD_OPTIONS.get().get("selectVersion"));
+				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(logP.getUid());
+				if (opt.isPresent()) {
+					opt.get().setLatestINFFirmwaveRequest(System.currentTimeMillis() + "_INF_" + logP.getMid() + "_" + CommonController.CMD_OPTIONS.get().get("selectVersion"));
+					caRequestLogRepository.save(opt.get());
+				}
+			}
+			CommonController.CMD_OPTIONS.remove();
 			
 			//wait 2s
 			LOG.debug("sleep 2s");
@@ -584,10 +598,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 			
 			if (opt.isPresent()) {
 				Long vendor = opt.get().getVendor().getId();
-				if (firmwareService.getLatestFirmware().get(vendor).getVersion().equals(data1.get("ver"))) {
+				
+				String[] latestINFFirmwaveRequest = (opt.get().getLatestINFFirmwaveRequest() + "").split("_");
+				String nextVersion = firmwareService.getLatestFirmware().get(vendor).getVersion();
+				if (latestINFFirmwaveRequest.length >= 4) {
+					nextVersion = latestINFFirmwaveRequest[3];
+					LOG.debug("handleINFRes selectVersion - uid: {}, vendor: {}, firmware: {}", opt.get().getUid(), vendor, nextVersion);
+				}
+				// System.currentTimeMillis() + "_INF_" + logP.getMid() + "_" + CommonController.CMD_OPTIONS.get().get("selectVersion")
+				if (nextVersion.equals(data1.get("ver"))) {
 					status = -1;
 				}
-				LOG.debug("handleINFRes - vendor: {}, firmware: {}", vendor, firmwareService.getLatestFirmware().get(vendor));
+				LOG.debug("handleINFRes - uid: {}, vendor: {}, firmware: {}", opt.get().getUid(), vendor, nextVersion);
 			}
 			if (data1.get("ver") != null) {
 				LOG.debug("handleINFRes saving resp");
@@ -620,11 +642,27 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Map<String, Object> mapPl = new LinkedHashMap<>();
 			if (opt.isPresent()) {
 				Long vendor = opt.get().getVendor().getId();
-				urlS3 = getS3URL(vendor, firmwareService.getLatestFirmware().get(vendor).getFileName());
-				mapPl.put("ver", firmwareService.getLatestFirmware().get(vendor).getVersion());
-				mapPl.put("hash", firmwareService.getLatestFirmware().get(vendor).getHashCode());
+				
+				String[] latestINFFirmwaveRequest = (opt.get().getLatestINFFirmwaveRequest() + "").split("_");
+				String nextVersion = firmwareService.getLatestFirmware().get(vendor).getVersion();
+				if (latestINFFirmwaveRequest.length >= 4) {
+					nextVersion = latestINFFirmwaveRequest[3];
+					LOG.debug("handleINFRes selectVersion - uid: {}, vendor: {}, firmware: {}", opt.get().getUid(), vendor, nextVersion);
+				}
+				
+				List<Firmware> firmwares = firmwareRepository.findByVersionAndVendorId(nextVersion, vendor);
+				Firmware firmware = null;
+				if (firmwares.isEmpty()) {
+					firmware = firmwareService.getLatestFirmware().get(vendor);
+				} else {
+					firmware = firmwares.get(0);
+				}
+				
+				urlS3 = getS3URL(vendor, firmware.getFileName());
+				mapPl.put("ver", firmware.getVersion());
+				mapPl.put("hash", firmware.getHashCode());
 				mapPl.put("url", urlS3);
-				LOG.debug("handleINFRes - vendor: {}, firmware: {}", vendor, firmwareService.getLatestFirmware().get(vendor));
+				LOG.debug("handleINFRes - uid: {}, url: {}, vendor: {}, firmware: {}", opt.get().getUid(), urlS3, vendor, firmware.getVersion());
 			}
 			
 			if (log.getMid() == null) {

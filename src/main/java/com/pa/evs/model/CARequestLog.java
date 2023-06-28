@@ -156,6 +156,9 @@ public class CARequestLog extends BaseEntity {
 	
 	private Long p1OnlineLastReceived;
 	
+	@Column(name = "latestINFFirmwaveRequest", length = 255)
+	private String latestINFFirmwaveRequest;//time_INF_version
+	
 	@Transient
 	private List<String> logs;
 	

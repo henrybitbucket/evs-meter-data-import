@@ -1,5 +1,6 @@
 package com.pa.evs.dto;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -31,5 +32,8 @@ public class Command {
 	private String batchId;
 	
 	private Map<String, Object> data;
+	
+	@Builder.Default
+	private Map<String, Object> options = new LinkedHashMap<>();
 	
 }

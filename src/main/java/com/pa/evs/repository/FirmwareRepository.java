@@ -21,4 +21,6 @@ public interface FirmwareRepository extends JpaRepository<Firmware, Long>{
 	@Modifying
 	@Query(value = "update {h-schema}firmware_tbl set vendor_id = ?1 where vendor_id is null", nativeQuery = true)
 	void updateVendor(Long vendorId);
+	
+	List<Firmware> findByVersionAndVendorId(String version, Long vendorId);
 }
