@@ -682,8 +682,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
 			payload.put("p1", mapPl);
-			
-			header.put("sig", RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload)));
+			String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			header.put("sig", sig);
 			publish(alias + log.getUid(), data, type);
 
 			//update last OTA time
@@ -742,8 +742,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			payload.put("cmd", "ACT");
 			List<String> svCA = caRequestLogRepository.findCAByUid("server.csr");
 			payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
-
-			String sig = RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
+			String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 
 			publish(alias + log.getUid(), data, type);
@@ -944,7 +943,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			header.put("uid", caRequestLog.get().getUid());
 			header.put("gid", caRequestLog.get().getUid());
 			payload.put("id", caRequestLog.get().getUid());
-			String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 			publish(alias + caRequestLog.get().getUid(), data);
 		} else {
@@ -1354,7 +1353,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String bcName = bucketName + "/" + vendor + "/" + objectKey;
 		LOG.info("getS3URL: " + bcName);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		CMD.exec("/usr/local/aws/bin/aws s3 presign s3://\"" + bcName + "\" --expires-in " + (60 * expireTime), null, bos);
+		CMD.exec("/usr/local/aws/bin/aws s3 presign \"s3://" + bcName + "\" --expires-in " + (60 * expireTime), null, bos);
 		String rs = new String(bos.toByteArray(), StandardCharsets.UTF_8).replaceAll("[\n\r]", "");
 		try {
 			bos.close();

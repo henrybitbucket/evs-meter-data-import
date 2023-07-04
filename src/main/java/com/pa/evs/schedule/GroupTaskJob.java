@@ -1,13 +1,10 @@
 package com.pa.evs.schedule;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pa.evs.enums.CommandEnum;
-import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.Group;
-import com.pa.evs.model.Users;
-import com.pa.evs.sv.EVSPAService;
-import com.pa.evs.utils.RSAUtil;
-import com.pa.evs.utils.SimpleMap;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -16,10 +13,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.enums.CommandEnum;
+import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Group;
+import com.pa.evs.model.Users;
+import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.utils.AppProps;
+import com.pa.evs.utils.RSAUtil;
+import com.pa.evs.utils.SimpleMap;
 
 @Component
 public class GroupTaskJob implements Job {
@@ -50,7 +52,7 @@ public class GroupTaskJob implements Job {
                     try {
                         Long mid = evsPAService.nextvalMID();
                         SimpleMap<String, Object> map = SimpleMap.init("id", ca.getUid()).more("cmd", command.name());
-                        String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
+                        String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
                         evsPAService.publish(alias + ca.getUid(), SimpleMap.init(
                                 "header", SimpleMap.init("uid", ca.getUid()).more("mid", mid).more("gid", ca.getUid()).more("msn", ca.getMsn()).more("sig", sig)
                         ).more(

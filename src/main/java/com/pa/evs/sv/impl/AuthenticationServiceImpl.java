@@ -184,7 +184,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				|| pf.getEndTime() < System.currentTimeMillis()) {
 			throw new AuthenticationException(Message.USER_IS_DISABLE, new RuntimeException(Message.USER_IS_DISABLE));
 		}
-		if ("ON".equalsIgnoreCase(AppProps.get("OTP_MODE_LOGIN")) && "mobile".equalsIgnoreCase(pf.getName())) {
+		if ("ON".equalsIgnoreCase(AppProps.get("LOGIN_NORMAL_OTP"))) {
 			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
 			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 				throw new RuntimeException("otp invalid!");
@@ -1094,9 +1094,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new ApiException("email is required");
 		}
 		String otpType = (String) dto.get("otpType");
-		String actionType = (String) dto.get("actionType");		
+		String actionType = (String) dto.get("actionType");
 		Users user = userRepository.findByEmail(email);
-		if ("reset_pwd".equalsIgnoreCase(actionType) && user == null) {
+		if (("reset_pwd".equalsIgnoreCase(actionType) || "login".equalsIgnoreCase(actionType)) && user == null) {
 			throw new ApiException("email doesn't exists!");
 		}
 		String phone = user == null ? null : user.getPhoneNumber();

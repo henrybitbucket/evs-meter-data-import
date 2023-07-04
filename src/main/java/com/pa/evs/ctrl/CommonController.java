@@ -62,6 +62,7 @@ import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.GroupService;
 import com.pa.evs.sv.LogService;
 import com.pa.evs.sv.VendorService;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.RSAUtil;
@@ -166,7 +167,7 @@ public class CommonController {
                 localMap.getCfgMap().put(mid, command.getData());
             }
 
-            String sig = RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
+            String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
 
             if ("TCM_INFO".equalsIgnoreCase(command.getType())) {
             	LOG.debug("sendCommand TCM_INFO: " + mid + " " + ca.get().getMsn());
