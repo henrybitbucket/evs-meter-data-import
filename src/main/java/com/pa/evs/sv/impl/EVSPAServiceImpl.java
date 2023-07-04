@@ -658,7 +658,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 					firmware = firmwares.get(0);
 				}
 				
-				urlS3 = getS3URL(vendor, firmware.getFileName());
+				urlS3 = getS3URL(vendor, firmware.getVersion() + "/" + firmware.getFileName());
 				mapPl.put("ver", firmware.getVersion());
 				mapPl.put("hash", firmware.getHashCode());
 				mapPl.put("url", urlS3);
@@ -1351,9 +1351,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (vendor == null) {
 			vendor = 1l; //Default vendor
 		}
-		String bcName = bucketName + "/" + firmwareService.getLatestFirmware().get(vendor).getVersion() + "/" + objectKey;
+		String bcName = bucketName + "/" + vendor + "/" + objectKey;
+		LOG.info("getS3URL: " + bcName);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		CMD.exec("/usr/local/aws/bin/aws s3 presign s3://" + bcName + " --expires-in " + (60 * expireTime), null, bos);
+		CMD.exec("/usr/local/aws/bin/aws s3 presign s3://\"" + bcName + "\" --expires-in " + (60 * expireTime), null, bos);
 		String rs = new String(bos.toByteArray(), StandardCharsets.UTF_8).replaceAll("[\n\r]", "");
 		try {
 			bos.close();

@@ -266,6 +266,23 @@ public class CommonController {
 		}
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
+
+    @GetMapping("/api/firm-ware/get/{version}/{hashCode}/{vendor}")
+    public ResponseEntity<Object> getFirmware(
+            HttpServletRequest httpServletRequest,
+            @PathVariable final String version,
+            @PathVariable final String hashCode,
+            @PathVariable final Long vendor,
+            @RequestParam final String fileName) throws Exception {
+        
+        try {
+
+        	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(evsPAService.getS3URL(vendor, version + "/" + fileName)).success(true).build());
+            
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    }
     
     @PostMapping("/api/firm-ware/upload/{version}/{hashCode}/{vendor}")
     public ResponseEntity<Object> uploadFirmware(
@@ -278,7 +295,7 @@ public class CommonController {
         try {
 
             firmwareService.upload(version, hashCode, vendor, file);
-            evsPAService.upload(file.getOriginalFilename(), version, hashCode, file.getInputStream());
+            evsPAService.upload(file.getOriginalFilename(), vendor + "/" + version, hashCode, file.getInputStream());
             
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
