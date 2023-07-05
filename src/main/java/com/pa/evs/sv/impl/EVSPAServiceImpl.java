@@ -75,6 +75,7 @@ import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
+import com.pa.evs.enums.MqttCmdStatus;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 import com.pa.evs.enums.ScreenMonitorKey;
@@ -531,10 +532,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if ("ECH".equals(log.getPType()) && evsPASubscribeTopic.equalsIgnoreCase(log.getTopic())) {
 				// receive from evs/pa/data
 				// MCU -> MMS
+				LOG.info("ECH MCU -> PA EVS -> MCU " + log.getUid() + " checking...");
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
 				if (opt.isPresent()) {
-					opt.get().setP1Online("Online");
-					opt.get().setP1OnlineLastUserSent("MCU");
 					
 					// reply -> MCU
 					// publish
@@ -544,11 +544,27 @@ public class EVSPAServiceImpl implements EVSPAService {
 					header.put("oid", log.getMid());
 					header.put("uid", log.getUid());
 					header.put("gid", log.getGid());
-					header.put("status", 0);
+					
+					int sttECH = 0;
+					
+					// check coupled msn
+					if (StringUtils.isNotBlank(opt.get().getMsn()) && !opt.get().getMsn().equalsIgnoreCase(log.getMsn())) {
+						LOG.info("ECH PA EVS -> MCU false, msn coupled but msn not match");
+						sttECH = MqttCmdStatus.INVALID_DEVICE.getStatus();
+					}
+					// not couple msn always ok
+					
+					header.put("status", sttECH);
 					publish(alias + log.getUid(), dataP, type);
-					opt.get().setP1OnlineLastSent(System.currentTimeMillis());
-					opt.get().setP1OnlineLastReceived(System.currentTimeMillis());
+					if (StringUtils.isBlank(opt.get().getMsn()) || sttECH == 0) {
+						opt.get().setP1Online("Online");
+						opt.get().setP1OnlineLastUserSent("MCU");
+						opt.get().setP1OnlineLastSent(System.currentTimeMillis());
+						opt.get().setP1OnlineLastReceived(System.currentTimeMillis());
+					}
 					caRequestLogRepository.save(opt.get());
+				} else {
+					LOG.info("ECH PA EVS -> MCU false, uid not exists: " + log.getUid());
 				}
 				LOG.info("> check ECH evs/pa/data ECHP1OnlineTest for uuid=" + log.getUid() + " mid=" + (log.getMid() == null ? log.getOid() : log.getMid()));
 			} else if (evsPARespSubscribeTopic.equalsIgnoreCase(log.getTopic())) {
@@ -1457,7 +1473,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\"header\":{\"uid\":\"BIE2IEYAAMAEYABJAA\",\"gid\":null,\"msn\":null,\"mid\":1234,\"status\":0},\"payload\":{\"id\":\"BIE2IEYAAMAEYABJAA\",\"cmd\":\"ECH\"}}";
+		String json = "{\"header\":{\"uid\":\"BIE2IEYAAMAEYABJAA\",\"gid\":null,\"msn\":\"202006000878\",\"mid\":1234,\"status\":0},\"payload\":{\"id\":\"BIE2IEYAAMAEYABJAA\",\"cmd\":\"ECH\"}}";
 
 		String evsPAMQTTAddress = null;
 		String mqttClientId = System.currentTimeMillis() + "";

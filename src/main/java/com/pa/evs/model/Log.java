@@ -13,6 +13,7 @@ import javax.persistence.Transient;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.dto.GroupDto;
+import com.pa.evs.enums.MqttCmdStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -90,18 +91,22 @@ public class Log extends BaseEntity {
     @Column(name = "cmd_desc")
     private String cmdDesc;
     
+    @Column(name = "status_desc")
+    private String statusDesc;
+    
     @JsonIgnore
     public String getRepStatusDesc() {
-		if (repStatus == null) return "NO RESPONSE";
-    	return repStatus == 0 ? "OK"
-                : repStatus == 1 ? "Invalid Format"
-                : repStatus == 2 ? "Invalid Command"
-                : repStatus == 3 ? "Invalid Signature"
-                : repStatus == 4 ? "Decryption Failed"
-                : repStatus == 5 ? "Invalid Configuration"
-                : repStatus == 8 ? "Failed send to device (Gateway)"
-                : repStatus == 9 ? "General Error"
-                : "NO RESPONSE";
+    	return MqttCmdStatus.getDescription(repStatus);
+//		if (repStatus == null) return "NO RESPONSE";
+//    	return repStatus == 0 ? "OK"
+//                : repStatus == 1 ? "Invalid Format"
+//                : repStatus == 2 ? "Invalid Command"
+//                : repStatus == 3 ? "Invalid Signature"
+//                : repStatus == 4 ? "Decryption Failed"
+//                : repStatus == 5 ? "Invalid Configuration"
+//                : repStatus == 8 ? "Failed send to device (Gateway)"
+//                : repStatus == 9 ? "General Error"
+//                : "NO RESPONSE";
     }
 	
 	@SuppressWarnings("unchecked")
