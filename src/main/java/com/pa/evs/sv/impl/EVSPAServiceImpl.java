@@ -682,7 +682,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
 			payload.put("p1", mapPl);
-			String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			String sig = BooleanUtils.isTrue(opt.isPresent() && opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 			publish(alias + log.getUid(), data, type);
 
@@ -742,7 +742,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 			payload.put("cmd", "ACT");
 			List<String> svCA = caRequestLogRepository.findCAByUid("server.csr");
 			payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
-			String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
+			
+			Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
+			
+			String sig = BooleanUtils.isTrue(opt.isPresent() && opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 
 			publish(alias + log.getUid(), data, type);
@@ -943,7 +946,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			header.put("uid", caRequestLog.get().getUid());
 			header.put("gid", caRequestLog.get().getUid());
 			payload.put("id", caRequestLog.get().getUid());
-			String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			String sig = BooleanUtils.isTrue(caRequestLog.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 			publish(alias + caRequestLog.get().getUid(), data);
 		} else {

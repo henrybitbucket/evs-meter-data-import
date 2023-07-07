@@ -167,7 +167,7 @@ public class CommonController {
                 localMap.getCfgMap().put(mid, command.getData());
             }
 
-            String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
+            String sig = BooleanUtils.isTrue(ca.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
 
             if ("TCM_INFO".equalsIgnoreCase(command.getType())) {
             	LOG.debug("sendCommand TCM_INFO: " + mid + " " + ca.get().getMsn());
