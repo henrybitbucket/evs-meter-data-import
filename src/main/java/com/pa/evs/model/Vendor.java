@@ -24,4 +24,8 @@ public class Vendor extends BaseEntity {
     
     @Column(name = "description")
     private String description;
+    
+    @Builder.Default
+    @Column(name = "empty_sig", columnDefinition = "boolean default false not null")
+    private Boolean emptySig = false;
 }

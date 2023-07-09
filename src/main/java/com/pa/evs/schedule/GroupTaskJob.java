@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -52,7 +53,7 @@ public class GroupTaskJob implements Job {
                     try {
                         Long mid = evsPAService.nextvalMID();
                         SimpleMap<String, Object> map = SimpleMap.init("id", ca.getUid()).more("cmd", command.name());
-                        String sig = "true".equalsIgnoreCase(AppProps.get("FAKE_SIG", "false")) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
+                        String sig = BooleanUtils.isTrue(ca.getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
                         evsPAService.publish(alias + ca.getUid(), SimpleMap.init(
                                 "header", SimpleMap.init("uid", ca.getUid()).more("mid", mid).more("gid", ca.getUid()).more("msn", ca.getMsn()).more("sig", sig)
                         ).more(
