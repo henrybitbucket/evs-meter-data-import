@@ -131,6 +131,12 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "last_mtd_date")
 	private Long lastMdtDate;
 
+	@Column(name = "last_act_date")
+	private Long lastACTDate;
+
+	@Column(name = "last_OBR_date")
+	private Long lastOBRDate;
+
 	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.MERGE})
 	@JoinColumn(name = "installer")
 	private Users installer;

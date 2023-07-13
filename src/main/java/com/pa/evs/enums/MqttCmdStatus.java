@@ -27,6 +27,7 @@ public enum MqttCmdStatus {
 	FAILED_SEND_TO_DEVICE(8, "Failed send to device (Gateway)"), 
 	GENERAL_ERROR(9, "General Error"),
 	INVALID_DEVICE(10, "invalid device"),
+	NOTFOUND_DEVICE(11, "device not found"),
 	;
 
 	private final int status;

@@ -49,7 +49,7 @@ public class SFileDto {
 				.description(fr.getDescription())
 				.contentType(fr.getContentType())
 				.createdDate(fr.getCreateDate())
-				.uploadedBy(fr.getUpdatedBy())
+				.uploadedBy(fr.getUploadedBy())
 				.build();
 	}
 }

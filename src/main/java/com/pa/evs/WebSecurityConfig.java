@@ -115,6 +115,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers("/api/address-logs").permitAll()
 	            .antMatchers("/api/address-logs").permitAll()
 	            .antMatchers("/api/firm-ware/get/**").permitAll()
+	            .antMatchers("/api/file/*/*").permitAll()
 	            .antMatchers("/api/otp", "/api/user/resetPassword").permitAll()
 				.anyRequest().authenticated();
 

@@ -16,7 +16,7 @@ public interface FileService {
 
 	Optional<SFile> findById(Long id);
 
-	void downloadFile(Long id, HttpServletResponse response) throws Exception;
-
 	void downloadFile(String altName, HttpServletResponse response) throws Exception;
+
+	void downloadFile(Long id, String uid, HttpServletResponse response) throws Exception;
 }

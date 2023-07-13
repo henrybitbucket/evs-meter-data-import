@@ -146,9 +146,12 @@ public class FileServiceImpl implements FileService {
 	
 	@Override
 	@Transactional(readOnly = true)
-	public void downloadFile(Long id, HttpServletResponse response) throws Exception {
+	public void downloadFile(Long id, String uid, HttpServletResponse response) throws Exception {
 		
 		SFile file = this.findById(id).orElseThrow(() -> new RuntimeException("File not found!"));
+		if (!uid.equals(file.getUid())) {
+			throw new RuntimeException("file not found");
+		}
 		if (StringUtils.isBlank(file.getContentType())) {
 			file.setContentType("application/octet-stream");
 		}

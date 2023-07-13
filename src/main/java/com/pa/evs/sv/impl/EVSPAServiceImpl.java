@@ -488,9 +488,28 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		return mid.longValue();
 	}
+
+	private int validateUid(Log log) {
+		Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+		if (!opt.isPresent()) {
+			//Publish device not found
+			Map<String, Object> data = new HashMap<>();
+			Map<String, Object> header = new HashMap<>();
+			data.put("header", header);
+			header.put("oid", log.getMid());
+			header.put("uid", log.getUid());
+			header.put("gid", log.getGid());
+			header.put("msn", log.getMsn());
+			header.put("status", MqttCmdStatus.NOTFOUND_DEVICE.getStatus());
+			publish(alias + log.getUid(), data);
+		}
+		
+		return opt.isPresent() ? 0 : MqttCmdStatus.NOTFOUND_DEVICE.getStatus();
+	}
 	
 	private int validateUidAndMsn(Log log) {
 		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
+
 		if (!opt.isPresent()) {
 			LOG.error("Not found binding of msn: {} for uuid: {}", log.getMsn(), log.getUid());
 		}
@@ -767,6 +786,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 			publish(alias + log.getUid(), data, type);
 			//put mid to check receive response or not
 			localMap.getOnboardingMap().put(log.getMid(), Calendar.getInstance().getTimeInMillis());
+			if (opt.isPresent()) {
+				opt.get().setLastOBRDate(System.currentTimeMillis());
+				opt.get().setLastACTDate(System.currentTimeMillis());
+			}
 		}
 	}
 	
@@ -782,6 +805,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 			logRepository.save(log);
 			updatePublishStatus(log);
 
+			if (validateUid(log) == MqttCmdStatus.NOTFOUND_DEVICE.getStatus()) {
+				LOG.debug("Device notfound: " + log.getUid());
+				return;
+			}
+			
 			Map<String, Object> header = (Map<String, Object>) data.get("header");
 			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 			String type = (String) payload.get("type");
@@ -1161,12 +1189,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 								String uuid = details[1];
 								Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
 								CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
+								
+								if (caLog.getId() == null && caRequestLogRepository.findByCid(details[2]).isPresent()) {
+									LOG.info("eSIM Id exists: " + details[2] + " where insert new UID: " + uuid);
+									continue;
+								}
 								if (caLog.getStatus() == null) {
 									caLog.setStatus(DeviceStatus.OFFLINE);	
 								}
 								if (caLog.getType() == null) {
 									caLog.setType(DeviceType.NOT_COUPLED);	
 								}
+								
 								caLog.setUid(uuid);
 								caLog.setSn(details[0]);
 								caLog.setCid(details[2]);
@@ -1476,7 +1510,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\"header\":{\"uid\":\"BIE2IEYAAMAEYABJAA\",\"gid\":null,\"msn\":\"202006000878\",\"mid\":1234,\"status\":0},\"payload\":{\"id\":\"BIE2IEYAAMAEYABJAA\",\"cmd\":\"ECH\"}}";
+		String json = "{\"header\":{\"uid\":\"TESTNOTFOUNDDEVICE\",\"gid\":null,\"msn\":null,\"mid\":1234,\"status\":0},\"payload\":{\"id\":\"TESTNOTFOUNDDEVICE\",\"cmd\":\"ECH\"}}";
 
 		String evsPAMQTTAddress = null;
 		String mqttClientId = System.currentTimeMillis() + "";
@@ -1484,11 +1518,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		String topic = "evs/pa/data";
 
-//		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, 2, o -> {
-//			final MqttMessage mqttMessage = (MqttMessage) o;
-//			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
-//			return null;
-//		});
+		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/TESTNOTFOUNDDEVICE", 2, o -> {
+			final MqttMessage mqttMessage = (MqttMessage) o;
+			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+			return null;
+		});
 		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, new ObjectMapper().readValue(json, Map.class), 2, false);
 
 		/*SimpleDateFormat sf = new SimpleDateFormat();

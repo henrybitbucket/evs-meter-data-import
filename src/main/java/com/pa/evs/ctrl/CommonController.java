@@ -655,10 +655,11 @@ public class CommonController {
 	}
     
     // http://localhost:7770/api/file?id=1
-    @GetMapping("/api/file")
+    @GetMapping("/api/file/{uid}/{id}")
 	public void downloadFile(HttpServletResponse response, 
-			@RequestParam(required = false) Long id) throws Exception {
-    	fileService.downloadFile(id, response);
+			@PathVariable(required = true) Long id,
+			@PathVariable(required = true) String uid) throws Exception {
+    	fileService.downloadFile(id, uid, response);
 	}
     
     // http://localhost:7770/api/file/P2_TEST_BIERWXAABMAKWAEAAA
