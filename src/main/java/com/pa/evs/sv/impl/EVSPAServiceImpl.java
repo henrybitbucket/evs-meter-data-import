@@ -206,6 +206,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Value("${evs.pa.fakeS3Url:false}") private boolean fakeS3Url;
 
 	@Value("${s3.bucket.name}") private String bucketName;
+	
+	@Value("${s3.photo.bucket.name}") private String photoBucketName;
 
 	@Value("${s3.access.id}") private String accessID;
 
@@ -1144,8 +1146,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 					    try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(tempFile.getAbsolutePath()))) {
 					        while (entries.hasMoreElements()) {
 					            ZipEntry entry = entries.nextElement();
+					            ZipEntry newEntry = null;
 					            String currentName = entry.getName();
-					            ZipEntry newEntry = new ZipEntry(vendor + "-" + currentName);
+					            
+					            if (currentName.endsWith(".csv")) {
+					            	String uploadedZipRealName = name.substring(name.indexOf("-") + 1, name.length());
+					            	newEntry = new ZipEntry(vendor + "-" + uploadedZipRealName + "---" + currentName);
+					            } else {
+					            	newEntry = new ZipEntry(vendor + "-" + currentName);
+					            }
+					            
 				                InputStream in = zipFile.getInputStream(entry);
 				                out.putNextEntry(newEntry);
 				                byte[] buffer = new byte[1024];
@@ -1181,12 +1191,25 @@ public class EVSPAServiceImpl implements EVSPAService {
 					if (!vendorOpt.isPresent()) {
 						continue;
 					}
-					try {						
+					try {
+						String zipFileName = name.substring(name.indexOf("-") + 1, name.indexOf("---"));
+						String csvFileName = name.substring(name.indexOf("---") + 3, name.length());
 						String[] lines = new String(Files.readAllBytes(ful.toPath()), StandardCharsets.UTF_8).split("\r*\n");
+						if (StringUtils.isBlank(lines[0]) || !lines[0].toUpperCase().startsWith("SN,UUID,CID")) {
+							LOG.info("Uploaded file has wrong format. Headers should start with: SN UUID CID. Uploaded zip file: {}, CSV file: {}, Headers: {}", zipFileName, csvFileName, lines[0]);
+							Files.delete(ful.toPath());
+							continue;
+						}
 						for (int i = 1; i < lines.length; i++) {
 							String[] details = lines[i].split(" *, *");
 							if (details.length > 2) {
 								String uuid = details[1];
+								
+								if (StringUtils.isBlank(uuid) || StringUtils.isBlank(details[0]) || StringUtils.isBlank(details[2])) {
+									LOG.info("UUID, SN, CID are required. Zip file: {}, CSV file: {}, UUID: {}, SN: {}, CID: {}.", zipFileName, csvFileName, uuid, details[0], details[2]);
+									continue;
+								}
+								
 								Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
 								CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
 								
@@ -1917,4 +1940,41 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 	}
 
+	@Override
+	public boolean upload(String fileName, InputStream in) {
+		boolean result = false;
+		Date today = new Date();
+		String keyName = String.format("%s", new SimpleDateFormat("yyyy/MM/dd").format(today));
+		LOG.info("Upload Function. Bucket Name: {}, File Name: {}, KeyName: {}", photoBucketName, fileName, keyName);
+		PutObjectRequest request = null;
+		ObjectMetadata metadata = null;
+		try {
+			if (in != null) {
+				String key = fileName;
+				metadata = new ObjectMetadata();
+				metadata.setContentType("plain/text");
+				request = new PutObjectRequest(photoBucketName, key, in, metadata);
+				request.setMetadata(metadata);
+				s3Client.putObject(request);
+
+				LOG.info("{} Finished uploading File Object: {} to {}", DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()), fileName);
+				result = true;
+			} else {
+				LOG.info("File: {} does not exists", fileName);
+				result = true;
+			}
+		} catch (AmazonServiceException e) {
+			// The call was transmitted successfully, but Amazon S3 couldn't process
+			// it, so it returned an error response.
+			LOG.error("S3 Service Exception: " + e.getMessage(), e);
+		} catch (Exception e) {
+			LOG.error("Exception in uploading file: " + e.getLocalizedMessage());
+		} finally {
+			IdleConnectionReaper.shutdown();
+			AwsSdkMetrics.unregisterMetricAdminMBean();
+			LOG.info("Finished S3 Upload");
+		}
+
+		return result;
+	}
 }
