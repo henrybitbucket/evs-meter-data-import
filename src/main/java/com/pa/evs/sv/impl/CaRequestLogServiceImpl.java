@@ -508,7 +508,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         query.setMaxResults(pagin.getLimit());
         
         List<CARequestLog> list = query.getResultList();
-        list.forEach(ca -> ca.setHomeAddress(Utils.formatHomeAddress(ca)));
+        list.forEach(ca -> {
+        	ca.getVendor();
+        	ca.setHomeAddress(Utils.formatHomeAddress(ca));
+        });
         
         pagin.setResults(list);
         getRLSLog(list);

@@ -166,7 +166,7 @@ public class LogServiceImpl implements LogService {
         		LogDto dto = LogDto.builder()
 	              .id(l.getId())
 	              .createDate(l.getCreateDate())
-	              .mid(l.getMid())
+	              .mid(l.getMid() == null ? l.getRmid() : l.getMid())
 	              .uid(l.getUid())
 	              .oid(l.getOid())
 	              .gid(l.getGid())

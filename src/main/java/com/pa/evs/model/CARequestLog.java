@@ -145,8 +145,8 @@ public class CARequestLog extends BaseEntity {
 	@JoinColumn(name = "group_id")
 	private Group group;
 	
-	@ManyToOne
-	@JoinColumn(name = "vendor_id")
+	@ManyToOne(fetch = FetchType.EAGER)
+	@JoinColumn(name = "vendor_id", nullable = false)
 	private Vendor vendor;
 	
 	@Transient

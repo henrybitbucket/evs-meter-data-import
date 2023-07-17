@@ -721,7 +721,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
 			payload.put("p1", mapPl);
-			String sig = BooleanUtils.isTrue(opt.isPresent() && opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			String sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 			publish(alias + log.getUid(), data, type);
 
@@ -798,8 +798,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 			payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
 			
 			Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
+			String sig = "";
 			
-			String sig = BooleanUtils.isTrue(opt.isPresent() && opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
+			try {
+				sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
+			}
 			header.put("sig", sig);
 
 			publish(alias + log.getUid(), data, type);
@@ -1550,7 +1555,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\"header\":{\"uid\":\"TESTNOTFOUNDDEVICE\",\"gid\":null,\"msn\":null,\"mid\":1234,\"status\":0},\"payload\":{\"id\":\"TESTNOTFOUNDDEVICE\",\"cmd\":\"ECH\"}}";
+		String json = "{\"header\":{\"mid\":1081,\"uid\":\"89049032000001000000128255813628\",\"gid\":\"89049032000001000000128255813628\",\"msn\":\"202206000055\",\"sig\":\"\"},\"payload\":{\"id\":\"89049032000001000000128255813628\",\"type\":\"OBR\",\"data\":\"202307171528\"}}";
 
 		String evsPAMQTTAddress = null;
 		String mqttClientId = System.currentTimeMillis() + "";
