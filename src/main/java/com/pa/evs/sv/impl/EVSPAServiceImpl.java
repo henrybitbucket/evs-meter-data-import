@@ -711,7 +711,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			data = new HashMap<>();
 			Map<String, Object> header = new HashMap<>();
 			data.put("header", header);
-			header.put("mid", log.getMid());
+			header.put("mid", log.getMid() == null ? log.getOid() : log.getMid());
 			header.put("uid", log.getUid());
 			header.put("gid", log.getUid());
 			header.put("msn", log.getMsn());
@@ -736,7 +736,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			data = new HashMap<>();
 			Map<String, Object> header = new HashMap<>();
 			data.put("header", header);
-			header.put("mid", log.getMid());
+			header.put("mid", log.getMid() == null ? log.getOid() : log.getMid());
 			header.put("uid", log.getUid());
 			header.put("gid", log.getUid());
 			header.put("msn", log.getMsn());

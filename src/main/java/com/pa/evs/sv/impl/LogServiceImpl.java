@@ -168,6 +168,7 @@ public class LogServiceImpl implements LogService {
 	              .createDate(l.getCreateDate())
 	              .mid(l.getMid())
 	              .uid(l.getUid())
+	              .oid(l.getOid())
 	              .gid(l.getGid())
 	              .msn(l.getMsn())
 	              .sig(l.getSig())
