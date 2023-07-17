@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import com.pa.evs.dto.GroupDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.enums.MqttCmdStatus;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.Log;
@@ -178,8 +179,11 @@ public class LogServiceImpl implements LogService {
 	              .pType(l.getPType())
 	              .pId(l.getPId())
 	              .sn(l.getSn()) 
+	              .status(l.getStatus())
+	              .statusDesc(MqttCmdStatus.getDescription(l.getStatus()))
 	              .RepStatusDesc(l.getRepStatusDesc())
 	              .raw(l.getRaw())
+	              .handleSubscribeDesc(l.getHandleSubscribeDesc())
 	              .build();
         		if (os[1] instanceof PiLog) {
 	        		PiLog pl = (PiLog) os[1];	        		

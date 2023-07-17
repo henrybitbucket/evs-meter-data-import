@@ -94,6 +94,9 @@ public class Log extends BaseEntity {
     @Column(name = "status_desc")
     private String statusDesc;
     
+    @Column(name = "handle_subscribe_desc")
+    private String handleSubscribeDesc;
+    
     @JsonIgnore
     public String getRepStatusDesc() {
     	return MqttCmdStatus.getDescription(repStatus);

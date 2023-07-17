@@ -75,4 +75,8 @@ public class LogDto {
     private String userName;
     
     private String userEmail;
+    
+    private String handleSubscribeDesc;
+    
+    private String statusDesc;
 }

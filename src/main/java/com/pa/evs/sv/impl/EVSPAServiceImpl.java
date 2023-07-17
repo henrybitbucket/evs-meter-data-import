@@ -644,7 +644,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 				}
 				// System.currentTimeMillis() + "_INF_" + logP.getMid() + "_" + CommonController.CMD_OPTIONS.get().get("selectVersion")
 				if (nextVersion.equals(data1.get("ver"))) {
-					status = -1;
+					status = MqttCmdStatus.UPGRADED_FIRMWARE_VERSION.getStatus();
+					log.setHandleSubscribeDesc(MqttCmdStatus.UPGRADED_FIRMWARE_VERSION.getDescription());
+					logRepository.save(log);
 				}
 				LOG.debug("handleINFRes - uid: {}, vendor: {}, firmware: {}", opt.get().getUid(), vendor, nextVersion);
 			}
@@ -730,6 +732,21 @@ public class EVSPAServiceImpl implements EVSPAService {
 				caRequestLogRepository.save(opt.get());
 			}
 			localMap.getOtaMap().put(log.getMid(), Calendar.getInstance().getTimeInMillis());
+		} else {
+			data = new HashMap<>();
+			Map<String, Object> header = new HashMap<>();
+			data.put("header", header);
+			header.put("mid", log.getMid());
+			header.put("uid", log.getUid());
+			header.put("gid", log.getUid());
+			header.put("msn", log.getMsn());
+			header.put("status", status);
+			
+			Map<String, Object> payload = new HashMap<>();
+			data.put("payload", payload);
+			payload.put("id", log.getUid());
+			payload.put("cmd", "OTA");
+			publish(alias + log.getUid(), data, type);
 		}
 	}
 	
