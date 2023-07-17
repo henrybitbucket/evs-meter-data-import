@@ -91,7 +91,7 @@ public class FileServiceImpl implements FileService {
 					fileName = uid.concat(fileName);
 				}
 				
-				evsPAService.upload(fileName, file.getInputStream());
+				evsPAService.upload(fileName, file.getInputStream(), file.getContentType());
 				
 				sFileRepository.save(
 						SFile

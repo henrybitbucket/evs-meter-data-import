@@ -1941,7 +1941,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 
 	@Override
-	public boolean upload(String fileName, InputStream in) {
+	public boolean upload(String fileName, InputStream in, String contentType) {
 		boolean result = false;
 		Date today = new Date();
 		String keyName = String.format("%s", new SimpleDateFormat("yyyy/MM/dd").format(today));
@@ -1952,7 +1952,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if (in != null) {
 				String key = fileName;
 				metadata = new ObjectMetadata();
-				metadata.setContentType("plain/text");
+				metadata.setContentType(contentType);
 				request = new PutObjectRequest(photoBucketName, key, in, metadata);
 				request.setMetadata(metadata);
 				s3Client.putObject(request);
