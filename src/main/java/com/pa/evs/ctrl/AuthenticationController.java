@@ -238,6 +238,15 @@ public class AuthenticationController {
         }
     }
     
+    @PostMapping(value = {"/api/user/preLogin"})
+    public ResponseEntity<?> preLogin(HttpServletRequest httpServletRequest, @RequestParam(name = "username") String username) {
+    	try {
+        	return ResponseEntity.ok(ResponseDto.<Object>builder().success(true).response(authenticationService.preLogin(username)).build());
+        } catch (Exception e) {
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+    }
+    
     @PostConstruct
     public void init() {
     	authenticationService.initDataAuths();

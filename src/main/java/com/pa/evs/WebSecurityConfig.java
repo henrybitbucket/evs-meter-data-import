@@ -117,6 +117,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers("/api/firm-ware/get/**").permitAll()
 	            .antMatchers("/api/file/*/*").permitAll()
 	            .antMatchers("/api/otp", "/api/user/resetPassword").permitAll()
+	            .antMatchers("/api/user/preLogin").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

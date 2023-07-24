@@ -24,6 +24,7 @@ public interface AuthenticationService {
     ResponseDto<JwtUser>getUser(HttpServletRequest request);
     Object getUsernameById(Long userId);
     Object getUserById(Long userId);
+    Object preLogin(String username);
 	void save(UserDto dto);
 	void saveRole (UserDto dto);
 	void saveGroup (UserDto dto);

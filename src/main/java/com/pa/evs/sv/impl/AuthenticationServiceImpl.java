@@ -20,6 +20,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -184,18 +185,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				|| pf.getEndTime() < System.currentTimeMillis()) {
 			throw new AuthenticationException(Message.USER_IS_DISABLE, new RuntimeException(Message.USER_IS_DISABLE));
 		}
-		if ("ON".equalsIgnoreCase(AppProps.get("LOGIN_NORMAL_OTP"))) {
-			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
-			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
-				throw new RuntimeException("otp invalid!");
-			}
-			invalidOtp(email, loginRequestDTO.getOtp());
-		}			
 		
 		Users user = userRepository.findByEmail(userDetails.getEmail());
 		if (user.getLastChangePwd() == null || user.getLastChangePwd() <= 0l) {
 			user.setLastChangePwd(System.currentTimeMillis());
 		}
+		
+		if (BooleanUtils.isTrue(user.getLoginOtpRequire())) {
+			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
+			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
+				throw new RuntimeException("otp invalid!");
+			}
+			invalidOtp(email, loginRequestDTO.getOtp());
+		}
+		
 		Long pwdValidTimeRange = 90 * 24 * 60 * 60 * 1000l;
 		try {
 			pwdValidTimeRange = Long.parseLong(AppProps.get("PWD_VALID_IN_MLS", pwdValidTimeRange + ""));
@@ -345,6 +348,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		en.setLastName(dto.getLastName());
 		en.setPhoneNumber(dto.getPhoneNumber());
 		en.setStatus(dto.getStatus());
+		en.setLoginOtpRequire(dto.getLoginOtpRequire());
 
 		if (StringUtils.isNotBlank(dto.getPassword())) {
 
@@ -621,6 +625,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					.phoneNumber(user.getPhoneNumber()).avatar(user.getAvatar())
 					.fullName(user.getFirstName() + " " + user.getLastName()).status(user.getStatus())
 					.changePwdRequire(user.getChangePwdRequire())
+					.loginOtpRequire(user.getLoginOtpRequire())
 					.roleDescs(user.getRoles().stream().map(authority -> {
 						roles.add(authority.getRole().getName());
 						return SimpleMap.init("name", authority.getRole().getName()).more("desc",
@@ -1167,5 +1172,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
 		user.setPhoneNumber(phoneNumber);
 		userRepository.save(user);
+	}
+	
+	@Override
+	public Object preLogin(String username) {
+		Users user = userRepository.findByEmail(username);
+
+        if (user == null) {
+        	user = userRepository.findByUsername(username);
+        }
+        
+        if (user == null) {
+        	throw new ApiException(MSG_USER_NOT_FOUND);
+        }
+        
+        Map<String, Object> userDetails = new HashMap<>();
+        userDetails.put(username, username);
+        userDetails.put("loginOtpRequire", user.getLoginOtpRequire());
+        
+		return userDetails;
 	}
 }

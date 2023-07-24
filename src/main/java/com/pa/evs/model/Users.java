@@ -83,6 +83,10 @@ public class Users extends Base1Entity {
 
     @Column(name = "last_change_pwd")
     private Long lastChangePwd;
+    
+    @Builder.Default
+    @Column(name = "login_otp_require", columnDefinition = "boolean default false not null")
+    private Boolean loginOtpRequire = false;
 
     public String getLastPwd() {
     	if (StringUtils.isBlank(lastPwd)) {

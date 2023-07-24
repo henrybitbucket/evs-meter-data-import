@@ -49,4 +49,6 @@ public class UserDto {
 
     private Boolean changePwdRequire;
     
+    private Boolean loginOtpRequire;
+    
 }
