@@ -279,7 +279,26 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 ca.setVendor(vendorOpt.get());
             }
         } else {
-            ca.setVendor(null);
+        	if (dto.getId() != null) {
+        		Optional<CARequestLog> opt = caRequestLogRepository.findById(dto.getId());
+                if (opt.isPresent()) {
+                	ca.setVendor(opt.get().getVendor());
+                } else {
+                	Vendor vendor = vendorRepository.findByName("Default");
+                	if (vendor != null) {
+                		ca.setVendor(vendor);
+                	} else {
+                		throw new Exception("Default vendor not found!");
+                	}
+                }
+        	} else {
+        		Vendor vendor = vendorRepository.findByName("Default");
+            	if (vendor != null) {
+            		ca.setVendor(vendor);
+            	} else {
+            		throw new Exception("Default vendor not found!");
+            	}
+        	}
         }
         
         // status, type
