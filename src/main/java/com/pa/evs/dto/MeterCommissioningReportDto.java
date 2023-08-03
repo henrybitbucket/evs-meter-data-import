@@ -1,0 +1,41 @@
+package com.pa.evs.dto;
+
+import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.DeviceType;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
+@Getter
+@Setter
+@Builder
+public class MeterCommissioningReportDto {
+
+	private Long id;
+	private String uid;
+	private String sn;
+	private String cid;
+	private String msn;
+	private Boolean isPassed;
+    private String kwh;
+    private String kw;
+    private String i;
+    private String v;
+    private String pf;
+	private Long dt;
+	private String meterPhotos;
+	private DeviceStatus status;
+	private DeviceType type;
+	private Long lastOBRDate;
+	private Long installer;
+    private String installerName;
+    private String installerEmail;
+    
+}

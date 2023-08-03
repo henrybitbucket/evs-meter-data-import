@@ -47,6 +47,7 @@ import com.pa.evs.dto.FirmwareDto;
 import com.pa.evs.dto.GroupDto;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.LogDto;
+import com.pa.evs.dto.MeterCommissioningReportDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
@@ -61,6 +62,7 @@ import com.pa.evs.sv.FileService;
 import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.GroupService;
 import com.pa.evs.sv.LogService;
+import com.pa.evs.sv.MeterCommissioningReportService;
 import com.pa.evs.sv.VendorService;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CMD;
@@ -107,6 +109,8 @@ public class CommonController {
     @Autowired VendorService vendorService;
 
     @Autowired FileService fileService;
+    
+    @Autowired MeterCommissioningReportService meterCommissioningReportService;
 	
 	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
@@ -667,6 +671,26 @@ public class CommonController {
 	public void downloadFile(HttpServletResponse response, 
 			@PathVariable(required = true) String altName) throws Exception {
     	fileService.downloadFile(altName, response);
+	}
+    
+    @PostMapping("/api/submit-meter-commission")
+	public ResponseEntity<Object> saveMeterCommissionSubmit(HttpServletResponse response, @RequestBody MeterCommissioningReportDto dto) {
+    	try {
+    		meterCommissioningReportService.save(dto);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @GetMapping("/api/last-submitted-meter-commission")
+	public ResponseEntity<Object> getLastSubmit(HttpServletResponse response, @RequestParam(required = true) String uid, @RequestParam(required = true) String msn) throws Exception {
+    	try {
+    		MeterCommissioningReportDto dto = meterCommissioningReportService.getLastSubmit(uid, msn);
+    		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(dto).build());
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
 	}
     
 	@PostConstruct

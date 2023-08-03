@@ -118,6 +118,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers("/api/file/*/*").permitAll()
 	            .antMatchers("/api/otp", "/api/user/resetPassword").permitAll()
 	            .antMatchers("/api/user/preLogin").permitAll()
+	            .antMatchers("/api/submit-meter-commission").permitAll()
+	            .antMatchers("/api/last-submitted-meter-commission**").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
