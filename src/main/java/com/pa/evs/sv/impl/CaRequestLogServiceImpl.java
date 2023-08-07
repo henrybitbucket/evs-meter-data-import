@@ -356,6 +356,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Boolean coupledDate = BooleanUtils.toBoolean((String) options.get("queryCoupledDate"));
             Boolean activationDate = BooleanUtils.toBoolean((String) options.get("queryActivationDate"));
             Boolean deactivationDate = BooleanUtils.toBoolean((String) options.get("queryDeactivationDate"));
+            Boolean onboardingDate = BooleanUtils.toBoolean((String) options.get("onboardingDate"));
             Boolean allDate = BooleanUtils.toBoolean((String) options.get("queryAllDate"));
             
             String queryBuilding = (String) options.get("queryBuilding");
@@ -428,6 +429,19 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                         sqlCommonBuilder.append(" AND deactivationDate <= " + toDate + ") OR");
                     }
                 }
+                if (BooleanUtils.isTrue(onboardingDate)) {
+                    if (fromDate != null && toDate == null) {
+                        sqlCommonBuilder.append(" lastOBRDate >= " + fromDate + "OR");
+                    }
+                    if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" lastOBRDate <= " + toDate + "OR");
+                    }
+                    if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" ( lastOBRDate >= " + fromDate);
+                        sqlCommonBuilder.append(" AND lastOBRDate <= " + toDate + ") OR");
+                    }
+                }
+                
                 sqlCommonBuilder.delete(sqlCommonBuilder.length() - 2, sqlCommonBuilder.length());
                 if (sqlCommonBuilder.length() >= 30) {
                     sqlCommonBuilder.append(" ) AND ");

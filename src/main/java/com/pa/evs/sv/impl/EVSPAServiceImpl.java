@@ -813,6 +813,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if (opt.isPresent()) {
 				opt.get().setLastOBRDate(System.currentTimeMillis());
 				opt.get().setLastACTDate(System.currentTimeMillis());
+				caRequestLogRepository.save(opt.get());
 			}
 		}
 	}
@@ -1555,7 +1556,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\"header\":{\"mid\":1081,\"uid\":\"89049032000001000000128255813628\",\"gid\":\"89049032000001000000128255813628\",\"msn\":\"202206000055\",\"sig\":\"\"},\"payload\":{\"id\":\"89049032000001000000128255813628\",\"type\":\"OBR\",\"data\":\"202307171528\"}}";
+		String json = "{\"header\":{\"mid\":1081,\"uid\":\"89049032000001000000128255735252\",\"gid\":\"89049032000001000000128255735252\",\"msn\":\"202206000279\"},\"payload\":{\"id\":\"89049032000001000000128255735252\",\"type\":\"OBR\",\"data\":\"202206000279\"}}";
 
 		String evsPAMQTTAddress = null;
 		String mqttClientId = System.currentTimeMillis() + "";
@@ -1563,7 +1564,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		String topic = "evs/pa/data";
 
-		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/TESTNOTFOUNDDEVICE", 2, o -> {
+		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/89049032000001000000128255735252", 2, o -> {
 			final MqttMessage mqttMessage = (MqttMessage) o;
 			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
 			return null;
