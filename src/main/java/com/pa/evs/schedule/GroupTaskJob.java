@@ -20,7 +20,6 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.Users;
 import com.pa.evs.sv.EVSPAService;
-import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SimpleMap;
 
@@ -51,7 +50,7 @@ public class GroupTaskJob implements Job {
             if (!caRequestLogs.isEmpty()) {
                 caRequestLogs.forEach(ca -> {
                     try {
-                        Long mid = evsPAService.nextvalMID();
+                        Long mid = evsPAService.nextvalMID(ca.getVendor());
                         SimpleMap<String, Object> map = SimpleMap.init("id", ca.getUid()).more("cmd", command.name());
                         String sig = BooleanUtils.isTrue(ca.getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
                         evsPAService.publish(alias + ca.getUid(), SimpleMap.init(

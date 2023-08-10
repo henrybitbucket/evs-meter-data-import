@@ -28,4 +28,7 @@ public class Vendor extends BaseEntity {
     @Builder.Default
     @Column(name = "empty_sig", columnDefinition = "boolean default false not null")
     private Boolean emptySig = false;
+    
+    @Builder.Default
+    private Long maxMidValue = 4294967295l;
 }

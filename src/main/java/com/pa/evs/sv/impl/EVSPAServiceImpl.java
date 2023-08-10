@@ -75,9 +75,9 @@ import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
-import com.pa.evs.enums.MqttCmdStatus;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
+import com.pa.evs.enums.MqttCmdStatus;
 import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.CARequestLog;
@@ -144,6 +144,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired CaRequestLogService caRequestLogService;
 
 	@Autowired private LogRepository logRepository;
+	
+	@Autowired private SequenceService sequenceService;
 	
 	@Autowired private LogBatchRepository logBatchRepository;
 
@@ -481,12 +483,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	@Override
-	public Long nextvalMID() {
-		Number mid = logRepository.nextvalMID().longValue();
+	public Long nextvalMID(Vendor vendor) {
+		Number mid = sequenceService.nextvalMID(vendor.getId()).longValue();
 		// TC Module mid (message id) format is uint32, the max number is 4294967295
-		if (mid.longValue() >= 4294967295l) {
-			logRepository.nextvalMID(10000l);
-			mid = logRepository.nextvalMID().longValue();
+		if (vendor.getMaxMidValue() == null) {
+			vendor.setMaxMidValue(65535l);
+		}
+		if (mid.longValue() >= vendor.getMaxMidValue()) {// 4294967295l
+			sequenceService.nextvalMID(10000l, vendor.getId());
+			mid = sequenceService.nextvalMID(vendor.getId()).longValue();
 		}
 		return mid.longValue();
 	}
@@ -625,6 +630,26 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 	}
 	
+	private boolean isReceivedINFBySentOTA(Log log) {
+		if (!"INF".equalsIgnoreCase(log.getPType())) {
+			return false;
+		}
+		List<Log> logs = new ArrayList<>();
+		try {
+			logs = logRepository.findByUidAndMidAndPType(log.getUid(), log.getMid() != null ? log.getMid() : log.getOid(), "OTA");
+		} catch (Exception e) {
+			LOG.error("isReceivedINFBySentOTA error", e);
+		}
+		LOG.info(">INF from OTA OTA length=" + logs.size());
+		for (Log l : logs) {
+			if ((System.currentTimeMillis() - l.getCreateDate().getTime()) < 1l * 60l * 60l * 1000l) {
+				LOG.info(">INF from OTA oid=" + log.getOid());
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	private void handleINFRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
 		// chua validate resp signature
 		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
@@ -647,6 +672,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 					status = MqttCmdStatus.UPGRADED_FIRMWARE_VERSION.getStatus();
 					log.setHandleSubscribeDesc(MqttCmdStatus.UPGRADED_FIRMWARE_VERSION.getDescription());
 					logRepository.save(log);
+				} else if (isReceivedINFBySentOTA(log)) {
+					status = MqttCmdStatus.UPGRADE_FIRMWARE_VERSION_FAIL.getStatus();
+					log.setHandleSubscribeDesc(MqttCmdStatus.UPGRADE_FIRMWARE_VERSION_FAIL.getDescription());
+					logRepository.save(log);
+					return;
 				}
 				LOG.debug("handleINFRes - uid: {}, vendor: {}, firmware: {}", opt.get().getUid(), vendor, nextVersion);
 			}
@@ -704,8 +734,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 				LOG.debug("handleINFRes - uid: {}, url: {}, vendor: {}, firmware: {}", opt.get().getUid(), urlS3, vendor, firmware.getVersion());
 			}
 			
-			if (log.getMid() == null) {
-				log.setMid(nextvalMID());
+			if (log.getMid() == null && opt.isPresent()) {
+				log.setMid(nextvalMID(opt.get().getVendor()));
 			}
 			//Publish
 			data = new HashMap<>();
@@ -1009,7 +1039,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String cmd = (String)payload.get("cmd");
 		Optional<CARequestLog> caRequestLog = caRequestLogRepository.findByMsn(msn);
 		if (caRequestLog.isPresent()) {
-			Long nextMid = nextvalMID();
+			Long nextMid = nextvalMID(caRequestLog.get().getVendor());
 			localMap.getLocalMap().put(nextMid, mid.longValue());
 			header.put("mid", nextMid);
 			header.put("uid", caRequestLog.get().getUid());
@@ -1333,14 +1363,30 @@ public class EVSPAServiceImpl implements EVSPAService {
 		try {
 			initS3();
 		} catch (Exception e) {/**/}
-		
+
 		try {
-			logRepository.createMIDSeq();
-			Number lastValue = logRepository.nextvalMID();
-			if (lastValue.longValue() < 10000l) {
-				logRepository.nextvalMID(10000l);
-			}
-		} catch (Exception e) {/**/}
+			vendorRepository.findAll()
+			.forEach(vendor -> {
+				if (vendor.getMaxMidValue() == null) {
+					vendor.setMaxMidValue(!"Default".equalsIgnoreCase(vendor.getName()) ? 65535l : 4294967295l);
+					vendorRepository.save(vendor);
+				}
+				try {
+					sequenceService.createMIDSeq(vendor.getId());
+					Number lastValue = sequenceService.nextvalMID(vendor.getId());
+					if (lastValue.longValue() < 10000l) {
+						sequenceService.nextvalMID(10000l, vendor.getId());
+					}
+				} catch (Exception e) {
+					
+					e.printStackTrace();
+				}
+					
+			});
+        } catch (Exception e) {
+            //
+        }
+		
 		
 		try {
             caRequestLogService.getCids(true);
@@ -1528,7 +1574,7 @@ public class EVSPAServiceImpl implements EVSPAService {
     		Long status = log.getStatus();
         	if (status != null) {
         		Long mId = log.getOid() == null ? log.getMid() : log.getOid();
-        		logRepository.updateStatus(status, mId);
+        		logRepository.updateStatus(status, mId, log.getUid());
         	}
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
@@ -1556,19 +1602,19 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\"header\":{\"mid\":1081,\"uid\":\"89049032000001000000128255735252\",\"gid\":\"89049032000001000000128255735252\",\"msn\":\"202206000279\"},\"payload\":{\"id\":\"89049032000001000000128255735252\",\"type\":\"OBR\",\"data\":\"202206000279\"}}";
+		String json = "{\"header\":{\"oid\":10181,\"uid\":\"89049032000001000000128255740781\",\"gid\":\"89049032000001000000128255740781\",\"msn\":\"202206000050\",\"sig\":\"\"},\"payload\":{\"id\":\"89049032000001000000128255740781\",\"type\":\"INF\",\"data\":{\"ver\":\"1.1.5\",\"rdti\":15,\"pdti\":360,\"pdtm\":50,\"mqka\":600}}}";
 
 		String evsPAMQTTAddress = null;
 		String mqttClientId = System.currentTimeMillis() + "";
 		evsPAMQTTAddress = "ssl://3.1.87.138:8883";
 		
-		String topic = "evs/pa/data";
+		String topic = "dev/evs/pa/resp";
 
-		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/89049032000001000000128255735252", 2, o -> {
-			final MqttMessage mqttMessage = (MqttMessage) o;
-			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
-			return null;
-		});
+//		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/89049032000001000000128255735252", 2, o -> {
+//			final MqttMessage mqttMessage = (MqttMessage) o;
+//			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+//			return null;
+//		});
 		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, new ObjectMapper().readValue(json, Map.class), 2, false);
 
 		/*SimpleDateFormat sf = new SimpleDateFormat();

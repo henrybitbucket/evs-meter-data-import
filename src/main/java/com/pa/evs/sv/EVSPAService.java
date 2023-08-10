@@ -13,12 +13,13 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.Users;
+import com.pa.evs.model.Vendor;
 
 public interface EVSPAService {
 
 	Log publish(String topic, Object message, String type) throws Exception;
 
-	Long nextvalMID();
+	Long nextvalMID(Vendor vendor);
 
     boolean upload(String fileName, String version, String hashCode, InputStream in);
 

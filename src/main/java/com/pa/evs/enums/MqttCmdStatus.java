@@ -29,6 +29,7 @@ public enum MqttCmdStatus {
 	INVALID_DEVICE(10, "invalid device"),
 	NOTFOUND_DEVICE(11, "device not found"),
 	UPGRADED_FIRMWARE_VERSION(12, "The firmware version is the same as the last requested upgrade."),
+	UPGRADE_FIRMWARE_VERSION_FAIL(13, "Firmware version update failed"),
 	;
 
 	private final int status;

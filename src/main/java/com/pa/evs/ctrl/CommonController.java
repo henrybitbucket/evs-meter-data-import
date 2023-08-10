@@ -161,7 +161,7 @@ public class CommonController {
             command.setUid(ca.get().getUid());
             CMD_OPTIONS.set(command.getOptions());
 
-            Long mid = evsPAService.nextvalMID();
+            Long mid = evsPAService.nextvalMID(ca.get().getVendor());
             Map<String, Object> data = command.getData();
             SimpleMap<String, Object> map = SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd());
             if (CommandEnum.CFG.name().equals(command.getCmd())) {
@@ -713,7 +713,7 @@ public class CommonController {
 		} catch (IOException e) {/**/}
 		
 		if (!CMD.isWindow()) {
-			CMD.exec("cd " + caFolder + " && sh aw-install.sh", null);
+			// CMD.exec("cd " + caFolder + " && sh aw-install.sh", null);
 	        try {
 	        	LOG.info("Test get S3 {}", evsPAService.getS3URL(null, "pa-meter-2.bin"));
 			} catch (Exception e) {
