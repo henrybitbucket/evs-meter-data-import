@@ -762,7 +762,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				caRequestLogRepository.save(opt.get());
 			}
 			localMap.getOtaMap().put(log.getMid(), Calendar.getInstance().getTimeInMillis());
-		} else {
+		} else if (!isReceivedINFBySentOTA(log)) {
 			data = new HashMap<>();
 			Map<String, Object> header = new HashMap<>();
 			data.put("header", header);
