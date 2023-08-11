@@ -599,7 +599,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         			}
         			caRequestLogRepository.save(ca);
         		} else {
-        			throw new RuntimeException("SN doesn't exists!");
+        			throw new RuntimeException("MCU SN(QR Code) doesn't exist!");
         		}
 			} catch (Exception e) {
 				LOG.error("link error " + e.getMessage(), e);
