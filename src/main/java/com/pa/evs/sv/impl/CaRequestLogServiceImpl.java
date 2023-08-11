@@ -598,9 +598,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         				}
         			}
         			caRequestLogRepository.save(ca);
+        		} else {
+        			throw new RuntimeException("SN doesn't exists!");
         		}
 			} catch (Exception e) {
 				LOG.error("link error " + e.getMessage(), e);
+				throw new RuntimeException(e.getMessage(), e);
 			}
     		
     	} else if (map.get("uuid") != null) {
@@ -847,6 +850,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			caRequestLog.setMsn(null);
 			caRequestLog.setCoupledDatetime(null);
 			caRequestLogRepository.save(caRequestLog);
+		} else {
+			throw new RuntimeException("Device doesn't exists!");
 		}
 	}
 }
