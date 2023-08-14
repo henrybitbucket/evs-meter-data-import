@@ -791,9 +791,21 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	private void handleOBR(String type, Log log, int status) throws Exception {
 
-		if(status == 0) {
-			status = validateUidAndMsn(log);
+//		https://powerautomationsg.atlassian.net/browse/MMS-93
+//		xuejiang.qing
+//		Backgroud,
+//		The OBR test should be done during Provision step 1, allow the MCU without Meter can send OBR to MMS to do virtual onboarding test(no couple with meter). 
+//		MMS Server should reply the virtual onboarding message as normal OBR if the Meter ID with  “20200101001001” is in the OBR. just not check the if Meter ID is in system or not.  
+		
+//		if (status == 0) {
+//			status = validateUidAndMsn(log);
+//		}
+ 
+		if (StringUtils.isBlank(log.getMsn())) {
+			log.setMsn("20200101001001");
 		}
+//		https://powerautomationsg.atlassian.net/browse/MMS-93 END
+
 		updateLastSubscribe(log);
 
 		//publish
@@ -827,7 +839,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			List<String> svCA = caRequestLogRepository.findCAByUid("server.csr");
 			payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
 			
-			Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
+			Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
 			String sig = "";
 			
 			try {
@@ -1602,13 +1614,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\"header\":{\"oid\":10181,\"uid\":\"89049032000001000000128255740781\",\"gid\":\"89049032000001000000128255740781\",\"msn\":\"202206000050\",\"sig\":\"\"},\"payload\":{\"id\":\"89049032000001000000128255740781\",\"type\":\"INF\",\"data\":{\"ver\":\"1.1.5\",\"rdti\":15,\"pdti\":360,\"pdtm\":50,\"mqka\":600}}}";
+		String json = "{\"header\":{\"mid\":10181,\"uid\":\"880490320000010000001282557529061234\",\"gid\":\"880490320000010000001282557529061234\",\"msn\":\"\",\"sig\":\"\"},\"payload\":{\"id\":\"880490320000010000001282557529061234\",\"type\":\"OBR\",\"data\":\"123456789\"}}";
 
 		String evsPAMQTTAddress = null;
 		String mqttClientId = System.currentTimeMillis() + "";
 		evsPAMQTTAddress = "ssl://3.1.87.138:8883";
 		
-		String topic = "dev/evs/pa/resp";
+		String topic = "evs/pa/data";
 
 //		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/89049032000001000000128255735252", 2, o -> {
 //			final MqttMessage mqttMessage = (MqttMessage) o;

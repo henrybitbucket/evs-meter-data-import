@@ -10,6 +10,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.dto.GroupDto;
@@ -117,7 +119,14 @@ public class Log extends BaseEntity {
 		
 		Map<String, Object> header = (Map<String, Object>) data.get("header");
 		Map<String, Object> payload = (Map<String, Object>) data.get("payload");
-		
+		String pType = payload == null ? "" : (payload.get("type") == null ? payload.get("cmd") + "" : payload.get("type") + "");
+		if (StringUtils.isBlank(pType)) {
+			pType = (String) data.get("type");
+		}
+		if (pType == null) {
+			pType = "";
+		}
+		data.remove("type");
 		return builder()
 				.type(type)
 				.mid(header.get("mid") == null ? null : ((Number)(header.get("mid"))).longValue())
@@ -129,7 +138,7 @@ public class Log extends BaseEntity {
 				.sig((String)header.get("sig"))
 				.status(header.get("status") == null ? null : ((Number)(header.get("status"))).longValue())
 				.pId(payload == null ? null : (payload.get("id") + ""))
-				.pType(payload == null ? "" : (payload.get("type") == null ? payload.get("cmd") + "" : payload.get("type") + ""))
+				.pType(pType)
 				.raw(new ObjectMapper().writeValueAsString(data))
 				.repStatus((header.get("mid") != null && "publish".equalsIgnoreCase(type)) ? -999l : null) //-999l PUBLISH status waiting
 				.build();
