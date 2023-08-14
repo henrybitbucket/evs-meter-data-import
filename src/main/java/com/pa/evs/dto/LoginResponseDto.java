@@ -16,6 +16,7 @@ public class LoginResponseDto {
     @Builder.Default
     private Boolean changePwdRequire = false;
     private String phoneNumber;
+    private Long id;
     private String email;
     private String firstName;
     private String lastName;

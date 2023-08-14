@@ -224,6 +224,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 						.email(userDetails.getEmail())
 						.firstName(user.getFirstName())
 						.lastName(user.getLastName())
+						.id(userDetails.getId())
 						.build());
 	}
 
