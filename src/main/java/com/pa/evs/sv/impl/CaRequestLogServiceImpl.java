@@ -502,6 +502,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 sqlCommonBuilder.append(" vendor.id = " + queryVendor + " AND ");
             }
             
+            sqlCommonBuilder.append(" sn is not null  AND ");
+            
             sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
         }
         
