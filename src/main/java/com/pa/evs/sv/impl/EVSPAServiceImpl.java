@@ -1614,7 +1614,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String sig = RSAUtil.initSignedRequest("D://server.key", payload);
 		System.out.println(sig);*/
 
-		String json = "{\"header\":{\"mid\":10181,\"uid\":\"880490320000010000001282557529061234\",\"gid\":\"880490320000010000001282557529061234\",\"msn\":\"\",\"sig\":\"\"},\"payload\":{\"id\":\"880490320000010000001282557529061234\",\"type\":\"OBR\",\"data\":\"123456789\"}}";
+		String json = "{\"header\":{\"mid\":10181,\"uid\":\"89049032000001000000128256736680\",\"gid\":\"89049032000001000000128256736680\",\"msn\":\"202206000057\",\"sig\":\"\"},\"payload\":{\"id\":\"89049032000001000000128256736680\",\"type\":\"OBR\",\"data\":\"202206000057\"}}";
 
 		String evsPAMQTTAddress = null;
 		String mqttClientId = System.currentTimeMillis() + "";

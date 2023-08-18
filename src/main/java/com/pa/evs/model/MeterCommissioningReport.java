@@ -6,6 +6,7 @@ import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
@@ -25,7 +26,15 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "meter_commissioning_report")
+@Table(
+	name = "meter_commissioning_report", 
+	indexes = {
+		@Index(columnList = "user_submit", name = "idx_meter_commissioning_report_user_submit"),
+		@Index(columnList = "user_submit,uid", name = "idx_meter_commissioning_report_user_submit_uid"),
+		@Index(columnList = "user_submit,msn", name = "idx_meter_commissioning_report_user_submit_msn"),
+		@Index(columnList = "uid,is_latest", name = "idx_meter_commissioning_report_uid_is_latest")
+	}
+)
 public class MeterCommissioningReport extends BaseEntity {
 	
 	private String uid;
@@ -53,8 +62,19 @@ public class MeterCommissioningReport extends BaseEntity {
 
 	@Column(name = "last_OBR_date")
 	private Long lastOBRDate;
+	
+	@Column(name = "is_latest", columnDefinition = "boolean not null default false")
+	private Boolean isLatest;
 
 	@ManyToOne(fetch = FetchType.LAZY, cascade = { CascadeType.MERGE })
 	@JoinColumn(name = "installer")
 	private Users installer;
+	
+	@Column(name = "user_submit")
+	private String userSubmit;
+	
+	@Column(name = "time_submit")
+	private Long timeSubmit;
+	
+	private String coupledUser;
 }

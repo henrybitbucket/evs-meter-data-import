@@ -24,6 +24,7 @@ import org.springframework.util.CollectionUtils;
 import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.LogDto;
+import com.pa.evs.dto.MeterCommissioningReportDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.sv.SettingService;
 
@@ -225,4 +226,68 @@ public class CsvUtils {
     public interface CsvRecordConverter<T> {
         List<String> toCSVRecord(int idx, T record, Long activateDate);
     }
+    
+    private static List<String> toCSVRecord(int idx, MeterCommissioningReportDto log, Long acDate) {
+        List<String> record = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        sdf.setTimeZone(TimeZoneHolder.get());
+        record.add(log.getMsn());
+        record.add(log.getUid());
+        
+        // MCU Profile
+        if (log.getId() != null) {
+            record.add(
+            		new StringBuilder()
+            		.append("MCU SN: ").append(log.getSn()).append("\n")
+            		.append("MCU UUID: ").append(log.getUid()).append("\n")
+            		.append("ESIM ID: ").append(log.getCid()).append("\n")
+            		.append("STATUS: ").append(log.getStatus()).append("\n")
+            		.append("COUPLED STATE: ").append(log.getType()).append("\n")
+            		.append("COUPLED USER: ").append(StringUtils.isNotBlank(log.getInstallerEmail()) ? log.getInstallerEmail() : "").append("\n")
+            		.toString()
+        		);        	
+        } else {
+        	record.add("");
+        }
+        
+        // Meter Data
+        if (log.getId() != null) {
+            record.add(
+            		new StringBuilder()
+            		.append("Kwh: ").append(log.getKwh()).append("\n")
+            		.append("Kw: ").append(log.getKw()).append("\n")
+            		.append("I: ").append(log.getI()).append("\n")
+            		.append("V: ").append(log.getV()).append("\n")
+            		.append("DTime: ").append(log.getDt() != null ? (sdf.format(new Date(log.getDt())) + " (Meter Time)") : "").append("\n")
+            		.toString()
+        		);       	
+        } else {
+        	record.add("");
+        }
+        
+        // User ID
+        record.add(log.getUserSubmit());
+        
+        // Datetime
+        record.add(log.getTimeSubmit() != null ? sdf.format(new Date(log.getTimeSubmit())) : "");
+        
+        // OnBoarding Time
+        record.add(log.getLastOBRDate() != null ? sdf.format(new Date(log.getLastOBRDate())) : "");
+        
+        // Meter photo
+        if (log.getId() != null && log.getMeterPhotos() != null) {
+        	record.add(Arrays.stream(log.getMeterPhotos().split(",")).collect(Collectors.joining("\n")));     	
+        } else {
+        	record.add("");
+        }
+        
+        record.add(log.getIsPassed() != null ? (log.getIsPassed() ? "PASS" : "FAIL") : "No Submission");
+        return postProcessCsv(record);
+    }
+
+	public static File writeMeterCommissionCsv(List<MeterCommissioningReportDto> results, String fileName) throws IOException {
+        List<String> headers = Arrays.asList(
+				"Meter SN", "MCU ID(QR)", "MCU Profile", "Meter Data", "User ID", "Datetime", "OnBoarding Time", "Meter photo", "Result");
+        return toCsv(headers, results, CsvUtils::toCSVRecord, buildPathFile(fileName), new Date().getTime());
+	}
 }

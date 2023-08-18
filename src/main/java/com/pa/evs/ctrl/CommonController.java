@@ -13,6 +13,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
@@ -681,6 +683,34 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/meter-commissions")
+	public ResponseEntity<Object> getMeterCommissions(HttpServletResponse response, @RequestBody PaginDto<MeterCommissioningReportDto> pagin) {
+    	try {
+    		meterCommissioningReportService.search(pagin);
+    		
+    		if ("true".equalsIgnoreCase(pagin.getOptions().get("exportCSV") + "")) {
+    	        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+    	        String tag = sdf.format(new Date());
+    	        String fileName = "meter-commissions-reports-" + tag + ".csv";
+                File file = CsvUtils.writeMeterCommissionCsv(pagin.getResults(), fileName);
+                
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    response.setContentLengthLong(file.length());
+                    response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                    response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                    response.setHeader("name", fileName);
+                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                    IOUtils.copy(fis, response.getOutputStream());
+                } finally {
+                    FileUtils.deleteDirectory(file.getParentFile());
+                }
+            }
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     
     @GetMapping("/api/last-submitted-meter-commission")

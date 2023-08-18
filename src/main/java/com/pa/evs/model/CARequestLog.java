@@ -1,5 +1,6 @@
 package com.pa.evs.model;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -161,6 +162,9 @@ public class CARequestLog extends BaseEntity {
 	private Long p1OnlineLastSent;
 	
 	private Long p1OnlineLastReceived;
+	
+	@Column(name = "last_meter_commissioning_report")
+	private Date lastMeterCommissioningReport;
 	
 	@Column(name = "latestINFFirmwaveRequest", length = 255)
 	private String latestINFFirmwaveRequest;//time_INF_version

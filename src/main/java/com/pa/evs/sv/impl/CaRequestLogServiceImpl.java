@@ -502,16 +502,16 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 sqlCommonBuilder.append(" vendor.id = " + queryVendor + " AND ");
             }
             
-            sqlCommonBuilder.append(" sn is not null  AND ");
+            sqlCommonBuilder.append(" sn is not null and sn <> ''  AND ");
             
             sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
         }
         
         if (Boolean.parseBoolean(pagin.getOptions().get("cidIsNotNull") + "")) {
-            if (StringUtils.isNotBlank((String) pagin.getOptions().get("querySnOrCid"))) {
-                sqlCommonBuilder.append(" AND ");
-            }
-            sqlCommonBuilder.append(" cid is not null AND cid <> '' ");
+//            if (StringUtils.isNotBlank((String) pagin.getOptions().get("querySnOrCid"))) {
+//                sqlCommonBuilder.append(" AND ");
+//            }
+            sqlCommonBuilder.append(" AND cid is not null AND cid <> '' ");
         }
         
         if (sqlCommonBuilder.length() < 10) {
@@ -828,6 +828,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		Calendar c = Calendar.getInstance();
 		c.add(Calendar.MONTH, -1);
 		Query query = em.createQuery("DELETE FROM PiLog where createDate < :cd");
+		query.setParameter("cd", c.getTime());
+		query.executeUpdate();
+		
+		query = em.createQuery("DELETE FROM MeterLog where createDate < :cd");
 		query.setParameter("cd", c.getTime());
 		query.executeUpdate();
 	}

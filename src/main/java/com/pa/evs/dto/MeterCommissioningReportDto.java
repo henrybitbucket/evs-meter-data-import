@@ -37,5 +37,13 @@ public class MeterCommissioningReportDto {
 	private Long installer;
     private String installerName;
     private String installerEmail;
+	private String p1Online;
+	private String p1OnlineLastUserSent;
+	private Long p1OnlineLastSent;
+	private Long p1OnlineLastReceived;
+	private String userSubmit;
+	private Long timeSubmit;
+	private String coupledUser;
+	private Long countDevicesSubmitByUser;
     
 }
