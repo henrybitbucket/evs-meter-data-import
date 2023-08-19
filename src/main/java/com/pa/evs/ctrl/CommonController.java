@@ -13,8 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
@@ -50,6 +48,7 @@ import com.pa.evs.dto.GroupDto;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.MeterCommissioningReportDto;
+import com.pa.evs.dto.P1OnlineStatusDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
@@ -65,8 +64,8 @@ import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.GroupService;
 import com.pa.evs.sv.LogService;
 import com.pa.evs.sv.MeterCommissioningReportService;
+import com.pa.evs.sv.P1OnlineStatusService;
 import com.pa.evs.sv.VendorService;
-import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.RSAUtil;
@@ -113,6 +112,8 @@ public class CommonController {
     @Autowired FileService fileService;
     
     @Autowired MeterCommissioningReportService meterCommissioningReportService;
+    
+    @Autowired P1OnlineStatusService p1OnlineStatusService;
 	
 	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
@@ -722,6 +723,34 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
 	}
+    
+    @PostMapping("/api/p1-online-statuses")
+	public ResponseEntity<Object> getP1OnlineStatuses(HttpServletResponse response, @RequestBody PaginDto<P1OnlineStatusDto> pagin) {
+    	try {
+    		p1OnlineStatusService.search(pagin);
+    		
+    		if ("true".equalsIgnoreCase(pagin.getOptions().get("exportCSV") + "")) {
+    	        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+    	        String tag = sdf.format(new Date());
+    	        String fileName = "p1-online-status-reports-" + tag + ".csv";
+                File file = CsvUtils.writeP1OnlineCsv(pagin.getResults(), fileName);
+                
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    response.setContentLengthLong(file.length());
+                    response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                    response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                    response.setHeader("name", fileName);
+                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                    IOUtils.copy(fis, response.getOutputStream());
+                } finally {
+                    FileUtils.deleteDirectory(file.getParentFile());
+                }
+            }
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+    }
     
 	@PostConstruct
 	public void init() {

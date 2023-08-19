@@ -25,6 +25,8 @@ import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.MeterCommissioningReportDto;
+import com.pa.evs.dto.P1OnlineStatusDto;
+import com.pa.evs.enums.DeviceType;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.sv.SettingService;
 
@@ -284,10 +286,36 @@ public class CsvUtils {
         record.add(log.getIsPassed() != null ? (log.getIsPassed() ? "PASS" : "FAIL") : "No Submission");
         return postProcessCsv(record);
     }
+    
+    private static List<String> toCSVRecord(int idx, P1OnlineStatusDto p1, Long acDate) {
+        List<String> record = new ArrayList<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        sdf.setTimeZone(TimeZoneHolder.get());
+
+        record.add(p1.getSn());
+        record.add(p1.getUid());
+        record.add(p1.getCid());
+        record.add(p1.getMsn());
+        record.add(p1.getType() == null ? DeviceType.NOT_COUPLED.name() : p1.getType().name());
+        record.add(p1.getVersion());
+        record.add(p1.getVendor() != null ? p1.getVendor().getName() : "");
+        record.add(p1.getP1Online());
+        record.add(p1.getP1OnlineLastUserSent());
+        record.add(p1.getP1OnlineLastSent() != null ? sdf.format(new Date(p1.getP1OnlineLastSent())) : "");
+        record.add(p1.getP1OnlineLastReceived() != null ? sdf.format(new Date(p1.getP1OnlineLastReceived())) : "");
+        
+        return postProcessCsv(record);
+    }
 
 	public static File writeMeterCommissionCsv(List<MeterCommissioningReportDto> results, String fileName) throws IOException {
         List<String> headers = Arrays.asList(
 				"Meter SN", "MCU ID(QR)", "MCU Profile", "Meter Data", "User ID", "Datetime", "OnBoarding Time", "Meter photo", "Result");
+        return toCsv(headers, results, CsvUtils::toCSVRecord, buildPathFile(fileName), new Date().getTime());
+	}
+	
+	public static File writeP1OnlineCsv(List<P1OnlineStatusDto> results, String fileName) throws IOException {
+        List<String> headers = Arrays.asList(
+				"MCU SN", "MCU UUID", "ESIM ID", "MSN", "COUPLE STATE", "VERSION", "VENDOR", "STATUS", "USER SENT", "LAST SENT", "LAST RECEIVER");
         return toCsv(headers, results, CsvUtils::toCSVRecord, buildPathFile(fileName), new Date().getTime());
 	}
 }

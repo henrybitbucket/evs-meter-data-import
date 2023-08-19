@@ -51,6 +51,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -88,6 +89,7 @@ import com.pa.evs.model.LogBatch;
 import com.pa.evs.model.LogBatchGroupTask;
 import com.pa.evs.model.MeterFileData;
 import com.pa.evs.model.MeterLog;
+import com.pa.evs.model.P1OnlineStatus;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.PiLog;
 import com.pa.evs.model.ScreenMonitoring;
@@ -101,6 +103,7 @@ import com.pa.evs.repository.LogBatchRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.MeterFileDataRepository;
 import com.pa.evs.repository.MeterLogRepository;
+import com.pa.evs.repository.P1OnlineStatusRepository;
 import com.pa.evs.repository.PiLogRepository;
 import com.pa.evs.repository.PiRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
@@ -140,6 +143,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired LogService logService;
 	
 	@Autowired EntityManager em;
+	
+	@Autowired TransactionTemplate transactionTemplate;
 
 	@Autowired CaRequestLogService caRequestLogService;
 
@@ -150,6 +155,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Autowired private LogBatchRepository logBatchRepository;
 
 	@Autowired private CARequestLogRepository caRequestLogRepository;
+	
+	@Autowired private P1OnlineStatusRepository p1OnlineStatusRepository;
 	
 	@Autowired private LogBatchGroupTaskRepository logBatchGroupTaskRepository;
 	
@@ -316,7 +323,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.error(e.getMessage(), e);
 		}
 	}
-	
+
 	private void handlePublishType(Log log) {
 		if (CommonController.CMD_DESC.get() != null) {
 			// ECH_P1_ONLINE_TEST
@@ -332,10 +339,34 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if ("ECH_P1_ONLINE_TEST".equals(log.getCmdDesc())) {
 			Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
 			if (opt.isPresent()) {
-				opt.get().setP1Online("Offline");
-				opt.get().setP1OnlineLastUserSent(SecurityUtils.getEmail());
-				opt.get().setP1OnlineLastSent(System.currentTimeMillis());
-				caRequestLogRepository.save(opt.get());
+				Long now = System.currentTimeMillis();
+				
+				CARequestLog ca = opt.get();
+				ca.setP1Online("Offline");
+				ca.setP1OnlineLastUserSent(SecurityUtils.getEmail());
+				ca.setP1OnlineLastSent(now);
+				caRequestLogRepository.save(ca);
+				
+				P1OnlineStatus p1 = new P1OnlineStatus();
+				p1.setCid(ca.getCid());
+				p1.setMsn(ca.getMsn());
+				p1.setUid(ca.getUid());
+				p1.setSn(ca.getSn());
+				p1.setP1Online("Offline");
+				p1.setP1OnlineLastUserSent(SecurityUtils.getEmail());
+				p1.setP1OnlineLastSent(now);
+				p1.setIsLatest(true);
+				p1.setType(ca.getType());
+				p1.setVendor(ca.getVendor());
+				p1.setVersion(ca.getVer());
+				
+				transactionTemplate.execute(transactionStatus -> {
+			        em.createQuery("UPDATE P1OnlineStatus set isLatest = false where uid = '" + ca.getUid() + "'").executeUpdate();
+			        transactionStatus.flush();
+			        return null;
+			    });
+				
+				p1OnlineStatusRepository.save(p1);
 			}
 		}
 	}
@@ -561,6 +592,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				LOG.info("ECH MCU -> PA EVS -> MCU " + log.getUid() + " checking...");
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
 				if (opt.isPresent()) {
+					CARequestLog ca = opt.get();
 					
 					// reply -> MCU
 					// publish
@@ -574,7 +606,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 					int sttECH = 0;
 					
 					// check coupled msn
-					if (StringUtils.isNotBlank(opt.get().getMsn()) && !opt.get().getMsn().equalsIgnoreCase(log.getMsn())) {
+					if (StringUtils.isNotBlank(ca.getMsn()) && !ca.getMsn().equalsIgnoreCase(log.getMsn())) {
 						LOG.info("ECH PA EVS -> MCU false, msn coupled but msn not match");
 						sttECH = MqttCmdStatus.INVALID_DEVICE.getStatus();
 					}
@@ -582,13 +614,37 @@ public class EVSPAServiceImpl implements EVSPAService {
 					
 					header.put("status", sttECH);
 					publish(alias + log.getUid(), dataP, type);
-					if (StringUtils.isBlank(opt.get().getMsn()) || sttECH == 0) {
-						opt.get().setP1Online("Online");
-						opt.get().setP1OnlineLastUserSent("MCU");
-						opt.get().setP1OnlineLastSent(System.currentTimeMillis());
-						opt.get().setP1OnlineLastReceived(System.currentTimeMillis());
+					if (StringUtils.isBlank(ca.getMsn()) || sttECH == 0) {
+						Long now = System.currentTimeMillis();
+						
+						ca.setP1Online("Online");
+						ca.setP1OnlineLastUserSent("MCU");
+						ca.setP1OnlineLastSent(now);
+						ca.setP1OnlineLastReceived(now);
+						
+						P1OnlineStatus p1 = new P1OnlineStatus();
+						p1.setCid(ca.getCid());
+						p1.setMsn(ca.getMsn());
+						p1.setUid(ca.getUid());
+						p1.setSn(ca.getSn());
+						p1.setP1Online("Online");
+						p1.setP1OnlineLastUserSent("MCU");
+						p1.setP1OnlineLastSent(now);
+						p1.setP1OnlineLastReceived(now);
+						p1.setIsLatest(true);
+						p1.setType(ca.getType());
+						p1.setVendor(ca.getVendor());
+						p1.setVersion(ca.getVer());
+						
+						transactionTemplate.execute(transactionStatus -> {
+					        em.createQuery("UPDATE P1OnlineStatus set isLatest = false where uid = '" + ca.getUid() + "'").executeUpdate();
+					        transactionStatus.flush();
+					        return null;
+					    });
+						
+						p1OnlineStatusRepository.save(p1);
 					}
-					caRequestLogRepository.save(opt.get());
+					caRequestLogRepository.save(ca);
 				} else {
 					LOG.info("ECH PA EVS -> MCU false, uid not exists: " + log.getUid());
 				}
@@ -603,9 +659,43 @@ public class EVSPAServiceImpl implements EVSPAService {
 				if (isECHP1OnlineTest) {
 					Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
 					if (opt.isPresent()) {
-						opt.get().setP1Online("Online");
-						opt.get().setP1OnlineLastReceived(System.currentTimeMillis());
-						caRequestLogRepository.save(opt.get());
+						CARequestLog ca = opt.get();
+						Long now = System.currentTimeMillis();
+						
+						ca.setP1Online("Online");
+						ca.setP1OnlineLastReceived(now);
+						caRequestLogRepository.save(ca);
+						
+						Optional<P1OnlineStatus> p1Opt = p1OnlineStatusRepository.findLatestByUid(log.getUid());
+						if (p1Opt.isPresent()) {
+							P1OnlineStatus p1 = p1Opt.get();
+							p1.setP1Online("Online");
+							p1.setP1OnlineLastReceived(now);
+							p1.setModifyDate(new Date());
+							p1OnlineStatusRepository.save(p1);
+						} else {
+							P1OnlineStatus p1 = new P1OnlineStatus();
+							p1.setCid(ca.getCid());
+							p1.setMsn(ca.getMsn());
+							p1.setUid(ca.getUid());
+							p1.setSn(ca.getSn());
+							p1.setP1Online("Online");
+							p1.setP1OnlineLastUserSent("MCU");
+							p1.setP1OnlineLastSent(now);
+							p1.setP1OnlineLastReceived(now);
+							p1.setIsLatest(true);
+							p1.setType(ca.getType());
+							p1.setVendor(ca.getVendor());
+							p1.setVersion(ca.getVer());
+							
+							transactionTemplate.execute(transactionStatus -> {
+						        em.createQuery("UPDATE P1OnlineStatus set isLatest = false where uid = '" + ca.getUid() + "'").executeUpdate();
+						        transactionStatus.flush();
+						        return null;
+						    });
+							
+							p1OnlineStatusRepository.save(p1);
+						}
 					}
 				}				
 			}
