@@ -870,6 +870,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 	}
 	
+	private void handleACTRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
+
+		Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+		if (opt.isPresent()) {
+			opt.get().setLastACTDate(System.currentTimeMillis());
+			caRequestLogRepository.save(opt.get());
+		}
+	}
+
 	private void handleOTARes(Map<String, Object> data, String type, Log log, int status) throws Exception {
 
 		/**Map<String, Object> savehData = new HashMap<>(data);
@@ -1032,6 +1041,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 			if ("OTA".equalsIgnoreCase(type)) {
 				handleOTARes(data, type, log, status);
+			}
+			
+			if ("ACT".equalsIgnoreCase(type)) {
+				handleACTRes(data, type, log, status);
 			}
 			
 			checkECH(data, type, log, status);

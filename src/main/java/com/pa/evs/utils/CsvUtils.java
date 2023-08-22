@@ -309,7 +309,7 @@ public class CsvUtils {
 
 	public static File writeMeterCommissionCsv(List<MeterCommissioningReportDto> results, String fileName) throws IOException {
         List<String> headers = Arrays.asList(
-				"Meter SN", "MCU ID(QR)", "MCU Profile", "Meter Data", "User ID", "Datetime", "OnBoarding Time", "Meter photo", "Result");
+				"Meter SN", "MCU ID(QR)", "MCU Profile", "Meter Data", "Commit User ID", "P2Checking time", "OnBoarding Time", "Meter photo", "P2Checking Result");
         return toCsv(headers, results, CsvUtils::toCSVRecord, buildPathFile(fileName), new Date().getTime());
 	}
 	
