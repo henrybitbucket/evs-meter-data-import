@@ -245,7 +245,7 @@ public class CsvUtils {
             		.append("ESIM ID: ").append(log.getCid()).append("\n")
             		.append("STATUS: ").append(log.getStatus()).append("\n")
             		.append("COUPLED STATE: ").append(log.getType()).append("\n")
-            		.append("COUPLED USER: ").append(StringUtils.isNotBlank(log.getInstallerEmail()) ? log.getInstallerEmail() : "").append("\n")
+            		.append("COUPLED USER: ").append(StringUtils.isNotBlank(log.getCoupledUser()) ? log.getCoupledUser() : "").append("\n")
             		.toString()
         		);        	
         } else {
@@ -270,11 +270,14 @@ public class CsvUtils {
         // User ID
         record.add(log.getUserSubmit());
         
-        // Datetime
+        // P2Checking time
         record.add(log.getTimeSubmit() != null ? sdf.format(new Date(log.getTimeSubmit())) : "");
         
+        // Commit time
+        record.add(log.getCreateDate() != null ? sdf.format(log.getCreateDate()) : "");
+        
         // OnBoarding Time
-        record.add(log.getLastOBRDate() != null ? sdf.format(new Date(log.getLastOBRDate())) : "");
+        // record.add(log.getLastOBRDate() != null ? sdf.format(new Date(log.getLastOBRDate())) : "");
         
         // Meter photo
         if (log.getId() != null && log.getMeterPhotos() != null) {
@@ -309,7 +312,7 @@ public class CsvUtils {
 
 	public static File writeMeterCommissionCsv(List<MeterCommissioningReportDto> results, String fileName) throws IOException {
         List<String> headers = Arrays.asList(
-				"Meter SN", "MCU ID(QR)", "MCU Profile", "Meter Data", "Commit User ID", "P2Checking time", "OnBoarding Time", "Meter photo", "P2Checking Result");
+				"Meter SN", "MCU SN", "MCU Profile", "Meter Data", "Commit User ID", "P2Checking time", "Commit time", "Meter photo", "P2Checking Result");
         return toCsv(headers, results, CsvUtils::toCSVRecord, buildPathFile(fileName), new Date().getTime());
 	}
 	

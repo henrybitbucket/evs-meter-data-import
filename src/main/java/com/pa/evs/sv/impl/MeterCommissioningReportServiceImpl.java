@@ -1,6 +1,7 @@
 package com.pa.evs.sv.impl;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -217,31 +218,31 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		StringBuilder sqlCommonBuilder = new StringBuilder(" WHERE 1=1 ");
 		
 		if (StringUtils.isNotBlank(uid)) {
-			sqlCommonBuilder.append(" AND uid = '" + uid + "' ");
+			sqlCommonBuilder.append(" AND lower(uid) like lower('%" + uid + "%') ");
 		}
 		
 		if (StringUtils.isNotBlank(sn)) {
-			sqlCommonBuilder.append(" AND sn = '" + sn + "' ");
+			sqlCommonBuilder.append(" AND lower(sn) like lower('%" + sn + "%') ");
 		}
 		
 		if (StringUtils.isNotBlank(msn)) {
-			sqlCommonBuilder.append(" AND msn = '" + msn + "' ");
+			sqlCommonBuilder.append(" AND lower(msn) like lower('%" + msn + "%') ");
 		}
 		
 		if ("true".equalsIgnoreCase(hasSubmission)) {
 			sqlCommonBuilder.append(" AND lastMeterCommissioningReport is not null ");
 			if (fromDate != null) {
-				sqlCommonBuilder.append(" AND lastMeterCommissioningReport >= " + fromDate + " ");
+				sqlCommonBuilder.append(" AND lastMeterCommissioningReport >= :fromDate ");
 			}
 			if (toDate != null) {
-				sqlCommonBuilder.append(" AND lastMeterCommissioningReport <= " + toDate + " ");
+				sqlCommonBuilder.append(" AND lastMeterCommissioningReport <= :toDate ");
 			}
 			if (fromDate != null && toDate != null) {
-				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.timeSubmit >= " + fromDate + " and mcr.timeSubmit <= " + toDate + ") ");	
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.createDate >= :fromDate and mcr.createDate <= :toDate) ");	
 			} else if (fromDate != null) {
-				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.timeSubmit >= " + fromDate + ") ");
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.createDate >= :fromDate) ");
 			} else if (toDate != null) {
-				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.timeSubmit <= " + toDate + ") ");
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.createDate <= :toDate) ");
 			} else {
 				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid) ");
 			}
@@ -250,11 +251,11 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		
 		if (StringUtils.isNotBlank(userSubmit)) {
 			if (fromDate != null && toDate != null) {
-				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.userSubmit = '" + userSubmit + "' and mcr.timeSubmit >= " + fromDate + " and mcr.timeSubmit <= " + toDate + ") ");	
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.userSubmit = '" + userSubmit + "' and mcr.createDate >= :fromDate and mcr.createDate <= :toDate) ");	
 			} else if (fromDate != null) {
-				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.userSubmit = '" + userSubmit + "' and mcr.timeSubmit >= " + fromDate + ") ");
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.userSubmit = '" + userSubmit + "' and mcr.createDate >= :fromDate) ");
 			} else if (toDate != null) {
-				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.userSubmit = '" + userSubmit + "' and mcr.timeSubmit <= " + toDate + ") ");
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.userSubmit = '" + userSubmit + "' and mcr.createDate <= :toDate) ");
 			} else {
 				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid AND mcr.userSubmit = '" + userSubmit + "') ");
 			}
@@ -269,6 +270,14 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		
 		Query qrCount = em.createQuery(sqlCountBuilder.toString());
 		Query qr = em.createQuery(sqlBuilder.toString());
+		if (sqlCommonBuilder.indexOf(":fromDate") > -1) {
+			qrCount.setParameter("fromDate", new Date(fromDate));
+			qr.setParameter("fromDate", new Date(fromDate));
+		}
+		if (sqlCommonBuilder.indexOf(":toDate") > -1) {
+			qrCount.setParameter("toDate", new Date(toDate));
+			qr.setParameter("toDate", new Date(toDate));
+		}
 		
 		Long count = ((Number) qrCount.getSingleResult()).longValue();
 		pagin.setTotalRows(count);
@@ -304,11 +313,11 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 
 		
 		if (fromDate != null) {
-			sqlCommonBuilder.append(" AND timeSubmit >= :fromDate ");
+			sqlCommonBuilder.append(" AND createDate >= :fromDate ");
 		}
 		
 		if (toDate != null) {
-			sqlCommonBuilder.append(" AND timeSubmit <= :toDate ");
+			sqlCommonBuilder.append(" AND createDate <= :toDate ");
 		}
 		
 		if (StringUtils.isNotBlank(userSubmit)) {
@@ -322,11 +331,11 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		qr = em.createQuery(sqlBuilder.toString()).setParameter("uids", cas.keySet());
 		
 		if (fromDate != null) {
-			qr.setParameter("fromDate", fromDate);
+			qr.setParameter("fromDate", new Date(fromDate));
 		}
 		
 		if (toDate != null) {
-			qr.setParameter("toDate", toDate);
+			qr.setParameter("toDate", new Date(toDate));
 		}
 		
 		List<MeterCommissioningReport> mcrs = qr.getResultList();
@@ -358,6 +367,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 				dto.setCoupledUser(mcr.getCoupledUser());
 				dto.setUserSubmit(mcr.getUserSubmit());
 				dto.setTimeSubmit(mcr.getTimeSubmit());
+				dto.setCreateDate(mcr.getCreateDate());
 				
 				if (mcr.getInstaller() != null) {
 					dto.setInstaller(mcr.getInstaller().getUserId());

@@ -1,5 +1,7 @@
 package com.pa.evs.dto;
 
+import java.util.Date;
+
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 
@@ -45,5 +47,6 @@ public class MeterCommissioningReportDto {
 	private Long timeSubmit;
 	private String coupledUser;
 	private Long countDevicesSubmitByUser;
+	private Date createDate;
     
 }
