@@ -49,12 +49,16 @@ import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.MeterCommissioningReportDto;
 import com.pa.evs.dto.P1OnlineStatusDto;
+import com.pa.evs.dto.P2JobDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.CommandEnum;
+import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.DeviceType;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
+import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.sv.AddressLogService;
 import com.pa.evs.sv.AddressService;
 import com.pa.evs.sv.CaRequestLogService;
@@ -85,6 +89,8 @@ public class CommonController {
 	
 	@Autowired CaRequestLogService caRequestLogService;
 	
+	@Autowired CARequestLogRepository caRequestLogRepository;
+	
 	@Autowired FirmwareService firmwareService;
 
 	@Autowired LogService logService;
@@ -102,6 +108,8 @@ public class CommonController {
 	private long otaTimeout;
 
     @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
+    
+    @Value("${evs.pa.csr.folder}") private String csrFolder;
 	
 	private String caFolder;
 
@@ -686,6 +694,42 @@ public class CommonController {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
+    @PostMapping("/api/bulk-submit-meter-commission")
+	public ResponseEntity<Object> saveBulkMeterCommissionSubmit(HttpServletResponse response, @RequestBody List<MeterCommissioningReportDto> dtos) {
+    	try {
+    		meterCommissioningReportService.save(dtos);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/add-device-test/{uid}/{sn}")
+	public ResponseEntity<Object> addDeviceTest(@PathVariable String uid, @PathVariable String sn) {
+    	try {
+    		Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uid);
+			CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
+			if (caLog.getId() == null) {
+				CMD.exec("cp " + csrFolder + "/" + "BIE2IEYAAMAHOABRAA.csr " + csrFolder + "/" + uid + ".csr", null);
+				caLog.setSn(sn);
+			}
+			caLog.setUid(uid);
+			if (caLog.getStatus() == null) {
+				caLog.setStatus(DeviceStatus.OFFLINE);	
+			}
+			if (caLog.getType() == null) {
+				caLog.setType(DeviceType.NOT_COUPLED);	
+			}
+			caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
+			caLog.setRequireRefresh(false);
+			caLog.setVendor(caRequestLogRepository.findByUid("BIE2IEYAAMAHOABRAA").get().getVendor());
+			caRequestLogRepository.save(caLog);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
     @PostMapping("/api/meter-commissions")
 	public ResponseEntity<Object> getMeterCommissions(HttpServletResponse response, @RequestBody PaginDto<MeterCommissioningReportDto> pagin) {
     	try {
@@ -723,6 +767,29 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
 	}
+    
+    @GetMapping("/api/p2/job-no/{jobNo}/jobs")
+	public ResponseEntity<Object> getP2Jobs(HttpServletResponse response, @PathVariable(required = true) String jobNo) throws Exception {
+    	try {
+    		if ("NA".equalsIgnoreCase(jobNo)) {
+    			jobNo = null;
+    		}
+    		Object dto = meterCommissioningReportService.getOrNewP2Job(jobNo);
+    		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(dto).build());
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+	}
+    
+    @PostMapping("/api/p2/job-no/{jobNo}/job")
+	public ResponseEntity<Object> saveMeterCommissionSubmit(HttpServletResponse response, @RequestBody P2JobDto dto) {
+    	try {
+    		meterCommissioningReportService.saveP2Job(dto);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
     
     @PostMapping("/api/p1-online-statuses")
 	public ResponseEntity<Object> getP1OnlineStatuses(HttpServletResponse response, @RequestBody PaginDto<P1OnlineStatusDto> pagin) {

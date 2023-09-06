@@ -1,5 +1,7 @@
 package com.pa.evs.sv.impl;
 
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -15,16 +17,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.dto.MeterCommissioningReportDto;
+import com.pa.evs.dto.P2JobDataDto;
+import com.pa.evs.dto.P2JobDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.MeterCommissioningReport;
+import com.pa.evs.model.P2Job;
+import com.pa.evs.model.P2JobData;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.MeterCommissioningReportRepository;
+import com.pa.evs.repository.P2JobDataRepository;
+import com.pa.evs.repository.P2JobRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.sv.MeterCommissioningReportService;
+import com.pa.evs.utils.SecurityUtils;
+import com.pa.evs.utils.TimeZoneHolder;
 
 @Service
 public class MeterCommissioningReportServiceImpl implements MeterCommissioningReportService {
@@ -40,6 +52,14 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	
 	@Autowired
 	private MeterCommissioningReportRepository meterCommissioningReportRepository;
+	
+	@Autowired
+	P2JobDataRepository p2JobDataRepository;
+	
+	@Autowired
+	P2JobRepository p2JobRepository;
+	
+	ObjectMapper mapper = new ObjectMapper();
 
 //	set is_latest = true where m1.id in (
 //		select tmp.id from (
@@ -94,6 +114,17 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		if (caOpt.isPresent()) {
 			caOpt.get().setLastMeterCommissioningReport(mcr.getCreateDate());
 			caRequestLogRepository.save(caOpt.get());
+		}
+	}
+	
+	@Transactional
+	@Override
+	public void save(List<MeterCommissioningReportDto> dtos) {
+		if (dtos == null || dtos.isEmpty()) {
+			return;
+		}
+		for (MeterCommissioningReportDto dto : dtos) {
+			save(dto);
 		}
 	}
 	
@@ -415,6 +446,121 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 			dto.setInstallerEmail(mcr.getInstaller().getEmail());
 		}
 		return dto;
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	@SuppressWarnings("unchecked")
+	public Object getOrNewP2Job(String jobName) {
+	
+		String user = SecurityUtils.getEmail();
+		
+		String sql = null;
+		if (StringUtils.isNotBlank(jobName)) {
+			if (!jobName.matches("^[0-9]{11}$")) {
+				throw new RuntimeException("Job no invaid! (ex: 20220500001)");
+			}
+			sql = "FROM P2Job WHERE jobBy = '" + user + "' and name = '" + jobName + "' order by createDate DESC ";
+		} else {
+			sql = "FROM P2Job WHERE jobBy = '" + user + "' order by createDate DESC ";
+		}
+		List<P2Job> p2Jobs = em.createQuery(sql)
+		.setFirstResult(0)
+		.setMaxResults(1)
+		.getResultList();
+		
+		if (StringUtils.isNotBlank(jobName)) {
+			if (p2Jobs.isEmpty()) {
+				throw new RuntimeException("Job not exists!");
+			}
+			List<P2JobData> data = em.createQuery("FROM P2JobData where jobName = '" + jobName + "' and jobBy = '" + user + "' order by itNo asc ").getResultList();
+			P2JobDto rs = P2JobDto.from(p2Jobs.get(0));
+			rs.setJobBy(StringUtils.isBlank(p2Jobs.get(0).getJobByAlias()) ? user : p2Jobs.get(0).getJobByAlias());
+			
+			for (P2JobData jobData : data) {
+				
+				P2JobDataDto item = P2JobDataDto.from(jobData);
+				try {
+					item.setTempDataChecks(mapper.readValue(jobData.getTmps(), Map.class));
+				} catch (Exception e) {
+					//
+				}
+				rs.getItems().add(item);
+			}
+			return rs;
+		}
+		
+		// for case get next job name
+		SimpleDateFormat sf = new SimpleDateFormat("yyyyMM");
+		sf.setTimeZone(TimeZoneHolder.get());
+		String jobNamePrefix = sf.format(new Date());
+		
+		String lastestJobName = p2Jobs.isEmpty() ? "" : p2Jobs.get(0).getName();
+		if (!lastestJobName.startsWith(jobNamePrefix)) {// not exists job or old month -> restart count
+			lastestJobName = jobNamePrefix + "00001";
+		} else {
+			// next count
+			lastestJobName = jobNamePrefix + new DecimalFormat("00000").format((Integer.parseInt((lastestJobName.replace(jobNamePrefix, ""))) + 1));
+		}
+		
+		return P2JobDto.builder().name(lastestJobName).jobBy(user).build();
+	}
+	
+	@Override
+	@Transactional
+	public void saveP2Job(P2JobDto dto) {
+	
+		if (StringUtils.isBlank(dto.getName()) || !dto.getName().matches("^[0-9]{11}$")) {
+			throw new RuntimeException("Job no invaid! (ex: 20220500001)");
+		}
+		
+		if (StringUtils.isNotBlank(dto.getTitle()) && !dto.getTitle().replaceAll("[^0-9]", "").matches("^[0-9]{14}$")) {
+			throw new RuntimeException("Job title invaid! (ex: 2022-05-05 15:30:30)");
+		}
+		
+		if (dto.getItems() == null || dto.getItems().isEmpty()) {
+			throw new RuntimeException("Job items must not be empty!");
+		}
+		
+		String user = SecurityUtils.getEmail();
+		String jobName = dto.getName();
+		
+		// for validate exists job name
+		P2JobDto nextJob = (P2JobDto) this.getOrNewP2Job(null);
+		if (!jobName.equals(nextJob.getName())) {
+			// check exists job, if not exists will throw ex
+			nextJob = (P2JobDto) this.getOrNewP2Job(jobName);
+		}
+		
+		em.createQuery("DELETE FROM P2JobData WHERE jobBy = '" + user + "' and jobName = '" + jobName + "' ").executeUpdate();
+		em.flush();
+		
+		int i = 1;
+		for (P2JobDataDto p2JobDataDto : dto.getItems()) {
+			P2JobData jobData = P2JobData
+			.builder()
+			.jobName(jobName)
+			.jobBy(user)
+			.msn(p2JobDataDto.getMsn())
+			.sn(p2JobDataDto.getSn())
+			.itNo(i)
+			.jobByAlias(StringUtils.isBlank(dto.getJobBy()) ? user : dto.getJobBy())
+			.build();
+			try {
+				jobData.setTmps(mapper.writeValueAsString(p2JobDataDto.getTempDataChecks()));
+			} catch (Exception e) {
+				//
+			}
+			p2JobDataRepository.save(jobData);
+			i++;
+		}
+		P2Job job = nextJob.getId() == null ? new P2Job() : p2JobRepository.findById(nextJob.getId()).orElse(new P2Job());
+		job.setJobBy(user);
+		job.setJobByAlias(StringUtils.isBlank(dto.getJobBy()) ? user : dto.getJobBy());
+		job.setTitle(dto.getTitle());
+		job.setName(jobName);
+		job.setItCount(dto.getItems().size());
+		p2JobRepository.save(job);
 	}
 
 }
