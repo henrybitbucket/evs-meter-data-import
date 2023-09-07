@@ -75,8 +75,8 @@ public class Mqtt {
 					SSLContext sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
 					options.setSocketFactory(sslContext.getSocketFactory());
 				}
-				options.setUserName("LinksField");
-				options.setPassword("Linksp@ss1234".toCharArray());
+				options.setUserName("admin");
+				options.setPassword("public".toCharArray());
 				
 				instance.connect(options);
 			}

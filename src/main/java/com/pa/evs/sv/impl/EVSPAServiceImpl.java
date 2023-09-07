@@ -1696,7 +1696,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
     }
 	
-	public static void main(String[] args) throws Exception {
+	public static void main4(String[] args) throws Exception {
 		/**System.out.println(requestCA("http://54.254.171.4:8880/api/evs-ca-request", new ClassPathResource("sv-ca/server.csr"), null));*/
 
 		/*Mqtt.subscribe(null, "dev/evs/pa/data", QUALITY_OF_SERVICE, o -> {
@@ -1721,16 +1721,23 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 		String evsPAMQTTAddress = null;
 		String mqttClientId = System.currentTimeMillis() + "";
-		evsPAMQTTAddress = "ssl://3.1.87.138:8883";
+		evsPAMQTTAddress = "tcp://13.229.153.249:1883";
 		
 		String topic = "evs/pa/data";
 
-//		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/89049032000001000000128255735252", 2, o -> {
-//			final MqttMessage mqttMessage = (MqttMessage) o;
-//			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
-//			return null;
-//		});
-		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, new ObjectMapper().readValue(json, Map.class), 2, false);
+		int[] counts = new int[] {0};
+		ExecutorService ex = Executors.newFixedThreadPool(1);
+		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/data", 2, o -> {
+			final MqttMessage mqttMessage = (MqttMessage) o;
+			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+			ex.submit(() -> {
+				counts[0] = counts[0] + 1;
+				System.out.println("count->" + counts[0]);
+			});
+			return null;
+		});
+		System.out.println(1 << 30);
+		// Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, new ObjectMapper().readValue(json, Map.class), 2, false);
 
 		/*SimpleDateFormat sf = new SimpleDateFormat();
 		sf.setTimeZone(UTC);
@@ -1751,6 +1758,26 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 			System.out.println(newDate);
 		}*/
+	}
+	
+	public static void main(String[] args) throws Exception {
+		String evsPAMQTTAddress = null;
+		String mqttClientId = System.currentTimeMillis() + "";
+		evsPAMQTTAddress = "tcp://13.229.153.249:1883";
+		
+		String topic = "evs/pa/data";
+
+		int[] counts = new int[] {0};
+		ExecutorService ex = Executors.newFixedThreadPool(1);
+		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/data", 2, o -> {
+			final MqttMessage mqttMessage = (MqttMessage) o;
+			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+			ex.submit(() -> {
+				counts[0] = counts[0] + 1;
+				System.out.println("count->" + counts[0]);
+			});
+			return null;
+		});
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)

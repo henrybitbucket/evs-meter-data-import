@@ -16,12 +16,15 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import com.pa.evs.ctrl.CommonController;
+import com.pa.evs.sv.impl.EVSPAServiceImpl;
 import com.pa.evs.utils.TimeZoneHolder;
 
 @Order(value = Ordered.HIGHEST_PRECEDENCE)
 @Component
 public class TopFilter implements Filter {
 
+	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(TopFilter.class);
+	
 	@Override
 	public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
 			throws IOException, ServletException {
@@ -37,11 +40,15 @@ public class TopFilter implements Filter {
 		response.setHeader("Access-Control-Allow-Headers", "*");
 
 		try {
-			String timeZone = request.getParameter("timeZone");
-			if (StringUtils.isNotBlank(timeZone)) {
-    			TimeZoneHolder.set(timeZone);
-    		} 
-			chain.doFilter(req, res);			
+			try {
+				String timeZone = request.getParameter("timeZone");
+				if (StringUtils.isNotBlank(timeZone)) {
+	    			TimeZoneHolder.set(timeZone);
+	    		} 
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
+			}
+			chain.doFilter(req, res);
 		} finally {
 			TimeZoneHolder.remove();
 			CommonController.CMD_DESC.remove();
