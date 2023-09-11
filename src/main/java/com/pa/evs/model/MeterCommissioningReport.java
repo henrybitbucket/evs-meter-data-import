@@ -32,7 +32,8 @@ import lombok.Setter;
 		@Index(columnList = "user_submit", name = "idx_meter_commissioning_report_user_submit"),
 		@Index(columnList = "user_submit,uid", name = "idx_meter_commissioning_report_user_submit_uid"),
 		@Index(columnList = "user_submit,msn", name = "idx_meter_commissioning_report_user_submit_msn"),
-		@Index(columnList = "uid,is_latest", name = "idx_meter_commissioning_report_uid_is_latest")
+		@Index(columnList = "uid,is_latest", name = "idx_meter_commissioning_report_uid_is_latest"),
+		@Index(columnList = "user_submit,job_sheet_no", name = "idx_meter_commissioning_report_user_submit_job_sheet_no")
 	}
 )
 public class MeterCommissioningReport extends BaseEntity {
@@ -76,5 +77,14 @@ public class MeterCommissioningReport extends BaseEntity {
 	@Column(name = "time_submit")
 	private Long timeSubmit;
 	
+	@Column(name = "comment_submit")
+	private String commentSubmit;
+
+	@Column(name = "job_sheet_no")
+	private String jobSheetNo;
+
+	@Column(name = "job_by")
+	private String jobBy;
+
 	private String coupledUser;
 }

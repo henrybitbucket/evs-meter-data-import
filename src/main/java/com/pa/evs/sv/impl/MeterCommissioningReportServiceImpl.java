@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.dto.MeterCommissioningReportDto;
 import com.pa.evs.dto.P2JobDataDto;
@@ -98,6 +97,9 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		mcr.setIsLatest(true);
 		mcr.setUserSubmit(dto.getUserSubmit());
 		mcr.setTimeSubmit(dto.getTimeSubmit());
+		mcr.setCommentSubmit(dto.getCommentSubmit());
+		mcr.setJobSheetNo(dto.getJobSheetNo());
+		mcr.setJobBy(dto.getJobBy());
 		mcr.setCoupledUser(dto.getCoupledUser());
 		em.createQuery("UPDATE MeterCommissioningReport set isLatest = false where uid = '" + mcr.getUid() + "'").executeUpdate();
 		em.flush();
@@ -243,7 +245,9 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		String msn = (String) options.get("queryMsn");
 		String exportCSV = options.get("exportCSV") + "";
 		String hasSubmission = options.get("hasSubmission") + "";
-		
+		String jobSheetNo = (String) options.get("jobSheetNo");
+		String jobBy = (String) options.get("jobBy");
+
 		StringBuilder sqlBuilder = new StringBuilder("FROM CARequestLog ca ");
 		StringBuilder sqlCountBuilder = new StringBuilder("select count(*) FROM CARequestLog ca ");
 		StringBuilder sqlCommonBuilder = new StringBuilder(" WHERE 1=1 ");
@@ -292,6 +296,18 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 			}
 		}
 		
+		if (StringUtils.isNotBlank(jobSheetNo) && StringUtils.isNotBlank(jobBy)) {
+			if (fromDate != null && toDate != null) {
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.jobSheetNo = '" + jobSheetNo + "' and mcr.jobBy = '" + jobBy + "' and mcr.createDate >= :fromDate and mcr.createDate <= :toDate) ");
+			} else if (fromDate != null) {
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.jobSheetNo = '" + jobSheetNo + "' and mcr.jobBy = '" + jobBy + "' and mcr.createDate >= :fromDate) ");
+			} else if (toDate != null) {
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid and mcr.jobSheetNo = '" + jobSheetNo +  "' and mcr.jobBy = '" + jobBy + "' and mcr.createDate <= :toDate) ");
+			} else {
+				sqlCommonBuilder.append(" AND exists (select 1 FROM MeterCommissioningReport mcr where mcr.uid = ca.uid AND mcr.jobSheetNo = '" + jobSheetNo + "' and mcr.jobBy = '" + jobBy + "' ) ");
+			}
+		}
+
 		sqlCommonBuilder.append(" AND sn is not null and sn <> '' and msn is not null and msn <> '' ");
 		
 		sqlBuilder.append(sqlCommonBuilder);
@@ -355,6 +371,11 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 			sqlCommonBuilder.append(" AND userSubmit = '" + userSubmit + "' ");
 		}
 		
+		if (StringUtils.isNotBlank(jobSheetNo) && StringUtils.isNotBlank(jobBy)) {
+			sqlCommonBuilder.append(" AND jobSheetNo = '" + jobSheetNo + "' ");
+			sqlCommonBuilder.append(" AND jobBy = '" + jobBy + "' ");
+		}
+
 		sqlCommonBuilder.append(" AND uid in (:uids) ");
 		
 		sqlBuilder.append(sqlCommonBuilder);
@@ -399,7 +420,8 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 				dto.setUserSubmit(mcr.getUserSubmit());
 				dto.setTimeSubmit(mcr.getTimeSubmit());
 				dto.setCreateDate(mcr.getCreateDate());
-				
+				dto.setJobSheetNo(mcr.getJobSheetNo());
+
 				if (mcr.getInstaller() != null) {
 					dto.setInstaller(mcr.getInstaller().getUserId());
 					dto.setInstallerName(mcr.getInstaller().getUsername());

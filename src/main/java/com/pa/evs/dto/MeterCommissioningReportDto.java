@@ -48,5 +48,7 @@ public class MeterCommissioningReportDto {
 	private String coupledUser;
 	private Long countDevicesSubmitByUser;
 	private Date createDate;
-    
+	private String commentSubmit;
+	private String jobSheetNo;
+	private String jobBy;
 }
