@@ -23,6 +23,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.TimeZone;
+import java.util.Vector;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +39,7 @@ import javax.persistence.Query;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.eclipse.paho.client.mqttv3.IMqttClient;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -116,6 +119,7 @@ import com.pa.evs.sv.LogService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CMD;
+import com.pa.evs.utils.ExternalLogger;
 import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SchedulerHelper;
@@ -128,9 +132,10 @@ import software.amazon.awssdk.services.sns.model.SnsException;
 @Component
 @SuppressWarnings("unchecked")
 @EnableScheduling
+@org.springframework.context.annotation.DependsOn({"ajms", "jmsTemplate", "connectionFactory", "jmsContainerFactory"})
 public class EVSPAServiceImpl implements EVSPAService {
 
-	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
+	private static final org.slf4j.Logger LOG = ExternalLogger.getLogger(EVSPAServiceImpl.class);// org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
 
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
@@ -291,9 +296,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 			CommonController.CMD_OPTIONS.remove();
 			
-			//wait 2s
-			LOG.debug("sleep 2s");
-			TimeUnit.SECONDS.sleep(2);
+			if (!"MDT".equalsIgnoreCase(type)) {
+				//wait 2s
+				LOG.debug("sleep 2s");
+				TimeUnit.SECONDS.sleep(2);
+			}
 			
 			return logP;
 		} catch (Exception e) {
@@ -436,7 +443,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 				}
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
 			LOG.error(e.getMessage(), e);
 		}
 		return file;
@@ -528,7 +534,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 
 	private int validateUid(Log log) {
-		Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+		// Optional<?> opt = caRequestLogRepository.findByUid(log.getUid());
+		Optional<Object> opt = localMap.getUidMsnMap().containsKey(log.getUid()) ? Optional.<Object>of(true) : Optional.<Object>empty();
 		if (!opt.isPresent()) {
 			//Publish device not found
 			Map<String, Object> data = new HashMap<>();
@@ -546,7 +553,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	private int validateUidAndMsn(Log log) {
-		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
+		//Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid(), log.getMsn());
+		String cacheMsn = localMap.getUidMsnMap().get(log.getUid());
+		Optional<Object> opt = ((StringUtils.isBlank(log.getMsn()) && StringUtils.isBlank(cacheMsn)) || cacheMsn.equals(log.getMsn())) ? Optional.<Object>of(true) : Optional.<Object>empty();
 
 		if (!opt.isPresent()) {
 			LOG.error("Not found binding of msn: {} for uuid: {}", log.getMsn(), log.getUid());
@@ -559,24 +568,24 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (status == 0) {
 			status = validateUidAndMsn(log);
 		}
-		
-		if (status == 0) {
-			sendToMeterClient(data, type, log);
-		}
-
-		updateLastMDTSubscribe(log);
 
 		//Publish
-		data = new HashMap<>();
+		Map<String, Object> dataRes = new HashMap<>();
 		Map<String, Object> header = new HashMap<>();
-		data.put("header", header);
+		dataRes.put("header", header);
 		header.put("oid", log.getMid());
 		header.put("uid", log.getUid());
 		header.put("gid", log.getGid());
 		header.put("msn", log.getMsn());
 		header.put("status", status);
-		publish(alias + log.getUid(), data, type);
+		publish(alias + log.getUid(), dataRes, type);
+		
+		//
+		if (status == 0) {
+			sendToMeterClient(data, type, log);
+		}
 
+		updateLastMDTSubscribe(log);
 	}
 
 	private void checkECH(Map<String, Object> data, String type, Log log, int status) throws Exception {
@@ -1209,7 +1218,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsPASubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsPASubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
-				EX.submit(() -> handleOnSubscribe(mqttMessage));
+				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
+					EX.submit(() -> handleOnSubscribe(mqttMessage));
+				} else {
+					new Thread(() -> {handleOnSubscribe(mqttMessage);}).start();
+				}
 				return null;
 			});
 		} catch (Exception e) {
@@ -1221,7 +1234,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsPARespSubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsPARespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
-				EX.submit(() -> handleOnRespSubscribe(mqttMessage));
+				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
+					EX.submit(() -> handleOnRespSubscribe(mqttMessage));
+				} else {
+					new Thread(() -> {handleOnRespSubscribe(mqttMessage);}).start();
+				}
 				return null;
 			});
 		} catch (Exception e) {
@@ -1232,7 +1249,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMeterLocalSubscribeTopic, QUALITY_OF_SERVICE, o -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(evsMeterLocalSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
-				EX.submit(() -> handleOnLocalRequestSubscribe(mqttMessage));
+				LOG.info(evsPARespSubscribeTopic + " -> " + new String(mqttMessage.getPayload()));
+				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
+					EX.submit(() -> handleOnLocalRequestSubscribe(mqttMessage));
+				} else {
+					new Thread(() -> {handleOnLocalRequestSubscribe(mqttMessage);}).start();
+				}
 				return null;
 			});
 		} catch (Exception e) {
@@ -1398,6 +1420,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 								caLog.setRequireRefresh(false);
 								caLog.setVendor(vendorOpt.get());
 								caRequestLogRepository.save(caLog);
+								caRequestLogRepository.flush();
+								caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
 							}
 						}
 						Files.delete(ful.toPath());
@@ -1436,6 +1460,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 						caLog.setRequireRefresh(false);
 						caLog.setVendor(vendorOpt.get());
 						caRequestLogRepository.save(caLog);
+						caRequestLogRepository.flush();
+						caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
 						File out = new File(ful.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));
 						Files.deleteIfExists(out.toPath());
 						ful.renameTo(out);
@@ -1474,6 +1500,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 			
 		}, "removePiLlog");
+		
+		caRequestLogService.updateCacheUidMsnDevice(null, null);
+		SchedulerHelper.scheduleJob("0 0/2 * * * ? *", () -> {
+			//REFRESH_CACHE_UID_MSN
+			try {
+				caRequestLogService.updateCacheUidMsnDevice(null, null);
+				LOG.info("refresh map uid-msn -> " + localMap.getUidMsnMap().size() + " devices");
+			} catch (Exception e) {
+				//
+			}
+			
+		}, "REFRESH_CACHE_UID_MSN");
 		
 		try {
 			initS3();
@@ -1761,23 +1799,63 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String evsPAMQTTAddress = null;
+		String evsPAMQTTAddress = "tcp://18.142.166.146:1883";
 		String mqttClientId = System.currentTimeMillis() + "";
-		evsPAMQTTAddress = "tcp://13.229.153.249:1883";
 		
 		String topic = "evs/pa/data";
 
 		int[] counts = new int[] {0};
 		ExecutorService ex = Executors.newFixedThreadPool(1);
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, new ObjectMapper().readValue("{}", Map.class), 2, false);
 		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/data", 2, o -> {
 			final MqttMessage mqttMessage = (MqttMessage) o;
 			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
-			ex.submit(() -> {
+			ex.execute(() -> {
 				counts[0] = counts[0] + 1;
 				System.out.println("count->" + counts[0]);
 			});
 			return null;
 		});
+		
+		String json = "{\"header\":{\"mid\":18766,\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"sig\":\"MGUCMCVYs4u2WOK2V2v2ekGVtpE8Y5JKtIRiYcCsbkLY9yDsdPa50rHNfOEAE3GKhqXkowIxAMR2hO+HXArX19Hwmh8OmnWlv5rsIKSryGKXST+w0dnC4NsrKOLaxQBHAN+AIZrZBQ==\"},\"payload\":{\"id\":\"JMETER001\",\"type\":\"MDT\",\"data\":[{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"55.765\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"244.5\",\"pf\":\"1.0000\",\"dt\":\"2023-09-06T02:47:04.000\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"55.765\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"243.2\",\"pf\":\"1.0000\",\"dt\":\"2023-09-06T03:17:05.000\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"55.765\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"243.3\",\"pf\":\"1.0000\",\"dt\":\"2023-09-06T03:47:05.000\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"55.765\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"243.7\",\"pf\":\"1.0000\",\"dt\":\"2023-09-06T04:17:04.000\"}]}}";
+		Map<String, Object> payload = new ObjectMapper().readValue(json, Map.class);
+		
+		System.out.println("start connect");
+		// connect
+		ExecutorService exPub = Executors.newFixedThreadPool(10000);
+		List<Callable<String>> tasks = new ArrayList<>();
+		Vector<IMqttClient> clients = new Vector<>();
+		for (int i = 1; i <= 10000; i++) {
+			int idx = i;
+			tasks.add(() -> {
+				String prefix = "java." + idx;
+				IMqttClient client = Mqtt.getInstance(evsPAMQTTAddress, prefix);
+				System.out.println(prefix + " -> " + client.getClientId() + " -> " + client.isConnected());
+				if (client.isConnected()) {
+					clients.add(client);
+				}
+				return null;
+			});
+		}
+		exPub.invokeAll(tasks);
+		
+		// publish
+		tasks = new ArrayList<>();
+		for (int i = 1; i <= 10000; i++) {
+			int idx = i;
+			tasks.add(() -> {
+				IMqttClient client = clients.get(idx - 1);
+				try {
+					Mqtt.publish(client, topic, payload, 2, false);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				return null;
+			});
+		}
+		
+		exPub.invokeAll(tasks);
+		System.out.println("total client connected: " + clients.size());
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -2188,4 +2266,5 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 		return result;
 	}
+	
 }

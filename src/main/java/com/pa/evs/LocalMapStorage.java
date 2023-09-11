@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Getter
 public class LocalMapStorage {
 
+	private Map<String, String> uidMsnMap;
     private Map<Long, Long> localMap;
     private Map<Long, Long> onboardingMap;
     private Map<Long, Long> otaMap;
@@ -22,5 +23,6 @@ public class LocalMapStorage {
         onboardingMap = new ConcurrentHashMap<>();
         otaMap = new ConcurrentHashMap<>();
         cfgMap = new ConcurrentHashMap<>();
+        uidMsnMap = new ConcurrentHashMap<>();
     }
 }

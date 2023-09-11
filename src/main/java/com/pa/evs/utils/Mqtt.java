@@ -51,13 +51,13 @@ public class Mqtt {
 			clientId = "dev-be-server";
 		}
 		
-		Lock lock = LOCKS.computeIfAbsent(serverAddress, k -> new ReentrantLock());
+		Lock lock = LOCKS.computeIfAbsent(serverAddress + "." + clientId, k -> new ReentrantLock());
 		lock.lock();
-		IMqttClient instance = INSTANCES.get(serverAddress);
+		IMqttClient instance = INSTANCES.get(serverAddress + "." + clientId);
 		try {
 			if (instance == null) {
 				instance = new MqttClient(serverAddress, clientId + "." + System.currentTimeMillis());
-				INSTANCES.put(serverAddress, instance);
+				INSTANCES.put(serverAddress + "." + clientId, instance);
 			}
 			
 			if (!instance.isConnected()) {

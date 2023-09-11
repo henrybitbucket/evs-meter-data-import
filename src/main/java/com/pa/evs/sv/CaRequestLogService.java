@@ -53,4 +53,6 @@ public interface CaRequestLogService {
 	void unLinkMsn(String eId);
 
 	Optional<CARequestLog> findByMsn(String msn);
+
+	void updateCacheUidMsnDevice(String currentUid, String action);
 }

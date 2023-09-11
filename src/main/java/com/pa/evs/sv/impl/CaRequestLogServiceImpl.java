@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.pa.evs.LocalMapStorage;
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
@@ -100,6 +102,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	EntityManager em;
+	
+	@Autowired LocalMapStorage localMap;
 
 	@Autowired
 	private ScreenMonitoringRepository screenMonitoringRepository;
@@ -317,6 +321,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	ca.setStatus(DeviceStatus.OFFLINE);
         }
         caRequestLogRepository.save(ca);
+        caRequestLogRepository.flush();
         
         if (isCoupledAddress) {
 
@@ -325,6 +330,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     		addrLog.setType(DeviceType.COUPLED);
     		addressLogRepository.save(addrLog);
         }
+        
+        updateCacheUidMsnDevice(ca.getUid(), "update");
     }
 
     @Override
@@ -600,6 +607,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         				}
         			}
         			caRequestLogRepository.save(ca);
+        			caRequestLogRepository.flush();
+        			updateCacheUidMsnDevice(ca.getUid(), "update");
         		} else {
         			throw new RuntimeException("MCU SN(QR Code) doesn't exist!");
         		}
@@ -630,6 +639,37 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         }
 	    return cacheCids;
     }
+    
+	@Override
+	public void updateCacheUidMsnDevice(String currentUid, String action) {
+		LOG.info("updating cache device: currentUid = " + currentUid + " action = " + action);
+		Map<String, String> cache = localMap.getUidMsnMap();
+		if (StringUtils.isEmpty(currentUid)) {
+			List<Object[]> dvs = em.createQuery("select uid,msn from CARequestLog").getResultList();
+			Set<String> existDb = new HashSet<>();
+			for (Object[] obj : dvs) {
+				String uid = (String) obj[0];
+				String msn = (String) obj[1];
+				existDb.add(uid);
+				cache.put(uid, msn == null ? "" : msn);
+			}
+			Set<String> existCache = cache.keySet();
+			for (String uid : existCache) {
+				if (!existDb.contains(uid)) {
+					cache.remove(uid);
+				}
+			}
+			return;
+		}
+		if ("remove".equalsIgnoreCase(action)) {
+			cache.remove(currentUid);
+			return;
+		}
+		CARequestLog ca = caRequestLogRepository.findByUid(currentUid).orElse(null);
+		if (ca != null) {
+			cache.put(ca.getUid(), ca.getMsn() == null ? "" : ca.getMsn());
+		}
+	}
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -842,6 +882,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		CARequestLog caRequestLog = caRequestLogRepository.findByUid(uId).orElse(null);
 		if (caRequestLog != null && caRequestLog.getType() == DeviceType.NOT_COUPLED) {//8931070521315025237F
 			caRequestLogRepository.delete(caRequestLog);
+			updateCacheUidMsnDevice(caRequestLog.getUid(), "remove");
 		}
 	}
 
@@ -856,6 +897,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			caRequestLog.setMsn(null);
 			caRequestLog.setCoupledDatetime(null);
 			caRequestLogRepository.save(caRequestLog);
+			caRequestLogRepository.flush();
+			updateCacheUidMsnDevice(caRequestLog.getUid(), "update");
 		} else {
 			throw new RuntimeException("Device doesn't exists!");
 		}
