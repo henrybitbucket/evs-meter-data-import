@@ -2,6 +2,7 @@ package com.pa.evs.dto;
 
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 
@@ -18,6 +19,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MeterCommissioningReportDto {
 
 	private Long id;

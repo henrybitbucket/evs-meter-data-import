@@ -41,6 +41,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.eclipse.paho.client.mqttv3.IMqttClient;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -568,9 +569,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (status == 0) {
 			status = validateUidAndMsn(log);
 		}
-
+		
 		//Publish
-		Map<String, Object> dataRes = new HashMap<>();
+		final Map<String, Object> dataRes = new HashMap<>();
 		Map<String, Object> header = new HashMap<>();
 		dataRes.put("header", header);
 		header.put("oid", log.getMid());
@@ -578,14 +579,46 @@ public class EVSPAServiceImpl implements EVSPAService {
 		header.put("gid", log.getGid());
 		header.put("msn", log.getMsn());
 		header.put("status", status);
-		publish(alias + log.getUid(), dataRes, type);
+
+		// publish(alias + log.getUid(), dataRes, type);
+		// special publish only for MDT
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), alias + log.getUid(), dataRes, QUALITY_OF_SERVICE, false);
 		
+		// save subscribe/publish message log
+		final int statusTmp = status;
+		new Thread(() -> {
+			try {
+				LOG.info("Publish " + alias + log.getUid() + " -> " + new ObjectMapper().writeValueAsString(dataRes));
+				AppProps.getContext().getBean(this.getClass()).saveMDTMessage(data, type, log, statusTmp, dataRes);
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
+			}
+		}).start();
+		
+	}
+	
+	@SuppressWarnings("rawtypes")
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void saveMDTMessage(Map<String, Object> data, String type, Log subscribeLog, int status, final Map<String, Object> dataRes) throws Exception {
+		
+		logRepository.save(subscribeLog);
+		updatePublishStatus(subscribeLog);
 		//
 		if (status == 0) {
-			sendToMeterClient(data, type, log);
+			sendToMeterClient(data, type, subscribeLog);
 		}
-
-		updateLastMDTSubscribe(log);
+		updateLastMDTSubscribe(subscribeLog);
+		
+		//save log publish log
+		Map<String, Object> publishData = new HashMap<>((Map) dataRes);
+		publishData.put("type", type);
+		Log logP = Log.build(publishData, "PUBLISH");
+		logP.setTopic(alias + subscribeLog.getUid());
+		logP.setMqttAddress(evsPAMQTTAddress);
+		logRepository.save(logP);
+		
+		handlePublishType(logP);
+		
 	}
 
 	private void checkECH(Map<String, Object> data, String type, Log log, int status) throws Exception {
@@ -971,24 +1004,25 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private void handleOnSubscribe(final MqttMessage mqttMessage) {
 		try {
 			Map<String, Object> data = MAPPER.readValue(mqttMessage.getPayload(), Map.class);
+			Map<String, Object> header = (Map<String, Object>) data.get("header");
+			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
+			String type = (String) payload.get("type");
 			
 			//save log
 			Log log = Log.build(data, "SUBSCRIBE");
 			log.setMqttAddress(evsPAMQTTAddress);
 			log.setTopic(evsPASubscribeTopic);
 			LOG.debug(">Subscribe " + log.getMid() + " " + log.getMsn() + " " + log.getPType() + " " + evsPASubscribeTopic);
-			logRepository.save(log);
-			updatePublishStatus(log);
+			if (!"MDT".equalsIgnoreCase(type)) {
+				logRepository.save(log);
+				updatePublishStatus(log);				
+			}
 
 			if (validateUid(log) == MqttCmdStatus.NOTFOUND_DEVICE.getStatus()) {
 				LOG.debug("Device notfound: " + log.getUid());
 				return;
 			}
 			
-			Map<String, Object> header = (Map<String, Object>) data.get("header");
-			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
-			String type = (String) payload.get("type");
-
 			int status = 0;
 			if(validateSign) {
 				boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",

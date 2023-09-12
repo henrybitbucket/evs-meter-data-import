@@ -33,7 +33,8 @@ import lombok.Setter;
 		@Index(columnList = "user_submit,uid", name = "idx_meter_commissioning_report_user_submit_uid"),
 		@Index(columnList = "user_submit,msn", name = "idx_meter_commissioning_report_user_submit_msn"),
 		@Index(columnList = "uid,is_latest", name = "idx_meter_commissioning_report_uid_is_latest"),
-		@Index(columnList = "user_submit,job_sheet_no", name = "idx_meter_commissioning_report_user_submit_job_sheet_no")
+		@Index(columnList = "user_submit,job_sheet_no", name = "idx_meter_commissioning_report_user_submit_job_sheet_no"),
+		@Index(columnList = "job_by,job_sheet_no", name = "idx_meter_commissioning_report_job_by_job_sheet_no")
 	}
 )
 public class MeterCommissioningReport extends BaseEntity {

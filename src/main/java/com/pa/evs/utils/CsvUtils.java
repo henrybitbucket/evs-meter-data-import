@@ -246,6 +246,7 @@ public class CsvUtils {
             		.append("STATUS: ").append(log.getStatus()).append("\n")
             		.append("COUPLED STATE: ").append(log.getType()).append("\n")
             		.append("COUPLED USER: ").append(StringUtils.isNotBlank(log.getCoupledUser()) ? log.getCoupledUser() : "").append("\n")
+            		.append("Onboarding Time: ").append(log.getLastOBRDate() != null ? (sdf.format(new Date(log.getLastOBRDate()))) : "").append("\n")
             		.toString()
         		);        	
         } else {
@@ -287,6 +288,7 @@ public class CsvUtils {
         }
         
         record.add(log.getIsPassed() != null ? (log.getIsPassed() ? "PASS" : "FAIL") : "No Submission");
+        record.add(StringUtils.isBlank(log.getJobSheetNo()) ? "" : log.getJobSheetNo());
         return postProcessCsv(record);
     }
     
@@ -312,7 +314,7 @@ public class CsvUtils {
 
 	public static File writeMeterCommissionCsv(List<MeterCommissioningReportDto> results, String fileName) throws IOException {
         List<String> headers = Arrays.asList(
-				"Meter SN", "MCU SN", "MCU Profile", "Meter Data", "Commit User ID", "P2Checking time", "Commit time", "Meter photo", "P2Checking Result");
+				"Meter SN", "MCU SN", "MCU Profile", "Meter Data", "P2Submit user", "P2Checking time", "Commit time", "Meter photo", "P2Checking Result", "Job sheet no");
         return toCsv(headers, results, CsvUtils::toCSVRecord, buildPathFile(fileName), new Date().getTime());
 	}
 	
