@@ -17,6 +17,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,11 +33,16 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SimpleMap;
 
 @RestController
 public class CaRequestLogController {
+	
+	@Value("${evs.pa.mqtt.address}") private String evsPAMQTTAddress;
+
+	@Value("${evs.pa.mqtt.client.id}") private String mqttClientId;
 
 	private Date lastReboot = new Date();
 	
@@ -100,10 +106,13 @@ public class CaRequestLogController {
     
     @GetMapping(RestPath.CA_CAL_DASHBOARD)
     public ResponseEntity<?> calDashboard(HttpServletRequest httpServletRequest) {
+    	boolean mqttCheck = Mqtt.getInstance(evsPAMQTTAddress, mqttClientId).isConnected();
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(
         		SimpleMap.init("countAlarms", countAlarms)
         		.more("critical", 0)
         		.more("lastReboot", lastReboot.getTime())
+        		.more("mqttStatus", mqttCheck ? "UP" : "DOWN")
+        		.more("mqttAddress", evsPAMQTTAddress)
         		).build());
     }
     
