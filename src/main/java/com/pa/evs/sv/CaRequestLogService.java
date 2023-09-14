@@ -9,6 +9,7 @@ import java.util.Set;
 
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.ScreenMonitoringDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.ScreenMonitoring;
 
@@ -55,4 +56,6 @@ public interface CaRequestLogService {
 	Optional<CARequestLog> findByMsn(String msn);
 
 	void updateCacheUidMsnDevice(String currentUid, String action);
+
+	ScreenMonitoringDto mqttStatusCheck();
 }

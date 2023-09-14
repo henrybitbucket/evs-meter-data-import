@@ -29,11 +29,11 @@ import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.dto.ScreenMonitoringDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.sv.CaRequestLogService;
-import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SimpleMap;
 
@@ -47,6 +47,12 @@ public class CaRequestLogController {
 	private Date lastReboot = new Date();
 	
 	Number countAlarms = 0;
+	
+	ScreenMonitoringDto mqttStatus;
+	
+	Map<String, Integer> countDevices;
+	
+	List<ScreenMonitoring> systemInformation;
 
     @Autowired
     CaRequestLogService caRequestLogService;
@@ -106,13 +112,14 @@ public class CaRequestLogController {
     
     @GetMapping(RestPath.CA_CAL_DASHBOARD)
     public ResponseEntity<?> calDashboard(HttpServletRequest httpServletRequest) {
-    	boolean mqttCheck = Mqtt.getInstance(evsPAMQTTAddress, mqttClientId).isConnected();
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(
         		SimpleMap.init("countAlarms", countAlarms)
         		.more("critical", 0)
         		.more("lastReboot", lastReboot.getTime())
-        		.more("mqttStatus", mqttCheck ? "UP" : "DOWN")
+        		.more("mqttStatus", mqttStatus)
         		.more("mqttAddress", evsPAMQTTAddress)
+        		.more("countDevices", countDevices)
+        		.more("systemInformation", systemInformation)
         		).build());
     }
     
@@ -148,7 +155,12 @@ public class CaRequestLogController {
     @PostConstruct
     public void init() {
     	SchedulerHelper.scheduleJob("0/10 * * * * ? *", () -> {
+    		
     		countAlarms = caRequestLogService.countAlarms();
-    	}, "COUNT_ALARMNS");
+    		mqttStatus = caRequestLogService.mqttStatusCheck();
+    		countDevices = caRequestLogService.getCountDevices();
+    		systemInformation = caRequestLogService.getDashboard();
+    		
+    	}, "GET_SYSTEM_PROPERTIES");
     }
 }

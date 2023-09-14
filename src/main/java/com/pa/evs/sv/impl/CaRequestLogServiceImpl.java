@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.dto.ScreenMonitoringDto;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 import com.pa.evs.enums.ScreenMonitorKey;
@@ -61,6 +63,7 @@ import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.CsvUtils;
+import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.Utils;
 
@@ -69,6 +72,10 @@ import com.pa.evs.utils.Utils;
 public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
+	
+	@Value("${evs.pa.mqtt.address}") private String evsPAMQTTAddress;
+
+	@Value("${evs.pa.mqtt.client.id}") private String mqttClientId;
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
@@ -685,6 +692,53 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@Override
 	public Number countAlarms() {
 		return caRequestLogRepository.countAlarms();
+	}
+	
+	@Override
+	public ScreenMonitoringDto mqttStatusCheck() {
+		Optional<ScreenMonitoring> opt = screenMonitoringRepository.findByKey(ScreenMonitorKey.MQTT_STATUS);
+		boolean mqttCheck = Mqtt.getInstance(evsPAMQTTAddress, mqttClientId).isConnected();
+		Long now = System.currentTimeMillis();
+		ScreenMonitoringDto dto = new ScreenMonitoringDto();
+		
+		if (opt.isPresent()) {
+			ScreenMonitoring sm = opt.get();
+			dto.setKey(ScreenMonitorKey.MQTT_STATUS.name());
+
+			if (mqttCheck) {
+				sm.setValue("UP");
+				sm.setStatus(ScreenMonitorStatus.OK);
+				sm.setLastUpTime(now);
+				screenMonitoringRepository.save(sm);
+			} else {
+				sm.setValue("DOWN");
+				sm.setStatus(ScreenMonitorStatus.NOT_OK);
+				if (sm.getLastDownTime() == null || (sm.getLastDownTime() != null && sm.getLastUpTime() != null
+						&& sm.getLastDownTime() < sm.getLastUpTime())) {
+					sm.setLastDownTime(now);
+					screenMonitoringRepository.save(sm);
+				}
+			}
+			dto.setValue(sm.getValue());
+			dto.setLastUpTime(sm.getLastUpTime());
+			dto.setLastDownTime(sm.getLastDownTime());
+		} else {
+			ScreenMonitoring sm = new ScreenMonitoring();
+			sm.setKey(ScreenMonitorKey.MQTT_STATUS);
+			sm.setStatus(mqttCheck ? ScreenMonitorStatus.OK : ScreenMonitorStatus.NOT_OK);
+			sm.setValue(mqttCheck ? "UP" : "DOWN");
+			if (mqttCheck) {
+				sm.setLastUpTime(now);
+			} else {
+				sm.setLastDownTime(now);
+			}
+			dto.setKey(ScreenMonitorKey.MQTT_STATUS.name());
+			dto.setValue(sm.getValue());
+			dto.setLastUpTime(sm.getLastUpTime());
+			dto.setLastDownTime(sm.getLastDownTime());
+			screenMonitoringRepository.save(sm);
+		}
+		return dto;
 	}
 	
 	@Override

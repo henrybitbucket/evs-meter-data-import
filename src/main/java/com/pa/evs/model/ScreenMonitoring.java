@@ -41,5 +41,11 @@ public class ScreenMonitoring {
     @Column(name = "status")
     @Enumerated(EnumType.STRING)
     private ScreenMonitorStatus status;
+    
+    @Column(name = "last_up_time")
+    private Long lastUpTime;
+    
+    @Column(name = "last_down_time")
+    private Long lastDownTime;
 
 }

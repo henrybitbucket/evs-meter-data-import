@@ -18,4 +18,7 @@ public class ScreenMonitoringDto {
     private Long id;
     private String key;
     private String value;
+    private Long lastUpTime;
+    private Long lastDownTime;
+    
 }
