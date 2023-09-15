@@ -39,9 +39,8 @@ import javax.persistence.Query;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
-import org.eclipse.paho.client.mqttv3.IMqttClient;
+import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -229,6 +228,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Value("${s3.access.key}") private String accessKey;
 
 	private static final ExecutorService EX = Executors.newFixedThreadPool(10);
+	
+	private static final ExecutorService EX_POOL_SDB = Executors.newFixedThreadPool(500);
 	
 	private AmazonS3Client s3Client = null;
 	
@@ -586,14 +587,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		// save subscribe/publish message log
 		final int statusTmp = status;
-		new Thread(() -> {
+		EX_POOL_SDB.submit(() -> {
 			try {
 				LOG.info("Publish " + alias + log.getUid() + " -> " + new ObjectMapper().writeValueAsString(dataRes));
 				AppProps.getContext().getBean(this.getClass()).saveMDTMessage(data, type, log, statusTmp, dataRes);
 			} catch (Exception e) {
 				LOG.error(e.getMessage(), e);
 			}
-		}).start();
+		});
 		
 	}
 	
@@ -1836,14 +1837,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String evsPAMQTTAddress = "tcp://18.142.166.146:1883";
 		String mqttClientId = System.currentTimeMillis() + "";
 		
-		String topic = "evs/pa/data";
+		String topic = "dev/evs/pa/data";
 
 		int[] counts = new int[] {0};
 		ExecutorService ex = Executors.newFixedThreadPool(1);
-		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), topic, new ObjectMapper().readValue("{}", Map.class), 2, false);
-		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/data", 2, o -> {
+		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "dev/evs/pa/JMETER001", 2, o -> {
 			final MqttMessage mqttMessage = (MqttMessage) o;
-			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+			LOG.info("dev/evs/pa/JMETER001 -> " + new String(mqttMessage.getPayload()));
 			ex.execute(() -> {
 				counts[0] = counts[0] + 1;
 				System.out.println("count->" + counts[0]);
@@ -1851,45 +1851,24 @@ public class EVSPAServiceImpl implements EVSPAService {
 			return null;
 		});
 		
-		String json = "{\"header\":{\"mid\":18766,\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"sig\":\"MGUCMCVYs4u2WOK2V2v2ekGVtpE8Y5JKtIRiYcCsbkLY9yDsdPa50rHNfOEAE3GKhqXkowIxAMR2hO+HXArX19Hwmh8OmnWlv5rsIKSryGKXST+w0dnC4NsrKOLaxQBHAN+AIZrZBQ==\"},\"payload\":{\"id\":\"JMETER001\",\"type\":\"MDT\",\"data\":[{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"55.765\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"244.5\",\"pf\":\"1.0000\",\"dt\":\"2023-09-06T02:47:04.000\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"55.765\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"243.2\",\"pf\":\"1.0000\",\"dt\":\"2023-09-06T03:17:05.000\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"55.765\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"243.3\",\"pf\":\"1.0000\",\"dt\":\"2023-09-06T03:47:05.000\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"55.765\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"243.7\",\"pf\":\"1.0000\",\"dt\":\"2023-09-06T04:17:04.000\"}]}}";
+		String json = "{\"header\":{\"mid\":15246,\"uid\":\"JMETER001\",\"gid\":\"JMETER001\",\"msn\":\"20230906000001\",\"sig\":\"\"},\"payload\":{\"id\":\"JMETER001\",\"type\":\"MDT\",\"data\":[{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"235.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T16:40:13\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"235.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T16:55:14\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T17:10:15\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T17:25:16\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T17:40:17\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T17:55:18\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T18:10:18\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T18:25:19\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T18:40:20\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T18:55:21\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T19:10:21\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T19:25:23\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T19:40:24\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T19:55:24\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T20:10:26\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"238.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T20:25:27\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T20:40:27\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T20:55:28\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T21:10:29\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T21:25:30\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T21:40:31\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"238.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T21:55:32\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T22:10:33\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T22:25:33\"}]}}";
 		Map<String, Object> payload = new ObjectMapper().readValue(json, Map.class);
 		
 		System.out.println("start connect");
 		// connect
 		ExecutorService exPub = Executors.newFixedThreadPool(10000);
 		List<Callable<String>> tasks = new ArrayList<>();
-		Vector<IMqttClient> clients = new Vector<>();
 		for (int i = 1; i <= 10000; i++) {
 			int idx = i;
 			tasks.add(() -> {
 				String prefix = "java." + idx;
-				IMqttClient client = Mqtt.getInstance(evsPAMQTTAddress, prefix);
-				System.out.println(prefix + " -> " + client.getClientId() + " -> " + client.isConnected());
-				if (client.isConnected()) {
-					clients.add(client);
-				}
+				IMqttAsyncClient client = Mqtt.getInstance(evsPAMQTTAddress, prefix);
+				System.out.println(prefix + " -> " + client.getClientId() + " -> " + client.isConnected());				
+				Mqtt.publish(client, topic, payload, 2, false);
 				return null;
 			});
 		}
 		exPub.invokeAll(tasks);
-		
-		// publish
-		tasks = new ArrayList<>();
-		for (int i = 1; i <= 10000; i++) {
-			int idx = i;
-			tasks.add(() -> {
-				IMqttClient client = clients.get(idx - 1);
-				try {
-					Mqtt.publish(client, topic, payload, 2, false);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-				return null;
-			});
-		}
-		
-		exPub.invokeAll(tasks);
-		System.out.println("total client connected: " + clients.size());
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
