@@ -8,5 +8,6 @@ import com.pa.evs.model.P2JobData;
 @Repository
 public interface P2JobDataRepository extends JpaRepository<P2JobData, Long> {
 
+	void deleteByJobByAndJobName(String user, String jobNo);
 
 }

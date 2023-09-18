@@ -15,4 +15,5 @@ public interface MeterCommissioningReportService {
 	Object getOrNewP2Job(String jobName);
 	void saveP2Job(P2JobDto dto);
 	void save(List<MeterCommissioningReportDto> dtos);
+	void deleteP2Job(String jobNo);
 }

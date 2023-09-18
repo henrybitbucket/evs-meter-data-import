@@ -117,6 +117,17 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 			caOpt.get().setLastMeterCommissioningReport(mcr.getCreateDate());
 			caRequestLogRepository.save(caOpt.get());
 		}
+		
+		String user = SecurityUtils.getEmail();
+		Optional<P2Job> p2JobOpt = p2JobRepository.findByJobByAndName(user, dto.getJobSheetNo());
+		
+		if (p2JobOpt.isPresent()) {
+			P2Job p2Job = p2JobOpt.get();
+			p2Job.setCommentSubmit(dto.getCommentSubmit());
+			p2Job.setTimeSubmit(dto.getTimeSubmit());
+			p2Job.setUserSubmit(dto.getUserSubmit());
+			p2JobRepository.save(p2Job);
+		}
 	}
 	
 	@Transactional
@@ -421,6 +432,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 				dto.setTimeSubmit(mcr.getTimeSubmit());
 				dto.setCreateDate(mcr.getCreateDate());
 				dto.setJobSheetNo(mcr.getJobSheetNo());
+				dto.setJobBy(mcr.getJobBy());
 
 				if (mcr.getInstaller() != null) {
 					dto.setInstaller(mcr.getInstaller().getUserId());
@@ -583,6 +595,14 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		job.setName(jobName);
 		job.setItCount(dto.getItems().size());
 		p2JobRepository.save(job);
+	}
+
+	@Override
+	@Transactional
+	public void deleteP2Job(String jobNo) {
+		String user = SecurityUtils.getEmail();
+		p2JobDataRepository.deleteByJobByAndJobName(user, jobNo);
+		p2JobRepository.deleteByJobByAndName(user, jobNo);
 	}
 
 }

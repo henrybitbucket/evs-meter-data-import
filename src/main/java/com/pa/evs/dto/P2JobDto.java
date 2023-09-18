@@ -32,6 +32,12 @@ public class P2JobDto {
 	
 	private Date createDate;
 	
+	private String userSubmit;
+	
+	private Long timeSubmit;
+	
+	private String commentSubmit;
+	
 	@Builder.Default
 	private List<P2JobDataDto> items = new ArrayList<>();
 	
@@ -43,6 +49,9 @@ public class P2JobDto {
 				.itCount(fr.getItCount())
 				.title(fr.getTitle())
 				.createDate(fr.getCreateDate())
+				.commentSubmit(fr.getCommentSubmit())
+				.timeSubmit(fr.getTimeSubmit())
+				.userSubmit(fr.getUserSubmit())
 				.build();
 	}
 }

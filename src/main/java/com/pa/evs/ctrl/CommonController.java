@@ -791,6 +791,16 @@ public class CommonController {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
+    @DeleteMapping("/api/p2/job-no/{jobNo}/job")
+	public ResponseEntity<Object> deleteP2Job(HttpServletResponse response, @PathVariable(required = true) String jobNo) {
+    	try {
+    		meterCommissioningReportService.deleteP2Job(jobNo);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
     @PostMapping("/api/p1-online-statuses")
 	public ResponseEntity<Object> getP1OnlineStatuses(HttpServletResponse response, @RequestBody PaginDto<P1OnlineStatusDto> pagin) {
     	try {

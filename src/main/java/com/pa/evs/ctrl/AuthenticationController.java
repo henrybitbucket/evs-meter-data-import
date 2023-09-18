@@ -247,6 +247,15 @@ public class AuthenticationController {
         }
     }
     
+    @PostMapping(value = {"/api/user/validate-password"})
+    public ResponseEntity<?> validatePassword(HttpServletRequest httpServletRequest, @RequestBody LoginRequestDto loginRequestDTO) {
+    	try {
+        	return ResponseEntity.ok(ResponseDto.<Object>builder().success(true).response(authenticationService.validatePassword(loginRequestDTO)).build());
+        } catch (Exception e) {
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+    }
+    
     @PostConstruct
     public void init() {
     	authenticationService.initDataAuths();

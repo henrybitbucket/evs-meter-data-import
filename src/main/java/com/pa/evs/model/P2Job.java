@@ -54,4 +54,13 @@ public class P2Job extends Base1Entity {
 	
 	@Version
 	private long version;
+	
+	@Column(name = "user_submit")
+	private String userSubmit;
+	
+	@Column(name = "time_submit")
+	private Long timeSubmit;
+	
+	@Column(name = "comment_submit")
+	private String commentSubmit;
 }
