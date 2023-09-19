@@ -1193,4 +1193,19 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         
 		return userDetails;
 	}
+	
+	@Transactional
+	@Override
+	public boolean validatePassword(LoginRequestDto loginRequestDTO) {
+		String email = SecurityUtils.getEmail();
+		String password = loginRequestDTO.getPassword();
+		try {
+			authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+			return true;
+		} catch (DisabledException e) {
+			throw new AuthenticationException(Message.USER_IS_DISABLE, e);
+		} catch (BadCredentialsException e) {
+			throw new AuthenticationException(Message.INVALID_USERNAME_PASSWORD, e);
+		}
+	}
 }

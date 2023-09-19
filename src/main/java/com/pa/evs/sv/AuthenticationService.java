@@ -44,4 +44,5 @@ public interface AuthenticationService {
 	void changePwd(ChangePasswordDto changePasswordDto);
 	void resetPwd(ResetPasswordDto resetPasswordDto);
 	void updatePhoneNumber(String phoneNumber);
+	boolean validatePassword(LoginRequestDto loginRequestDTO);
 }
