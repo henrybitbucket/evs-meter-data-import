@@ -361,7 +361,10 @@ public class CommonController {
             @RequestParam(value = "file") final MultipartFile file) throws Exception {
 
         try {
-            evsPAService.uploadDeviceCsr(file, vendor);
+            Object error = evsPAService.uploadDeviceCsr(file, vendor);
+            if (error != null) {
+            	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message("Device validation error!").response(error).build());
+            }
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }

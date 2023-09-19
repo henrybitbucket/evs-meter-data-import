@@ -23,7 +23,7 @@ public interface EVSPAService {
 
     boolean upload(String fileName, String version, String hashCode, InputStream in);
 
-	void uploadDeviceCsr(MultipartFile file, Long vendor);
+	Object uploadDeviceCsr(MultipartFile file, Long vendor);
 
 	String getS3URL(Long vendor, String objectKey);
 

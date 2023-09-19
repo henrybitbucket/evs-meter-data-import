@@ -27,12 +27,21 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	
 	Optional<CARequestLog> findByMsn(String msn);
 	
-	@Query(value = "SELECT * FROM ca_request_log WHERE msn = ?1 limit 1", nativeQuery = true)
+	@Query(value = "SELECT * FROM {h-schema}ca_request_log WHERE msn = ?1 limit 1", nativeQuery = true)
 	Optional<CARequestLog> findOneByMsn(String msn);
 	
 	Optional<CARequestLog> findByUidAndMsn(String uid, String msn);
 	
 	Optional<CARequestLog> findBySn(String sn);
+	
+	@Query(value = "SELECT sn FROM {h-schema}ca_request_log WHERE sn in (?1)", nativeQuery = true)
+	Set<String> findSnBySnIn(java.util.Collection<String> sns);
+	
+	@Query(value = "SELECT uid FROM {h-schema}ca_request_log WHERE uid in (?1)", nativeQuery = true)
+	Set<String> findUidByUidIn(java.util.Collection<String> uids);
+	
+	@Query(value = "SELECT cid FROM {h-schema}ca_request_log WHERE cid in (?1)", nativeQuery = true)
+	Set<String> findCidByCidIn(java.util.Collection<String> cids);
 	
 	Optional<CARequestLog> findByCid(String cid);
 	

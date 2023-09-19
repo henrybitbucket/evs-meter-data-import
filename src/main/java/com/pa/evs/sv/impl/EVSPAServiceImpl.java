@@ -18,10 +18,12 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.Vector;
 import java.util.concurrent.Callable;
@@ -30,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import javax.annotation.PostConstruct;
@@ -238,7 +241,97 @@ public class EVSPAServiceImpl implements EVSPAService {
 	com.amazonaws.services.simpleemail.AmazonSimpleEmailService sesClient = null;
 	
 	@Override
-	public void uploadDeviceCsr(MultipartFile file, Long vendor) {
+	public Object uploadDeviceCsr(MultipartFile file, Long vendor) {
+		
+		// validate
+		Set<String> snSet = new LinkedHashSet<>();
+		Set<String> uidSet = new LinkedHashSet<>();
+		Set<String> cidSet = new LinkedHashSet<>();
+		List<Map<String, Object>> reads = new ArrayList<>();
+		try (ZipInputStream zipFile = new ZipInputStream(file.getInputStream())) {
+		    ZipEntry entry = null;
+	        while ((entry = zipFile.getNextEntry()) != null) {
+	            String currentName = entry.getName();
+	            if (currentName.endsWith(".csv")) {
+	            	String[] lines = null;
+	            	try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+	            		IOUtils.copy(zipFile, bos);
+						lines = new String(bos.toByteArray(), StandardCharsets.UTF_8).split("\r*\n");
+						if (StringUtils.isBlank(lines[0]) || !lines[0].toUpperCase().startsWith("SN,UUID,CID")) {
+							LOG.info("Headers should start with: SN UUID CID");
+							continue;
+						}
+	            	}
+					for (int i = 1; i < lines.length; i++) {
+						String[] details = lines[i].split(" *, *");
+						if (details.length > 2) {
+							
+							String sn = details[0];
+							String uid = details[1];
+							String cid = details[2];
+							Map<String, Object> map = SimpleMap.init("sn", sn)
+									.more("uid", uid)
+									.more("cid", cid);
+							reads.add(map);
+							
+							String message = (String) map.computeIfAbsent("message", k -> "");
+							
+							if (StringUtils.isBlank(uid) || StringUtils.isBlank(details[0]) || StringUtils.isBlank(details[2])) {
+								LOG.info("UUID, SN, CID are required!");
+								message += "UUID, SN, CID are required!\n";
+							}
+							
+							if (snSet.contains(sn)) {
+								message += "Duplicate SN\n";
+							}
+							if (uidSet.contains(uid)) {
+								message += "Duplicate UUID\n";
+							}
+							if (cidSet.contains(cid)) {
+								message += "Duplicate CID\n";
+							}
+							snSet.add(sn);
+							uidSet.add(uid);
+							cidSet.add(cid);
+							map.put("message", message);
+							
+						}
+					}
+	            }
+	        }
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+			throw new RuntimeException(e.getMessage());
+		}
+		
+		Set<String> existSn = caRequestLogRepository.findSnBySnIn(snSet);
+		Set<String> existUid = caRequestLogRepository.findUidByUidIn(uidSet);
+		Set<String> existCid = caRequestLogRepository.findCidByCidIn(cidSet);
+		
+		boolean hasError = false;
+		for (Map<String, Object> item : reads) {
+			String sn = (String) item.get("sn");
+			String uid = (String) item.get("uid");
+			String cid = (String) item.get("cid");
+			String message = (String) item.computeIfAbsent("message", k -> "");
+			if (existSn.contains(sn)) {
+				message = message + "SN exists!\n"; 
+			}
+			if (existUid.contains(uid)) {
+				message = message + "UUID exists!\n"; 
+			}
+			if (existCid.contains(cid)) {
+				message = message + "CID exists!\n"; 
+			}
+			item.put("message", message);
+			hasError = hasError || StringUtils.isNotBlank(message);
+		}
+		
+		if (hasError) {
+			return reads;
+		}
+		
+		// end validate
 		
 		File f = new File(evsDataFolder + "/" + vendor + "-" + file.getOriginalFilename());
 		try {
@@ -248,6 +341,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} catch (IOException e) {
 			LOG.error(e.getMessage(), e);
 		}
+		
+		return null;
 	}
 
 	@Override
