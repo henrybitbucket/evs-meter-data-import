@@ -43,6 +43,7 @@ import com.pa.evs.model.Address;
 import com.pa.evs.model.AddressLog;
 import com.pa.evs.model.BuildingUnit;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.DeviceRemoveLog;
 import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.ScreenMonitoring;
@@ -53,6 +54,7 @@ import com.pa.evs.repository.AddressRepository;
 import com.pa.evs.repository.BuildingRepository;
 import com.pa.evs.repository.BuildingUnitRepository;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.DeviceRemoveLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.repository.GroupRepository;
 import com.pa.evs.repository.LogRepository;
@@ -62,6 +64,7 @@ import com.pa.evs.repository.VendorRepository;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.SecurityUtils;
@@ -79,6 +82,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
+	
+	@Autowired
+	private DeviceRemoveLogRepository deviceRemoveLogRepository;
 
 	@Autowired
     private GroupRepository groupRepository;
@@ -936,10 +942,23 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		CARequestLog caRequestLog = caRequestLogRepository.findByUid(uId).orElse(null);
 		if (caRequestLog != null && caRequestLog.getType() == DeviceType.NOT_COUPLED) {//8931070521315025237F
 			caRequestLogRepository.delete(caRequestLog);
+			AppProps.getContext().getBean(this.getClass()).logRemoveDeviceHistory(caRequestLog);
 			updateCacheUidMsnDevice(caRequestLog.getUid(), "remove");
 		}
 	}
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logRemoveDeviceHistory(CARequestLog caRequestLog) {
+    	try {
+			DeviceRemoveLog log = DeviceRemoveLog.build(caRequestLog);
+			log.setId(null);
+			log.setRemoveBy(SecurityUtils.getEmail());
+			deviceRemoveLogRepository.save(log);
+		} catch (Exception e) {
+			//
+		}
+    }
+    
 	@Transactional
 	@Override
 	public void unLinkMsn(String uId) {

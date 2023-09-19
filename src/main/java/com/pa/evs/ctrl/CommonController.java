@@ -704,14 +704,15 @@ public class CommonController {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
-    @PostMapping("/api/add-device-test/{uid}/{sn}")
-	public ResponseEntity<Object> addDeviceTest(@PathVariable String uid, @PathVariable String sn) {
+    @GetMapping("/api/add-device-test/{uid}/{sn}/{msn}")
+	public ResponseEntity<Object> addDeviceTest(@PathVariable String uid, @PathVariable String sn, @PathVariable String msn) {
     	try {
     		Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uid);
 			CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
 			if (caLog.getId() == null) {
 				CMD.exec("cp " + csrFolder + "/" + "BIE2IEYAAMAHOABRAA.csr " + csrFolder + "/" + uid + ".csr", null);
 				caLog.setSn(sn);
+				caLog.setMsn(msn);
 			}
 			caLog.setUid(uid);
 			if (caLog.getStatus() == null) {
