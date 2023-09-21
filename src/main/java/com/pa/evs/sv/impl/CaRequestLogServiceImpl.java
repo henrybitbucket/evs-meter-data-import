@@ -32,6 +32,7 @@ import org.springframework.util.CollectionUtils;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
+import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.ScreenMonitoringDto;
@@ -938,24 +939,25 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 
     @Transactional
 	@Override
-	public void removeDevice(String uId) {
+	public void removeDevice(String uId, String reason) {
 		CARequestLog caRequestLog = caRequestLogRepository.findByUid(uId).orElse(null);
 		if (caRequestLog != null && caRequestLog.getType() == DeviceType.NOT_COUPLED) {//8931070521315025237F
 			caRequestLogRepository.delete(caRequestLog);
-			AppProps.getContext().getBean(this.getClass()).logRemoveDeviceHistory(caRequestLog);
+			AppProps.getContext().getBean(this.getClass()).logRemoveDeviceHistory(caRequestLog, reason);
 			updateCacheUidMsnDevice(caRequestLog.getUid(), "remove");
 		}
 	}
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logRemoveDeviceHistory(CARequestLog caRequestLog) {
+    public void logRemoveDeviceHistory(CARequestLog caRequestLog, String reason) {
     	try {
 			DeviceRemoveLog log = DeviceRemoveLog.build(caRequestLog);
 			log.setId(null);
 			log.setRemoveBy(SecurityUtils.getEmail());
+			log.setReason(reason);
 			deviceRemoveLogRepository.save(log);
 		} catch (Exception e) {
-			//
+			System.err.println(e);
 		}
     }
     
@@ -975,5 +977,100 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		} else {
 			throw new RuntimeException("Device doesn't exists!");
 		}
+	}
+
+	@Override
+	public PaginDto<DeviceRemoveLogDto> getDeviceRemoveLogs(PaginDto<DeviceRemoveLogDto> pagin) {
+		StringBuilder sqlBuilder = new StringBuilder("FROM DeviceRemoveLog ca ");
+		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM DeviceRemoveLog ca");
+		StringBuilder sqlCommonBuilder = new StringBuilder();
+
+		Map<String, Object> options = pagin.getOptions();
+		Long fromDate = (Long) options.get("fromDate");
+		Long toDate = (Long) options.get("toDate");
+		String querySn = (String) options.get("querySn");
+		String queryMsn = (String) options.get("queryMsn");
+		String queryUuid = (String) options.get("queryUuid");
+		String queryEsimId = (String) options.get("queryEsimId");
+		String queryRemark = (String) options.get("queryRemark");
+		Boolean enrollmentDate = BooleanUtils.toBoolean((String) options.get("queryEnrollmentDate"));
+		Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor"))
+				? Long.parseLong((String) options.get("queryVendor"))
+				: null;
+
+		sqlCommonBuilder.append(" WHERE     ");
+
+		if (BooleanUtils.isTrue(enrollmentDate)) {
+			if (fromDate != null && toDate == null) {
+				sqlCommonBuilder.append(" enrollmentDatetime >= " + fromDate + " AND ");
+			}
+			if (fromDate == null && toDate != null) {
+				sqlCommonBuilder.append(" enrollmentDatetime <= " + toDate + " AND ");
+			}
+			if (fromDate != null && toDate != null) {
+				sqlCommonBuilder.append(" ( enrollmentDatetime >= " + fromDate);
+				sqlCommonBuilder.append(" AND enrollmentDatetime <= " + toDate + ") AND ");
+			}
+		}
+		if (StringUtils.isNotBlank(querySn)) {
+			sqlCommonBuilder.append(" upper(sn) like '%" + querySn.toUpperCase() + "%' AND ");
+		}
+		if (StringUtils.isNotBlank(queryMsn)) {
+			sqlCommonBuilder.append(" msn like '%" + queryMsn + "%' AND ");
+		}
+		if (StringUtils.isNotBlank(queryUuid)) {
+			sqlCommonBuilder.append(" upper(uid) like '%" + queryUuid.toUpperCase() + "%' AND ");
+		}
+		if (StringUtils.isNotBlank(queryEsimId)) {
+			sqlCommonBuilder.append(" upper(cid) like '%" + queryEsimId.toUpperCase() + "%' AND ");
+		}
+		if (StringUtils.isNotBlank(queryRemark)) {
+			sqlCommonBuilder.append(" upper(remark) like '%" + queryRemark.toUpperCase() + "%' AND ");
+		}
+		if (queryVendor != null) {
+			sqlCommonBuilder.append(" vendor.id = " + queryVendor + " AND ");
+		}
+		sqlCommonBuilder.append(" sn is not null and sn <> ''  AND ");
+
+		sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
+
+		if (sqlCommonBuilder.length() < 10) {
+			sqlCommonBuilder.append(" 1 = 1 ");
+		}
+
+		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id asc");
+		sqlCountBuilder.append(sqlCommonBuilder);
+
+		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+			pagin.setOffset(0);
+		}
+
+		if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+			pagin.setLimit(100);
+		}
+
+		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+		Long count = ((Number) queryCount.getSingleResult()).longValue();
+		pagin.setTotalRows(count);
+		pagin.setResults(new ArrayList<>());
+		if (count == 0l) {
+			return pagin;
+		}
+
+		Query query = em.createQuery(sqlBuilder.toString());
+		query.setFirstResult(pagin.getOffset());
+		query.setMaxResults(pagin.getLimit());
+
+		List<DeviceRemoveLog> list = query.getResultList();
+		list.forEach(dv -> {
+			try {
+				DeviceRemoveLogDto dto = DeviceRemoveLogDto.build(dv);
+				pagin.getResults().add(dto);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		});
+		return pagin;
 	}
 }

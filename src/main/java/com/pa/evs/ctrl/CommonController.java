@@ -43,6 +43,7 @@ import com.pa.evs.LocalMapStorage;
 import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.AddressLogDto;
 import com.pa.evs.dto.Command;
+import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.FirmwareDto;
 import com.pa.evs.dto.GroupDto;
 import com.pa.evs.dto.LogBatchDto;
@@ -254,16 +255,27 @@ public class CommonController {
     @DeleteMapping("/api/remove-device/{uId}")
     public ResponseEntity<?> removeDevice(
     		HttpServletRequest httpServletRequest,
-    		@PathVariable final String uId
+    		@PathVariable final String uId,
+    		@RequestBody final String reason
     		) throws Exception {
     	
 		try {
-			caRequestLogService.removeDevice(uId);
+			caRequestLogService.removeDevice(uId, reason);
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build());
 		}
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/device-remove-logs")
+    public ResponseEntity<?> getGantryAccess(HttpServletResponse response, @RequestBody PaginDto<DeviceRemoveLogDto> pagin) throws IOException {
+    	try {
+    		caRequestLogService.getDeviceRemoveLogs(pagin);
+        } catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     
     @GetMapping("/api/test-link-msn")

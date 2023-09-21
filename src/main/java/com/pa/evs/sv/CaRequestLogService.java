@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.pa.evs.dto.CaRequestLogDto;
+import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ScreenMonitoringDto;
 import com.pa.evs.model.CARequestLog;
@@ -49,7 +50,7 @@ public interface CaRequestLogService {
 
 	void removePiLlog();
 
-	void removeDevice(String eId);
+	void removeDevice(String eId, String reason);
 
 	void unLinkMsn(String eId);
 
@@ -58,4 +59,6 @@ public interface CaRequestLogService {
 	void updateCacheUidMsnDevice(String currentUid, String action);
 
 	ScreenMonitoringDto mqttStatusCheck();
+
+	PaginDto<DeviceRemoveLogDto> getDeviceRemoveLogs(PaginDto<DeviceRemoveLogDto> pagin);
 }

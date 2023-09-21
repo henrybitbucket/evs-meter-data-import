@@ -1,15 +1,10 @@
-package com.pa.evs.model;
+package com.pa.evs.dto;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Table;
-
-import org.apache.commons.lang3.StringUtils;
+import java.util.Date;
 
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
+import com.pa.evs.model.DeviceRemoveLog;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,10 +17,10 @@ import lombok.Setter;
 @Builder
 @Getter
 @Setter
-@Entity
-@Table(name = "device_remove_log")
-public class DeviceRemoveLog extends BaseEntity {
+public class DeviceRemoveLogDto {
 
+	private Date createDate;
+	
     private String uid;
     
     private String sn;
@@ -34,108 +29,76 @@ public class DeviceRemoveLog extends BaseEntity {
 	
     private String msn;
 
-    @Column(name = "status")
-	@Enumerated(EnumType.STRING)
 	private DeviceStatus status;
     
-    @Column(name = "d_type")
-	@Enumerated(EnumType.STRING)
 	private DeviceType type;
 
-    @Column(name = "certificate", length = 20000)
     private String certificate;
     
-	@Column(name = "raw", length = 20000)
     private String raw;
 
-	@Column(name = "start_date")
 	private Long startDate;
 	
-	@Column(name = "end_date")
 	private Long endDate;
 	
-	@Column(name = "require_refresh")
 	private Boolean requireRefresh;
 	
-	@Column
 	private String ver;
 
-	@Builder.Default
-	@Column
-	private Long interval = 720L; //publish time
+	private Long interval;
 
-	@Builder.Default
-	@Column
-	private Long readInterval = 30L; // read interval time
+	private Long readInterval;
 	
-	@Column(name = "address")
 	private String addressOld;
 	
-	@Column(name = "home_address")
 	private String homeAddress;
 	
-	@Column(name = "coupled_datetime")
 	private Long coupledDatetime;
 
-	@Column(name = "coupled_user")
 	private String coupledUser;
 	
-	@Column(name = "onboarding_datetime")
 	private Long onboardingDatetime;
 
-	@Column(name = "enrollment_datetime")
 	private Long enrollmentDatetime;
 
-	@Column(name = "last_subscribe_datetime")
 	private Long lastSubscribeDatetime;
 	
-	@Column(name = "activation_date")
     private Long activationDate;
 	
-	@Column(name = "deactivation_date")
     private Long deactivationDate;
 
-	@Column(name = "is_ota")
 	private Boolean isOta;
 
-	@Column(name = "last_ota_date")
 	private Long lastOtaDate;
 
-	@Column(name = "last_mtd_date")
 	private Long lastMdtDate;
 
-	@Column(name = "last_act_date")
 	private Long lastACTDate;
 
-	@Column(name = "last_OBR_date")
 	private Long lastOBRDate;
 
-	@Column(name = "email_installer")
 	private String emailInstaller;
 	
-	@Column(name = "remove_by")
 	private String removeBy;
 
-	@Column(name = "vendor_name")
 	private String vendorName;
 	
-	@Column(name = "reason")
 	private String reason;
 	
-	@Column(name = "remark")
 	private String remark;
 	
-	public static DeviceRemoveLog build(CARequestLog dv) throws Exception {
+	public static DeviceRemoveLogDto build(DeviceRemoveLog dv) throws Exception {
 
 		return builder()
 		.activationDate(dv.getActivationDate())
 		.addressOld(dv.getAddressOld())
+		.createDate(dv.getCreateDate())
 		.certificate(dv.getCertificate())
 		.cid(dv.getCid())
 		.coupledDatetime(dv.getCoupledDatetime())
 		.coupledUser(dv.getCoupledUser())
 		.deactivationDate(dv.getDeactivationDate())
-		.emailInstaller(dv.getInstaller() != null ? dv.getInstaller().getEmail() : "")
+		.emailInstaller(dv.getEmailInstaller())
 		.endDate(dv.getEndDate())
 		.enrollmentDatetime(dv.getEnrollmentDatetime())
 		.homeAddress(dv.getHomeAddress())
@@ -150,14 +113,16 @@ public class DeviceRemoveLog extends BaseEntity {
 		.onboardingDatetime(dv.getOnboardingDatetime())
 		.raw(dv.getRaw())
 		.readInterval(dv.getReadInterval())
-		.remark((dv.getGroup() != null && StringUtils.isNotBlank(dv.getGroup().getRemark())) ? dv.getGroup().getRemark() : "")
+		.remark(dv.getRemark())
+		.reason(dv.getReason())
+		.removeBy(dv.getRemoveBy())
 		.requireRefresh(dv.getRequireRefresh())
 		.sn(dv.getSn())
 		.startDate(dv.getStartDate())
 		.status(dv.getStatus())
 		.type(dv.getType())
 		.uid(dv.getUid())
-		.vendorName(dv.getVendor() != null ? dv.getVendor().getName() : "Default")
+		.vendorName(dv.getVendorName())
 		.ver(dv.getVer())
 		.build();
 	}
