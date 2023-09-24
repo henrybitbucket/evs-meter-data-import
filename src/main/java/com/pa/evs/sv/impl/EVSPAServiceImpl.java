@@ -259,7 +259,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 						lines = new String(bos.toByteArray(), StandardCharsets.UTF_8).split("\r*\n");
 						if (StringUtils.isBlank(lines[0]) || !lines[0].toUpperCase().startsWith("SN,UUID,CID")) {
 							LOG.info("Headers should start with: SN UUID CID");
-							continue;
+							throw new RuntimeException("Headers should start with: SN UUID CID");
 						}
 	            	}
 					for (int i = 1; i < lines.length; i++) {

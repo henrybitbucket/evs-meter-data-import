@@ -23,13 +23,13 @@ public class Address extends BaseEntity {
 	@Column(name = "display_name")
 	private String displayName;
 
-	@Column(name = "country", length = 50)
+	@Column(name = "country", length = 500)
 	private String country;
 
-	@Column(name = "city", length = 100)
+	@Column(name = "city", length = 500)
 	private String city;
 
-	@Column(name = "town", length = 100)
+	@Column(name = "town", length = 500)
 	private String town;
 
 	@Column(name = "street")
@@ -41,13 +41,13 @@ public class Address extends BaseEntity {
 	@Column(name = "postal_code")
 	private String postalCode;
 
-	@Column(name = "block", length = 10)
+	@Column(name = "block", length = 500)
 	private String block;
 	
 	@Column(name = "level", length = 500)
 	private String level;
 
-	@Column(name = "unit_number", length = 50)
+	@Column(name = "unit_number", length = 500)
 	private String unitNumber;
 	
 	@Column(name = "remark", length = 500)

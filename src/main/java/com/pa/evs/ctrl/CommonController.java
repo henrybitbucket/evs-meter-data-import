@@ -625,6 +625,7 @@ public class CommonController {
             @RequestParam(value = "file") final MultipartFile file, HttpServletResponse response) throws Exception {
         
         try {
+        	
         	File csv = CsvUtils.writeImportAddressCsv(addressService.handleUpload(file, importType), importType, "import_result_" + System.currentTimeMillis() + ".csv");
             String fileName = file.getName();
             
@@ -639,6 +640,7 @@ public class CommonController {
                 FileUtils.deleteDirectory(csv.getParentFile());
             }
         } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
