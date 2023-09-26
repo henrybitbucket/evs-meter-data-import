@@ -379,6 +379,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Log logP = Log.build(publishData, "PUBLISH");
 			logP.setTopic(topic);
 			logP.setMqttAddress(evsPAMQTTAddress);
+			
+			if (CommonController.CMD_OPTIONS.get() != null 
+					&& !CommonController.CMD_OPTIONS.get().isEmpty()
+					&& logP.getUid() == null
+					) {
+				logP.setUid((String) CommonController.CMD_OPTIONS.get().get("uid"));
+				if (logP.getMid() == null) {
+					logP.setMid((Long) CommonController.CMD_OPTIONS.get().get("mid"));
+				}
+			}
 			logRepository.save(logP);
 			
 			handlePublishType(logP);
@@ -1284,6 +1294,34 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 
 	}
+	
+	private void handleOnM3ModuleRequestSubscribe(final String topic, final MqttMessage mqttMessage) {
+		try {
+//			/check_ac_status
+//			/check_ac_lock_status
+//			These 2 command has a response/reply after send the MQTT message to the pi, the pi will read the status and response back with topic pa/evs/ntu/<meter_sn> and with message 
+//			'Read Aircon Status for 202206000520 (3), Status: AirCon_Status: read failed, Coil: None'
+//			'Read Lock Status for 202206000520(3), Status: Lock_Status: read failed, Coil: None'
+			String raw = new String(mqttMessage.getPayload());
+			String msn = topic.replace(AppProps.get("m3.pa.evs.ntu", "pa/evs/ntu/"), "");
+			CARequestLog dv = caRequestLogRepository.findByMsn(msn).orElse(new CARequestLog());
+			//save log
+			Log log = Log.builder()
+					.msn(msn)
+					.uid(dv.getUid())
+					.topic(topic)
+					.type("SUBSCRIBE")
+					.raw(raw)
+					.pType(raw.toLowerCase().contains("read aircon status") ? "airconstatus" : raw.toLowerCase().contains("read lock status") ? "lockstatus" : "unknown")
+					.build();
+			log.setMqttAddress(evsPAMQTTAddress);
+			LOG.debug(">Subscribe 4M3Module " + topic + " -> " + raw);
+			logRepository.save(log);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+
+	}
 
 	private void handleLocalCmdRequest(Map<String, Object> data) throws Exception {
 		Map<String, Object> header = (Map<String, Object>) data.get("header");
@@ -1384,6 +1422,24 @@ public class EVSPAServiceImpl implements EVSPAService {
 					EX.submit(() -> handleOnLocalRequestSubscribe(mqttMessage));
 				} else {
 					new Thread(() -> {handleOnLocalRequestSubscribe(mqttMessage);}).start();
+				}
+				return null;
+			});
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+		
+		
+		/// M3 Module subscribe 
+		/// https://powerautomationsg.atlassian.net/browse/BE-251
+		try {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), AppProps.get("m3.pa.evs.ntu", "pa/evs/ntu/") + "+", QUALITY_OF_SERVICE, (o, topic) -> {
+				final MqttMessage mqttMessage = (MqttMessage) o;
+				LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
+					EX.submit(() -> handleOnM3ModuleRequestSubscribe((String) topic, mqttMessage));
+				} else {
+					new Thread(() -> {handleOnM3ModuleRequestSubscribe((String) topic, mqttMessage);}).start();
 				}
 				return null;
 			});
@@ -1929,6 +1985,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		String evsPAMQTTAddress = "tcp://18.142.166.146:1883";
+		String mqttClientId = System.currentTimeMillis() + "";
+		
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/ntu/202206000056", "Read Aircon Status for 202206000520 (3), Status: AirCon_Status: read failed, Coil: None", 2, false);
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/ntu/202206000056", "Read Lock Status for 202206000520(3), Status: Lock_Status: read failed, Coil: None", 2, false);
+	}
+	
+	public static void main3(String[] args) throws Exception {
 		String evsPAMQTTAddress = "tcp://18.142.166.146:1883";
 		String mqttClientId = System.currentTimeMillis() + "";
 		

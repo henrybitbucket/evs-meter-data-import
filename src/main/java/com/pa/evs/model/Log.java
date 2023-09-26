@@ -1,5 +1,6 @@
 package com.pa.evs.model;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.persistence.Column;
@@ -119,8 +120,14 @@ public class Log extends BaseEntity {
 		
 		Map<String, Object> header = (Map<String, Object>) data.get("header");
 		Map<String, Object> payload = (Map<String, Object>) data.get("payload");
+		if (header == null) {
+			header = new LinkedHashMap<>();
+		}
+		if (payload == null) {
+			payload = new LinkedHashMap<>();
+		}
 		String pType = payload == null ? "" : (payload.get("type") == null ? payload.get("cmd") + "" : payload.get("type") + "");
-		if (StringUtils.isBlank(pType)) {
+		if (StringUtils.isBlank(pType) || "null".equalsIgnoreCase(pType)) {
 			pType = (String) data.get("type");
 		}
 		if (pType == null) {

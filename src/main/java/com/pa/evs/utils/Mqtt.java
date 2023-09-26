@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javax.net.ssl.SSLContext;
@@ -223,6 +224,30 @@ public class Mqtt {
 			instance.subscribe(topic, qos, (s, mqttMessage) -> {
 				for (Function<Object, Object> fn : fns) {
 					fn.apply(mqttMessage);
+				}
+			});	
+			/**
+			instance.subscribeWithResponse(topic, qos, (s, mqttMessage) -> {
+				for (Function<Object, Object> fn : fns) {
+					fn.apply(mqttMessage);
+				}
+			});
+			*/	
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+	}
+	
+	@SafeVarargs
+	public static void subscribe(IMqttAsyncClient instance, String topic, int qos, BiFunction<Object, Object, Object>... fns) throws Exception {
+		try {
+			if (instance == null) {
+				instance = Mqtt.getInstance();
+			}
+			// AsyncClient
+			instance.subscribe(topic, qos, (s, mqttMessage) -> {
+				for (BiFunction<Object, Object, Object> fn : fns) {
+					fn.apply(mqttMessage, s);
 				}
 			});	
 			/**

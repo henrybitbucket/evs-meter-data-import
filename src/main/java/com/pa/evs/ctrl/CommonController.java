@@ -155,6 +155,39 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
+    /**
+     * 
+     *
+     *<pre>
+    var command = {
+	    "msn": '202206000056',
+	    "cmd": 'lockoff',
+	    "data": {
+	        "meter_sn": '202206000056',
+	        "command": 'lockoff'
+	    },
+	    "options": {
+	        "DIRECT": true,
+	        "topic": "pa/evs/ntu/crc"
+	    }
+	}
+
+	fetch("http://localhost:7770/api/command?timeZone=Asia/Bangkok", {
+	  "headers": {
+	    "authorization": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJoZW5yeUBnbWFpbC5jb20iLCJleHAiOjE2OTU2OTk1OTMsImlhdCI6MTY5NTY5NTk5M30.QdezHSFzZg8YQNauIfBKV58bDysCphfcPxDsT9-PKNQC0ziGHzLFgheY84OfqE_XsxRkQ5tXb2FNPfsfmS-KHQ",
+	    "content-type": "application/json",
+	    "x-kl-ajax-request": "Ajax_Request"
+	  },
+	  "referrer": "http://localhost:7770/devices?queryAllDate=true&advancedSearch=true&queryMsn=202206000056",
+	  "referrerPolicy": "strict-origin-when-cross-origin",
+	  "body": JSON.stringify(command),
+	  "method": "POST",
+	  "mode": "cors"
+	})
+	.then(rp => rp.json())
+	.then(rp => console.info(rp));
+	</pre>
+    */
     @PostMapping("/api/command")//http://localhost:8080/api/command
     public ResponseEntity<?> sendCommand(
             HttpServletRequest httpServletRequest,
@@ -168,12 +201,22 @@ public class CommonController {
             }
             
             if (!ca.isPresent()) {
-                return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).build());
+                return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message("device not exists!").build());
             }
+            
+            Long mid = evsPAService.nextvalMID(ca.get().getVendor());
             command.setUid(ca.get().getUid());
+            command.getOptions().put("uid", ca.get().getUid());
+            command.getOptions().put("mid", mid);
             CMD_OPTIONS.set(command.getOptions());
 
-            Long mid = evsPAService.nextvalMID(ca.get().getVendor());
+            if (command.getOptions().get("topic") != null 
+            		&& "true".equalsIgnoreCase("" + command.getOptions().get("DIRECT"))) {
+            	evsPAService.publish(command.getOptions().get("topic") + "", command.getData(), command.getCmd());
+            	return ResponseEntity.ok(ResponseDto.builder().success(true).response(mid).build());
+            }
+            
+            
             Map<String, Object> data = command.getData();
             SimpleMap<String, Object> map = SimpleMap.init("id", command.getUid()).more("cmd", command.getCmd());
             if (CommandEnum.CFG.name().equals(command.getCmd())) {
