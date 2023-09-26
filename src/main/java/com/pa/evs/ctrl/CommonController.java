@@ -830,16 +830,16 @@ public class CommonController {
 	}
     
     @GetMapping("/api/p2/job-no/{jobNo}/jobs")
-	public ResponseEntity<Object> getP2Jobs(HttpServletResponse response, @PathVariable(required = true) String jobNo) throws Exception {
+	public ResponseEntity<Object> getP2Jobs(HttpServletResponse response, @PathVariable(required = true) String jobNo, @RequestParam(required = false) String hasSubmitReport) throws Exception {
     	try {
     		
     		if ("all".equalsIgnoreCase(jobNo)) {
-    			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(meterCommissioningReportService.getP2Jobs()).build());
+    			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(meterCommissioningReportService.getP2Jobs(hasSubmitReport)).build());
     		}
     		if ("NA".equalsIgnoreCase(jobNo)) {
     			jobNo = null;
     		}
-    		Object dto = meterCommissioningReportService.getOrNewP2Job(jobNo);
+    		Object dto = meterCommissioningReportService.getOrNewP2Job(jobNo, hasSubmitReport);
     		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(dto).build());
     	} catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());

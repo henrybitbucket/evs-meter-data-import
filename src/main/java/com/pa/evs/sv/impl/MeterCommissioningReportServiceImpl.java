@@ -485,7 +485,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	@Override
 	@Transactional(readOnly = true)
 	@SuppressWarnings("unchecked")
-	public Object getOrNewP2Job(String jobName) {
+	public Object getOrNewP2Job(String jobName, String hasSubmitReport) {
 	
 		String user = SecurityUtils.getEmail();
 		
@@ -506,6 +506,9 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		if (StringUtils.isNotBlank(jobName)) {
 			if (p2Jobs.isEmpty()) {
 				throw new RuntimeException("Job not exists!");
+			}
+			if ("true".equalsIgnoreCase(hasSubmitReport) && meterCommissioningReportRepository.findByJobByAndJobSheetNo(user, jobName).isEmpty()) {
+				throw new RuntimeException("Report not found");
 			}
 			List<P2JobData> data = em.createQuery("FROM P2JobData where jobName = '" + jobName + "' and jobBy = '" + user + "' order by itNo asc ").getResultList();
 			P2JobDto rs = P2JobDto.from(p2Jobs.get(0));
@@ -560,10 +563,10 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		String jobName = dto.getName();
 		
 		// for validate exists job name
-		P2JobDto nextJob = (P2JobDto) this.getOrNewP2Job(null);
+		P2JobDto nextJob = (P2JobDto) this.getOrNewP2Job(null, null);
 		if (!jobName.equals(nextJob.getName())) {
 			// check exists job, if not exists will throw ex
-			nextJob = (P2JobDto) this.getOrNewP2Job(jobName);
+			nextJob = (P2JobDto) this.getOrNewP2Job(jobName, null);
 		}
 		
 		em.createQuery("DELETE FROM P2JobData WHERE jobBy = '" + user + "' and jobName = '" + jobName + "' ").executeUpdate();
@@ -606,12 +609,16 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	}
 
 	@Override
-	public Object getP2Jobs() {
+	public Object getP2Jobs(String hasSubmitReport) {
 		
 		List<P2JobDto> dtos = new ArrayList<>();
-		p2JobRepository.findAllByJobBy(SecurityUtils.getEmail())
-		.forEach(job -> dtos.add(P2JobDto.from(job)));
-		
+		if ("true".equalsIgnoreCase(hasSubmitReport)) {
+			p2JobRepository.findAllByJobByAndHasReport(SecurityUtils.getEmail())
+			.forEach(job -> dtos.add(P2JobDto.from(job)));
+		} else {
+			p2JobRepository.findAllByJobBy(SecurityUtils.getEmail())
+			.forEach(job -> dtos.add(P2JobDto.from(job)));
+		}
 		return dtos;
 	}
 

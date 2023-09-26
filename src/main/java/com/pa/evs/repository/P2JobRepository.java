@@ -18,5 +18,8 @@ public interface P2JobRepository extends JpaRepository<P2Job, Long> {
 	
 	@Query(value = "select * from {h-schema}p2_job where job_by = ?1 order by name desc ", nativeQuery = true)
 	List<P2Job> findAllByJobBy(String jobBy);
+	
+	@Query(value = "select job.* from {h-schema}p2_job job where job_by = ?1 and exists (select 1 from {h-schema}meter_commissioning_report rp where rp.job_by = job.job_by and rp.job_sheet_no = job.name) order by name desc ", nativeQuery = true)
+	List<P2Job> findAllByJobByAndHasReport(String jobBy);
 
 }

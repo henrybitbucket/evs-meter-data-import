@@ -44,6 +44,7 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         String authToken = request.getHeader(this.tokenHeader);
         String username = null;
+        
         /*username = "xuejiang.qing@pa.com.sg";
 		authToken = "Bearer " + jwtTokenUtil.generateToken(this.userDetailsService.loadUserByUsername(username));
 		final String tokenHeaderName = this.tokenHeader;
