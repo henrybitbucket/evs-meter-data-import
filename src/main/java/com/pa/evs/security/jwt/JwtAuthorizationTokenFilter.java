@@ -6,6 +6,7 @@ import java.util.UUID;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
@@ -43,6 +44,20 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
         String authToken = request.getHeader(this.tokenHeader);
         String username = null;
+        /*username = "xuejiang.qing@pa.com.sg";
+		authToken = "Bearer " + jwtTokenUtil.generateToken(this.userDetailsService.loadUserByUsername(username));
+		final String tokenHeaderName = this.tokenHeader;
+		final String token = authToken;
+		request = new HttpServletRequestWrapper(request) {
+			@Override
+			public String getHeader(String name) {
+				if (name.equals(tokenHeaderName)) {
+					return token;
+				}
+				return super.getHeader(name);
+			}
+		};*/
+		
         if (authToken != null) {
             if (authToken.startsWith("Basic")) {
                 chain.doFilter(request, response);

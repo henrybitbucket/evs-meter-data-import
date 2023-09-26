@@ -1985,10 +1985,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String evsPAMQTTAddress = "tcp://18.142.166.146:1883";
+		String evsPAMQTTAddress = "ssl://3.1.87.138:8883";
 		String mqttClientId = System.currentTimeMillis() + "";
 		
-		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/ntu/202206000056", "Read Aircon Status for 202206000520 (3), Status: AirCon_Status: read failed, Coil: None", 2, false);
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/ntu/202206000056", "Read Aircon Status for 202206000520 (3), Status: AirCon_Status: read failed, Coil: false", 2, false);
 		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/ntu/202206000056", "Read Lock Status for 202206000520(3), Status: Lock_Status: read failed, Coil: None", 2, false);
 	}
 	

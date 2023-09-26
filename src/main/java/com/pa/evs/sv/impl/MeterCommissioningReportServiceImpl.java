@@ -605,4 +605,14 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		p2JobRepository.deleteByJobByAndName(user, jobNo);
 	}
 
+	@Override
+	public Object getP2Jobs() {
+		
+		List<P2JobDto> dtos = new ArrayList<>();
+		p2JobRepository.findAllByJobBy(SecurityUtils.getEmail())
+		.forEach(job -> dtos.add(P2JobDto.from(job)));
+		
+		return dtos;
+	}
+
 }
