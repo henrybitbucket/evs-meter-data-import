@@ -4,6 +4,8 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import org.apache.commons.lang3.StringUtils;
@@ -113,8 +115,11 @@ public class DeviceRemoveLog extends BaseEntity {
 	@Column(name = "email_installer")
 	private String emailInstaller;
 	
-	@Column(name = "remove_by")
-	private String removeBy;
+	@Column(name = "operation_by")
+	private String operationBy;
+	
+	@Column(name = "operation")
+	private String operation;
 
 	@Column(name = "vendor_name")
 	private String vendorName;
@@ -124,6 +129,10 @@ public class DeviceRemoveLog extends BaseEntity {
 	
 	@Column(name = "remark")
 	private String remark;
+	
+	@ManyToOne
+	@JoinColumn(name = "address_log")
+	private AddressLog addressLog;
 	
 	public static DeviceRemoveLog build(CARequestLog dv) throws Exception {
 

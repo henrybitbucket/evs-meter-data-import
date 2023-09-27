@@ -3,6 +3,7 @@ package com.pa.evs.dto;
 import java.util.Date;
 
 import com.pa.evs.enums.DeviceType;
+import com.pa.evs.model.AddressLog;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,7 +19,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class AddressLogDto {
-	
+
 	private Long id;
 	private Date createdDate;
 	private String sn;
@@ -36,4 +37,24 @@ public class AddressLogDto {
 	private String remark;
 	private DeviceType type;
 
+	public static AddressLogDto build(AddressLog addr) {
+		return builder()
+				.id(addr.getId())
+				.block(addr.getBlock())
+				.building(addr.getBuilding())
+				.city(addr.getCity())
+				.country(addr.getCountry())
+				.level(addr.getLevel())
+				.msn(addr.getMsn())
+				.postalCode(addr.getPostalCode())
+				.remark(addr.getRemark())
+				.unitNumber(addr.getUnitNumber())
+				.type(addr.getType())
+				.town(addr.getTown())
+				.streetNumber(addr.getStreetNumber())
+				.street(addr.getStreet())
+				.sn(addr.getSn())
+				.createdDate(addr.getCreateDate())
+				.build();
+	}
 }

@@ -79,7 +79,9 @@ public class DeviceRemoveLogDto {
 
 	private String emailInstaller;
 	
-	private String removeBy;
+	private String operationBy;
+	
+	private String operation;
 
 	private String vendorName;
 	
@@ -87,11 +89,14 @@ public class DeviceRemoveLogDto {
 	
 	private String remark;
 	
+	private AddressLogDto address;
+	
 	public static DeviceRemoveLogDto build(DeviceRemoveLog dv) throws Exception {
 
 		return builder()
 		.activationDate(dv.getActivationDate())
 		.addressOld(dv.getAddressOld())
+		.address(dv.getAddressLog() != null ? AddressLogDto.build(dv.getAddressLog()) : null)
 		.createDate(dv.getCreateDate())
 		.certificate(dv.getCertificate())
 		.cid(dv.getCid())
@@ -115,7 +120,8 @@ public class DeviceRemoveLogDto {
 		.readInterval(dv.getReadInterval())
 		.remark(dv.getRemark())
 		.reason(dv.getReason())
-		.removeBy(dv.getRemoveBy())
+		.operation(dv.getOperation())
+		.operationBy(dv.getOperationBy())
 		.requireRefresh(dv.getRequireRefresh())
 		.sn(dv.getSn())
 		.startDate(dv.getStartDate())

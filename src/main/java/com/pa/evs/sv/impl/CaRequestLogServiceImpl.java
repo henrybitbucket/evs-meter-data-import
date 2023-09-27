@@ -147,6 +147,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     public void save(CaRequestLogDto dto) throws Exception {
         CARequestLog ca = null;
         Calendar c = Calendar.getInstance();
+        boolean isSetAddress = false;
+        AddressLog addrLog = null;
+        
         if (StringUtils.isNotBlank(dto.getMsn())) {
         	dto.setMsn(dto.getMsn().trim());
         }
@@ -195,9 +198,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     			|| (ca.getBuildingUnit() != null && dto.getBuildingUnitId() == null)) {
     		
     		// Add new log to address_log that this address is unlinked to this device
-			AddressLog addrLog = AddressLog.build(ca);
+			addrLog = AddressLog.build(ca);
 			addrLog.setType(DeviceType.NOT_COUPLED);
 			addressLogRepository.save(addrLog);
+			isSetAddress = true;
     	}
         
         try {
@@ -340,12 +344,20 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         if (isCoupledAddress) {
 
         	// Add new log to address_log that this new address is linked to this device
-    		AddressLog addrLog = AddressLog.build(ca);
+    		addrLog = AddressLog.build(ca);
     		addrLog.setType(DeviceType.COUPLED);
     		addressLogRepository.save(addrLog);
+    		isSetAddress = true;
         }
         
         updateCacheUidMsnDevice(ca.getUid(), "update");
+        if (isSetAddress) {
+        	String operation = isCoupledAddress ? "COUPLE ADDRESS" : "DE-COUPLE ADDRESS";
+        	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(ca, null, operation, addrLog);
+        } else {
+        	String operation = ca.getType() == DeviceType.COUPLED ? "COUPLE MSN" : "DE-COUPLE MSN";
+        	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(ca, null, operation, null);
+        }
     }
 
     @Override
@@ -623,6 +635,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         			caRequestLogRepository.save(ca);
         			caRequestLogRepository.flush();
         			updateCacheUidMsnDevice(ca.getUid(), "update");
+        			AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(ca, null, "COUPLE MSN", null);
         		} else {
         			throw new RuntimeException("MCU SN(QR Code) doesn't exist!");
         		}
@@ -943,18 +956,24 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		CARequestLog caRequestLog = caRequestLogRepository.findByUid(uId).orElse(null);
 		if (caRequestLog != null && caRequestLog.getType() == DeviceType.NOT_COUPLED) {//8931070521315025237F
 			caRequestLogRepository.delete(caRequestLog);
-			AppProps.getContext().getBean(this.getClass()).logRemoveDeviceHistory(caRequestLog, reason);
+			AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(caRequestLog, reason, "REMOVE", null);
 			updateCacheUidMsnDevice(caRequestLog.getUid(), "remove");
 		}
 	}
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logRemoveDeviceHistory(CARequestLog caRequestLog, String reason) {
+    public void updateDeviceLogs(CARequestLog caRequestLog, String reason, String operation, AddressLog addrLog) {
     	try {
 			DeviceRemoveLog log = DeviceRemoveLog.build(caRequestLog);
 			log.setId(null);
-			log.setRemoveBy(SecurityUtils.getEmail());
-			log.setReason(reason);
+			log.setOperation(operation);
+			log.setOperationBy(SecurityUtils.getEmail());
+			if (StringUtils.isNotBlank(reason)) {
+				log.setReason(reason);
+			}
+			if (addrLog != null) {
+				log.setAddressLog(addrLog);
+			}
 			deviceRemoveLogRepository.save(log);
 		} catch (Exception e) {
 			System.err.println(e);
@@ -974,6 +993,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			caRequestLogRepository.save(caRequestLog);
 			caRequestLogRepository.flush();
 			updateCacheUidMsnDevice(caRequestLog.getUid(), "update");
+			AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(caRequestLog, null, "DE-COUPLE MSN", null);
 		} else {
 			throw new RuntimeException("Device doesn't exists!");
 		}
@@ -993,6 +1013,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		String queryUuid = (String) options.get("queryUuid");
 		String queryEsimId = (String) options.get("queryEsimId");
 		String queryRemark = (String) options.get("queryRemark");
+		String queryOperation = (String) options.get("queryOperation");
 		Boolean enrollmentDate = BooleanUtils.toBoolean((String) options.get("queryEnrollmentDate"));
 		Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor"))
 				? Long.parseLong((String) options.get("queryVendor"))
@@ -1027,6 +1048,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		if (StringUtils.isNotBlank(queryRemark)) {
 			sqlCommonBuilder.append(" upper(remark) like '%" + queryRemark.toUpperCase() + "%' AND ");
 		}
+		if (StringUtils.isNotBlank(queryOperation)) {
+			sqlCommonBuilder.append(" upper(operation) = '" + queryOperation.toUpperCase() + "' AND ");
+		}
 		if (queryVendor != null) {
 			sqlCommonBuilder.append(" vendor.id = " + queryVendor + " AND ");
 		}
@@ -1038,7 +1062,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			sqlCommonBuilder.append(" 1 = 1 ");
 		}
 
-		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id asc");
+		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id desc");
 		sqlCountBuilder.append(sqlCommonBuilder);
 
 		if (pagin.getOffset() == null || pagin.getOffset() < 0) {

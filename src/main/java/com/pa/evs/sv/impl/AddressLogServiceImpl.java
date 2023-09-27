@@ -76,24 +76,7 @@ public class AddressLogServiceImpl implements AddressLogService {
 		List<AddressLog> list = query.getResultList();
 		
 		list.forEach(li -> {
-            AddressLogDto dto = AddressLogDto.builder()
-                    .id(li.getId())
-                    .block(li.getBlock())
-                    .building(li.getBuilding())
-                    .city(li.getCity())
-                    .country(li.getCountry())
-                    .level(li.getLevel())
-                    .msn(li.getMsn())
-                    .postalCode(li.getPostalCode())
-                    .remark(li.getRemark())
-                    .unitNumber(li.getUnitNumber())
-                    .type(li.getType())
-                    .town(li.getTown())
-                    .streetNumber(li.getStreetNumber())
-                    .street(li.getStreet())
-                    .sn(li.getSn())
-                    .createdDate(li.getCreateDate())
-                    .build();
+            AddressLogDto dto = AddressLogDto.build(li);
             pagin.getResults().add(dto);
         });
 		
