@@ -7,6 +7,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -16,6 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -23,18 +25,22 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.RelayStatusLogDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.ScreenMonitoringDto;
+import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.utils.SchedulerHelper;
+import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 
 @RestController
@@ -145,6 +151,42 @@ public class CaRequestLogController {
     public ResponseEntity<Object> searchLogsByUser(HttpServletRequest httpServletRequest, @RequestBody PaginDto<CaRequestLogDto> pagin) throws Exception {
         try {
         	caRequestLogService.searchCaRequestLog(pagin);
+        } catch (Exception e) {
+        	e.printStackTrace();
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).response(pagin).build());
+    }
+    
+    @PostMapping(RestPath.CA_REQUEST_LOG_POST_SEND_COMMAND)
+    public ResponseEntity<Object> sendRLSCommandForDevices(HttpServletRequest httpServletRequest, @RequestBody PaginDto<CARequestLog> pagin, @RequestParam String command) throws Exception {
+        try {
+        	
+        	if (StringUtils.isBlank(command) || !("PW1".equals(command) || "PW0".equals(command) || "RLS".equals(command))) {
+        		throw new ApiException("Command only accept PW0 or PW1 or RLS");
+        	}
+        	
+        	pagin.setOffset(0);
+        	pagin.setLimit(Integer.MAX_VALUE);
+        	PaginDto<CARequestLog> result = caRequestLogService.search(pagin);
+        	List<CARequestLog> listDevice = result.getResults();
+        	String commandSendBy = SecurityUtils.getEmail();
+        	
+        	AtomicReference<String> uuid = new AtomicReference<>(null);
+        	Thread sendRLSCommandThread = new Thread(() -> uuid.set(caRequestLogService.sendRLSCommandForDevices(listDevice, command, pagin.getOptions(), commandSendBy)));
+        	sendRLSCommandThread.start();
+        	sendRLSCommandThread.join();
+        	return ResponseEntity.ok(ResponseDto.builder().success(true).response(uuid.get()).build());
+        } catch (Exception e) {
+        	e.printStackTrace();
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+    }
+    
+    @PostMapping(RestPath.RLS_STATUS_GET_LOGS)
+    public ResponseEntity<Object> getRelayStatusLogs(HttpServletRequest httpServletRequest, @RequestBody PaginDto<RelayStatusLogDto> pagin) throws Exception {
+    	try {
+        	caRequestLogService.getRelayStatusLogs(pagin);
         } catch (Exception e) {
         	e.printStackTrace();
             return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());

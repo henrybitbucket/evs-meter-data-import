@@ -10,6 +10,7 @@ import java.util.Set;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.RelayStatusLogDto;
 import com.pa.evs.dto.ScreenMonitoringDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.ScreenMonitoring;
@@ -61,4 +62,8 @@ public interface CaRequestLogService {
 	ScreenMonitoringDto mqttStatusCheck();
 
 	PaginDto<DeviceRemoveLogDto> getDeviceRemoveLogs(PaginDto<DeviceRemoveLogDto> pagin);
+	
+	String sendRLSCommandForDevices(List<CARequestLog> listDevice, String command, Map<String, Object> options, String commandSendBy);
+
+	void getRelayStatusLogs(PaginDto<RelayStatusLogDto> pagin);
 }

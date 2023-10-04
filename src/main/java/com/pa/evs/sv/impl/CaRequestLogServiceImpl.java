@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
@@ -29,11 +30,13 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.RelayStatusLogDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.ScreenMonitoringDto;
 import com.pa.evs.enums.DeviceStatus;
@@ -47,6 +50,7 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.DeviceRemoveLog;
 import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.Group;
+import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.model.Vendor;
@@ -59,16 +63,20 @@ import com.pa.evs.repository.DeviceRemoveLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.repository.GroupRepository;
 import com.pa.evs.repository.LogRepository;
+import com.pa.evs.repository.RelayStatusLogRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.repository.VendorRepository;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.Mqtt;
+import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SecurityUtils;
+import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.Utils;
 
 @Component
@@ -80,6 +88,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@Value("${evs.pa.mqtt.address}") private String evsPAMQTTAddress;
 
 	@Value("${evs.pa.mqtt.client.id}") private String mqttClientId;
+	
+	@Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
+	
+	@Value("${evs.pa.privatekey.path}") private String pkPath;
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
@@ -124,6 +136,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	private AddressLogRepository addressLogRepository;
+	
+	@Autowired
+	EVSPAService evsPAService;
+	
+	@Autowired
+	private RelayStatusLogRepository relayStatusLogRepository;
 
     private List<String> cacheCids = Collections.EMPTY_LIST;
 
@@ -1096,5 +1114,122 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			}
 		});
 		return pagin;
+	}
+	
+	public String sendRLSCommandForDevices(List<CARequestLog> listDevice, String command, Map<String, Object> options, String commandSendBy) {
+		LOG.info("Sending command: " + command + "to list devices. List device size: " + listDevice.size());
+		String uuid = UUID.randomUUID().toString();
+		int successCount = 0;
+		for (CARequestLog ca : listDevice) {
+			try {
+				SimpleMap<String, Object> map = SimpleMap.init("id", ca.getUid()).more("cmd", command);
+				Long mid = evsPAService.nextvalMID(ca.getVendor());
+				String sig = BooleanUtils.isTrue(ca.getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
+				evsPAService.publish(alias + ca.getUid(), SimpleMap.init(
+	                    "header", SimpleMap.init("uid", ca.getUid()).more("mid", mid).more("gid", ca.getUid()).more("msn", ca.getMsn()).more("sig", sig)
+	                ).more("payload", map), command, uuid);
+				successCount++;
+			} catch (Exception e) {
+				LOG.info("Error while sending command: " + command + ", uid: " + ca.getUid() + ". Error: " + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+		if (successCount > 0) {
+			String comment = (String) options.get("comment");
+			
+			if (StringUtils.isNotBlank(comment)) {
+				options.remove("comment");	
+			}
+			
+			RelayStatusLog rl = new RelayStatusLog();
+			rl.setBatchUuid(uuid);
+			rl.setCommand(command);
+			rl.setComment(comment);
+			rl.setFilters(uuid);
+			rl.setFilters(options.toString());
+			rl.setCommandSendBy(commandSendBy);
+			relayStatusLogRepository.save(rl);
+			
+			return uuid;	
+		} else {
+			return null;
+		}
+	}
+
+	@Override
+	@Transactional
+	public void getRelayStatusLogs(PaginDto<RelayStatusLogDto> pagin) {
+		StringBuilder sqlBuilder = new StringBuilder("FROM RelayStatusLog ca ");
+        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM RelayStatusLog ca");
+        StringBuilder sqlCommonBuilder = new StringBuilder();
+        
+        Map<String, Object> options = pagin.getOptions();
+        Long fromDate = (Long) options.get("queryFromDate");
+        Long toDate = (Long) options.get("queryToDate");
+        String commandBy = (String) options.get("queryCommandBy");
+        String command = (String) options.get("queryCommand");
+        String comment = (String) options.get("queryComment");
+        String batchUuid = (String) options.get("queryBatchUuid");
+        
+        sqlCommonBuilder.append(" WHERE     ");
+        
+        if (fromDate != null && toDate == null) {
+            sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate + " AND ");
+        }
+        if (fromDate == null && toDate != null) {
+            sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + " AND ");
+        }
+        if (fromDate != null && toDate != null) {
+            sqlCommonBuilder.append(" ( EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + ") AND ");
+        }
+        if (StringUtils.isNotBlank(comment)) {
+        	sqlCommonBuilder.append(" upper(comment) like '%" + comment.toUpperCase() + "%' AND ");
+        }
+        if (StringUtils.isNotBlank(commandBy)) {
+        	sqlCommonBuilder.append(" upper(commandBy) like '%" + commandBy.toUpperCase() + "%' AND ");
+        }
+        if (StringUtils.isNotBlank(command)) {
+        	sqlCommonBuilder.append(" command = '" + command + "' AND ");
+        }
+        if (StringUtils.isNotBlank(batchUuid)) {
+        	sqlCommonBuilder.append(" batchUuid = '" + batchUuid + "' AND ");
+        }
+        
+        sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
+        
+        if (sqlCommonBuilder.length() < 8) {
+            sqlCommonBuilder.append(" 1 = 1 ");
+        }
+        
+        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id DESC");
+        sqlCountBuilder.append(sqlCommonBuilder);
+        
+        if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+            pagin.setOffset(0);
+        }
+        
+        if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+            pagin.setLimit(100);
+        }
+        
+        Query queryCount = em.createQuery(sqlCountBuilder.toString());
+        
+        Long count = ((Number)queryCount.getSingleResult()).longValue();
+        pagin.setTotalRows(count);
+        pagin.setResults(new ArrayList<>());
+        if (count == 0l) {
+            return;
+        }
+        
+        Query query = em.createQuery(sqlBuilder.toString());
+        query.setFirstResult(pagin.getOffset());
+        query.setMaxResults(pagin.getLimit());
+        
+        List<RelayStatusLog> list = query.getResultList();
+        list.forEach(rl -> {
+        	RelayStatusLogDto dto = new RelayStatusLogDto().build(rl);
+        	pagin.getResults().add(dto);
+        });
 	}
 }

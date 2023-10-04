@@ -1,6 +1,7 @@
 package com.pa.evs.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -36,5 +37,8 @@ public interface LogRepository extends JpaRepository<Log, Long> {
 	
 	@Query(value = "select raw from {h-schema}log where uid = ?1 and type='SUBSCRIBE' and p_type=?2 order by create_date desc limit 1", nativeQuery = true)
 	String findRawByUidAndPType(String uid, String pType);
+
+	@Query(value = "select * from {h-schema}log where p_type = ?1 and type='PUBLISH' and mid =?2 order by create_date desc limit 1", nativeQuery = true)
+	Optional<Log> findLastPublishByMidAndPType(String type, Long oid);
 
 }

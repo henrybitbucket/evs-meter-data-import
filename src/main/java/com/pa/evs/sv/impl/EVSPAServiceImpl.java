@@ -857,13 +857,28 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private void handleRLSRes(Map<String, Object> data, String type, Log log) throws Exception {
 		//Publish
 		if (localMap.getLocalMap().get(log.getOid()) != null) {
+			Optional<Log> lastMidLogOpt = logRepository.findLastPublishByMidAndPType(type, log.getOid());
+			String batchUuid = "";
+			
+			if (lastMidLogOpt.isPresent() && StringUtils.isNotBlank(lastMidLogOpt.get().getBatchId())) {
+				batchUuid = lastMidLogOpt.get().getBatchId();
+				log.setBatchId(batchUuid);
+				logRepository.save(log);
+			}
+			
 			Map<String, Object> header = (Map<String, Object>) data.get("header");
 			Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 			header.put("oid", localMap.getLocalMap().get(log.getOid()));
 			header.remove("sig");
 			header.remove("uid");
 			payload.put("id", header.get("msn"));
-			publish(evsMeterLocalRespSubscribeTopic, data, type);
+			
+			if (StringUtils.isNotBlank(batchUuid)) {
+				publish(evsMeterLocalRespSubscribeTopic, data, type, batchUuid);
+			} else {
+				publish(evsMeterLocalRespSubscribeTopic, data, type);
+			}
+			
 			localMap.getLocalMap().remove(log.getOid());
 		}
 	}
