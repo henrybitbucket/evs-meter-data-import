@@ -364,7 +364,44 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
-
+			<plugin>
+				<groupId>org.codehaus.gmaven</groupId>
+				<artifactId>groovy-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>clean</phase>
+						<goals>
+							<goal>execute</goal>
+						</goals>
+						<configuration>
+							<source>
+						        <![CDATA[
+						            File versionFile = new File("src/main/resources/version.properties");
+						            if (versionFile.exists()) {
+						            	versionFile.delete();
+						            }
+						            versionFile.createNewFile();
+						            BufferedWriter writer = new BufferedWriter(new FileWriter(versionFile));
+						            writer.write("groupId=${project.groupId}");
+							        writer.newLine();
+							        writer.write("artifactId=${project.artifactId}");
+							        writer.newLine();
+							        writer.write("version=${project.version}");
+							        writer.newLine();
+							        writer.write("buildtime=${maven.build.timestamp}");
+							        writer.newLine();
+							        writer.write("by=" + "whoami".execute().text);
+							        writer.write("branch=" + "git branch --show-current".execute().text);
+							        writer.write("hash=" + "git rev-parse --short HEAD".execute().text);
+							        // git log --pretty="%C(Yellow)%h  %C(reset)%ad (%C(Green)%cr%C(reset))%x09 %C(Cyan)%an: %C(reset)%s" --date=short -7
+							        writer.write("lcm=" + "git log --pretty=\"%C(Yellow)%h %ad %x09 %C(Cyan)%an\" -1".execute().text);
+							        writer.close();
+						        ]]>
+							</source>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-install-plugin</artifactId>

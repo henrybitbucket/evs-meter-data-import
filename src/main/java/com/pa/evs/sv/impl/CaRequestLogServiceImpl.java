@@ -1050,7 +1050,19 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				sqlCommonBuilder.append(" ( enrollmentDatetime >= " + fromDate);
 				sqlCommonBuilder.append(" AND enrollmentDatetime <= " + toDate + ") AND ");
 			}
+		} else {
+            if (fromDate != null && toDate == null) {
+                sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate + "AND");
+            }
+            if (fromDate == null && toDate != null) {
+                sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + "AND");
+            }
+            if (fromDate != null && toDate != null) {
+                sqlCommonBuilder.append(" ( EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
+                sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + ") AND ");
+            }
 		}
+		
 		if (StringUtils.isNotBlank(querySn)) {
 			sqlCommonBuilder.append(" upper(sn) like '%" + querySn.toUpperCase() + "%' AND ");
 		}

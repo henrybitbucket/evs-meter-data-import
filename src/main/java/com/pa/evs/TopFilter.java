@@ -16,8 +16,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import com.pa.evs.ctrl.CommonController;
-import com.pa.evs.sv.impl.EVSPAServiceImpl;
 import com.pa.evs.utils.TimeZoneHolder;
+import com.pa.evs.utils.Version;
 
 @Order(value = Ordered.HIGHEST_PRECEDENCE)
 @Component
@@ -38,6 +38,7 @@ public class TopFilter implements Filter {
 		response.setHeader("Access-Control-Allow-Credentials", "true");
 		response.setHeader("Access-Control-Allow-Methods", "*");
 		response.setHeader("Access-Control-Allow-Headers", "*");
+		response.setHeader("-vs-", Version.TEXT);
 
 		try {
 			try {
