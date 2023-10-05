@@ -45,6 +45,8 @@ import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.Address;
 import com.pa.evs.model.AddressLog;
+import com.pa.evs.model.Block;
+import com.pa.evs.model.Building;
 import com.pa.evs.model.BuildingUnit;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.DeviceRemoveLog;
@@ -56,6 +58,7 @@ import com.pa.evs.model.Users;
 import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.AddressLogRepository;
 import com.pa.evs.repository.AddressRepository;
+import com.pa.evs.repository.BlockRepository;
 import com.pa.evs.repository.BuildingRepository;
 import com.pa.evs.repository.BuildingUnitRepository;
 import com.pa.evs.repository.CARequestLogRepository;
@@ -113,6 +116,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	BuildingRepository buildingRepository;
+
+	@Autowired
+	BlockRepository blockRepository;
 	
 	@Autowired
 	FloorLevelRepository floorLevelRepository;
@@ -1148,16 +1154,69 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		}
 		if (successCount > 0) {
 			String comment = (String) options.get("comment");
-			
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 			if (StringUtils.isNotBlank(comment)) {
 				options.remove("comment");	
 			}
+			
+            Long fromDate = (Long) options.get("fromDate");
+            Long toDate = (Long) options.get("toDate");
+            Long queryGroup = StringUtils.isNotBlank((String) options.get("queryGroup")) ? Long.parseLong((String) options.get("queryGroup")) : null;
+            Long queryBuilding = StringUtils.isNotBlank((String) options.get("queryBuilding")) ? Long.parseLong((String) options.get("queryBuilding")) : null;
+            Long queryBlock = StringUtils.isNotBlank((String) options.get("queryBlock")) ? Long.parseLong((String) options.get("queryBlock")) : null;
+            Long queryFloorLevel = StringUtils.isNotBlank((String) options.get("queryFloorLevel")) ? Long.parseLong((String) options.get("queryFloorLevel")) : null;
+            Long queryBuildingUnit = StringUtils.isNotBlank((String) options.get("queryBuildingUnit")) ? Long.parseLong((String) options.get("queryBuildingUnit")) : null;
+            Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor")) ? Long.parseLong((String) options.get("queryVendor")) : null;
+            
+            if (fromDate != null) {
+            	String strFromDate = sdf.format(new Date(fromDate));
+            	options.put("fromDate", strFromDate);
+            }
+            if (toDate != null) {
+            	String strToDate = sdf.format(new Date(toDate));
+            	options.put("toDate", strToDate);
+            }
+            if (queryGroup != null) {
+            	Optional<Group> opt = groupRepository.findById(queryGroup);
+            	if (opt.isPresent()) {
+            		options.put("queryGroup", opt.get().getName());
+            	}
+            }
+            if (queryBuilding != null) {
+            	Optional<Building> opt = buildingRepository.findById(queryBuilding);
+            	if (opt.isPresent()) {
+            		options.put("queryBuilding", opt.get().getName());
+            	}
+            }
+            if (queryBlock != null) {
+            	Optional<Block> opt = blockRepository.findById(queryBlock);
+            	if (opt.isPresent()) {
+            		options.put("queryBlock", opt.get().getName());
+            	}
+            }
+            if (queryFloorLevel != null) {
+            	Optional<FloorLevel> opt = floorLevelRepository.findById(queryFloorLevel);
+            	if (opt.isPresent()) {
+            		options.put("queryFloorLevel", opt.get().getName());
+            	}
+            }
+            if (queryBuildingUnit != null) {
+            	Optional<BuildingUnit> opt = buildingUnitRepository.findById(queryBuildingUnit);
+            	if (opt.isPresent()) {
+            		options.put("queryBuildingUnit", opt.get().getName());
+            	}
+            }
+            if (queryVendor != null) {
+            	Optional<Vendor> opt = vendorRepository.findById(queryVendor);
+            	if (opt.isPresent()) {
+            		options.put("queryVendor", opt.get().getName());
+            	}
+            }
 			
 			RelayStatusLog rl = new RelayStatusLog();
 			rl.setBatchUuid(uuid);
 			rl.setCommand(command);
 			rl.setComment(comment);
-			rl.setFilters(uuid);
 			rl.setFilters(options.toString());
 			rl.setCommandSendBy(commandSendBy);
 			relayStatusLogRepository.save(rl);

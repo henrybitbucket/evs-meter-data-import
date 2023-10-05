@@ -26,10 +26,10 @@ public class RelayStatusLog extends BaseEntity {
 	@Column(name = "command")
 	private String command;
 	
-	@Column(name = "comment")
+	@Column(name = "comment", columnDefinition = "text")
 	private String comment;
 	
-	@Column(name = "filters")
+	@Column(name = "filters", columnDefinition = "text")
 	private String filters;
 	
 	@Column(name = "batch_uuid")
