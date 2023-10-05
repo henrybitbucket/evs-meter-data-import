@@ -172,6 +172,10 @@ public class CaRequestLogController {
         	List<CARequestLog> listDevice = result.getResults();
         	String commandSendBy = SecurityUtils.getEmail();
         	
+        	if (listDevice.isEmpty()) {
+        		return ResponseEntity.ok(ResponseDto.builder().success(false).message("No device found!").build());
+        	}
+        	
         	AtomicReference<String> uuid = new AtomicReference<>(null);
         	Thread sendRLSCommandThread = new Thread(() -> uuid.set(caRequestLogService.sendRLSCommandForDevices(listDevice, command, pagin.getOptions(), commandSendBy)));
         	sendRLSCommandThread.start();
