@@ -292,7 +292,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	void loadRoleAndPermission() {
 		List<Role> roles = roleRepository.findAll();
 		for (Role role : roles) {
-			List<Permission> permissions = new ArrayList();
+			List<Permission> permissions = new ArrayList<>();
 			List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(role.getId());
 			for (RolePermission rolePer : rolePermissions) {
 				Optional<Permission> permisstion = permissionRepository.findById(rolePer.getPermission().getId());
@@ -345,12 +345,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			en.setChangePwdRequire(dto.getChangePwdRequire());
 		}
 
+		en.setIdentification(dto.getIdentification());
 		en.setFirstName(dto.getFirstName());
 		en.setLastName(dto.getLastName());
 		en.setPhoneNumber(dto.getPhoneNumber());
 		en.setStatus(dto.getStatus());
 		en.setLoginOtpRequire(dto.getLoginOtpRequire());
 
+		if (dto.getId() != null && dto.getUpdatePwd() == Boolean.TRUE && StringUtils.isBlank(dto.getPassword())) {
+			throw new RuntimeException("Password is required!");
+		}
+		
+		if (dto.getId() != null && dto.getUpdatePwd() != Boolean.TRUE) {
+			dto.setPassword(null);
+		}
+		
 		if (StringUtils.isNotBlank(dto.getPassword())) {
 
 			Utils.validatePwd(dto.getPassword(), en.getLastPwd());
@@ -627,6 +636,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					.fullName(user.getFirstName() + " " + user.getLastName()).status(user.getStatus())
 					.changePwdRequire(user.getChangePwdRequire())
 					.loginOtpRequire(user.getLoginOtpRequire())
+					.identification(user.getIdentification())
 					.roleDescs(user.getRoles().stream().map(authority -> {
 						roles.add(authority.getRole().getName());
 						return SimpleMap.init("name", authority.getRole().getName()).more("desc",

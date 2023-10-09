@@ -5,7 +5,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import lombok.AllArgsConstructor;
@@ -27,9 +26,12 @@ public class UserDto {
     private String gender;
     private String avatar;
     private Date birthDay;
+    private String identification;
     private String phoneNumber;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String password;
+    
+    private Boolean updatePwd;
     
     private Long approved;
     
