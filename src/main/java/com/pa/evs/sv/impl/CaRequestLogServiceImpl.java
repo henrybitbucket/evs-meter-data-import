@@ -173,6 +173,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         Calendar c = Calendar.getInstance();
         boolean isSetAddress = false;
         AddressLog addrLog = null;
+        String msn = dto.getMsn();
         
         if (StringUtils.isNotBlank(dto.getMsn())) {
         	dto.setMsn(dto.getMsn().trim());
@@ -186,6 +187,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                     throw new Exception(Message.MSN_WAS_ASSIGNED);
                 }
                 ca.setModifyDate(c.getTime());
+                if (StringUtils.isBlank(msn) && StringUtils.isNotBlank(ca.getMsn())) {
+                	msn = ca.getMsn();
+                }
             } else {
                 ca = new CARequestLog();
                 ca.setCreateDate(c.getTime());
@@ -379,6 +383,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	String operation = isCoupledAddress ? "COUPLE ADDRESS" : "DE-COUPLE ADDRESS";
         	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(ca, null, operation, addrLog);
         } else {
+        	ca.setMsn(msn);
         	String operation = ca.getType() == DeviceType.COUPLED ? "COUPLE MSN" : "DE-COUPLE MSN";
         	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(ca, null, operation, null);
         }
