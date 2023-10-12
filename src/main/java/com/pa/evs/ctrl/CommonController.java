@@ -312,7 +312,7 @@ public class CommonController {
     }
     
     @PostMapping("/api/device-logs")
-    public ResponseEntity<?> getGantryAccess(HttpServletResponse response, @RequestBody PaginDto<DeviceRemoveLogDto> pagin) throws IOException {
+    public ResponseEntity<?> getDeviceRemoveLogs(HttpServletResponse response, @RequestBody PaginDto<DeviceRemoveLogDto> pagin) throws IOException {
     	try {
     		caRequestLogService.getDeviceRemoveLogs(pagin);
         } catch (Exception e) {
