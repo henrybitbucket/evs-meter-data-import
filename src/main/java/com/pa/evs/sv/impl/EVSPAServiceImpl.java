@@ -2417,11 +2417,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 
 	@Override
-	public boolean upload(String fileName, InputStream in, String contentType) {
+	public boolean upload(String fileName, InputStream in, String contentType, String bucketName) {
 		boolean result = false;
 		Date today = new Date();
 		String keyName = String.format("%s", new SimpleDateFormat("yyyy/MM/dd").format(today));
-		LOG.info("Upload Function. Bucket Name: {}, File Name: {}, KeyName: {}", photoBucketName, fileName, keyName);
+		LOG.info("Upload Function. Bucket Name: {}, File Name: {}, KeyName: {}", bucketName, fileName, keyName);
 		PutObjectRequest request = null;
 		ObjectMetadata metadata = null;
 		try {
@@ -2429,7 +2429,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				String key = fileName;
 				metadata = new ObjectMetadata();
 				metadata.setContentType(contentType);
-				request = new PutObjectRequest(photoBucketName, key, in, metadata);
+				request = new PutObjectRequest(bucketName, key, in, metadata);
 				request.setMetadata(metadata);
 				s3Client.putObject(request);
 

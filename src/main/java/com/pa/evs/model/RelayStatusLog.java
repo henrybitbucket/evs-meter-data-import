@@ -35,4 +35,13 @@ public class RelayStatusLog extends BaseEntity {
 	@Column(name = "batch_uuid")
 	private String batchUuid;
 	
+	@Column(name = "total_count")
+	private Integer totalCount;
+	
+	@Column(name = "current_count")
+	private Integer currentCount;
+	
+	@Column(name = "error_count")
+	private Integer errorCount;
+	
 }

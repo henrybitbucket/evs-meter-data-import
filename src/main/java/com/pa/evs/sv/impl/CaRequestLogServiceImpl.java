@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
@@ -377,16 +376,23 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     		addressLogRepository.save(addrLog);
     		isSetAddress = true;
         }
-        
+
         updateCacheUidMsnDevice(ca.getUid(), "update");
-        if (isSetAddress) {
-        	String operation = isCoupledAddress ? "COUPLE ADDRESS" : "DE-COUPLE ADDRESS";
-        	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(ca, null, operation, addrLog);
-        } else {
-        	ca.setMsn(msn);
-        	String operation = ca.getType() == DeviceType.COUPLED ? "COUPLE MSN" : "DE-COUPLE MSN";
-        	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(ca, null, operation, null);
-        }
+        try {
+			DeviceRemoveLog log = DeviceRemoveLog.build(ca);
+
+			if (isSetAddress) {
+	        	String operation = isCoupledAddress ? "COUPLE ADDRESS" : "DE-COUPLE ADDRESS";
+	        	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(log, null, operation, addrLog);
+	        } else {
+	        	String operation = ca.getType() == DeviceType.COUPLED ? "COUPLE MSN" : "DE-COUPLE MSN";
+	        	log.setMsn(msn);
+	        	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(log, null, operation, addrLog);
+	        }
+			
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
     }
 
     @Override
@@ -664,7 +670,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         			caRequestLogRepository.save(ca);
         			caRequestLogRepository.flush();
         			updateCacheUidMsnDevice(ca.getUid(), "update");
-        			AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(ca, null, "COUPLE MSN", null);
+        			
+        			DeviceRemoveLog log = DeviceRemoveLog.build(ca);
+    				AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(log, null, "COUPLE MSN", null);
+        			
         		} else {
         			throw new RuntimeException("MCU SN(QR Code) doesn't exist!");
         		}
@@ -985,15 +994,20 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		CARequestLog caRequestLog = caRequestLogRepository.findByUid(uId).orElse(null);
 		if (caRequestLog != null && caRequestLog.getType() == DeviceType.NOT_COUPLED) {//8931070521315025237F
 			caRequestLogRepository.delete(caRequestLog);
-			AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(caRequestLog, reason, "REMOVE", null);
+			
+			try {
+				DeviceRemoveLog log = DeviceRemoveLog.build(caRequestLog);
+				AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(log, reason, "REMOVE", null);
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
+			}
 			updateCacheUidMsnDevice(caRequestLog.getUid(), "remove");
 		}
 	}
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void updateDeviceLogs(CARequestLog caRequestLog, String reason, String operation, AddressLog addrLog) {
+    public void updateDeviceLogs(DeviceRemoveLog log, String reason, String operation, AddressLog addrLog) {
     	try {
-			DeviceRemoveLog log = DeviceRemoveLog.build(caRequestLog);
 			log.setId(null);
 			log.setOperation(operation);
 			log.setOperationBy(SecurityUtils.getEmail());
@@ -1005,7 +1019,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			}
 			deviceRemoveLogRepository.save(log);
 		} catch (Exception e) {
-			System.err.println(e);
+			LOG.error(e.getMessage(), e);
 		}
     }
     
@@ -1022,7 +1036,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			caRequestLogRepository.save(caRequestLog);
 			caRequestLogRepository.flush();
 			updateCacheUidMsnDevice(caRequestLog.getUid(), "update");
-			AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(caRequestLog, null, "DE-COUPLE MSN", null);
+			
+			try {
+				DeviceRemoveLog log = DeviceRemoveLog.build(caRequestLog);
+				AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(log, null, "DE-COUPLE MSN", null);
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
+			}
+			
 		} else {
 			throw new RuntimeException("Device doesn't exists!");
 		}
@@ -1139,10 +1160,83 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		return pagin;
 	}
 	
-	public String sendRLSCommandForDevices(List<CARequestLog> listDevice, String command, Map<String, Object> options, String commandSendBy) {
+	@Override
+	public void sendRLSCommandForDevices(List<CARequestLog> listDevice, String command, Map<String, Object> options, String commandSendBy, String uuid) {
 		LOG.info("Sending command: " + command + "to list devices. List device size: " + listDevice.size());
-		String uuid = UUID.randomUUID().toString();
+		
+		String comment = (String) options.get("comment");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+		if (StringUtils.isNotBlank(comment)) {
+			options.remove("comment");	
+		}
+		
+        Long fromDate = (Long) options.get("fromDate");
+        Long toDate = (Long) options.get("toDate");
+        Long queryGroup = StringUtils.isNotBlank((String) options.get("queryGroup")) ? Long.parseLong((String) options.get("queryGroup")) : null;
+        Long queryBuilding = StringUtils.isNotBlank((String) options.get("queryBuilding")) ? Long.parseLong((String) options.get("queryBuilding")) : null;
+        Long queryBlock = StringUtils.isNotBlank((String) options.get("queryBlock")) ? Long.parseLong((String) options.get("queryBlock")) : null;
+        Long queryFloorLevel = StringUtils.isNotBlank((String) options.get("queryFloorLevel")) ? Long.parseLong((String) options.get("queryFloorLevel")) : null;
+        Long queryBuildingUnit = StringUtils.isNotBlank((String) options.get("queryBuildingUnit")) ? Long.parseLong((String) options.get("queryBuildingUnit")) : null;
+        Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor")) ? Long.parseLong((String) options.get("queryVendor")) : null;
+        
+        if (fromDate != null) {
+        	String strFromDate = sdf.format(new Date(fromDate));
+        	options.put("fromDate", strFromDate);
+        }
+        if (toDate != null) {
+        	String strToDate = sdf.format(new Date(toDate));
+        	options.put("toDate", strToDate);
+        }
+        if (queryGroup != null) {
+        	Optional<Group> opt = groupRepository.findById(queryGroup);
+        	if (opt.isPresent()) {
+        		options.put("queryGroup", opt.get().getName());
+        	}
+        }
+        if (queryBuilding != null) {
+        	Optional<Building> opt = buildingRepository.findById(queryBuilding);
+        	if (opt.isPresent()) {
+        		options.put("queryBuilding", opt.get().getName());
+        	}
+        }
+        if (queryBlock != null) {
+        	Optional<Block> opt = blockRepository.findById(queryBlock);
+        	if (opt.isPresent()) {
+        		options.put("queryBlock", opt.get().getName());
+        	}
+        }
+        if (queryFloorLevel != null) {
+        	Optional<FloorLevel> opt = floorLevelRepository.findById(queryFloorLevel);
+        	if (opt.isPresent()) {
+        		options.put("queryFloorLevel", opt.get().getName());
+        	}
+        }
+        if (queryBuildingUnit != null) {
+        	Optional<BuildingUnit> opt = buildingUnitRepository.findById(queryBuildingUnit);
+        	if (opt.isPresent()) {
+        		options.put("queryBuildingUnit", opt.get().getName());
+        	}
+        }
+        if (queryVendor != null) {
+        	Optional<Vendor> opt = vendorRepository.findById(queryVendor);
+        	if (opt.isPresent()) {
+        		options.put("queryVendor", opt.get().getName());
+        	}
+        }
+		
+		RelayStatusLog rl = new RelayStatusLog();
+		rl.setBatchUuid(uuid);
+		rl.setCommand(command);
+		rl.setComment(comment);
+		rl.setFilters(options.toString());
+		rl.setCommandSendBy(commandSendBy);
+		rl.setTotalCount(listDevice.size());
+		rl.setCurrentCount(0);
+		rl.setErrorCount(0);
+		relayStatusLogRepository.save(rl);
+		
 		int successCount = 0;
+		int errorCount = 0;
 		for (CARequestLog ca : listDevice) {
 			try {
 				SimpleMap<String, Object> map = SimpleMap.init("id", ca.getUid()).more("cmd", command);
@@ -1152,84 +1246,21 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	                    "header", SimpleMap.init("uid", ca.getUid()).more("mid", mid).more("gid", ca.getUid()).more("msn", ca.getMsn()).more("sig", sig)
 	                ).more("payload", map), command, uuid);
 				successCount++;
+				rl.setCurrentCount(successCount);
+				updateRLSStatus(rl);
 			} catch (Exception e) {
+				errorCount++;
+				rl.setErrorCount(errorCount);
+				updateRLSStatus(rl);
 				LOG.info("Error while sending command: " + command + ", uid: " + ca.getUid() + ". Error: " + e.getMessage());
 				e.printStackTrace();
 			}
 		}
-		if (successCount > 0) {
-			String comment = (String) options.get("comment");
-			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-			if (StringUtils.isNotBlank(comment)) {
-				options.remove("comment");	
-			}
-			
-            Long fromDate = (Long) options.get("fromDate");
-            Long toDate = (Long) options.get("toDate");
-            Long queryGroup = StringUtils.isNotBlank((String) options.get("queryGroup")) ? Long.parseLong((String) options.get("queryGroup")) : null;
-            Long queryBuilding = StringUtils.isNotBlank((String) options.get("queryBuilding")) ? Long.parseLong((String) options.get("queryBuilding")) : null;
-            Long queryBlock = StringUtils.isNotBlank((String) options.get("queryBlock")) ? Long.parseLong((String) options.get("queryBlock")) : null;
-            Long queryFloorLevel = StringUtils.isNotBlank((String) options.get("queryFloorLevel")) ? Long.parseLong((String) options.get("queryFloorLevel")) : null;
-            Long queryBuildingUnit = StringUtils.isNotBlank((String) options.get("queryBuildingUnit")) ? Long.parseLong((String) options.get("queryBuildingUnit")) : null;
-            Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor")) ? Long.parseLong((String) options.get("queryVendor")) : null;
-            
-            if (fromDate != null) {
-            	String strFromDate = sdf.format(new Date(fromDate));
-            	options.put("fromDate", strFromDate);
-            }
-            if (toDate != null) {
-            	String strToDate = sdf.format(new Date(toDate));
-            	options.put("toDate", strToDate);
-            }
-            if (queryGroup != null) {
-            	Optional<Group> opt = groupRepository.findById(queryGroup);
-            	if (opt.isPresent()) {
-            		options.put("queryGroup", opt.get().getName());
-            	}
-            }
-            if (queryBuilding != null) {
-            	Optional<Building> opt = buildingRepository.findById(queryBuilding);
-            	if (opt.isPresent()) {
-            		options.put("queryBuilding", opt.get().getName());
-            	}
-            }
-            if (queryBlock != null) {
-            	Optional<Block> opt = blockRepository.findById(queryBlock);
-            	if (opt.isPresent()) {
-            		options.put("queryBlock", opt.get().getName());
-            	}
-            }
-            if (queryFloorLevel != null) {
-            	Optional<FloorLevel> opt = floorLevelRepository.findById(queryFloorLevel);
-            	if (opt.isPresent()) {
-            		options.put("queryFloorLevel", opt.get().getName());
-            	}
-            }
-            if (queryBuildingUnit != null) {
-            	Optional<BuildingUnit> opt = buildingUnitRepository.findById(queryBuildingUnit);
-            	if (opt.isPresent()) {
-            		options.put("queryBuildingUnit", opt.get().getName());
-            	}
-            }
-            if (queryVendor != null) {
-            	Optional<Vendor> opt = vendorRepository.findById(queryVendor);
-            	if (opt.isPresent()) {
-            		options.put("queryVendor", opt.get().getName());
-            	}
-            }
-			
-			RelayStatusLog rl = new RelayStatusLog();
-			rl.setBatchUuid(uuid);
-			rl.setCommand(command);
-			rl.setComment(comment);
-			rl.setFilters(options.toString());
-			rl.setCommandSendBy(commandSendBy);
-			relayStatusLogRepository.save(rl);
-			
-			return uuid;	
-		} else {
-			return null;
-		}
+	}
+	
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void updateRLSStatus(RelayStatusLog rl) {
+		relayStatusLogRepository.save(rl);
 	}
 
 	@Override

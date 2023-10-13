@@ -57,6 +57,6 @@ public interface EVSPAService {
 
 	String sendEmail(String message, String email, String subject);
 
-	boolean upload(String fileName, InputStream in, String contentType);
+	boolean upload(String fileName, InputStream in, String contentType, String bucketName);
 
 }

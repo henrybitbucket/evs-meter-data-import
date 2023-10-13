@@ -63,7 +63,7 @@ public interface CaRequestLogService {
 
 	PaginDto<DeviceRemoveLogDto> getDeviceRemoveLogs(PaginDto<DeviceRemoveLogDto> pagin);
 	
-	String sendRLSCommandForDevices(List<CARequestLog> listDevice, String command, Map<String, Object> options, String commandSendBy);
+	void sendRLSCommandForDevices(List<CARequestLog> listDevice, String command, Map<String, Object> options, String commandSendBy, String uuid);
 
 	void getRelayStatusLogs(PaginDto<RelayStatusLogDto> pagin);
 }

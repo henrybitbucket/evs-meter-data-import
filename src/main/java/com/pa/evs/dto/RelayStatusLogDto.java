@@ -31,6 +31,12 @@ public class RelayStatusLogDto {
 	
 	private String batchUuid;
 	
+	private Integer totalCount;
+	
+	private Integer currentCount;
+	
+	private Integer errorCount;
+	
 	public RelayStatusLogDto build(RelayStatusLog rl) {
 		return builder()
 				.createDate(rl.getCreateDate())
@@ -39,6 +45,9 @@ public class RelayStatusLogDto {
 				.commandSendBy(rl.getCommandSendBy())
 				.comment(rl.getComment())
 				.filters(rl.getFilters())
+				.totalCount(rl.getTotalCount())
+				.currentCount(rl.getCurrentCount())
+				.errorCount(rl.getErrorCount())
 				.build();
 	}
 }

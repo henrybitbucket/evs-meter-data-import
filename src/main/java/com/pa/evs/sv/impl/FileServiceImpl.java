@@ -2,16 +2,12 @@ package com.pa.evs.sv.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.sql.Blob;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -20,18 +16,14 @@ import javax.persistence.Query;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.StringUtils;
-import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.http.IdleConnectionReaper;
-import com.amazonaws.metrics.AwsSdkMetrics;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.SFileDto;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.SFile;
@@ -71,7 +63,7 @@ public class FileServiceImpl implements FileService {
 	
 	@Override
 	@Transactional
-	public void saveFile(MultipartFile[] files, String type, String altName, String uid, String description) {
+	public void saveFile(MultipartFile[] files, String type, String altName, String uid, String description, String bucketName) {
 
 		for (MultipartFile file : files) {
 			
@@ -82,17 +74,17 @@ public class FileServiceImpl implements FileService {
 				}
 				Long now = System.currentTimeMillis();
 				String fileName = ("-").concat(now.toString()).concat("-").concat(file.getOriginalFilename());
-				
+
 				Optional<CARequestLog> caOpt = caRequestLogRepository.findByUid(uid);
-				
+
 				if (caOpt.isPresent()) {
 					fileName = caOpt.get().getSn().concat(fileName);
 				} else {
 					fileName = uid.concat(fileName);
 				}
-				
-				evsPAService.upload(fileName, file.getInputStream(), file.getContentType());
-				
+
+				evsPAService.upload(fileName, file.getInputStream(), file.getContentType(), bucketName);
+
 				sFileRepository.save(
 						SFile
 						.builder()
@@ -109,7 +101,7 @@ public class FileServiceImpl implements FileService {
 					);
 			} catch (IOException e) {
 				e.printStackTrace();
-			}			
+			}
 		}
 
 	}
@@ -154,6 +146,64 @@ public class FileServiceImpl implements FileService {
 		query.getResultList().forEach(fr -> rp.add(SFileDto.from((SFile) fr)));
 		
 		return rp;
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public PaginDto<SFileDto> getP1Files(PaginDto<SFileDto> pagin) {
+        
+		StringBuilder sqlBuilder = new StringBuilder("FROM SFile sf ");
+		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM SFile sf");
+
+		StringBuilder sqlCommonBuilder = new StringBuilder();
+		if (CollectionUtils.isEmpty(pagin.getOptions())) {
+			sqlCommonBuilder.append(" WHERE 1=1 ");
+		} else {
+			Map<String, Object> map = pagin.getOptions();
+	        
+	        String uid = (String) map.get("uid");
+	        String type = (String) map.get("type");
+	        String altName = (String) map.get("altName");
+	        
+			if (StringUtils.isNotBlank(uid)) {
+				sqlCommonBuilder.append(" AND uid like '" + uid + "'");
+			}
+			if (StringUtils.isNotBlank(type)) {
+				sqlCommonBuilder.append(" AND type like '" + type + "'");
+			}
+			if (StringUtils.isNotBlank(altName)) {
+				sqlCommonBuilder.append(" AND altName like '" + altName + "'");
+			}
+		}
+		
+		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id DESC");
+		sqlCountBuilder.append(sqlCommonBuilder);
+
+		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+            pagin.setOffset(0);
+        }
+        
+        if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+            pagin.setLimit(10);
+        }
+        
+        Query queryCount = em.createQuery(sqlCountBuilder.toString());
+		Query query = em.createQuery(sqlBuilder.toString());
+		query.setFirstResult(pagin.getOffset());
+		query.setMaxResults(pagin.getLimit());
+
+		Long count = ((Number) queryCount.getSingleResult()).longValue();
+		pagin.setTotalRows(count);
+		pagin.setResults(new ArrayList<>());
+		if (count == 0l) {
+			return pagin;
+		}
+		
+		List<SFileDto> rp = new ArrayList<>();
+		query.getResultList().forEach(fr -> rp.add(SFileDto.from((SFile) fr)));
+		
+		pagin.setResults(rp);
+		return pagin;
 	}
 
 	@Override

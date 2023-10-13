@@ -6,11 +6,13 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.SFileDto;
 import com.pa.evs.model.SFile;
 
 public interface FileService {
 
-	void saveFile(MultipartFile[] files, String type, String altName, String uid, String description);
+	void saveFile(MultipartFile[] files, String type, String altName, String uid, String description, String bucketName);
 
 	Object getFiles(String types, String altNames, String uids);
 
@@ -19,4 +21,6 @@ public interface FileService {
 	void downloadFile(String altName, HttpServletResponse response) throws Exception;
 
 	void downloadFile(Long id, String uid, HttpServletResponse response) throws Exception;
+
+	PaginDto<SFileDto> getP1Files(PaginDto<SFileDto> pagin);
 }

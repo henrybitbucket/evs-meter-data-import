@@ -53,6 +53,7 @@ import com.pa.evs.dto.P1OnlineStatusDto;
 import com.pa.evs.dto.P2JobDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.dto.SFileDto;
 import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
@@ -108,9 +109,17 @@ public class CommonController {
     @Value("${evs.pa.mqtt.timeout:30}")
 	private long otaTimeout;
 
-    @Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
+    @Value("${evs.pa.mqtt.publish.topic.alias}")
+    private String alias;
     
-    @Value("${evs.pa.csr.folder}") private String csrFolder;
+    @Value("${evs.pa.csr.folder}")
+    private String csrFolder;
+    
+	@Value("${s3.photo.bucket.name}")
+	private String photoBucketName;
+	
+	@Value("${s3.p1.provisioning.bucket.name}")
+	private String p1ProvisioningBucketName;
 	
 	private String caFolder;
 
@@ -713,9 +722,52 @@ public class CommonController {
 			@RequestParam(required = false) String desc,
 			@RequestParam(required = true) String uid) throws IOException {
     	LOG.debug("Invoke fileUpload uid: {}", uid);
-    	fileService.saveFile(files, type, altName, uid, desc);
+    	fileService.saveFile(files, type, altName, uid, desc, photoBucketName);
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
 	}
+    
+    @PostMapping("api/p1-files-upload")
+    public ResponseEntity<?> uploadP1Files(HttpServletRequest req, HttpServletResponse res,
+    		@RequestParam("files") List<MultipartFile> files,
+    		@RequestParam(required = false) List<String> uids,
+    		@RequestParam(required = false) List<String> types,
+			@RequestParam(required = false) List<String> altNames,
+			@RequestParam(required = false) List<String> descs) {
+    	
+    	LOG.debug("Invoke P1 fileUpload");
+    	List<Map<String, String>> errors = new ArrayList<>();
+        for (int i = 0; i < files.size(); i++) {
+            try {
+            	MultipartFile[] mFiles = new MultipartFile[1];
+            	mFiles[0] = files.get(i);
+                fileService.saveFile(mFiles, types.get(i), altNames.get(i), uids.get(i), descs.get(i), p1ProvisioningBucketName);
+            } catch (Exception e) {
+            	Map<String, String> map = new LinkedHashMap<>();
+            	map.put("uid", uids.get(i));
+            	map.put("fileName", files.get(i).getOriginalFilename());
+            	map.put("error", e.getMessage());
+            	errors.add(map);
+				LOG.info("Error on upload file: {}, uid: {}", files.get(i).getOriginalFilename(), uids.get(i));
+				e.printStackTrace();
+			}
+        }
+        
+        if (!errors.isEmpty()) {
+        	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).response(errors).build());
+        }
+        
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/p1-files")
+ 	public Object getP1FileUploads(HttpServletResponse res, @RequestBody PaginDto<SFileDto> pagin) throws IOException {
+    	try {
+    		fileService.getP1Files(pagin);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+ 	}
     
     // http://localhost:7770/api/files?uids=BIERWXAABMAKWAEAAA,BIERWXAABMAKWAEAAA&types=MMS_P1_TEST,MMS_P2_TEST
     @GetMapping("/api/files")

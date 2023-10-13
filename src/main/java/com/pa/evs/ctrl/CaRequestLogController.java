@@ -7,7 +7,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -176,11 +176,9 @@ public class CaRequestLogController {
         		return ResponseEntity.ok(ResponseDto.builder().success(false).message("No device found!").build());
         	}
         	
-        	AtomicReference<String> uuid = new AtomicReference<>(null);
-        	Thread sendRLSCommandThread = new Thread(() -> uuid.set(caRequestLogService.sendRLSCommandForDevices(listDevice, command, pagin.getOptions(), commandSendBy)));
-        	sendRLSCommandThread.start();
-        	sendRLSCommandThread.join();
-        	return ResponseEntity.ok(ResponseDto.builder().success(true).response(uuid.get()).build());
+        	String uuid = UUID.randomUUID().toString();
+        	new Thread(() -> caRequestLogService.sendRLSCommandForDevices(listDevice, command, pagin.getOptions(), commandSendBy, uuid)).start();
+        	return ResponseEntity.ok(ResponseDto.builder().success(true).response(uuid).build());
         } catch (Exception e) {
         	e.printStackTrace();
             return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
