@@ -159,6 +159,7 @@ public class FileServiceImpl implements FileService {
 		if (CollectionUtils.isEmpty(pagin.getOptions())) {
 			sqlCommonBuilder.append(" WHERE 1=1 ");
 		} else {
+			sqlCommonBuilder.append(" WHERE    ");
 			Map<String, Object> map = pagin.getOptions();
 	        
 	        String uid = (String) map.get("uid");
@@ -166,13 +167,18 @@ public class FileServiceImpl implements FileService {
 	        String altName = (String) map.get("altName");
 	        
 			if (StringUtils.isNotBlank(uid)) {
-				sqlCommonBuilder.append(" AND uid like '" + uid + "'");
+				sqlCommonBuilder.append(" uid like '%" + uid + "%' AND ");
 			}
 			if (StringUtils.isNotBlank(type)) {
-				sqlCommonBuilder.append(" AND type like '" + type + "'");
+				sqlCommonBuilder.append(" type like '%" + type + "%' AND ");
 			}
 			if (StringUtils.isNotBlank(altName)) {
-				sqlCommonBuilder.append(" AND altName like '" + altName + "'");
+				sqlCommonBuilder.append(" altName like '%" + altName + "%' AND ");
+			}
+			sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
+
+			if (sqlCommonBuilder.length() < 10) {
+				sqlCommonBuilder.append(" 1 = 1 ");
 			}
 		}
 		
