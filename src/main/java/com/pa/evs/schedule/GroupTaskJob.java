@@ -52,7 +52,7 @@ public class GroupTaskJob implements Job {
                     try {
                         Long mid = evsPAService.nextvalMID(ca.getVendor());
                         SimpleMap<String, Object> map = SimpleMap.init("id", ca.getUid()).more("cmd", command.name());
-                        String sig = BooleanUtils.isTrue(ca.getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
+                        String sig = BooleanUtils.isTrue(ca.getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map), ca.getVendor().getSignatureAlgorithm());
                         evsPAService.publish(alias + ca.getUid(), SimpleMap.init(
                                 "header", SimpleMap.init("uid", ca.getUid()).more("mid", mid).more("gid", ca.getUid()).more("msn", ca.getMsn()).more("sig", sig)
                         ).more(

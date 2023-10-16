@@ -240,7 +240,7 @@ public class CommonController {
                 localMap.getCfgMap().put(mid, command.getData());
             }
             LOG.debug("sendCommand : evs.pa.privatekey.path: " + ca.get().getVendor().getKeyPath());
-            String sig = BooleanUtils.isTrue(ca.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(ca.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(map));
+            String sig = BooleanUtils.isTrue(ca.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(ca.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(map), ca.get().getVendor().getSignatureAlgorithm());
 
             if ("TCM_INFO".equalsIgnoreCase(command.getType())) {
             	LOG.debug("sendCommand TCM_INFO: " + mid + " " + ca.get().getMsn());
@@ -958,39 +958,40 @@ public class CommonController {
 			@RequestParam MultipartFile prkey) {
 		try {
 			File fileScr = null;
-			if (StringUtils.isBlank(signatureAlgorithm)) {
-				if (csr != null) {
-					fileScr = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_csrTemp_"
-							+ csr.getOriginalFilename());
-					try (OutputStream outStream = new FileOutputStream(fileScr.getPath())) {
-						outStream.write(csr.getBytes());
-					}
-					signatureAlgorithm = RSAUtil.getSignatureAlgorithm(fileScr.getPath().replaceAll("\\\\", "/"));
+			if (csr != null) {
+				fileScr = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_csrTemp_"
+						+ csr.getOriginalFilename());
+				try (OutputStream outStream = new FileOutputStream(fileScr.getPath())) {
+					outStream.write(csr.getBytes());
 				}
+			}
+			if (fileScr != null && StringUtils.isBlank(signatureAlgorithm)) {
+				signatureAlgorithm = RSAUtil.getSignatureAlgorithm(fileScr.getPath().replaceAll("\\\\", "/"));
 			}
 			File fileKey = null;
-			if (StringUtils.isBlank(keyType)) {
-				if (prkey != null) {
-					fileKey = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_keyTemp_"
-							+ prkey.getOriginalFilename());
-					try (OutputStream outStream = new FileOutputStream(fileKey.getPath())) {
-						outStream.write(prkey.getBytes());
-					}
-					keyType = RSAUtil.getKeyType(fileKey.getPath().replaceAll("\\\\", "/"));
+			if (prkey != null) {
+				fileKey = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_keyTemp_"
+						+ prkey.getOriginalFilename());
+				try (OutputStream outStream = new FileOutputStream(fileKey.getPath())) {
+					outStream.write(prkey.getBytes());
 				}
 			}
-			if (RSAUtil.validateServerKeyAndCsrKey(fileKey.getPath().replaceAll("\\\\", "/"),
-					fileScr.getPath().replaceAll("\\\\", "/"))) {
+			if (fileKey != null && StringUtils.isBlank(keyType)) {
+				keyType = RSAUtil.getKeyType(fileKey.getPath().replaceAll("\\\\", "/"));
+			}
+			if (fileScr != null && fileKey != null && RSAUtil.validateServerKeyAndCsrKey(
+					fileKey.getPath().replaceAll("\\\\", "/"), fileScr.getPath().replaceAll("\\\\", "/"))) {
 				Files.deleteIfExists(fileScr.toPath());
 				Files.deleteIfExists(fileKey.toPath());
 				vendorService.updateVendorMasterKey(vendorId, signatureAlgorithm, keyType, csr, prkey);
-				return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).message("updated successfuly").build());
+				return ResponseEntity
+						.<Object>ok(ResponseDto.<Object>builder().success(true).message("updated successfuly").build());
 			} else {
 				return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false)
 						.message("Error : check not match combo private-key, csr").build());
 			}
 		} catch (Exception e) {
-		return ResponseEntity
+			return ResponseEntity
 					.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
 		}
 	}

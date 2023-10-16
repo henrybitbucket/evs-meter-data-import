@@ -419,10 +419,7 @@ public class RSAUtil {
 		} catch (Exception e) {
 			LOG.error("getSignatureAlgorithm fail: ", e);
 		}
-		if (StringUtils.equals(str1, str2)) {
-			return true;
-		}
-		return false;
+		return StringUtils.equals(str1, str2);
 	}
 	
 	public static String getCSRInfo(String csrPath) {
@@ -435,23 +432,23 @@ public class RSAUtil {
 		return null;
 	}
 
-	public static String initSignedRequest(String privateKeyPath, String payload) throws IOException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+	public static String initSignedRequest(String privateKeyPath, String payload, String signatureAlgorithm) throws IOException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
 		Base64.Encoder encoder = Base64.getEncoder();
 		PEMReader pemReader = new PEMReader(new FileReader(privateKeyPath));
 		Security.addProvider(new BouncyCastleProvider());
 		KeyPair keyPair = (KeyPair) pemReader.readObject();
-		Signature signature = Signature.getInstance("SHA256withECDSA");
+		Signature signature = Signature.getInstance(signatureAlgorithm);
 		signature.initSign(keyPair.getPrivate());
 		signature.update(payload.getBytes());
 		return encoder.encodeToString(signature.sign());
 	}
 
-	public static boolean verifySign(String csrPath, String payload, String sig) {
+	public static boolean verifySign(String csrPath, String payload, String sig, String signatureAlgorithm) {
 		LOG.debug("VerifySign, csrPath: {}, payload: {}, signHex: {}", csrPath, payload, sig);
 		try(FileReader fileReader = new FileReader(csrPath);
 			PemReader pemReader = new PemReader(fileReader)) {
 			PKCS10CertificationRequest csr = new PKCS10CertificationRequest(pemReader.readPemObject().getContent());
-			Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA");
+			Signature ecdsaVerify = Signature.getInstance(signatureAlgorithm);
 			ecdsaVerify.initVerify(csr.getPublicKey());
 			ecdsaVerify.update(payload.getBytes("UTF-8"));
 			return ecdsaVerify.verify(Base64.getDecoder().decode(sig));

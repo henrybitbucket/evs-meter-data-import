@@ -1004,7 +1004,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			payload.put("cmd", "OTA");
 			payload.put("p1", mapPl);
 			LOG.debug("evs.pa.privatekey.path: " + opt.get().getVendor().getKeyPath());
-			String sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(opt.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload));
+			String sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(opt.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload), opt.get().getVendor().getSignatureAlgorithm());
 			header.put("sig", sig);
 			publish(alias + log.getUid(), data, type);
 
@@ -1093,19 +1093,19 @@ public class EVSPAServiceImpl implements EVSPAService {
 			header.put("mid", log.getMid());
 			header.put("uid", log.getUid());
 			header.put("gid", log.getGid());
-			header.put("msn", log.getMsn());
+			header.put("msn", log.getMsn()); 
 			Map<String, Object> payload = new HashMap<>();
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "ACT");
-			List<String> svCA = caRequestLogRepository.findCAByUid("server.csr");
-			payload.put("p1", svCA.isEmpty() ? null : svCA.get(0));
+			Optional<CARequestLog> otp = caRequestLogRepository.findByUid(log.getUid());
+			payload.put("p1", !otp.isPresent() ? null : otp.get().getVendor().getCertificate());
 			
 			Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
 			String sig = "";
 			
 			try {
-				sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(opt.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload));
+				sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(opt.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload), opt.get().getVendor().getSignatureAlgorithm());
 			} catch (Exception e) {
 				LOG.error(e.getMessage(), e);
 			}
@@ -1146,8 +1146,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 			
 			int status = 0;
 			if(validateSign) {
-				boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
-						new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
+				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+				boolean verifySign = false;
+				if (opt.isPresent()) {
+					verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
+							new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"), opt.get().getDeviceCsrSignatureAlgorithm());
+				}
 				LOG.debug("handleOnSubscribe, type: {}, verifySign: {}", type, verifySign);
 				if (!verifySign) {
 					status = -1;
@@ -1188,8 +1192,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 			int status = 0;
 			if(validateSign && (data.get("payload") != null)) {
 				Map<String, Object> payload = (Map<String, Object>) data.get("payload");
-				boolean verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
-						new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"));
+				boolean verifySign = false;
+				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+				if (opt.isPresent()) {
+					verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
+							new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"), opt.get().getDeviceCsrSignatureAlgorithm());
+				}
 				LOG.debug("HandleOnRespSubscribe, type: {}, verifySign: {}", type, verifySign);
 				if (!verifySign) {
 					status = -1;
@@ -1353,7 +1361,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			header.put("gid", caRequestLog.get().getUid());
 			payload.put("id", caRequestLog.get().getUid());
 			LOG.debug("handleLocalCmdRequest : evs.pa.privatekey.path: " + caRequestLog.get().getVendor().getKeyPath());
-			String sig = BooleanUtils.isTrue(caRequestLog.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(caRequestLog.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload));
+			String sig = BooleanUtils.isTrue(caRequestLog.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(caRequestLog.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload), caRequestLog.get().getVendor().getSignatureAlgorithm());
 			header.put("sig", sig);
 			publish(alias + caRequestLog.get().getUid(), data);
 		} else {
