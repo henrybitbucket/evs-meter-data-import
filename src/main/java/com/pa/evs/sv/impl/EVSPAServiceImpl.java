@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.Vector;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -1004,7 +1003,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
 			payload.put("p1", mapPl);
-			String sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			LOG.debug("evs.pa.privatekey.path: " + opt.get().getVendor().getKeyPath());
+			String sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(opt.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 			publish(alias + log.getUid(), data, type);
 
@@ -1105,7 +1105,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			String sig = "";
 			
 			try {
-				sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(masterPkPath, new ObjectMapper().writeValueAsString(payload));
+				sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(opt.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload));
 			} catch (Exception e) {
 				LOG.error(e.getMessage(), e);
 			}
@@ -1352,7 +1352,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			header.put("uid", caRequestLog.get().getUid());
 			header.put("gid", caRequestLog.get().getUid());
 			payload.put("id", caRequestLog.get().getUid());
-			String sig = BooleanUtils.isTrue(caRequestLog.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(payload));
+			LOG.debug("handleLocalCmdRequest : evs.pa.privatekey.path: " + caRequestLog.get().getVendor().getKeyPath());
+			String sig = BooleanUtils.isTrue(caRequestLog.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(caRequestLog.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload));
 			header.put("sig", sig);
 			publish(alias + caRequestLog.get().getUid(), data);
 		} else {
@@ -1660,6 +1661,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
 						caLog.setRequireRefresh(false);
 						caLog.setVendor(vendorOpt.get());
+						caLog.setDeviceCsrSignatureAlgorithm(RSAUtil.getSignatureAlgorithm(ful.getAbsolutePath()));
+						caLog.setDeviceKeyType(RSAUtil.getKeyType(ful.getAbsolutePath()));
 						caRequestLogRepository.save(caLog);
 						caRequestLogRepository.flush();
 						caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
@@ -2453,5 +2456,5 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 		return result;
 	}
-	
+
 }

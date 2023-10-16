@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -121,6 +123,9 @@ public class CommonController {
 	@Value("${s3.p1.provisioning.bucket.name}")
 	private String p1ProvisioningBucketName;
 	
+	@Value("${evs.pa.data.folder}") 
+	private String evsDataFolder;
+	
 	private String caFolder;
 
     @Autowired LocalMapStorage localMap;
@@ -234,8 +239,8 @@ public class CommonController {
                 map.more("p1", simpleMap);
                 localMap.getCfgMap().put(mid, command.getData());
             }
-
-            String sig = BooleanUtils.isTrue(ca.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
+            LOG.debug("sendCommand : evs.pa.privatekey.path: " + ca.get().getVendor().getKeyPath());
+            String sig = BooleanUtils.isTrue(ca.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(ca.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(map));
 
             if ("TCM_INFO".equalsIgnoreCase(command.getType())) {
             	LOG.debug("sendCommand TCM_INFO: " + mid + " " + ca.get().getMsn());
@@ -946,6 +951,62 @@ public class CommonController {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     
+	@PostMapping("/api/update-vendor-master-key")
+	public ResponseEntity<Object> updateVendorMasterKey(HttpServletRequest req, HttpServletResponse res,
+			@RequestParam(required = true) Long vendorId, @RequestParam(required = false) String signatureAlgorithm,
+			@RequestParam(required = false) String keyType, @RequestParam MultipartFile csr,
+			@RequestParam MultipartFile prkey) {
+		try {
+			File fileScr = null;
+			if (StringUtils.isBlank(signatureAlgorithm)) {
+				if (csr != null) {
+					fileScr = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_csrTemp_"
+							+ csr.getOriginalFilename());
+					try (OutputStream outStream = new FileOutputStream(fileScr.getPath())) {
+						outStream.write(csr.getBytes());
+					}
+					signatureAlgorithm = RSAUtil.getSignatureAlgorithm(fileScr.getPath().replaceAll("\\\\", "/"));
+				}
+			}
+			File fileKey = null;
+			if (StringUtils.isBlank(keyType)) {
+				if (prkey != null) {
+					fileKey = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_keyTemp_"
+							+ prkey.getOriginalFilename());
+					try (OutputStream outStream = new FileOutputStream(fileKey.getPath())) {
+						outStream.write(prkey.getBytes());
+					}
+					keyType = RSAUtil.getKeyType(fileKey.getPath().replaceAll("\\\\", "/"));
+				}
+			}
+			if (RSAUtil.validateServerKeyAndCsrKey(fileKey.getPath().replaceAll("\\\\", "/"),
+					fileScr.getPath().replaceAll("\\\\", "/"))) {
+				Files.deleteIfExists(fileScr.toPath());
+				Files.deleteIfExists(fileKey.toPath());
+				vendorService.updateVendorMasterKey(vendorId, signatureAlgorithm, keyType, csr, prkey);
+				return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).message("updated successfuly").build());
+			} else {
+				return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false)
+						.message("Error : check not match combo private-key, csr").build());
+			}
+		} catch (Exception e) {
+		return ResponseEntity
+					.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+		}
+	}
+
+	@PostMapping("/api/refresh-vendor-certificate")
+	public ResponseEntity<Object> refreshVendorCertificate(HttpServletRequest req, HttpServletResponse res,
+			@RequestParam(required = true) Long vendorId) {
+		try {
+			vendorService.refreshVendorCertificate(vendorId);
+		} catch (Exception e) {
+			return ResponseEntity
+					.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+		}
+		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+	}
+
 	@PostConstruct
 	public void init() {
 		

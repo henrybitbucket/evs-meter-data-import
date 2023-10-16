@@ -613,6 +613,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         List<CARequestLog> list = query.getResultList();
         list.forEach(ca -> {
         	ca.getVendor();
+        	ca.getVendor().setCsrBlob(null);
+        	ca.getVendor().setKeyContent(null);
         	ca.setHomeAddress(Utils.formatHomeAddress(ca));
         });
         
@@ -1241,7 +1243,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			try {
 				SimpleMap<String, Object> map = SimpleMap.init("id", ca.getUid()).more("cmd", command);
 				Long mid = evsPAService.nextvalMID(ca.getVendor());
-				String sig = BooleanUtils.isTrue(ca.getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map));
+				String sig = BooleanUtils.isTrue(ca.getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(ca.getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(map));
 				evsPAService.publish(alias + ca.getUid(), SimpleMap.init(
 	                    "header", SimpleMap.init("uid", ca.getUid()).more("mid", mid).more("gid", ca.getUid()).more("msn", ca.getMsn()).more("sig", sig)
 	                ).more("payload", map), command, uuid);

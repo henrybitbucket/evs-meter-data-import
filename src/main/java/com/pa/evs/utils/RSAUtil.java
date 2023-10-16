@@ -23,11 +23,11 @@ import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.io.pem.PemReader;
-
 import com.pa.evs.sv.impl.EVSPAServiceImpl;
 
 /**
@@ -402,6 +402,27 @@ public class RSAUtil {
 			LOG.error("getSignatureAlgorithm fail: ", e);
 		}
 		return null;
+	}
+	
+	public static boolean validateServerKeyAndCsrKey(String keyPath, String csrPath) {
+		String str1 = "";
+		String str2 = "";
+		try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+			CMD.exec("openssl pkey -in " + keyPath + " -pubout -outform pem | sha256sum", null, bos);
+			str1 = bos.toString().trim();
+		} catch (Exception e) {
+			LOG.error("getKeyType fail: ", e);
+		}
+		try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+			CMD.exec("openssl req -in " + csrPath + " -pubkey -noout -outform pem | sha256sum", null, bos);
+			str2 = bos.toString().trim();
+		} catch (Exception e) {
+			LOG.error("getSignatureAlgorithm fail: ", e);
+		}
+		if (StringUtils.equals(str1, str2)) {
+			return true;
+		}
+		return false;
 	}
 	
 	public static String getCSRInfo(String csrPath) {

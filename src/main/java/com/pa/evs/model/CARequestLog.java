@@ -169,6 +169,12 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "latestINFFirmwaveRequest", length = 255)
 	private String latestINFFirmwaveRequest;//time_INF_version
 	
+	@Column(name = "device_csr_Signature_Algorithm")
+	private String deviceCsrSignatureAlgorithm;
+	
+	@Column(name = "device_key_type")
+	private String deviceKeyType;
+	
 	@Transient
 	private List<String> logs;
 	
