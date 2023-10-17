@@ -196,6 +196,20 @@ public class CaRequestLogController {
         return ResponseEntity.ok(ResponseDto.builder().success(true).response(pagin).build());
     }
     
+    @PostMapping(RestPath.CA_REQUEST_LOG_BATCH_COUPLE_DEVICES)
+    public ResponseEntity<Object> batchCoupleDevices(HttpServletRequest httpServletRequest, @RequestBody List<Map<String, String>> listInput) throws Exception {
+    	try {
+    		List<Map<String, String>> output = caRequestLogService.batchCoupleDevices(listInput);
+    		if (output.isEmpty()) {
+    			return ResponseEntity.ok(ResponseDto.builder().success(true).build());
+    		}
+    		return ResponseEntity.ok(ResponseDto.builder().success(false).response(output).build());
+        } catch (Exception e) {
+        	e.printStackTrace();
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+    }
+    
     @PostConstruct
     public void init() {
     	SchedulerHelper.scheduleJob("0/10 * * * * ? *", () -> {

@@ -66,4 +66,6 @@ public interface CaRequestLogService {
 	void sendRLSCommandForDevices(List<CARequestLog> listDevice, String command, Map<String, Object> options, String commandSendBy, String uuid);
 
 	void getRelayStatusLogs(PaginDto<RelayStatusLogDto> pagin);
+	
+	List<Map<String, String>> batchCoupleDevices(List<Map<String, String>> listInput);
 }
