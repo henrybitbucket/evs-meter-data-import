@@ -1,11 +1,9 @@
 package com.pa.evs.sv.impl;
 
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -15,6 +13,9 @@ import java.util.Optional;
 import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Session;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -36,10 +37,7 @@ import com.pa.evs.repository.FirmwareRepository;
 import com.pa.evs.repository.VendorRepository;
 import com.pa.evs.sv.VendorService;
 import com.pa.evs.utils.ApiUtils;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.hibernate.Session;
+import com.pa.evs.utils.AppProps;
 
 @Service
 @Transactional
@@ -68,19 +66,23 @@ public class VendorServiceIplm implements VendorService {
 	@PostConstruct
 	@Transactional
 	public void init() {
-		Vendor vendor = vendorRepository.findByName("Default");
-		if (vendor == null) {
-			vendor = new Vendor();
-			vendor.setName("Default");
-			vendor = vendorRepository.save(vendor);
-		}
-		caRequestLogRepository.updateVendor(vendor.getId());
-		firmwareRepository.updateVendor(vendor.getId());
+		try {
+			Vendor vendor = vendorRepository.findByName("Default");
+			if (vendor == null) {
+				vendor = new Vendor();
+				vendor.setName("Default");
+				vendor = vendorRepository.save(vendor);
+			}
+			caRequestLogRepository.updateVendor(vendor.getId());
+			firmwareRepository.updateVendor(vendor.getId());
 
-		// build all file cer and key of vendor
-		List<Vendor> verdors = vendorRepository.findAll();
-		for (Vendor ven : verdors) {
-			buildPathFileOfVendor(ven);
+			// build all file cer and key of vendor
+			List<Vendor> verdors = vendorRepository.findAll();
+			for (Vendor ven : verdors) {
+				AppProps.getContext().getBean(this.getClass()).buildPathFileOfVendor(ven, null, null);
+			}
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
 		}
 	}
 
@@ -93,11 +95,14 @@ public class VendorServiceIplm implements VendorService {
 			dto.setId(ven.getId());
 			dto.setName(ven.getName());
 			dto.setDescrption(ven.getDescription());
+			dto.setKeyType(ven.getKeyType());
+			dto.setSignatureAlgorithm(ven.getSignatureAlgorithm());
 			res.add(dto);
 		}
 		return res;
 	}
 
+	@Transactional
 	@Override
 	public void updateVendorMasterKey(Long vendorId, String signatureAlgorithm, String keyType, MultipartFile csr,
 			MultipartFile prkey) throws Exception {
@@ -118,31 +123,26 @@ public class VendorServiceIplm implements VendorService {
 			vendorRepository.save(vendorOtp.get());
 			vendorRepository.flush();
 			//build new path file key of vendor
-		    buildPathFileOfVendor(vendorRepository.findById(vendorId).get());
+		    buildPathFileOfVendor(vendorRepository.findById(vendorId).get(), prkey.getInputStream(), csr.getInputStream());
 		} else {
 			throw new Exception("Vendor not found !");
 		}
 	}
 	
-	private void buildPathFileOfVendor(Vendor ven) {
-		if (!StringUtils.isBlank(ven.getKeyPath()) && ven.getKeyContent() != null) {
-			Path path = Paths.get(ven.getKeyPath());
-			if (!Files.exists(path)) {
-				try (OutputStream out = new FileOutputStream(ven.getKeyPath())) {
-					IOUtils.copy(ven.getKeyContent().getBinaryStream(), out);
-				} catch (Exception e) {
-					LOG.error("Error when build path key : ", e.getMessage(), e);
-				}
+	@Transactional
+	public void buildPathFileOfVendor(Vendor ven, InputStream keyContent, InputStream csrContent) {
+		if (StringUtils.isNotBlank(ven.getKeyPath()) && ven.getKeyContent() != null) {
+			try (OutputStream out = new FileOutputStream(ven.getKeyPath())) {
+				IOUtils.copy(keyContent == null ? ven.getKeyContent().getBinaryStream() : keyContent, out);
+			} catch (Exception e) {
+				LOG.error("Error when build path key : ", e.getMessage(), e);
 			}
 		}
-		if (!StringUtils.isBlank(ven.getCsrPath()) && ven.getCsrBlob() != null) {
-			Path path = Paths.get(ven.getCsrPath());
-			if (!Files.exists(path)) {
-				try (OutputStream out = new FileOutputStream(ven.getCsrPath())) {
-					IOUtils.copy(ven.getCsrBlob().getBinaryStream(), out);
-				} catch (Exception e) {
-					LOG.error("Error when build path csr : ", e.getMessage(), e);
-				}
+		if (StringUtils.isNotBlank(ven.getCsrPath()) && ven.getCsrBlob() != null) {
+			try (OutputStream out = new FileOutputStream(ven.getCsrPath())) {
+				IOUtils.copy(csrContent == null ? ven.getCsrBlob().getBinaryStream() : csrContent, out);
+			} catch (Exception e) {
+				LOG.error("Error when build path csr : ", e.getMessage(), e);
 			}
 		}
 	}

@@ -610,12 +610,13 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         query.setFirstResult(pagin.getOffset());
         query.setMaxResults(pagin.getLimit());
         
-        List<CARequestLog> list = query.getResultList();
+        final List<CARequestLog> list = query.getResultList();
         list.forEach(ca -> {
         	ca.getVendor();
-        	ca.getVendor().setCsrBlob(null);
-        	ca.getVendor().setKeyContent(null);
         	ca.setHomeAddress(Utils.formatHomeAddress(ca));
+        	if (StringUtils.isBlank(ca.getDeviceCsrSignatureAlgorithm())) {
+        		AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.getUid());
+        	}
         });
         
         pagin.setResults(list);

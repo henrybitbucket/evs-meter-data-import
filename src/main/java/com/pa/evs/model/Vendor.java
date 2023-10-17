@@ -7,6 +7,8 @@ import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.Table;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -41,6 +43,7 @@ public class Vendor extends BaseEntity {
     @Column(name = "key_path")
     private String keyPath;
     
+    @JsonIgnore
 	@Lob
 	@Column(name = "key_content")
     private Blob keyContent;
@@ -51,6 +54,7 @@ public class Vendor extends BaseEntity {
     @Column(name = "csr_path")
     private String csrPath;
     
+    @JsonIgnore
 	@Lob
 	@Column(name = "csr_blob")
     private Blob csrBlob;

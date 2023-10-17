@@ -209,10 +209,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Value("${portal.pa.ca.request.url}") private String caRequestUrl;
 
-	@Value("${evs.pa.privatekey.path}") private String pkPath;
-
-	@Value("${evs.pa.master.privatekey.path}") private String masterPkPath;
-
 	@Value("${evs.pa.csr.folder}") private String csrFolder;
 
 	@Value("${s3.access.expireTime:15}") private long expireTime;
@@ -1147,6 +1143,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			int status = 0;
 			if(validateSign) {
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+				AppProps.getContext().getBean(this.getClass()).updateDeviceCsrInfo(opt.get());
 				boolean verifySign = false;
 				if (opt.isPresent()) {
 					verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
@@ -1194,6 +1191,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				Map<String, Object> payload = (Map<String, Object>) data.get("payload");
 				boolean verifySign = false;
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
+				AppProps.getContext().getBean(this.getClass()).updateDeviceCsrInfo(opt.get());
 				if (opt.isPresent()) {
 					verifySign = RSAUtil.verifySign(csrFolder + log.getUid() + ".csr",
 							new ObjectMapper().writeValueAsString(payload), (String) header.get("sig"), opt.get().getDeviceCsrSignatureAlgorithm());
@@ -1273,6 +1271,28 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
+	}
+	
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void updateDeviceCsrInfo(CARequestLog dv) {
+		if (dv == null) {
+			return;
+		}
+		try {
+			File f = new File(csrFolder + dv.getUid() + ".csr");
+			if (dv != null && StringUtils.isBlank(dv.getDeviceCsrSignatureAlgorithm()) && f.exists()) {
+				dv.setDeviceKeyType(RSAUtil.getKeyType(f.getAbsolutePath()));
+				dv.setDeviceCsrSignatureAlgorithm(RSAUtil.getSignatureAlgorithm(f.getAbsolutePath()));
+			}
+			caRequestLogRepository.save(dv);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+	}
+	
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void updateDeviceCsrInfo(String uid) {
+		updateDeviceCsrInfo(caRequestLogRepository.findByUid(uid).orElse(null));
 	}
 
 	private void updateLastSubscribe(Log log) {

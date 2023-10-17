@@ -74,6 +74,8 @@ import com.pa.evs.sv.LogService;
 import com.pa.evs.sv.MeterCommissioningReportService;
 import com.pa.evs.sv.P1OnlineStatusService;
 import com.pa.evs.sv.VendorService;
+import com.pa.evs.sv.impl.EVSPAServiceImpl;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.RSAUtil;
@@ -104,9 +106,6 @@ public class CommonController {
 	@Autowired AddressService addressService;
 	
 	@Autowired AddressLogService addressLogService;
-
-	@Value("${evs.pa.privatekey.path}")
-	private String pkPath;
 
     @Value("${evs.pa.mqtt.timeout:30}")
 	private long otaTimeout;
@@ -217,6 +216,8 @@ public class CommonController {
             if (!ca.isPresent()) {
                 return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message("device not exists!").build());
             }
+            
+            AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.get());
             
             Long mid = evsPAService.nextvalMID(ca.get().getVendor());
             command.setUid(ca.get().getUid());
@@ -951,25 +952,27 @@ public class CommonController {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     
-    //curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=1" -F "signatureAlgorithm=" -F "keyType=" -F"csr=@D:/workspace/PA/evs-meter-data-import/src/main/resources/sv-ca/server.csr" -F"prkey=@D:/workspace/PA/evs-meter-data-import/src/main/resources/sv-ca/server.key" http://localhost:7770/api/update-vendor-master-key -H "Authorization:Bearer ..."
+    //curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=1" -F "signatureAlgorithm=" -F "keyType=" -F "csr=@/home/henry/server/server.csr" -F "prkey=@/home/henry/server/server.key" -H "Authorization: Bearer m3a3ec06e6-d8b7-4e85-aa25-0fb5a3e95ee1" "http://localhost:7770/api/update-vendor-master-key"
 	@PostMapping("/api/update-vendor-master-key")
 	public ResponseEntity<Object> updateVendorMasterKey(HttpServletRequest req, HttpServletResponse res,
 			@RequestParam(required = true) Long vendorId, @RequestParam(required = false) String signatureAlgorithm,
 			@RequestParam(required = false) String keyType, @RequestParam MultipartFile csr,
 			@RequestParam MultipartFile prkey) {
+		File fileCsr = null;
+		File fileKey = null;
 		try {
-			File fileScr = null;
+			
 			if (csr != null) {
-				fileScr = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_csrTemp_"
+				fileCsr = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_csrTemp_"
 						+ csr.getOriginalFilename());
-				try (OutputStream outStream = new FileOutputStream(fileScr.getPath())) {
+				try (OutputStream outStream = new FileOutputStream(fileCsr.getPath())) {
 					outStream.write(csr.getBytes());
 				}
 			}
-			if (fileScr != null && StringUtils.isBlank(signatureAlgorithm)) {
-				signatureAlgorithm = RSAUtil.getSignatureAlgorithm(fileScr.getPath().replaceAll("\\\\", "/"));
+			if (fileCsr != null && StringUtils.isBlank(signatureAlgorithm)) {
+				signatureAlgorithm = RSAUtil.getSignatureAlgorithm(fileCsr.getPath().replaceAll("\\\\", "/"));
 			}
-			File fileKey = null;
+			
 			if (prkey != null) {
 				fileKey = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_keyTemp_"
 						+ prkey.getOriginalFilename());
@@ -978,12 +981,11 @@ public class CommonController {
 				}
 			}
 			if (fileKey != null && StringUtils.isBlank(keyType)) {
-				keyType = RSAUtil.getKeyType(fileKey.getPath().replaceAll("\\\\", "/"));
+				keyType = RSAUtil.getKeyType(fileCsr.getPath().replaceAll("\\\\", "/"));
 			}
-			if (fileScr != null && fileKey != null && RSAUtil.validateServerKeyAndCsrKey(
-					fileKey.getPath().replaceAll("\\\\", "/"), fileScr.getPath().replaceAll("\\\\", "/"))) {
-				Files.deleteIfExists(fileScr.toPath());
-				Files.deleteIfExists(fileKey.toPath());
+			if (fileCsr != null && fileKey != null && RSAUtil.validateServerKeyAndCsrKey(
+					fileKey.getPath().replaceAll("\\\\", "/"), fileCsr.getPath().replaceAll("\\\\", "/"))) {
+
 				vendorService.updateVendorMasterKey(vendorId, signatureAlgorithm, keyType, csr, prkey);
 				return ResponseEntity
 						.<Object>ok(ResponseDto.<Object>builder().success(true).message("updated successfuly").build());
@@ -994,10 +996,19 @@ public class CommonController {
 		} catch (Exception e) {
 			return ResponseEntity
 					.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+		} finally {
+			try {
+				Files.deleteIfExists(fileCsr.toPath());
+				Files.deleteIfExists(fileKey.toPath());
+			} catch (Exception e2) {/**/}
 		}
 	}
 	
-	//curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=1" http://localhost:7770/api/refresh-vendor-certificate -H "Authorization:Bearer ..."
+	//curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=1"  -H "Authorization: Bearer m3a3ec06e6-d8b7-4e85-aa25-0fb5a3e95ee1" http://localhost:7770/api/refresh-vendor-certificate
+	//curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=2"  -H "Authorization: Bearer m3a3ec06e6-d8b7-4e85-aa25-0fb5a3e95ee1" http://localhost:7770/api/refresh-vendor-certificate
+	//curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=3"  -H "Authorization: Bearer m3a3ec06e6-d8b7-4e85-aa25-0fb5a3e95ee1" http://localhost:7770/api/refresh-vendor-certificate
+	//curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=4"  -H "Authorization: Bearer m3a3ec06e6-d8b7-4e85-aa25-0fb5a3e95ee1" http://localhost:7770/api/refresh-vendor-certificate
+	//curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=5"  -H "Authorization: Bearer m3a3ec06e6-d8b7-4e85-aa25-0fb5a3e95ee1" http://localhost:7770/api/refresh-vendor-certificate
 	@PostMapping("/api/refresh-vendor-certificate")
 	public ResponseEntity<Object> refreshVendorCertificate(HttpServletRequest req, HttpServletResponse res,
 			@RequestParam(required = true) Long vendorId) {

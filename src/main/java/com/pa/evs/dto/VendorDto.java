@@ -1,15 +1,24 @@
 package com.pa.evs.dto;
 
+import javax.persistence.Column;
+
 import com.pa.evs.model.Vendor;
 
+/**
+ * @author tonyk
+ *
+ */
 public class VendorDto {
 
 	private Long id;
 	private String name;
 	private String descrption;
-	
-	public VendorDto() {}
-	
+	private String signatureAlgorithm;
+	private String keyType;
+
+	public VendorDto() {
+	}
+
 	public VendorDto(Vendor vendor) {
 		this.id = vendor.getId();
 		this.name = vendor.getName();
@@ -39,4 +48,21 @@ public class VendorDto {
 	public void setDescrption(String descrption) {
 		this.descrption = descrption;
 	}
+
+	public String getSignatureAlgorithm() {
+		return signatureAlgorithm;
+	}
+
+	public void setSignatureAlgorithm(String signatureAlgorithm) {
+		this.signatureAlgorithm = signatureAlgorithm;
+	}
+
+	public String getKeyType() {
+		return keyType;
+	}
+
+	public void setKeyType(String keyType) {
+		this.keyType = keyType;
+	}
+
 }

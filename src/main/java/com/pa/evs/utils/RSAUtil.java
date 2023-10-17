@@ -376,12 +376,12 @@ public class RSAUtil {
 			if (str.contains("ASN1 OID:")) {
 				Matcher m = Pattern.compile("ASN1 OID: ([a-zA-Z0-9]+)").matcher(str);
 				m.find();
-				return m.group(1).trim();
+				return (str.contains("NIST CURVE") ? "EC-" : "") +  m.group(1).trim();
 			}
 			if (str.contains("RSA Public-Key")) {
 				Matcher m = Pattern.compile("RSA Public-Key: \\(([0-9]+) ").matcher(str);
 				m.find();
-				return "rsa" + m.group(1).trim();
+				return "RSA" + m.group(1).trim();
 			}
 			return null;
 		} catch (Exception e) {
@@ -433,6 +433,16 @@ public class RSAUtil {
 	}
 
 	public static String initSignedRequest(String privateKeyPath, String payload, String signatureAlgorithm) throws IOException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+		
+		LOG.debug("original initSignedRequest, privateKeyPath: {}, payload: {}, signatureAlgorithm: {}", privateKeyPath, payload, signatureAlgorithm);
+		
+		if (!"true".equalsIgnoreCase(AppProps.get("USE_VENDOR_KEY", "false"))) {
+			signatureAlgorithm = "SHA256withECDSA";
+			privateKeyPath = AppProps.get("evs.pa.privatekey.path"); 
+		}
+		
+		LOG.debug("initSignedRequest, privateKeyPath: {}, payload: {}, signatureAlgorithm: {}", privateKeyPath, payload, signatureAlgorithm);
+		
 		Base64.Encoder encoder = Base64.getEncoder();
 		PEMReader pemReader = new PEMReader(new FileReader(privateKeyPath));
 		Security.addProvider(new BouncyCastleProvider());
@@ -444,7 +454,11 @@ public class RSAUtil {
 	}
 
 	public static boolean verifySign(String csrPath, String payload, String sig, String signatureAlgorithm) {
-		LOG.debug("VerifySign, csrPath: {}, payload: {}, signHex: {}", csrPath, payload, sig);
+		if (!"true".equalsIgnoreCase(AppProps.get("USE_VENDOR_KEY", "false"))) {
+			signatureAlgorithm = "SHA256withECDSA";
+		}
+		
+		LOG.debug("VerifySign, csrPath: {}, payload: {}, signHex: {}, signatureAlgorithm: {}", csrPath, payload, sig, signatureAlgorithm);
 		try(FileReader fileReader = new FileReader(csrPath);
 			PemReader pemReader = new PemReader(fileReader)) {
 			PKCS10CertificationRequest csr = new PKCS10CertificationRequest(pemReader.readPemObject().getContent());
