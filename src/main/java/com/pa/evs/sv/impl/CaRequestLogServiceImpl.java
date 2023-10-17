@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
@@ -1338,5 +1340,48 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	RelayStatusLogDto dto = new RelayStatusLogDto().build(rl);
         	pagin.getResults().add(dto);
         });
+	}
+	
+	@Override
+	@Transactional
+	public List<Map<String, String>> batchCoupleDevices(List<Map<String, String>> listInput) {
+		
+		if (!listInput.isEmpty()) {
+			listInput.forEach(item -> {
+				String msn = item.get("msn");
+				String sn = item.get("sn");
+				
+				if (StringUtils.isBlank(sn) || StringUtils.isBlank(msn)) {
+					item.put("error", "Both MSN and SN are required!");
+				} else {
+					if (BooleanUtils.isTrue(caRequestLogRepository.existsByMsn(msn))) {
+		                item.put("error", "Invalid MSN, MSN is being linked!");
+		            } else {
+		            	Optional<CARequestLog> caOpt = caRequestLogRepository.findBySn(sn);
+						if (!caOpt.isPresent()) {
+							item.put("error", "MCU SN(QR Code) doesn't exist!");
+						} else {
+							CARequestLog ca = caOpt.get();
+		        			ca.setMsn(msn);
+		        			ca.setType(DeviceType.COUPLED);
+		    				ca.setCoupledDatetime(System.currentTimeMillis());
+		    				ca.setCoupledUser(SecurityUtils.getUsername());
+		        			caRequestLogRepository.save(ca);
+		        			caRequestLogRepository.flush();
+		        			
+							try {
+			        			updateCacheUidMsnDevice(ca.getUid(), "update");
+			        			DeviceRemoveLog log = DeviceRemoveLog.build(ca);
+			    				AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(log, null, "COUPLE MSN", null);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+		            }	
+				}
+			});
+			return listInput.stream().filter(item -> item.get("error") != null).collect(Collectors.toList());
+		}
+		return Collections.emptyList();
 	}
 }
