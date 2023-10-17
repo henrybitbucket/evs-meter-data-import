@@ -951,6 +951,7 @@ public class CommonController {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     
+    //curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=1" -F "signatureAlgorithm=" -F "keyType=" -F"csr=@D:/workspace/PA/evs-meter-data-import/src/main/resources/sv-ca/server.csr" -F"prkey=@D:/workspace/PA/evs-meter-data-import/src/main/resources/sv-ca/server.key" http://localhost:7770/api/update-vendor-master-key -H "Authorization:Bearer ..."
 	@PostMapping("/api/update-vendor-master-key")
 	public ResponseEntity<Object> updateVendorMasterKey(HttpServletRequest req, HttpServletResponse res,
 			@RequestParam(required = true) Long vendorId, @RequestParam(required = false) String signatureAlgorithm,
@@ -995,7 +996,8 @@ public class CommonController {
 					.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
 		}
 	}
-
+	
+	//curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=1" http://localhost:7770/api/refresh-vendor-certificate -H "Authorization:Bearer ..."
 	@PostMapping("/api/refresh-vendor-certificate")
 	public ResponseEntity<Object> refreshVendorCertificate(HttpServletRequest req, HttpServletResponse res,
 			@RequestParam(required = true) Long vendorId) {

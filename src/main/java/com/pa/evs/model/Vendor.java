@@ -45,7 +45,7 @@ public class Vendor extends BaseEntity {
 	@Column(name = "key_content")
     private Blob keyContent;
 	
-    @Column(name = "certificate")
+    @Column(name = "certificate", length = 20000)
     private String certificate;
     
     @Column(name = "csr_path")
