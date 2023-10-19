@@ -609,15 +609,21 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	}
 
 	@Override
-	public Object getP2Jobs(String hasSubmitReport) {
+	public Object getP2Jobs(String hasSubmitReport, String msn) {
 		
 		List<P2JobDto> dtos = new ArrayList<>();
 		if ("true".equalsIgnoreCase(hasSubmitReport)) {
 			p2JobRepository.findAllByJobByAndHasReport(SecurityUtils.getEmail())
 			.forEach(job -> dtos.add(P2JobDto.from(job)));
 		} else {
-			p2JobRepository.findAllByJobBy(SecurityUtils.getEmail())
-			.forEach(job -> dtos.add(P2JobDto.from(job)));
+			if (StringUtils.isNotBlank(msn)) {
+				p2JobRepository.findAllByJobByAndMsn(SecurityUtils.getEmail(), msn.trim().toLowerCase())
+				.forEach(job -> dtos.add(P2JobDto.from(job)));
+			} else {
+				p2JobRepository.findAllByJobBy(SecurityUtils.getEmail())
+				.forEach(job -> dtos.add(P2JobDto.from(job)));
+			}
+
 		}
 		return dtos;
 	}

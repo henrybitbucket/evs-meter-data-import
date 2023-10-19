@@ -888,11 +888,14 @@ public class CommonController {
 	}
     
     @GetMapping("/api/p2/job-no/{jobNo}/jobs")
-	public ResponseEntity<Object> getP2Jobs(HttpServletResponse response, @PathVariable(required = true) String jobNo, @RequestParam(required = false) String hasSubmitReport) throws Exception {
+	public ResponseEntity<Object> getP2Jobs(
+			HttpServletResponse response, @PathVariable(required = true) String jobNo, 
+			@RequestParam(required = false) String hasSubmitReport, 
+			@RequestParam(required = false) String msn) throws Exception {
     	try {
     		
     		if ("all".equalsIgnoreCase(jobNo)) {
-    			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(meterCommissioningReportService.getP2Jobs(hasSubmitReport)).build());
+    			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(meterCommissioningReportService.getP2Jobs(hasSubmitReport, msn)).build());
     		}
     		if ("NA".equalsIgnoreCase(jobNo)) {
     			jobNo = null;
