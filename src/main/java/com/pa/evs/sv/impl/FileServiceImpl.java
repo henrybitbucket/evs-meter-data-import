@@ -73,14 +73,16 @@ public class FileServiceImpl implements FileService {
 					throw new RuntimeException("File size error (limit: " + limit + " bytes)");
 				}
 				Long now = System.currentTimeMillis();
-				String fileName = ("-").concat(now.toString()).concat("-").concat(file.getOriginalFilename());
+				String fileName = now.toString().concat("-").concat(file.getOriginalFilename());
 
-				Optional<CARequestLog> caOpt = caRequestLogRepository.findByUid(uid);
+				if (StringUtils.isNotBlank(uid)) {
+					Optional<CARequestLog> caOpt = caRequestLogRepository.findByUid(uid);
 
-				if (caOpt.isPresent()) {
-					fileName = caOpt.get().getSn().concat(fileName);
-				} else {
-					fileName = uid.concat(fileName);
+					if (caOpt.isPresent()) {
+						fileName = caOpt.get().getSn().concat("-").concat(fileName);
+					} else {
+						fileName = uid.concat("-").concat(fileName);
+					}
 				}
 
 				evsPAService.upload(fileName, file.getInputStream(), file.getContentType(), bucketName);

@@ -734,29 +734,20 @@ public class CommonController {
     
     @PostMapping("api/p1-files-upload")
     public ResponseEntity<?> uploadP1Files(HttpServletRequest req, HttpServletResponse res,
-    		@RequestParam("files") List<MultipartFile> files,
-    		@RequestParam(required = false) List<String> uids,
-    		@RequestParam(required = false) List<String> types,
-			@RequestParam(required = false) List<String> altNames,
-			@RequestParam(required = false) List<String> descs) {
+    		@RequestParam("files") MultipartFile[] files,
+    		@RequestParam(required = false) String uid,
+    		@RequestParam(required = false) String type,
+			@RequestParam(required = false) String altName,
+			@RequestParam(required = false) String desc) {
     	
     	LOG.debug("Invoke P1 fileUpload");
     	List<Map<String, String>> errors = new ArrayList<>();
-        for (int i = 0; i < files.size(); i++) {
-            try {
-            	MultipartFile[] mFiles = new MultipartFile[1];
-            	mFiles[0] = files.get(i);
-                fileService.saveFile(mFiles, types.get(i), altNames.get(i), uids.get(i), descs.get(i), p1ProvisioningBucketName);
-            } catch (Exception e) {
-            	Map<String, String> map = new LinkedHashMap<>();
-            	map.put("uid", uids.get(i));
-            	map.put("fileName", files.get(i).getOriginalFilename());
-            	map.put("error", e.getMessage());
-            	errors.add(map);
-				LOG.info("Error on upload file: {}, uid: {}", files.get(i).getOriginalFilename(), uids.get(i));
-				e.printStackTrace();
-			}
-        }
+    	try {
+            fileService.saveFile(files, type, altName, uid, desc, p1ProvisioningBucketName);
+        } catch (Exception e) {
+			e.printStackTrace();
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+		}
         
         if (!errors.isEmpty()) {
         	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).response(errors).build());
