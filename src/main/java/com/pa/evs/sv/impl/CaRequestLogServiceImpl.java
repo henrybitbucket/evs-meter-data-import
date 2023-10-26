@@ -168,6 +168,18 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		return caRequestLogRepository.findByMsn(msn);
 	}
 
+	@Override
+	@Transactional
+    public void updateVendor(String msn, Long vendorId) throws Exception {
+    	LOG.info("NMM updateVendor " + msn + " / " + vendorId);
+    	Vendor vendor = vendorRepository.findById(vendorId).orElseThrow(() -> new RuntimeException("vendor not found"));
+    	CARequestLog dv = caRequestLogRepository.findByMsn(msn).orElseThrow(() -> new RuntimeException("vendor not found"));
+    	if (dv.getVendor().getId().longValue() != vendor.getId().longValue()) {
+    		dv.setVendor(vendor);
+    		caRequestLogRepository.save(dv);
+    	}
+    }
+
     @Override
     public void save(CaRequestLogDto dto) throws Exception {
         CARequestLog ca = null;

@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -104,6 +105,20 @@ public class CaRequestLogController {
     public ResponseDto<?> save(HttpServletRequest httpServletRequest, @RequestBody CaRequestLogDto dto) {
         try {
             caRequestLogService.save(dto);
+            return ResponseDto.<Object>builder().success(true).build();
+        } catch (Exception e) {
+            return ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build();
+        }
+    }
+    
+    @PostMapping("/api/update-device-vendor/{msn}/{vendorId}")
+    public ResponseDto<?> updateVendor(
+    		HttpServletRequest httpServletRequest,
+    		@PathVariable String msn,
+    		@PathVariable Long vendorId
+    		) {
+        try {
+            caRequestLogService.updateVendor(msn, vendorId);;
             return ResponseDto.<Object>builder().success(true).build();
         } catch (Exception e) {
             return ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build();

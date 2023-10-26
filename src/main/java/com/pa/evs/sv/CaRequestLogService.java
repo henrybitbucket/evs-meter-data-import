@@ -68,4 +68,6 @@ public interface CaRequestLogService {
 	void getRelayStatusLogs(PaginDto<RelayStatusLogDto> pagin);
 	
 	List<Map<String, String>> batchCoupleDevices(List<Map<String, String>> listInput);
+
+	void updateVendor(String msn, Long vendorId) throws Exception;
 }
