@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
@@ -55,6 +56,9 @@ public class FileServiceImpl implements FileService {
 	@Value("${s3.photo.bucket.name}")
 	private String photoBucketName;
 	
+	@Value("${s3.p1.provisioning.bucket.name}")
+	private String p1ProvisioningBucketName;
+	
 	@Value("${evs.pa.fakeS3Url:false}")
 	private boolean fakeS3Url;
 	
@@ -63,26 +67,48 @@ public class FileServiceImpl implements FileService {
 	
 	@Override
 	@Transactional
-	public void saveFile(MultipartFile[] files, String type, String altName, String uid, String description, String bucketName) {
+	public void saveFile(MultipartFile[] files, String[] types, String[] altNames, String[] uids, String[] descriptions, String[] replaceByOriginalNames, String bucketName) {
 
-		for (MultipartFile file : files) {
+		for (int i = 0; i < files.length; i++) {
+			
+			MultipartFile file = files[i];
+			String uid = null, type = null, description = null, altName = null, replaceByOriginalName = null;
+			if (types != null && types.length > i) {
+				type = types[i];
+			}
+			if (altNames != null && altNames.length > i) {
+				altName = altNames[i];
+			}
+			if (uids != null && uids.length > i) {
+				uid = uids[i];
+			}
+			if (descriptions != null && descriptions.length > i) {
+				description = descriptions[i];
+			}
+			if (replaceByOriginalNames != null && replaceByOriginalNames.length > i) {
+				replaceByOriginalName = replaceByOriginalNames[i];
+			}
+			
+			if ("true".equalsIgnoreCase(replaceByOriginalName + "")) {
+				LOG.info("replace original file " + file.getOriginalFilename());
+				sFileRepository.deleteByTypeAndOriginalName(type, file.getOriginalFilename());
+			}
 			
 			long limit = Long.parseLong(AppProps.get("MAX_FILE_SIZE_LIMIT", "10000000"));
 			try {
 				if (file.getSize() > limit) {
 					throw new RuntimeException("File size error (limit: " + limit + " bytes)");
 				}
-				Long now = System.currentTimeMillis();
-				String fileName = now.toString().concat("-").concat(file.getOriginalFilename());
+				long now = System.currentTimeMillis();
+				String fileName = StringUtils.isBlank(altName) ? file.getOriginalFilename() : altName;
 
 				if (StringUtils.isNotBlank(uid)) {
 					Optional<CARequestLog> caOpt = caRequestLogRepository.findByUid(uid);
-
 					if (caOpt.isPresent()) {
-						fileName = caOpt.get().getSn().concat("-").concat(fileName);
-					} else {
-						fileName = uid.concat("-").concat(fileName);
+						fileName = caOpt.get().getSn() + "-" + now + "-" + fileName;
 					}
+				} else {
+					uid = UUID.randomUUID().toString();
 				}
 
 				evsPAService.upload(fileName, file.getInputStream(), file.getContentType(), bucketName);
@@ -167,12 +193,16 @@ public class FileServiceImpl implements FileService {
 	        String uid = (String) map.get("uid");
 	        String type = (String) map.get("type");
 	        String altName = (String) map.get("altName");
+	        String originalName = (String) map.get("originalName");
 	        
 			if (StringUtils.isNotBlank(uid)) {
 				sqlCommonBuilder.append(" uid like '%" + uid + "%' AND ");
 			}
 			if (StringUtils.isNotBlank(type)) {
 				sqlCommonBuilder.append(" type like '%" + type + "%' AND ");
+			}
+			if (StringUtils.isNotBlank(originalName)) {
+				sqlCommonBuilder.append(" originalName = '" + originalName + "' AND ");
 			}
 			if (StringUtils.isNotBlank(altName)) {
 				sqlCommonBuilder.append(" altName like '%" + altName + "%' AND ");
@@ -244,7 +274,7 @@ public class FileServiceImpl implements FileService {
 			response.setHeader("Cache-Control", "max-age=86400, public");	
 		}
 		
-		String s3FileUrl = getS3FileUrl(file.getAltName() + extension);
+		String s3FileUrl = getS3FileUrl(file.getAltName() + extension, "P1_PROVISIONING".equalsIgnoreCase(file.getType()) ? p1ProvisioningBucketName : photoBucketName);
 		
 		response.setStatus(302);
 		response.setHeader("Location", s3FileUrl);
@@ -273,13 +303,13 @@ public class FileServiceImpl implements FileService {
 			response.setHeader("Cache-Control", "max-age=86400, public");	
 		}
 		
-		String s3FileUrl = getS3FileUrl(file.getAltName());
+		String s3FileUrl = getS3FileUrl(file.getAltName(), "P1_PROVISIONING".equalsIgnoreCase(file.getType()) ? p1ProvisioningBucketName : photoBucketName);
 		
 		response.setStatus(302);
 		response.setHeader("Location", s3FileUrl);
 	}
 	
-	public String getS3FileUrl(String fileName) {
+	public String getS3FileUrl(String fileName, String photoBucketName) {
 		if (fakeS3Url) {
 			LOG.debug("Using fake s3 url");
 			return "http://gridhutautomation.com/pa-meter-2.bin";

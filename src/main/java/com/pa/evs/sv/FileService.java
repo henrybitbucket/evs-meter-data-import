@@ -12,7 +12,7 @@ import com.pa.evs.model.SFile;
 
 public interface FileService {
 
-	void saveFile(MultipartFile[] files, String type, String altName, String uid, String description, String bucketName);
+	void saveFile(MultipartFile[] files, String type[], String altName[], String uid[], String description[], String[] replaceByOriginalNames, String bucketName);
 
 	Object getFiles(String types, String altNames, String uids);
 

@@ -8,4 +8,6 @@ import com.pa.evs.model.SFile;
 @Repository
 public interface SFileRepository extends JpaRepository<SFile, Long> {
 
+	void deleteByTypeAndOriginalName(String type, String originalFilename);
+
 }

@@ -721,29 +721,35 @@ public class CommonController {
     
     // curl -X POST -H "Content-Type: multipart/form-data" -F "uid=BIERWXAABMAKWAEAAA" -F "type=MMS_P2_TEST" -F "altName=P2_TEST_BIERWXAABMAKWAEAAA" -F "files=@C:/Users/tonyk/Downloads/P2_meter_data.PNG" http://localhost:7770/api/file-upload
     @PostMapping("/api/file-upload")
-	public Object fileUpload(@RequestParam MultipartFile[] files, 
+	public Object fileUpload(@RequestParam MultipartFile files, 
 			HttpServletRequest req, HttpServletResponse res,
 			@RequestParam(required = false) String type,
 			@RequestParam(required = false) String altName,
 			@RequestParam(required = false) String desc,
 			@RequestParam(required = true) String uid) throws IOException {
     	LOG.debug("Invoke fileUpload uid: {}", uid);
-    	fileService.saveFile(files, type, altName, uid, desc, photoBucketName);
+    	fileService.saveFile(new MultipartFile[] {files}, new String[] {type}, new String[] {altName}, new String[] {uid}, new String[] {desc}, req.getParameterValues("replaceByOriginalName"), photoBucketName);
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
 	}
     
     @PostMapping("api/p1-files-upload")
     public ResponseEntity<?> uploadP1Files(HttpServletRequest req, HttpServletResponse res,
     		@RequestParam("files") MultipartFile[] files,
-    		@RequestParam(required = false) String uid,
-    		@RequestParam(required = false) String type,
-			@RequestParam(required = false) String altName,
-			@RequestParam(required = false) String desc) {
+    		@RequestParam(required = false) String[] uid,
+    		@RequestParam(required = false) String[] type,
+			@RequestParam(required = false) String[] altName,
+			@RequestParam(required = false) String[] desc) {
     	
     	LOG.debug("Invoke P1 fileUpload");
     	List<Map<String, String>> errors = new ArrayList<>();
     	try {
-            fileService.saveFile(files, type, altName, uid, desc, p1ProvisioningBucketName);
+            fileService.saveFile(files, 
+            		req.getParameterValues("type"), 
+            		req.getParameterValues("altName"), 
+            		req.getParameterValues("uid"), 
+            		req.getParameterValues("desc"),
+            		req.getParameterValues("replaceByOriginalName"),
+            		p1ProvisioningBucketName);
         } catch (Exception e) {
 			e.printStackTrace();
 			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
