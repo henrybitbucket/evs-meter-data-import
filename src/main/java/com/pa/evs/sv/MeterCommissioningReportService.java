@@ -16,7 +16,7 @@ public interface MeterCommissioningReportService {
 	void saveP2Job(P2JobDto dto);
 	void save(List<MeterCommissioningReportDto> dtos);
 	void deleteP2Job(String jobNo);
-	Object getP2Jobs(String hasSubmitReport, String msn, String worker);
+	Object getP2Jobs(String hasSubmitReport, String msn, String worker, String constractNo);
 	void addP2Worker(String manager, List<String> workers);
 	List<Object> getP2WorkerByManager(String manager);
 	List<Object> getP2Managers();

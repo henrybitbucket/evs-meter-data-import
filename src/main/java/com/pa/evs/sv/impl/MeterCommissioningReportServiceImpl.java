@@ -703,8 +703,9 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		p2JobRepository.deleteByJobByAndName(user, jobNo);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public Object getP2Jobs(String hasSubmitReport, String msn, String worker) {
+	public Object getP2Jobs(String hasSubmitReport, String msn, String worker, String contractOrder) {
 		
 		if (!SecurityUtils.getEmail().equalsIgnoreCase(worker) && !SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_MANAGER", "STAFF")) {
 			throw new RuntimeException("Access denied!");
@@ -712,8 +713,25 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		if (!SecurityUtils.hasAnyRole(userRepository.findByEmail(worker), "P_P2_WORKER")) {
 			throw new RuntimeException("Access denied!");
 		}
-		List<P2JobDto> dtos = new ArrayList<>();
+		
+		StringBuilder qr = new StringBuilder("SELECT job FROM P2Job job ");
+		
+		qr.append(" WHERE 1=1 ");
+		qr.append(" AND job.jobBy = '" + worker + "' ");
 		if ("true".equalsIgnoreCase(hasSubmitReport)) {
+			qr.append(" AND (exists (SELECT 1 FROM MeterCommissioningReport rp WHERE (job.jobBy = rp.jobBy and job.name = rp.jobSheetNo and rp.isLatest = true))) ");
+		}
+		if (StringUtils.isNotBlank(msn)) {
+			qr.append(" AND (exists (SELECT 1 FROM P2JobData jobData WHERE jobData.jobName = job.name and jobData.jobBy = job.jobBy and lower(jobData.msn) like '%" + msn.toLowerCase().trim()+ "%')) ");
+		}
+		if (StringUtils.isNotBlank(contractOrder)) {
+			qr.append(" AND lower(job.contractOrder) like '%" + contractOrder.toLowerCase().trim() + "%' ");
+		}
+		List<P2JobDto> dtos = new ArrayList<>();
+		em.createQuery(qr.toString()).getResultList()
+		.forEach(job -> dtos.add(P2JobDto.from((P2Job) job)));
+		
+		/*if ("true".equalsIgnoreCase(hasSubmitReport)) {
 			p2JobRepository.findAllByJobByAndHasReport(worker)
 			.forEach(job -> dtos.add(P2JobDto.from(job)));
 		} else {
@@ -725,7 +743,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 				.forEach(job -> dtos.add(P2JobDto.from(job)));
 			}
 
-		}
+		}*/
 		return dtos;
 	}
 

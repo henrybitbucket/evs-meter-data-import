@@ -889,12 +889,13 @@ public class CommonController {
 	public ResponseEntity<Object> getP2Jobs(
 			HttpServletResponse response, @PathVariable(required = true) String jobNo, 
 			@RequestParam(required = false) String hasSubmitReport,
+			@RequestParam(required = false) String contractOrder,
 			@RequestParam(required = true) String p2Worker,
 			@RequestParam(required = false) String msn) throws Exception {
     	try {
     		
     		if ("all".equalsIgnoreCase(jobNo)) {
-    			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(meterCommissioningReportService.getP2Jobs(hasSubmitReport, msn, p2Worker)).build());
+    			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(meterCommissioningReportService.getP2Jobs(hasSubmitReport, msn, p2Worker, contractOrder)).build());
     		}
     		if ("NA".equalsIgnoreCase(jobNo)) {
     			jobNo = null;
