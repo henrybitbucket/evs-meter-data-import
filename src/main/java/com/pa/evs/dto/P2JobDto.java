@@ -38,6 +38,10 @@ public class P2JobDto {
 	
 	private String commentSubmit;
 	
+	private String managerSubmit;
+	
+	private String contractOrder;
+	
 	@Builder.Default
 	private List<P2JobDataDto> items = new ArrayList<>();
 	
@@ -52,6 +56,8 @@ public class P2JobDto {
 				.commentSubmit(fr.getCommentSubmit())
 				.timeSubmit(fr.getTimeSubmit())
 				.userSubmit(fr.getUserSubmit())
+				.managerSubmit(fr.getManagerSubmit())
+				.contractOrder(fr.getContractOrder())
 				.build();
 	}
 }

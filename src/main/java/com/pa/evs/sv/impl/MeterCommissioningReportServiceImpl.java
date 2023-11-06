@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -27,14 +28,18 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.MeterCommissioningReport;
 import com.pa.evs.model.P2Job;
 import com.pa.evs.model.P2JobData;
+import com.pa.evs.model.P2Worker;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.MeterCommissioningReportRepository;
 import com.pa.evs.repository.P2JobDataRepository;
 import com.pa.evs.repository.P2JobRepository;
+import com.pa.evs.repository.P2WorkerRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.sv.MeterCommissioningReportService;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.SecurityUtils;
+import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.TimeZoneHolder;
 
 @Service
@@ -58,6 +63,9 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	@Autowired
 	P2JobRepository p2JobRepository;
 	
+	@Autowired
+	P2WorkerRepository p2WorkerRepository;
+	
 	ObjectMapper mapper = new ObjectMapper();
 
 //	set is_latest = true where m1.id in (
@@ -77,6 +85,10 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	@Transactional
 	@Override
 	public void save(MeterCommissioningReportDto dto) {
+		
+		if (!SecurityUtils.getEmail().equalsIgnoreCase(dto.getUserSubmit()) && !SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_MANAGER")) {
+			throw new RuntimeException("Access denied!");
+		}
 		
 		MeterCommissioningReport mcr = new MeterCommissioningReport();
 		mcr.setCid(dto.getCid());
@@ -101,6 +113,8 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		mcr.setJobSheetNo(dto.getJobSheetNo());
 		mcr.setJobBy(dto.getJobBy());
 		mcr.setCoupledUser(dto.getCoupledUser());
+		mcr.setManagerSubmit(dto.getManagerSubmit());
+		mcr.setContractOrder(dto.getContractOrder());
 		em.createQuery("UPDATE MeterCommissioningReport set isLatest = false where uid = '" + mcr.getUid() + "'").executeUpdate();
 		em.flush();
 		
@@ -118,7 +132,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 			caRequestLogRepository.save(caOpt.get());
 		}
 		
-		String user = SecurityUtils.getEmail();
+		String user = dto.getUserSubmit();
 		Optional<P2Job> p2JobOpt = p2JobRepository.findByJobByAndName(user, dto.getJobSheetNo());
 		
 		if (p2JobOpt.isPresent()) {
@@ -126,8 +140,72 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 			p2Job.setCommentSubmit(dto.getCommentSubmit());
 			p2Job.setTimeSubmit(dto.getTimeSubmit());
 			p2Job.setUserSubmit(dto.getUserSubmit());
+			p2Job.setManagerSubmit(dto.getManagerSubmit());
 			p2JobRepository.save(p2Job);
 		}
+	}
+	
+	@Override
+	@Transactional
+	public void addP2Worker(String manager, List<String> workers) {
+		String loggerIn = SecurityUtils.getEmail();
+		if (!SecurityUtils.hasAnyRole(userRepository.findByEmail(loggerIn), AppProps.get("P_P2_WORKER_ADD_WORKER_ROLE", "P_P2_MANAGER").split(","))) {
+			throw new RuntimeException("Access denied!");
+		}		
+		Users uManager = Optional.<Users>ofNullable(userRepository.findByEmail(manager)).orElseThrow(() -> new RuntimeException("user p2_magager not found!"));
+		if (!SecurityUtils.hasAnyRole(uManager, "P_P2_MANAGER")) {
+			throw new RuntimeException("user p2_magager not found!");
+		}
+		for (String worker : workers) {
+			Users uWorker = Optional.<Users>ofNullable(userRepository.findByEmail(worker)).orElseThrow(() -> new RuntimeException("user p2_worker not found(" + worker + ")!"));
+			if (!SecurityUtils.hasAnyRole(uWorker, "P_P2_WORKER")) {
+				throw new RuntimeException("user p2_worker not found(" + worker + ")!");
+			}
+			P2Worker p2Worker = p2WorkerRepository.findByManagerAndEmail(manager, worker).orElse(new P2Worker());
+			if (p2Worker.getId() != null) {
+				throw new RuntimeException("Worker already exists!");
+			}
+			p2Worker.setEmail(worker);
+			p2Worker.setManager(manager);
+			p2Worker.setUpdatedBy(loggerIn);
+			p2WorkerRepository.save(p2Worker);
+		}
+	}
+	
+	@Override
+	@Transactional
+	public void deleteP2Worker(String manager, String worker) {
+		String loggerIn = SecurityUtils.getEmail();
+		if (!SecurityUtils.hasAnyRole(userRepository.findByEmail(loggerIn), AppProps.get("P_P2_WORKER_ADD_WORKER_ROLE", "P_P2_MANAGER").split(","))) {
+			throw new RuntimeException("Access denied!");
+		}		
+
+		P2Worker p2Worker = p2WorkerRepository.findByManagerAndEmail(manager, worker).orElseThrow(() -> new RuntimeException("Worker not found!"));
+		p2WorkerRepository.delete(p2Worker);
+	}
+
+	@Override
+	public List<Object> getP2WorkerByManager(String manager) {
+		String loggerIn = SecurityUtils.getEmail();
+		if (!SecurityUtils.hasAnyRole(userRepository.findByEmail(loggerIn), AppProps.get("P_P2_WORKER_GET_WORKER_ROLE", "SUPER_ADMIN,P_P2_MANAGER").split(","))) {
+			throw new RuntimeException("Access denied!");
+		}
+		return p2WorkerRepository.findByManager(manager)
+				.stream()
+				.map(wk -> SimpleMap.init("email", wk.getEmail()))
+				.collect(Collectors.toList());
+	}
+	
+	@Override
+	public List<Object> getP2Managers() {
+		String loggerIn = SecurityUtils.getEmail();
+		if (!SecurityUtils.hasAnyRole(userRepository.findByEmail(loggerIn), AppProps.get("P_P2_WORKER_GET_MANAGER_ROLE", "STAFF,SUPER_ADMIN").split(","))) {
+			throw new RuntimeException("Access denied!");
+		}
+		return p2WorkerRepository.getP2Managers()
+				.stream()
+				.map(wk -> SimpleMap.init("name", wk.getFirstName() + " " + wk.getLastName()).more("email", wk.getEmail()))
+				.collect(Collectors.toList());
 	}
 	
 	@Transactional
@@ -485,9 +563,17 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	@Override
 	@Transactional(readOnly = true)
 	@SuppressWarnings("unchecked")
-	public Object getOrNewP2Job(String jobName, String hasSubmitReport) {
+	public Object getOrNewP2Job(String jobName, String hasSubmitReport, String worker) {
 	
-		String user = SecurityUtils.getEmail();
+		boolean isActionByWorker = SecurityUtils.getEmail().equalsIgnoreCase(worker);
+		if (!isActionByWorker && !SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_MANAGER", "STAFF")) {
+			throw new RuntimeException("Access denied!");
+		}
+		if (isActionByWorker && !SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_WORKER")) {
+			throw new RuntimeException("Access denied!");
+		}
+		
+		String user = worker;
 		
 		String sql = null;
 		if (StringUtils.isNotBlank(jobName)) {
@@ -496,6 +582,10 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 			}
 			sql = "FROM P2Job WHERE jobBy = '" + user + "' and name = '" + jobName + "' order by createDate DESC ";
 		} else {
+			if (!isActionByWorker) {
+				throw new RuntimeException("Jobname must not be empty!");
+			}
+			
 			sql = "FROM P2Job WHERE jobBy = '" + user + "' order by createDate DESC ";
 		}
 		List<P2Job> p2Jobs = em.createQuery(sql)
@@ -546,6 +636,10 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	@Override
 	@Transactional
 	public void saveP2Job(P2JobDto dto) {
+		
+		if (!SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_WORKER")) {
+			throw new RuntimeException("Access denied!!");
+		}
 	
 		if (StringUtils.isBlank(dto.getName()) || !dto.getName().matches("^[0-9]{11}$")) {
 			throw new RuntimeException("Job no invaid! (ex: 20220500001)");
@@ -563,10 +657,10 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		String jobName = dto.getName();
 		
 		// for validate exists job name
-		P2JobDto nextJob = (P2JobDto) this.getOrNewP2Job(null, null);
+		P2JobDto nextJob = (P2JobDto) this.getOrNewP2Job(null, null, user);
 		if (!jobName.equals(nextJob.getName())) {
 			// check exists job, if not exists will throw ex
-			nextJob = (P2JobDto) this.getOrNewP2Job(jobName, null);
+			nextJob = (P2JobDto) this.getOrNewP2Job(jobName, null, user);
 		}
 		
 		em.createQuery("DELETE FROM P2JobData WHERE jobBy = '" + user + "' and jobName = '" + jobName + "' ").executeUpdate();
@@ -597,6 +691,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		job.setTitle(dto.getTitle());
 		job.setName(jobName);
 		job.setItCount(dto.getItems().size());
+		job.setContractOrder(dto.getContractOrder());
 		p2JobRepository.save(job);
 	}
 
@@ -609,18 +704,24 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	}
 
 	@Override
-	public Object getP2Jobs(String hasSubmitReport, String msn) {
+	public Object getP2Jobs(String hasSubmitReport, String msn, String worker) {
 		
+		if (!SecurityUtils.getEmail().equalsIgnoreCase(worker) && !SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_MANAGER", "STAFF")) {
+			throw new RuntimeException("Access denied!");
+		}
+		if (!SecurityUtils.hasAnyRole(userRepository.findByEmail(worker), "P_P2_WORKER")) {
+			throw new RuntimeException("Access denied!");
+		}
 		List<P2JobDto> dtos = new ArrayList<>();
 		if ("true".equalsIgnoreCase(hasSubmitReport)) {
-			p2JobRepository.findAllByJobByAndHasReport(SecurityUtils.getEmail())
+			p2JobRepository.findAllByJobByAndHasReport(worker)
 			.forEach(job -> dtos.add(P2JobDto.from(job)));
 		} else {
 			if (StringUtils.isNotBlank(msn)) {
-				p2JobRepository.findAllByJobByAndMsn(SecurityUtils.getEmail(), msn.trim().toLowerCase())
+				p2JobRepository.findAllByJobByAndMsn(worker, msn.trim().toLowerCase())
 				.forEach(job -> dtos.add(P2JobDto.from(job)));
 			} else {
-				p2JobRepository.findAllByJobBy(SecurityUtils.getEmail())
+				p2JobRepository.findAllByJobBy(worker)
 				.forEach(job -> dtos.add(P2JobDto.from(job)));
 			}
 

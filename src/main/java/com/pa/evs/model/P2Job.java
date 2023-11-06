@@ -63,4 +63,10 @@ public class P2Job extends Base1Entity {
 	
 	@Column(name = "comment_submit")
 	private String commentSubmit;
+	
+	@Column(name = "manager_submit")
+	private String managerSubmit;
+	
+	@Column(name = "contract_order", length = 255)
+	private String contractOrder;
 }

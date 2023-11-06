@@ -80,6 +80,7 @@ import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.RSAUtil;
 import com.pa.evs.utils.SchedulerHelper;
+import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.TimeZoneHolder;
 
@@ -887,17 +888,18 @@ public class CommonController {
     @GetMapping("/api/p2/job-no/{jobNo}/jobs")
 	public ResponseEntity<Object> getP2Jobs(
 			HttpServletResponse response, @PathVariable(required = true) String jobNo, 
-			@RequestParam(required = false) String hasSubmitReport, 
+			@RequestParam(required = false) String hasSubmitReport,
+			@RequestParam(required = true) String p2Worker,
 			@RequestParam(required = false) String msn) throws Exception {
     	try {
     		
     		if ("all".equalsIgnoreCase(jobNo)) {
-    			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(meterCommissioningReportService.getP2Jobs(hasSubmitReport, msn)).build());
+    			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(meterCommissioningReportService.getP2Jobs(hasSubmitReport, msn, p2Worker)).build());
     		}
     		if ("NA".equalsIgnoreCase(jobNo)) {
     			jobNo = null;
     		}
-    		Object dto = meterCommissioningReportService.getOrNewP2Job(jobNo, hasSubmitReport);
+    		Object dto = meterCommissioningReportService.getOrNewP2Job(jobNo, hasSubmitReport, p2Worker);
     		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(dto).build());
     	} catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
@@ -907,6 +909,7 @@ public class CommonController {
     @PostMapping("/api/p2/job-no/{jobNo}/job")
 	public ResponseEntity<Object> saveMeterCommissionSubmit(HttpServletResponse response, @RequestBody P2JobDto dto) {
     	try {
+    		String createBy = SecurityUtils.getEmail();
     		meterCommissioningReportService.saveP2Job(dto);
     	} catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
@@ -922,6 +925,52 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/p2/{manager}/add-worker")
+	public ResponseEntity<Object> addP2Workers(
+			HttpServletResponse response, 
+			@PathVariable String manager,
+			@RequestBody List<String> workers) {
+    	try {
+    		meterCommissioningReportService.addP2Worker(manager, workers);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @DeleteMapping("/api/p2/{manager}/delete-worker/{worker}")
+	public ResponseEntity<Object> deleteP2Worker(
+			HttpServletResponse response, 
+			@PathVariable String manager,
+			@PathVariable String worker) {
+    	try {
+    		meterCommissioningReportService.deleteP2Worker(manager, worker);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @GetMapping("/api/p2/{manager}/get-workers")
+	public ResponseEntity<Object> getP2WorkerByManager(
+			HttpServletResponse response, 
+			@PathVariable String manager) {
+    	try {
+    		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(meterCommissioningReportService.getP2WorkerByManager(manager)).success(true).build());
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    }
+    @GetMapping("/api/p2/get-managers")
+	public ResponseEntity<Object> getP2Managers(
+			HttpServletResponse response) {
+    	try {
+    		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(meterCommissioningReportService.getP2Managers()).success(true).build());
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
     }
     
     @PostMapping("/api/p1-online-statuses")

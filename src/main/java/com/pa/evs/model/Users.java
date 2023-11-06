@@ -64,6 +64,9 @@ public class Users extends Base1Entity {
 
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserRole> roles;
+	
+	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
+    private List<UserPermission> permissions;
     
     @Column(name = "avatar")
     private String avatar;

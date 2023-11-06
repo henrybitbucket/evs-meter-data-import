@@ -88,4 +88,10 @@ public class MeterCommissioningReport extends BaseEntity {
 	private String jobBy;
 
 	private String coupledUser;
+	
+	@Column(name = "manager_submit")
+	private String managerSubmit;
+	
+	@Column(name = "contract_order", length = 255)
+	private String contractOrder;
 }

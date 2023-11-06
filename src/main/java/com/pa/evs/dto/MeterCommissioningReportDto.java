@@ -2,6 +2,8 @@ package com.pa.evs.dto;
 
 import java.util.Date;
 
+import javax.persistence.Column;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
@@ -53,4 +55,6 @@ public class MeterCommissioningReportDto {
 	private String commentSubmit;
 	private String jobSheetNo;
 	private String jobBy;
+	private String managerSubmit;
+	private String contractOrder;
 }
