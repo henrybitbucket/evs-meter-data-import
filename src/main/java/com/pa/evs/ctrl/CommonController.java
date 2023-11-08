@@ -52,6 +52,7 @@ import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.MeterCommissioningReportDto;
 import com.pa.evs.dto.P1OnlineStatusDto;
+import com.pa.evs.dto.P1ReportDto;
 import com.pa.evs.dto.P2JobDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
@@ -73,6 +74,7 @@ import com.pa.evs.sv.GroupService;
 import com.pa.evs.sv.LogService;
 import com.pa.evs.sv.MeterCommissioningReportService;
 import com.pa.evs.sv.P1OnlineStatusService;
+import com.pa.evs.sv.P1ReportService;
 import com.pa.evs.sv.VendorService;
 import com.pa.evs.sv.impl.EVSPAServiceImpl;
 import com.pa.evs.utils.AppProps;
@@ -135,6 +137,8 @@ public class CommonController {
     @Autowired FileService fileService;
     
     @Autowired MeterCommissioningReportService meterCommissioningReportService;
+    
+    @Autowired P1ReportService p1ReportService;
     
     @Autowired P1OnlineStatusService p1OnlineStatusService;
 	
@@ -818,6 +822,32 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/bulk-submit-p1-report")
+    public ResponseEntity<?> saveBulkP1Report(HttpServletRequest req, HttpServletResponse res,
+    		@RequestParam("file") MultipartFile file) {
+    	
+    	LOG.debug("Invoke P1 p1-report");
+    	try {
+    		p1ReportService.save(file);
+        } catch (Exception e) {
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+		}
+        
+        
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    
+    @PostMapping("/api/p1_reports")
+	public ResponseEntity<Object> getP1Report(HttpServletResponse response, @RequestBody PaginDto<Object> pagin) {
+    	try {
+    		p1ReportService.search(pagin);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     
     @GetMapping("/api/add-device-test/{uid}/{sn}/{msn}")
