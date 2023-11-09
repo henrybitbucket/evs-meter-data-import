@@ -59,6 +59,9 @@ import com.pa.evs.model.Permission;
 import com.pa.evs.model.PlatformUserLogin;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.RolePermission;
+import com.pa.evs.model.SubGroup;
+import com.pa.evs.model.SubGroupMember;
+import com.pa.evs.model.SubGroupMemberRole;
 import com.pa.evs.model.Token;
 import com.pa.evs.model.UserGroup;
 import com.pa.evs.model.UserPermission;
@@ -69,6 +72,9 @@ import com.pa.evs.repository.PermissionRepository;
 import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.repository.RolePermissionRepository;
 import com.pa.evs.repository.RoleRepository;
+import com.pa.evs.repository.SubGroupMemberRepository;
+import com.pa.evs.repository.SubGroupMemberRoleRepository;
+import com.pa.evs.repository.SubGroupRepository;
 import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.repository.UserPermissionRepository;
 import com.pa.evs.repository.UserRepository;
@@ -105,6 +111,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Autowired
 	private UserGroupRepository userGroupRepository;
+	
+	@Autowired
+	private SubGroupRepository subGroupRepository;
+	
+	@Autowired
+	private SubGroupMemberRepository subGroupMemberRepository;
+	
+	@Autowired
+	private SubGroupMemberRoleRepository subGroupMemberRoleRepository;
 
 	@Autowired
 	private GroupUserRepository groupUserRepository;
@@ -1218,4 +1233,149 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new AuthenticationException(Message.INVALID_USERNAME_PASSWORD, e);
 		}
 	}
+	
+	@Override
+	@Transactional
+	public void saveSubGroup(Map<String, Object> payload) {
+		String name = (String) payload.get("name"); 
+		
+		if (StringUtils.isBlank(name)) {
+			throw new RuntimeException("Group name must not be empty!");
+		}
+		
+		String parentGroupName = (String) payload.get("parentGroupName");
+		String desc = (String) payload.get("desc");
+		
+		GroupUser group = groupUserRepository.findByName(parentGroupName).orElseThrow(() -> new RuntimeException("Parent group doesn't exists"));
+		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElse(new SubGroup());
+		subGroup.setDesc(desc);
+		subGroup.setName(name);
+		subGroup.setOwner(SecurityUtils.getEmail());
+		subGroup.setParentGroupName(group.getName());
+		subGroupRepository.save(subGroup);
+	}
+
+	@Override
+	@Transactional
+	public void deleteSubGroup(Map<String, Object> payload) {
+		String name = (String) payload.get("name"); 
+		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		subGroupRepository.delete(subGroup);
+	}
+	
+	@Override
+	@Transactional
+	public void addUserToSubGroup(Map<String, Object> payload) {
+		
+		String name = (String) payload.get("name"); 
+		if (StringUtils.isBlank(name)) {
+			throw new RuntimeException("Group name must not be empty!");
+		}
+		
+		List<String> members = (List<String>) payload.get("members");
+		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		
+		Map<String, SubGroupMember> map = new LinkedHashMap<>();
+		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), members)
+		.forEach(mb -> map.put(mb.getEmail(), mb));
+		
+		members.forEach(mb -> {
+			SubGroupMember groupMember = map.get(mb);
+			if (groupMember == null) {
+				groupMember = new SubGroupMember();
+			}
+			groupMember.setEmail(mb);
+			groupMember.setGroup(subGroup);
+			subGroupMemberRepository.save(groupMember);
+		});
+	}
+	
+	@Override
+	@Transactional
+	public void removeUserFromSubGroup(Map<String, Object> payload) {
+		
+		String name = (String) payload.get("name"); 
+		if (StringUtils.isBlank(name)) {
+			throw new RuntimeException("Group name must not be empty!");
+		}
+		
+		List<String> members = (List<String>) payload.get("members");
+		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		
+		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), members)
+		.forEach(subGroupMemberRepository::delete);
+	}
+	
+	@Override
+	@Transactional
+	public void addRoleToSubGroupMember(Map<String, Object> payload) {
+		
+		String name = (String) payload.get("name"); 
+		if (StringUtils.isBlank(name)) {
+			throw new RuntimeException("Group name must not be empty!");
+		}
+		
+		String member = (String) payload.get("member"); 
+		List<String> roles = (List<String>) payload.get("roles");
+		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		
+		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), Arrays.asList(member))
+		.forEach(mb -> {
+			Map<String, SubGroupMemberRole> map = new LinkedHashMap<>();
+			subGroupMemberRoleRepository.findByMemberIdAndRoleIn(mb.getId(), roles)
+			.forEach(mbr -> map.put(mbr.getRole(), mbr));
+			
+			roles.forEach(r -> {
+				SubGroupMemberRole groupMemberRole = map.get(r);
+				if (groupMemberRole == null) {
+					groupMemberRole = new SubGroupMemberRole();
+				}
+				groupMemberRole.setRole(r);
+				groupMemberRole.setMember(mb);
+				groupMemberRole.setEmail(mb.getEmail());
+				subGroupMemberRoleRepository.save(groupMemberRole);
+			});
+		});
+	}	
+	
+	@Override
+	@Transactional
+	public void removeRoleFromSubGroupMember(Map<String, Object> payload) {
+		
+		String name = (String) payload.get("name"); 
+		if (StringUtils.isBlank(name)) {
+			throw new RuntimeException("Group name must not be empty!");
+		}
+		
+		String member = (String) payload.get("member"); 
+		List<String> roles = (List<String>) payload.get("roles");
+		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		
+		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), Arrays.asList(member))
+		.forEach(mb -> {
+			subGroupMemberRoleRepository.findByMemberIdAndRoleIn(mb.getId(), roles)
+			.forEach(subGroupMemberRoleRepository::delete);
+		});
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<SubGroup> getSubGroupOfUser(String email) {
+		List<SubGroupMember> groupMembers = subGroupMemberRepository.findByEmail(email);
+		List<SubGroup> groups = new ArrayList<>();
+		groupMembers.forEach(g -> {
+			SubGroup group = g.getGroup();
+			groups.add(group);
+			List<String> roles = subGroupMemberRoleRepository.findByMemberId(g.getId()).stream().map(r -> r.getRole()).collect(Collectors.toList());
+			group.setRoles(roles);
+		});
+		return groups;
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<String> getUserOfSubGroup(Long subGroupId) {
+		return subGroupMemberRepository.findByGroupId(subGroupId).stream().map(mb -> mb.getEmail()).collect(Collectors.toList());
+	}
+	
 }

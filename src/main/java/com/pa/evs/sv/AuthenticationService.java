@@ -16,6 +16,7 @@ import com.pa.evs.dto.ResetPasswordDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
+import com.pa.evs.model.SubGroup;
 import com.pa.evs.security.user.JwtUser;
 
 public interface AuthenticationService {
@@ -45,4 +46,12 @@ public interface AuthenticationService {
 	void resetPwd(ResetPasswordDto resetPasswordDto);
 	void updatePhoneNumber(String phoneNumber);
 	boolean validatePassword(LoginRequestDto loginRequestDTO);
+	void saveSubGroup(Map<String, Object> payload);
+	void deleteSubGroup(Map<String, Object> payload);
+	void addUserToSubGroup(Map<String, Object> payload);
+	void removeUserFromSubGroup(Map<String, Object> payload);
+	void addRoleToSubGroupMember(Map<String, Object> payload);
+	void removeRoleFromSubGroupMember(Map<String, Object> payload);
+	List<SubGroup> getSubGroupOfUser(String email);
+	List<String> getUserOfSubGroup(Long subGroupId);
 }

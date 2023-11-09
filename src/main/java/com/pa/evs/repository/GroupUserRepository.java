@@ -1,6 +1,7 @@
 package com.pa.evs.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,5 +18,7 @@ public interface GroupUserRepository extends JpaRepository<GroupUser, Long> {
 	
 	@Query("Select ug.groupUser FROM UserGroup ug where ug.user.userId = ?1")
 	List<GroupUser> findGroupByUserUserId(Long id);
+	
+	Optional<GroupUser> findByName(String name);
 }
  
