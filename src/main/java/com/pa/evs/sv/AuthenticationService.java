@@ -47,11 +47,15 @@ public interface AuthenticationService {
 	void updatePhoneNumber(String phoneNumber);
 	boolean validatePassword(LoginRequestDto loginRequestDTO);
 	void saveSubGroup(Map<String, Object> payload);
-	void deleteSubGroup(Map<String, Object> payload);
 	void addUserToSubGroup(Map<String, Object> payload);
 	void removeUserFromSubGroup(Map<String, Object> payload);
 	void addRoleToSubGroupMember(Map<String, Object> payload);
 	void removeRoleFromSubGroupMember(Map<String, Object> payload);
 	List<SubGroup> getSubGroupOfUser(String email);
-	List<String> getUserOfSubGroup(Long subGroupId);
+	
+	List<SubGroup> getSubGroupOwner();
+	void deleteSubGroup(Long id);
+	@SuppressWarnings("rawtypes")
+	List getUserOfSubGroup(Map<String, Object> payload);
+	void getRoleOfMemberSubGroup(PaginDto<RoleDto> pagin);
 }

@@ -1,6 +1,7 @@
 package com.pa.evs.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -13,5 +14,7 @@ public interface SubGroupMemberRepository extends JpaRepository<SubGroupMember, 
 	List<SubGroupMember> findByEmail(String email);
 
 	List<SubGroupMember> findByGroupId(Long subGroupId);
+
+	Optional<SubGroupMember> findByGroupIdAndEmail(Long longValue, String memberEmail);
 
 }

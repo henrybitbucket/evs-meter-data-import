@@ -1,5 +1,6 @@
 package com.pa.evs.repository;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,5 +12,7 @@ public interface SubGroupMemberRoleRepository extends JpaRepository<SubGroupMemb
 	List<SubGroupMemberRole> findByMemberIdAndRoleIn(Long id, List<String> roles);
 
 	List<SubGroupMemberRole> findByMemberId(Long id);
+
+	List<SubGroupMemberRole> findByMemberIdIn(Collection<Long> memberIds);
 
 }

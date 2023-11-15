@@ -2,6 +2,7 @@ package com.pa.evs.security.user;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -48,6 +49,8 @@ public class JwtUser implements UserDetails {
     private String firstName;
     
     private String lastName;
+    
+    private List<String> groups;
     
     private Date birthDay;
     
@@ -133,4 +136,7 @@ public class JwtUser implements UserDetails {
 		this.changePwdRequire = changePwdRequire;
 	}
 
+	public void setGroups(List<String> groups) {
+		this.groups = groups;
+	}
 }

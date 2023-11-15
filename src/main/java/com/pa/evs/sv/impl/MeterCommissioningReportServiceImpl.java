@@ -36,6 +36,7 @@ import com.pa.evs.repository.P2JobDataRepository;
 import com.pa.evs.repository.P2JobRepository;
 import com.pa.evs.repository.P2WorkerRepository;
 import com.pa.evs.repository.UserRepository;
+import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.MeterCommissioningReportService;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.SecurityUtils;
@@ -50,6 +51,9 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
+	
+	@Autowired
+	private AuthenticationService authenticationService;
 	
 	@Autowired
 	private EntityManager em;
@@ -86,8 +90,19 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	@Override
 	public void save(MeterCommissioningReportDto dto) {
 		
-		if (!SecurityUtils.getEmail().equalsIgnoreCase(dto.getUserSubmit()) && !SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_MANAGER")) {
-			throw new RuntimeException("Access denied!");
+		boolean isActionByWorker = SecurityUtils.getEmail().equalsIgnoreCase(dto.getUserSubmit());
+		if (!isActionByWorker && !SecurityUtils.hasAnyRole("STAFF")) {
+			Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
+			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P_P2_MANAGER")) {
+				throw new RuntimeException("Access denied!");
+			}
+		} else if (isActionByWorker) {
+			Users user = userRepository.findByEmail(dto.getUserSubmit());
+			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
+			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
+				throw new RuntimeException("Access denied!");
+			}
 		}
 		
 		MeterCommissioningReport mcr = new MeterCommissioningReport();
@@ -566,11 +581,18 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	public Object getOrNewP2Job(String jobName, String hasSubmitReport, String worker) {
 	
 		boolean isActionByWorker = SecurityUtils.getEmail().equalsIgnoreCase(worker);
-		if (!isActionByWorker && !SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_MANAGER", "STAFF")) {
-			throw new RuntimeException("Access denied!");
-		}
-		if (isActionByWorker && !SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_WORKER")) {
-			throw new RuntimeException("Access denied!");
+		if (!isActionByWorker && !SecurityUtils.hasAnyRole("STAFF")) {
+			Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
+			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P_P2_MANAGER")) {
+				throw new RuntimeException("Access denied!");
+			}
+		} else if (isActionByWorker) {
+			Users user = userRepository.findByEmail(worker);
+			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
+			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
+				throw new RuntimeException("Access denied!");
+			}
 		}
 		
 		String user = worker;
@@ -707,11 +729,19 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	@Override
 	public Object getP2Jobs(String hasSubmitReport, String msn, String worker, String contractOrder) {
 		
-		if (!SecurityUtils.getEmail().equalsIgnoreCase(worker) && !SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_MANAGER", "STAFF")) {
-			throw new RuntimeException("Access denied!");
-		}
-		if (!SecurityUtils.hasAnyRole(userRepository.findByEmail(worker), "P_P2_WORKER")) {
-			throw new RuntimeException("Access denied!");
+		boolean isActionByWorker = SecurityUtils.getEmail().equalsIgnoreCase(worker);
+		if (!isActionByWorker && !SecurityUtils.hasAnyRole("STAFF")) {
+			Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
+			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P_P2_MANAGER")) {
+				throw new RuntimeException("Access denied!");
+			}
+		} else if (isActionByWorker) {
+			Users user = userRepository.findByEmail(worker);
+			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
+			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
+				throw new RuntimeException("Access denied!");
+			}
 		}
 		
 		StringBuilder qr = new StringBuilder("SELECT job FROM P2Job job ");

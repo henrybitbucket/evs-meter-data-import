@@ -35,6 +35,6 @@ public class SubGroupMemberRole extends BaseEntity {
     private String role;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sub_group_id")
+    @JoinColumn(name = "sub_group_member_id")
     private SubGroupMember member;
 }

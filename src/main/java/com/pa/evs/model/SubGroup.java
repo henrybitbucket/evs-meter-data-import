@@ -42,4 +42,8 @@ public class SubGroup extends BaseEntity {
 	@Transient
 	@Builder.Default
 	List<String> roles = new ArrayList<>();
+	
+	@Transient
+	@Builder.Default
+	List<String> permissions = new ArrayList<>();
 }

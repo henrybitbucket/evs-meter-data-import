@@ -546,6 +546,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		String token = request.getHeader(tokenHeader);
 		String email = jwtTokenUtil.getUsernameFromToken(token);
 		JwtUser jwtUser = (JwtUser) userDetailsService.loadUserByUsername(email);
+		jwtUser.setGroups(groupUserRepository.findGroupByUserUserId(jwtUser.getId()).stream().map(ug -> ug.getName()).collect(Collectors.toList()));
 		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE, jwtUser);
 	}
 
@@ -669,8 +670,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (user == null) {
 			user = userRepository.findByUsername(SecurityUtils.getEmail());
 		}
-		permissionRepository.findAll();
-		List<PermissionDto> permissionsDto = new ArrayList();
+		List<PermissionDto> permissionsDto = new ArrayList<>();
 		for (UserRole userRole : user.getRoles()) {
 			if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
 				for (Permission per : permissionRepository.findAll()) {
@@ -714,7 +714,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					}
 				}
 			}
-			List<UserPermission> userPermissions = userPermissionRepository.findAll();
+			List<UserPermission> userPermissions = userPermissionRepository.findByUserUserId(user.getUserId());
 			for (UserPermission userPer : userPermissions) {
 				if (userPer.getUser().getUserId() == user.getUserId()) {
 					List<PermissionDto> permissionss = new ArrayList();
@@ -1246,21 +1246,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		String parentGroupName = (String) payload.get("parentGroupName");
 		String desc = (String) payload.get("desc");
 		
-		GroupUser group = groupUserRepository.findByName(parentGroupName).orElseThrow(() -> new RuntimeException("Parent group doesn't exists"));
+		if (StringUtils.isNotBlank(parentGroupName)) {
+			groupUserRepository.findByName(parentGroupName).orElseThrow(() -> new RuntimeException("Parent group doesn't exists"));
+		}
 		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElse(new SubGroup());
 		subGroup.setDesc(desc);
 		subGroup.setName(name);
 		subGroup.setOwner(SecurityUtils.getEmail());
-		subGroup.setParentGroupName(group.getName());
+		subGroup.setParentGroupName(parentGroupName);
 		subGroupRepository.save(subGroup);
 	}
 
 	@Override
 	@Transactional
-	public void deleteSubGroup(Map<String, Object> payload) {
-		String name = (String) payload.get("name"); 
-		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
-		subGroupRepository.delete(subGroup);
+	public void deleteSubGroup(Long id) {
+		SubGroup subGroup = subGroupRepository.findByIdAndOwner(id, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		subGroup.setOwner(subGroup.getOwner() + "_delete" + System.currentTimeMillis());
+		subGroup.setName(subGroup.getName() + "_delete" + System.currentTimeMillis());
+		subGroupRepository.save(subGroup);
 	}
 	
 	@Override
@@ -1273,6 +1276,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		
 		List<String> members = (List<String>) payload.get("members");
+		
+		Set<String> existsUserEmails = userRepository.findByEmailIn(members).stream().map(u -> u.getEmail()).collect(Collectors.toSet());
+		
 		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
 		
 		Map<String, SubGroupMember> map = new LinkedHashMap<>();
@@ -1280,10 +1286,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		.forEach(mb -> map.put(mb.getEmail(), mb));
 		
 		members.forEach(mb -> {
-			SubGroupMember groupMember = map.get(mb);
-			if (groupMember == null) {
-				groupMember = new SubGroupMember();
+			
+			if (!existsUserEmails.contains(mb)) {
+				throw new RuntimeException("Email " + mb + " doesn't exist!");
 			}
+			if (map.get(mb) != null) {
+				throw new RuntimeException("Email " + mb + " already exist in this group!");
+			}
+			
+			SubGroupMember groupMember = new SubGroupMember();
 			groupMember.setEmail(mb);
 			groupMember.setGroup(subGroup);
 			subGroupMemberRepository.save(groupMember);
@@ -1322,7 +1333,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), Arrays.asList(member))
 		.forEach(mb -> {
 			Map<String, SubGroupMemberRole> map = new LinkedHashMap<>();
-			subGroupMemberRoleRepository.findByMemberIdAndRoleIn(mb.getId(), roles)
+			subGroupMemberRoleRepository.findByMemberId(mb.getId())
 			.forEach(mbr -> map.put(mbr.getRole(), mbr));
 			
 			roles.forEach(r -> {
@@ -1334,6 +1345,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				groupMemberRole.setMember(mb);
 				groupMemberRole.setEmail(mb.getEmail());
 				subGroupMemberRoleRepository.save(groupMemberRole);
+			});
+			map.forEach((k, v) -> {
+				if (!roles.contains(k)) {
+					subGroupMemberRoleRepository.delete(v);
+				}
 			});
 		});
 	}	
@@ -1360,22 +1376,101 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	
 	@Override
 	@Transactional(readOnly = true)
-	public List<SubGroup> getSubGroupOfUser(String email) {
-		List<SubGroupMember> groupMembers = subGroupMemberRepository.findByEmail(email);
-		List<SubGroup> groups = new ArrayList<>();
-		groupMembers.forEach(g -> {
-			SubGroup group = g.getGroup();
-			groups.add(group);
-			List<String> roles = subGroupMemberRoleRepository.findByMemberId(g.getId()).stream().map(r -> r.getRole()).collect(Collectors.toList());
-			group.setRoles(roles);
-		});
-		return groups;
+	public List<SubGroup> getSubGroupOwner() {
+		return subGroupRepository.findByOwner(SecurityUtils.getEmail());
 	}
 	
 	@Override
 	@Transactional(readOnly = true)
-	public List<String> getUserOfSubGroup(Long subGroupId) {
-		return subGroupMemberRepository.findByGroupId(subGroupId).stream().map(mb -> mb.getEmail()).collect(Collectors.toList());
+	public List<SubGroup> getSubGroupOfUser(String email) {
+
+		List<SubGroup> groups = new ArrayList<>();
+		Set<Long> sgIdCheck = new HashSet<>();
+		if (SecurityUtils.hasAnyRole("STAFF")) {
+			subGroupRepository.findAll()
+				.forEach(group -> {
+					if (!group.getName().contains("_delete") && !sgIdCheck.contains(group.getId())) {
+						groups.add(group);
+						sgIdCheck.add(group.getId());
+					}
+				});
+			return groups;
+		}
+		
+		List<SubGroupMember> groupMembers = subGroupMemberRepository.findByEmail(email);
+		groupMembers.forEach(g -> {
+			SubGroup group = g.getGroup();
+			if (!group.getName().contains("_delete") && !sgIdCheck.contains(group.getId())) {
+				groups.add(group);
+				sgIdCheck.add(group.getId());
+				List<String> roles = subGroupMemberRoleRepository.findByMemberId(g.getId()).stream().map(r -> r.getRole()).collect(Collectors.toList());
+				List<String> permissions = rolePermissionRepository.findByRoleNameIn(roles).stream().map(rp -> rp.getPermission().getName()).collect(Collectors.toList());
+				group.setRoles(roles);
+				group.setPermissions(permissions);
+			}
+		});
+		return groups;
 	}
 	
+	@SuppressWarnings("rawtypes")
+	@Override
+	@Transactional(readOnly = true)
+	public List getUserOfSubGroup(Map<String, Object> payload) {
+		Number subGroupId = (Number) payload.get("subGroupId");
+		List<SubGroupMember> subGroupMembers = subGroupMemberRepository.findByGroupId(subGroupId.longValue());
+		
+		Map<String, Long> emailMemberIds = new LinkedHashMap<>();
+		subGroupMembers.forEach(gm -> emailMemberIds.put(gm.getEmail(), gm.getId()));
+		
+		List<SubGroupMemberRole> memberRoles = subGroupMemberRoleRepository.findByMemberIdIn(emailMemberIds.values());
+		
+		Map<String, Role> roleMap = new LinkedHashMap<>();
+		roleRepository.findByNameIn(memberRoles.stream().map(mr -> mr.getRole()).collect(Collectors.toList()))
+		.forEach(r -> roleMap.put(r.getName(), r));
+		
+		Map<Long, List<Role>> mRoles = new LinkedHashMap<>();// map role memberId
+		memberRoles.forEach(mr -> {
+			List<Role> rls = mRoles.computeIfAbsent(mr.getMember().getId(), k -> new ArrayList<>());
+			if (roleMap.get(mr.getRole()) != null) {
+				rls.add(roleMap.get(mr.getRole()));
+			}
+		});
+		
+		return userRepository.findByEmailIn(emailMemberIds.keySet()).stream().map(user -> {
+			
+			List<Role> roleInSgs = mRoles.computeIfAbsent(emailMemberIds.get(user.getEmail()), k -> new ArrayList<>());
+			List<String> roles = new ArrayList<>();
+
+			UserDto dto = UserDto.builder().id(user.getUserId()).username(user.getUsername()).email(user.getEmail())
+					.fullName(user.getFullName()).firstName(user.getFirstName()).lastName(user.getLastName())
+					.phoneNumber(user.getPhoneNumber()).avatar(user.getAvatar())
+					.fullName(user.getFirstName() + " " + user.getLastName()).status(user.getStatus())
+					.changePwdRequire(user.getChangePwdRequire())
+					.loginOtpRequire(user.getLoginOtpRequire())
+					.identification(user.getIdentification())
+					.roleDescs(roleInSgs.stream().map(authority -> {
+						roles.add(authority.getName());
+						return SimpleMap.init("name", authority.getName()).more("desc",
+								authority.getDesc());
+					}).collect(Collectors.toList())).build();
+			dto.setRoles(roles);
+			return dto;
+		}).collect(Collectors.toList());
+	}
+	
+	@Override
+	public void getRoleOfMemberSubGroup(PaginDto<RoleDto> pagin) {
+		String memberEmail = (String) pagin.getOptions().get("memberEmail");
+		Number groupId = (Number) pagin.getOptions().get("groupId");
+		SubGroupMember subGroupMember  = subGroupMemberRepository.findByGroupIdAndEmail(groupId.longValue(), memberEmail).orElseThrow(() -> new RuntimeException("Member doesn't exists"));
+		List<SubGroupMemberRole> memberRoles = subGroupMemberRoleRepository.findByMemberId(subGroupMember.getId());
+		
+		roleRepository.findByNameIn(memberRoles.stream().map(mr -> mr.getRole()).collect(Collectors.toList()))
+		.forEach(r -> {
+			RoleDto dto = RoleDto.builder().id(r.getId()).name(r.getName())
+					.desc(r.getDesc()).build();
+			pagin.getResults().add(dto);
+		});
+		pagin.setTotalRows(Long.valueOf(pagin.getResults().size()));
+	}
 }

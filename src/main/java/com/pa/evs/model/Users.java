@@ -1,5 +1,6 @@
 package com.pa.evs.model;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -12,6 +13,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -93,6 +95,10 @@ public class Users extends Base1Entity {
     
     private String identification;
 
+    @Transient
+    @Builder.Default
+    private List<SubGroup> subGroups = new ArrayList<>();
+    
     public String getLastPwd() {
     	if (StringUtils.isBlank(lastPwd)) {
 			lastPwd = "";
