@@ -659,7 +659,9 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	@Transactional
 	public void saveP2Job(P2JobDto dto) {
 		
-		if (!SecurityUtils.hasAnyRole(userRepository.findByEmail(SecurityUtils.getEmail()), "P_P2_WORKER")) {
+		Users login = userRepository.findByEmail(SecurityUtils.getEmail());
+		login.setSubGroups(authenticationService.getSubGroupOfUser(login.getEmail()));
+		if (!SecurityUtils.hasAnySubGroupPermissions(login, "P2_GROUP", "P2_WORKER", "P_P2_WORKER")) {
 			throw new RuntimeException("Access denied!!");
 		}
 	
