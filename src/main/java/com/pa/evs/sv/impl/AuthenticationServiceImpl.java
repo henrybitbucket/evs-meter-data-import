@@ -714,23 +714,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					}
 				}
 			}
-			List<UserPermission> userPermissions = userPermissionRepository.findByUserUserId(user.getUserId());
-			for (UserPermission userPer : userPermissions) {
-				if (userPer.getUser().getUserId() == user.getUserId()) {
-					List<PermissionDto> permissionss = new ArrayList();
-					boolean check = false;
-					for (PermissionDto per : permissionsDto) {
-						if (per.getId() == userPer.getPermission().getId()) {
-							check = true;
-						}
+		}
+		List<UserPermission> userPermissions = userPermissionRepository.findByUserUserId(user.getUserId());
+		for (UserPermission userPer : userPermissions) {
+			if (userPer.getUser().getUserId() == user.getUserId()) {
+				List<PermissionDto> permissionss = new ArrayList();
+				boolean check = false;
+				for (PermissionDto per : permissionsDto) {
+					if (per.getId() == userPer.getPermission().getId()) {
+						check = true;
 					}
-					if (check != true) {
-						PermissionDto PerDto = new PermissionDto();
-						PerDto.setId(userPer.getPermission().getId());
-						PerDto.setName(userPer.getPermission().getName());
-						PerDto.setDescription(userPer.getPermission().getDescription());
-						permissionsDto.add(PerDto);
-					}
+				}
+				if (check != true) {
+					PermissionDto PerDto = new PermissionDto();
+					PerDto.setId(userPer.getPermission().getId());
+					PerDto.setName(userPer.getPermission().getName());
+					PerDto.setDescription(userPer.getPermission().getDescription());
+					permissionsDto.add(PerDto);
 				}
 			}
 		}
