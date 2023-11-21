@@ -1082,6 +1082,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		String queryRemark = (String) options.get("queryRemark");
 		String queryOperation = (String) options.get("queryOperation");
 		Boolean enrollmentDate = BooleanUtils.toBoolean((String) options.get("queryEnrollmentDate"));
+		boolean queryOperationDate = "true".equalsIgnoreCase(options.get("queryOperationDate") + "");
 		Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor"))
 				? Long.parseLong((String) options.get("queryVendor"))
 				: null;
@@ -1099,7 +1100,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				sqlCommonBuilder.append(" ( enrollmentDatetime >= " + fromDate);
 				sqlCommonBuilder.append(" AND enrollmentDatetime <= " + toDate + ") AND ");
 			}
-		} else {
+		} 
+		if (queryOperationDate) {
             if (fromDate != null && toDate == null) {
                 sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate + "AND");
             }
