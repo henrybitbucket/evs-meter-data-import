@@ -48,6 +48,9 @@ public class P1ReportItem extends BaseEntity {
 	@Column(name = "comment_submit")
 	private String commentSubmit;
 	
+	@Column(name = "log_report_filename")
+	private String logReportFilename;
+	
 	@ManyToOne
 	@JoinColumn(name = "p1_report_id")
 	private P1Report p1Report;
