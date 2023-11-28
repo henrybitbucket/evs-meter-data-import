@@ -2,8 +2,11 @@ package com.pa.evs.sv.impl;
 
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -14,6 +17,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
@@ -82,12 +86,25 @@ public class RoleServiceImpl implements RoleService {
         query.setMaxResults(pagin.getLimit());
 
         List<Role> list = query.getResultList();
+        Map<Long, List<PermissionDto>> mapRolePms = new LinkedHashMap<>();
+        rolePermissionRepository.findByRoleNameIn(list.stream().map(r -> r.getName()).collect(Collectors.toList()))
+        .forEach(rp -> {
+        	List<PermissionDto> pms = mapRolePms.computeIfAbsent(rp.getRole().getId(), k -> new ArrayList<>());
+        	Permission pm = rp.getPermission();
+        	pms.add(PermissionDto.builder()
+                    .id(pm.getId())
+                    .name(pm.getName())
+                    .description(pm.getDescription())
+                    .build());
+        });
+        
 
         list.forEach(li -> {
         	RoleDto dto = RoleDto.builder()
                     .id(li.getId())
                     .name(li.getName())
                     .desc(li.getDesc())
+                    .permissions(mapRolePms.get(li.getId()))
                     .build();
             pagin.getResults().add(dto);
         });
@@ -112,10 +129,10 @@ public class RoleServiceImpl implements RoleService {
 		}
 	}
 
+	@Transactional
 	@Override
 	public void updateRole(RoleDto dto) {
 		
-		boolean check = true;
 		Optional<Role> role = roleRepository.findById(dto.getId());
 		permissionRepository.findAll();
 		List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(dto.getId());
@@ -123,24 +140,17 @@ public class RoleServiceImpl implements RoleService {
 			role.get().setName(dto.getName());
 			role.get().setDesc(dto.getDesc());
 			roleRepository.save(role.get());
-			if(dto.getPermissions().size() != 0) {
-				for (PermissionDto permisstionDto : dto.getPermissions()) {
-					check = false;
-					for (RolePermission rolePerm :  rolePermissions) {
-						if (StringUtils.equals(permisstionDto.getName(), rolePerm.getPermission().getName())) {
-							check = true;
-						}
-					}
-					if(!check) {
-						Optional<Permission> permisstion = permissionRepository.findById(permisstionDto.getId());
-						if(permisstion.isPresent()) {
-							RolePermission rolePer = new RolePermission();
-							rolePer.setPermission(permisstion.get());
-							rolePer.setRole(role.get());
-							rolePermissionRepository.save(rolePer);
-						}
-					}
+			rolePermissionRepository.deleteAll(rolePermissions);
+			rolePermissionRepository.flush();
+			if (!dto.getPermissions().isEmpty()) {
+				List<Permission> newPrms = permissionRepository.findByNameIn(dto.getPermissions().stream().map(pm -> pm.getName()).collect(Collectors.toList()));
+				for (Permission pms : newPrms) {
+					RolePermission rolePer = new RolePermission();
+					rolePer.setPermission(pms);
+					rolePer.setRole(role.get());
+					rolePermissionRepository.save(rolePer);
 				}
+				
 			}
 		}
 	}
