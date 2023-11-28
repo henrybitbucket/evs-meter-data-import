@@ -13,4 +13,6 @@ public interface P1ReportService {
 	void save(List<MultipartFile> files) throws Exception;
 
 	void search(PaginDto<Object> pagin);
+
+	void deleteP1Report(Long id);
 }

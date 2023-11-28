@@ -387,4 +387,12 @@ public class P1ReportServiceImpl implements P1ReportService {
 		}
 		return rs;
 	}
+
+	@Transactional
+	@Override
+	public void deleteP1Report(Long id) {
+		em.createQuery("DELETE FROM P1ReportItem WHERE p1Report.id = " + id).executeUpdate();
+		em.flush();
+		em.createQuery("DELETE FROM P1Report WHERE id = " + id).executeUpdate();
+	}
 }

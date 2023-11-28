@@ -850,6 +850,16 @@ public class CommonController {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
     
+    @DeleteMapping("/api/p1_report/{id}")
+	public ResponseEntity<Object> deleteP1Report(HttpServletResponse response, @PathVariable Long id) {
+    	try {
+    		p1ReportService.deleteP1Report(id);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
     @GetMapping("/api/add-device-test/{uid}/{sn}/{msn}")
 	public ResponseEntity<Object> addDeviceTest(@PathVariable String uid, @PathVariable String sn, @PathVariable String msn) {
     	try {
