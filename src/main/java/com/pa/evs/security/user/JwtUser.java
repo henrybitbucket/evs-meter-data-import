@@ -59,6 +59,8 @@ public class JwtUser implements UserDetails {
     private String phoneNumber;
 
     private  Collection<? extends GrantedAuthority> authorities;
+    
+    private  Collection<String> permissions;
 
     @JsonIgnore
     private  boolean enabled;
@@ -138,5 +140,9 @@ public class JwtUser implements UserDetails {
 
 	public void setGroups(List<String> groups) {
 		this.groups = groups;
+	}
+
+	public void setPermissions(Collection<String> permissions) {
+		this.permissions = permissions;
 	}
 }

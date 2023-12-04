@@ -65,7 +65,10 @@ public final class SecurityUtils {
 			
 			if (obj instanceof JwtUser) {
 				Set<String> rs = Arrays.stream(roles).map(r -> r.trim()).collect(Collectors.toSet());
-				return ((JwtUser)obj).getAuthorities().stream().anyMatch(au -> rs.contains(au.getAuthority()));
+				JwtUser user = (JwtUser)obj;
+				return user.getAuthorities().stream().anyMatch(au -> rs.contains(au.getAuthority()))
+						|| user.getPermissions().stream().allMatch(rs::contains)
+						;
 			}
 		} catch (Exception e) {
 			//
@@ -82,9 +85,8 @@ public final class SecurityUtils {
 					.map(ur -> ur.getRole().getName())
 					.anyMatch(rs::contains)
 					||
-					user.getPermissions()
+					user.getAllPermissions()
 					.stream()
-					.map(ur -> ur.getPermission().getName())
 					.anyMatch(rs::contains)
 					;
 			

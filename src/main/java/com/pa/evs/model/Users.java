@@ -98,6 +98,10 @@ public class Users extends Base1Entity {
     @Transient
     @Builder.Default
     private List<SubGroup> subGroups = new ArrayList<>();
+
+    @Transient
+    @Builder.Default
+    private List<String> allPermissions = new ArrayList<>();
     
     public String getLastPwd() {
     	if (StringUtils.isBlank(lastPwd)) {

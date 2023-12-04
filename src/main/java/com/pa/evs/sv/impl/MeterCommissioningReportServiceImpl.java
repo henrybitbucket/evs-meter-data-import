@@ -100,7 +100,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		} else if (isActionByWorker) {
 			Users user = userRepository.findByEmail(dto.getUserSubmit());
 			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
-			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
+			if (!SecurityUtils.hasAnyRole("P_P2_WORKER") && !SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
 				throw new RuntimeException("Access denied!");
 			}
 		}
@@ -590,7 +590,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		} else if (isActionByWorker) {
 			Users user = userRepository.findByEmail(worker);
 			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
-			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
+			if (!SecurityUtils.hasAnyRole("P_P2_WORKER") && !SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
 				throw new RuntimeException("Access denied!");
 			}
 		}
@@ -661,7 +661,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		
 		Users login = userRepository.findByEmail(SecurityUtils.getEmail());
 		login.setSubGroups(authenticationService.getSubGroupOfUser(login.getEmail()));
-		if (!SecurityUtils.hasAnySubGroupPermissions(login, "P2_GROUP", "P2_WORKER", "P_P2_WORKER")) {
+		if (!SecurityUtils.hasAnyRole("P_P2_WORKER") && !SecurityUtils.hasAnySubGroupPermissions(login, "P2_GROUP", "P2_WORKER", "P_P2_WORKER")) {
 			throw new RuntimeException("Access denied!!");
 		}
 	
@@ -739,9 +739,10 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 				throw new RuntimeException("Access denied!");
 			}
 		} else if (isActionByWorker) {
+			
 			Users user = userRepository.findByEmail(worker);
 			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
-			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
+			if (!SecurityUtils.hasAnyRole("P_P2_WORKER") || !SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
 				throw new RuntimeException("Access denied!");
 			}
 		}

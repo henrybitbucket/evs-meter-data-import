@@ -1314,7 +1314,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
 		
 		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), members)
-		.forEach(subGroupMemberRepository::delete);
+		.forEach(mb -> {
+			subGroupMemberRoleRepository.findByMemberId(mb.getId())
+			.forEach(subGroupMemberRoleRepository::delete);
+			subGroupMemberRepository.delete(mb);
+		});
 	}
 	
 	@Override

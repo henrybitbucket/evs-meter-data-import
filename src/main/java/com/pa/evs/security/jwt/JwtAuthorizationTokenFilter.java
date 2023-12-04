@@ -1,12 +1,10 @@
 package com.pa.evs.security.jwt;
 
 import java.io.IOException;
-import java.util.UUID;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
