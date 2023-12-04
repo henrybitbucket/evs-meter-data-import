@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
-import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
 
 public final class JwtUserFactory {
@@ -26,7 +25,7 @@ public final class JwtUserFactory {
                 .phone(user.getPhoneNumber())
                 .avatar(user.getAvatar())
                 .password(user.getPassword())
-                .authorities(mapToGrantedAuthorities(user.getRoles()))
+                .authorities(mapToGrantedAuthorities(user.getAllRoles()))
                 .permissions(user.getAllPermissions())
                 .enabled(true)
                 .changePwdRequire(user.getChangePwdRequire())
@@ -36,9 +35,9 @@ public final class JwtUserFactory {
 
     }
     
-    private static List<GrantedAuthority> mapToGrantedAuthorities(List<UserRole> authorities) {
+    private static List<GrantedAuthority> mapToGrantedAuthorities(List<String> authorities) {
         return authorities.stream()
-                .map(authority -> new SimpleGrantedAuthority(authority.getRole().getName()))
+                .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
     }
 }

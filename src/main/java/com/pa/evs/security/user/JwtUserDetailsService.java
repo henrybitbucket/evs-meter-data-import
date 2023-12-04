@@ -1,5 +1,6 @@
 package com.pa.evs.security.user;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -12,7 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.model.RolePermission;
 import com.pa.evs.model.Users;
+import com.pa.evs.repository.RoleGroupRepository;
 import com.pa.evs.repository.RolePermissionRepository;
+import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.repository.UserRepository;
 
 @Service
@@ -24,6 +27,12 @@ public class JwtUserDetailsService implements UserDetailsService {
     
     @Autowired
     private RolePermissionRepository rolePermissionRepository;
+    
+    @Autowired
+    private UserGroupRepository userGroupRepository;
+    
+    @Autowired
+    private RoleGroupRepository roleGroupRepository;
     
     @Transactional(readOnly = true)
     @Override
@@ -38,17 +47,34 @@ public class JwtUserDetailsService implements UserDetailsService {
             return null;
         }
         
-        try {
-            List<String> allPms = user.getAllPermissions();
-            List<String> roles = user.getRoles().stream().map(r -> r.getRole().getName()).collect(Collectors.toList());
-            List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleNameIn(roles);
-            for (RolePermission rolePermission : rolePermissions) {
-            	allPms.add(rolePermission.getPermission().getName());
-            }
-            user.getPermissions().forEach(up -> allPms.add(up.getPermission().getName()));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+        List<String> roles = user.getRoles().stream().map(r -> r.getRole().getName()).collect(Collectors.toList());
+        
+        List<String> allRls = user.getAllRoles();
+        allRls.addAll(roles);
+        List<String> groups = userGroupRepository.findByUserUserIdIn(Arrays.asList(user.getUserId()))
+        .stream().map(ug -> ug.getGroupUser().getName()).collect(Collectors.toList());
+        
+        if (!groups.isEmpty()) {
+        	roleGroupRepository.findByGroupUserNameIn(groups)
+        	.forEach(rg -> {
+        		if (!allRls.contains(rg.getRole().getName())) {
+        			allRls.add(rg.getRole().getName());
+        		}
+        	});
+        }
+        
+        List<String> allPms = user.getAllPermissions();
+        List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleNameIn(allRls);
+        for (RolePermission rolePermission : rolePermissions) {
+        	if (!allPms.contains(rolePermission.getPermission().getName())) {
+        		allPms.add(rolePermission.getPermission().getName());
+        	}
+        }
+        user.getPermissions().forEach(up -> {
+        	if (!allPms.contains(up.getPermission().getName())) {
+        		allPms.add(up.getPermission().getName());
+        	}
+        });
         
         return JwtUserFactory.create(user);
     }

@@ -103,6 +103,10 @@ public class Users extends Base1Entity {
     @Builder.Default
     private List<String> allPermissions = new ArrayList<>();
     
+    @Transient
+    @Builder.Default
+    private List<String> allRoles = new ArrayList<>();
+    
     public String getLastPwd() {
     	if (StringUtils.isBlank(lastPwd)) {
 			lastPwd = "";
