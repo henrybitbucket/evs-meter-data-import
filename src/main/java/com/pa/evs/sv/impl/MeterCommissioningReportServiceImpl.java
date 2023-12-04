@@ -742,7 +742,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 			
 			Users user = userRepository.findByEmail(worker);
 			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
-			if (!SecurityUtils.hasAnyRole("P_P2_WORKER") || !SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
+			if (!SecurityUtils.hasAnyRole("P_P2_WORKER") && !SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
 				throw new RuntimeException("Access denied!");
 			}
 		}
