@@ -3,6 +3,9 @@ package com.pa.evs.sv.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -24,8 +27,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.http.IdleConnectionReaper;
+import com.amazonaws.metrics.AwsSdkMetrics;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.SFileDto;
+import com.pa.evs.enums.ResponseEnum;
+import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.SFile;
 import com.pa.evs.repository.CARequestLogRepository;
@@ -326,4 +336,23 @@ public class FileServiceImpl implements FileService {
 		}
 		return rs;
 	}
+
+	@Override
+	@Transactional
+	public void deleteP1File(String altName) throws Exception {
+		Optional<SFile> fileOpt = sFileRepository.findByTypeAndAltName("P1_PROVISIONING", altName);
+		
+		if (!fileOpt.isPresent()) {
+			throw new Exception("File not found!");
+		}
+		
+		// Delete file in S3 bucket
+		if (StringUtils.isNotBlank(getS3FileUrl(altName, p1ProvisioningBucketName))) {
+			evsPAService.deleteFileInS3(altName, p1ProvisioningBucketName);
+		}
+		
+		// Delete file in database
+		sFileRepository.deleteByTypeAndAltName("P1_PROVISIONING", altName);
+	}
+
 }

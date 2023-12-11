@@ -2484,5 +2484,33 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 		return result;
 	}
+	
+	@Override
+	public boolean deleteFileInS3(String fileName, String bucketName) {
+		boolean result = false;
+		LOG.info("Delete file. Bucket Name: {}, File Name: {}", bucketName, fileName);
+		try {
+			if (s3Client != null) {
+				s3Client.deleteObject(bucketName, fileName);
+				LOG.info("{} Finished Deleting S3 File Object: {} to {}", DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").format(LocalDateTime.now()), fileName);
+				result = true;
+			} else {
+				LOG.info("File: {} does not exists", fileName);
+				result = true;
+			}
+		} catch (AmazonServiceException e) {
+			// The call was transmitted successfully, but Amazon S3 couldn't process
+			// it, so it returned an error response.
+			LOG.error("S3 Service Exception: " + e.getMessage(), e);
+		} catch (Exception e) {
+			LOG.error("Exception in deleting file: " + e.getLocalizedMessage());
+		} finally {
+			IdleConnectionReaper.shutdown();
+			AwsSdkMetrics.unregisterMetricAdminMBean();
+			LOG.info("Finished delete S3 file");
+		}
+
+		return result;
+	}
 
 }

@@ -777,6 +777,17 @@ public class CommonController {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
  	}
     
+    @DeleteMapping("/api/p1-file")
+ 	public Object deleteP1File(HttpServletResponse res, @RequestParam(required = true) String altName) throws IOException {
+    	LOG.debug("Invoke delete P1 file");
+    	try {
+    		fileService.deleteP1File(altName);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+ 	}
+    
     // http://localhost:7770/api/files?uids=BIERWXAABMAKWAEAAA,BIERWXAABMAKWAEAAA&types=MMS_P1_TEST,MMS_P2_TEST
     @GetMapping("/api/files")
 	public Object getFileUploads(

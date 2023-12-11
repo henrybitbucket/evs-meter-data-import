@@ -51,6 +51,9 @@ public class P1ReportItem extends BaseEntity {
 	@Column(name = "log_report_filename")
 	private String logReportFilename;
 	
+	@Column(name = "summary_test_result")
+	private String summaryTestResult;
+	
 	@ManyToOne
 	@JoinColumn(name = "p1_report_id")
 	private P1Report p1Report;

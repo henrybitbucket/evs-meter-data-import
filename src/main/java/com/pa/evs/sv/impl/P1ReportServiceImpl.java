@@ -98,9 +98,12 @@ public class P1ReportServiceImpl implements P1ReportService {
 			}
 			sns.add(sn);
 			
+			String summaryTestResult = mcuItem.get("Summary Test Result") != null ? (String) mcuItem.get("Summary Test Result") : "N/A";
+			
 			P1ReportItem p1ReportItem = new P1ReportItem();
 			p1ReportItem.setP1Report(mcr);
 			p1ReportItem.setSn(sn);
+			p1ReportItem.setSummaryTestResult(summaryTestResult);
 			p1ReportItem.setRawContent(mapper.writeValueAsString(mcuItem));
 			p1ReportItem.setUserSubmit(mcr.getUserSubmit());
 			p1ReportItem.setTimeSubmit(mcr.getTimeSubmit());
@@ -137,9 +140,12 @@ public class P1ReportServiceImpl implements P1ReportService {
 			}
 			sns.add(sn);
 			
+			String summaryTestResult = mcuItem.get("Summary Test Result") != null ? (String) mcuItem.get("Summary Test Result") : "N/A";
+			
 			P1ReportItem p1ReportItem = new P1ReportItem();
 			p1ReportItem.setP1Report(mcr);
 			p1ReportItem.setSn(sn);
+			p1ReportItem.setSummaryTestResult(summaryTestResult);
 			p1ReportItem.setRawContent(mapper.writeValueAsString(mcuItem));
 			p1ReportItem.setUserSubmit(mcr.getUserSubmit());
 			p1ReportItem.setTimeSubmit(mcr.getTimeSubmit());
@@ -169,6 +175,7 @@ public class P1ReportServiceImpl implements P1ReportService {
 		String sn = (String) options.get("querySn");
 		String searchLogFileName = (String) options.get("searchLogFileName");
 		String exportCSV = options.get("exportCSV") + "";
+		String searchTestSummary = (String) options.get("searchTestSummary");
 		
 		pagin.setResults(new ArrayList<>());
 		
@@ -182,7 +189,9 @@ public class P1ReportServiceImpl implements P1ReportService {
 		if (StringUtils.isNotBlank(searchLogFileName)) {
 			sqlCommonBuilder.append(" AND lower(p1RPIt.logReportFilename) like lower('%" + searchLogFileName + "%') ");
 		}
-		
+		if (StringUtils.isNotBlank(searchTestSummary)) {
+			sqlCommonBuilder.append(" AND lower(p1RPIt.summaryTestResult) like lower('%" + searchTestSummary + "%') ");
+		}
 		sqlBuilder.append(sqlCommonBuilder);
 		sqlCountBuilder.append(sqlCommonBuilder);
 		
@@ -240,6 +249,7 @@ public class P1ReportServiceImpl implements P1ReportService {
 		String sn = (String) options.get("querySn");
 		String userSubmit = (String) options.get("userSent");
 		String searchLogFileName = (String) options.get("searchLogFileName");
+		String searchTestSummary = (String) options.get("searchTestSummary");
 		String msn = (String) options.get("queryMsn");
 		String exportCSV = options.get("exportCSV") + "";
 		
@@ -252,15 +262,16 @@ public class P1ReportServiceImpl implements P1ReportService {
 		}
 		if (StringUtils.isNotBlank(searchLogFileName)) {
 			sqlCommonBuilder.append(" and exists (select 1 from P1ReportItem p1RPIt where p1RPIt.p1Report.id = p1RP.id AND lower(p1RPIt.logReportFilename) like lower('%" + searchLogFileName + "%')) ");
-		}		
+		}
+		if (StringUtils.isNotBlank(searchTestSummary)) {
+			sqlCommonBuilder.append(" and exists (select 1 from P1ReportItem p1RPIt where p1RPIt.p1Report.id = p1RP.id AND lower(p1RPIt.summaryTestResult) like lower('%" + searchTestSummary + "%')) ");
+		}
 		if (StringUtils.isNotBlank(msn)) {
 			sqlCommonBuilder.append(" and exists (select 1 from P1ReportItem p1RPIt where p1RPIt.p1Report.id = p1RP.id AND lower(p1RPIt.msn) like lower('%" + msn + "%')) ");
 		}
-		
 		if (StringUtils.isNotBlank(userSubmit)) {
 			sqlCommonBuilder.append(" AND p1RP.userSubmit = '" + userSubmit + "' ");	
 		}
-		
 		if (fromDate != null) {
 			sqlCommonBuilder.append(" AND p1RP.createDate >= :fromDate  ");	
 		}

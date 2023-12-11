@@ -33,12 +33,15 @@ public class P1ReportItemDto {
 	
 	private String sn;
 	
+	private String summaryTestResult;
+	
 	public static P1ReportItemDto from(P1ReportItem fr) {
 		return builder()
 				.id(fr.getId())
 				.sn(fr.getSn())
 				.userSubmit(fr.getUserSubmit())
 				.timeSubmit(fr.getTimeSubmit())
+				.summaryTestResult(fr.getSummaryTestResult())
 				.rawContent(fr.getRawContent())
 				.build();
 	}

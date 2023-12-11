@@ -59,4 +59,6 @@ public interface EVSPAService {
 
 	boolean upload(String fileName, InputStream in, String contentType, String bucketName);
 
+	boolean deleteFileInS3(String fileName, String bucketName);
+
 }

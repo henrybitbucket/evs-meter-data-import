@@ -23,4 +23,6 @@ public interface FileService {
 	void downloadFile(Long id, String uid, HttpServletResponse response) throws Exception;
 
 	PaginDto<SFileDto> getP1Files(PaginDto<SFileDto> pagin);
+
+	void deleteP1File(String altName) throws Exception;
 }
