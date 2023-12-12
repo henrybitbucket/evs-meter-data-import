@@ -40,16 +40,16 @@ public class ProjectTagServiceImpl implements ProjectTagService {
 			if (dto.getName().equalsIgnoreCase("all") || dto.getName().equalsIgnoreCase("na")) {
 				throw new ApiException("This tag can't be edited!");
 			}
-			if (projectTagRepository.findByName(dto.getName()).isPresent()) {
-				throw new ApiException("Project tag name already exists!");
-			}
-			
 			Optional<ProjectTag> tagOpt = projectTagRepository.findById(dto.getId());
 			if (!tagOpt.isPresent()) {
 				throw new ApiException("Project tag not found!");
 			}
 			
 			ProjectTag tag = tagOpt.get();
+			List<ProjectTag> otherTags = projectTagRepository.findByNameAndDifferenceId(dto.getName(), tag.getId());
+			if (!otherTags.isEmpty()) {
+				throw new ApiException("Project tag name already exists!");
+			}
 			
 			tag.setName(dto.getName());
 			tag.setDescription(dto.getDescription());
@@ -60,7 +60,7 @@ public class ProjectTagServiceImpl implements ProjectTagService {
 			LOGGER.info("Create new Project Tag");
 			
 			Optional<ProjectTag> tagOpt = projectTagRepository.findByName(dto.getName());
-			if (tagOpt.isPresent()) {
+			if (tagOpt.isPresent() || dto.getName().equalsIgnoreCase("all") || dto.getName().equalsIgnoreCase("na")) {
 				throw new ApiException("Project tag name already exists!");
 			}
 			
