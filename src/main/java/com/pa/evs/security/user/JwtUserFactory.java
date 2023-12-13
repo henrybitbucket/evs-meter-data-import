@@ -27,6 +27,7 @@ public final class JwtUserFactory {
                 .password(user.getPassword())
                 .authorities(mapToGrantedAuthorities(user.getAllRoles()))
                 .permissions(user.getAllPermissions())
+                .projects(user.getAllProjects())
                 .enabled(true)
                 .changePwdRequire(user.getChangePwdRequire())
                 .phoneNumber(user.getPhoneNumber())

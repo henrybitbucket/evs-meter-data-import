@@ -39,6 +39,9 @@ public class UserDto {
     private List<String> roles = new ArrayList<>();
     
     @Builder.Default
+    private List<String> projects = new ArrayList<>();
+    
+    @Builder.Default
     private List<Map<String, Object>> roleDescs = new ArrayList<>();
     
     private String status;

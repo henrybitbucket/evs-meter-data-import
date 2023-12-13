@@ -31,6 +31,7 @@ import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.PlatformUserLoginDto;
+import com.pa.evs.dto.ProjectTagDto;
 import com.pa.evs.dto.ResetPasswordDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
@@ -89,6 +90,18 @@ public class AuthenticationController {
     @PostMapping(value = {RestPath.USERROLE})
     public Object getRoleOfUser(@RequestBody PaginDto<RoleDto> pagin) {
         authenticationService.getRoleOfUser(pagin);
+        return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
+    @PostMapping(value = {RestPath.USER_PROJECT_LOGGING})
+    public Object getProjectOfUserLogin(@RequestBody PaginDto<ProjectTagDto> pagin) {
+        authenticationService.getProjectTagOfUserLogin(pagin);
+        return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
+    @PostMapping(value = {RestPath.USER_PROJECT})
+    public Object getProjectOfUser(@RequestBody PaginDto<ProjectTagDto> pagin) {
+        authenticationService.getProjectTagOfUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     

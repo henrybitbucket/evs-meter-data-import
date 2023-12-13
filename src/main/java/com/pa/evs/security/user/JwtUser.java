@@ -1,5 +1,6 @@
 package com.pa.evs.security.user;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -58,9 +59,12 @@ public class JwtUser implements UserDetails {
     
     private String phoneNumber;
 
-    private  Collection<? extends GrantedAuthority> authorities;
+    private Collection<? extends GrantedAuthority> authorities;
     
-    private  Collection<String> permissions;
+    private Collection<String> permissions;
+    
+    @Builder.Default
+    private List<String> projects = new ArrayList<>();
 
     @JsonIgnore
     private  boolean enabled;
@@ -144,5 +148,9 @@ public class JwtUser implements UserDetails {
 
 	public void setPermissions(Collection<String> permissions) {
 		this.permissions = permissions;
+	}
+
+	public void setProjects(List<String> projects) {
+		this.projects = projects;
 	}
 }

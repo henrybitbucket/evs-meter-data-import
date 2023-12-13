@@ -76,6 +76,9 @@ public class JwtUserDetailsService implements UserDetailsService {
         	}
         });
         
+        List<String> allProjects = user.getAllProjects();
+        user.getProjects().forEach(pt -> allProjects.add(pt.getProject().getName()));
+        
         return JwtUserFactory.create(user);
     }
 }

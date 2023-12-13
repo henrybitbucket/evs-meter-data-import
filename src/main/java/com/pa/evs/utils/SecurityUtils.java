@@ -1,6 +1,7 @@
 package com.pa.evs.utils;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,25 @@ public final class SecurityUtils {
 			
 			if (obj instanceof JwtUser) {
 				return ((JwtUser)obj).getEmail();
+			}
+		} catch (Exception e) {
+			//
+		}
+		return null;
+	}
+	
+	public static JwtUser getUser() {
+		
+		try {
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+			Object obj = auth.getPrincipal();
+			
+			if (obj instanceof String) {
+				return null;
+			}
+			
+			if (obj instanceof JwtUser) {
+				return ((JwtUser)obj);
 			}
 		} catch (Exception e) {
 			//
@@ -111,5 +131,13 @@ public final class SecurityUtils {
 			//
 		}
 		return false;
+	}
+
+	public static List<String> getProjectTags() {
+		JwtUser user = getUser();
+		if (user == null || "false".equalsIgnoreCase(AppProps.get("ENABLE_PROJECT_TAG", "false"))) {
+			return Arrays.asList("ALL");
+		}
+		return user.getProjectTags();
 	}
 }

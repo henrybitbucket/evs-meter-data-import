@@ -12,6 +12,7 @@ import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.PlatformUserLoginDto;
+import com.pa.evs.dto.ProjectTagDto;
 import com.pa.evs.dto.ResetPasswordDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
@@ -58,4 +59,6 @@ public interface AuthenticationService {
 	@SuppressWarnings("rawtypes")
 	List getUserOfSubGroup(Map<String, Object> payload);
 	void getRoleOfMemberSubGroup(PaginDto<RoleDto> pagin);
+	void getProjectTagOfUser(PaginDto<ProjectTagDto> pagin);
+	void getProjectTagOfUserLogin(PaginDto<ProjectTagDto> pagin);
 }

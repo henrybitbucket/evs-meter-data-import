@@ -46,6 +46,7 @@ import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.PlatformUserLoginDto;
+import com.pa.evs.dto.ProjectTagDto;
 import com.pa.evs.dto.ResetPasswordDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
@@ -57,6 +58,7 @@ import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.OTP;
 import com.pa.evs.model.Permission;
 import com.pa.evs.model.PlatformUserLogin;
+import com.pa.evs.model.ProjectTag;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.RolePermission;
 import com.pa.evs.model.SubGroup;
@@ -65,6 +67,7 @@ import com.pa.evs.model.SubGroupMemberRole;
 import com.pa.evs.model.Token;
 import com.pa.evs.model.UserGroup;
 import com.pa.evs.model.UserPermission;
+import com.pa.evs.model.UserProject;
 import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.GroupUserRepository;
@@ -77,6 +80,7 @@ import com.pa.evs.repository.SubGroupMemberRoleRepository;
 import com.pa.evs.repository.SubGroupRepository;
 import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.repository.UserPermissionRepository;
+import com.pa.evs.repository.UserProjectRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.repository.UserRoleRepository;
 import com.pa.evs.security.jwt.JwtTokenUtil;
@@ -105,6 +109,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Autowired
 	private UserRoleRepository userRoleRepository;
+
+	@Autowired
+	private UserProjectRepository userProjectRepository;
 
 	@Autowired
 	private RolePermissionRepository rolePermissionRepository;
@@ -407,6 +414,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		;
 		// End role
+		
+		// Project
+
+		Set<String> projectNames = new HashSet<>();
+		dto.getProjects().forEach(projectNames::add);
+		userProjectRepository.deleteNotInProjects(userId,
+				roleNames.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : projectNames);
+		List<String> existsProjectNames = userProjectRepository.findProjectNameByUserId(userId);
+		List<ProjectTag> projects = userProjectRepository.findProjectByProjectTagNameIn(projectNames);
+		for (ProjectTag project : projects) {
+			if (!existsProjectNames.contains(project.getName())) {
+				UserProject userProject = new UserProject();
+				userProject.setUser(en);
+				userProject.setProject(project);
+				userProjectRepository.save(userProject);
+			}
+		}
+		// End Project 
 	}
 
 	@Transactional
@@ -922,6 +947,186 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 	}
 
+	@Override
+	public void getProjectTagOfUserLogin(PaginDto<ProjectTagDto> pagin) {
+
+		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+
+		if (user == null) {
+			user = userRepository.findByUsername(SecurityUtils.getEmail());
+		}
+
+		if (user != null) {
+			boolean check = false;
+			for (UserRole userRole : user.getRoles()) {
+				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+					check = true;
+				}
+			}
+			if (check == true) {
+				StringBuilder sqlBuilder = new StringBuilder("FROM ProjectTag");
+				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM ProjectTag");
+
+				StringBuilder sqlCommonBuilder = new StringBuilder();
+				sqlCommonBuilder.append(" WHERE 1 = 1");
+				sqlCountBuilder.append(sqlCommonBuilder);
+
+				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+					pagin.setOffset(0);
+				}
+
+				if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+					pagin.setLimit(10000);
+				}
+
+				Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+				Long count = ((Number) queryCount.getSingleResult()).longValue();
+				pagin.setTotalRows(count);
+				pagin.setResults(new ArrayList<>());
+				if (count == 0l) {
+					return;
+				}
+
+				Query query = em.createQuery(sqlBuilder.toString());
+				query.setFirstResult(pagin.getOffset());
+				query.setMaxResults(pagin.getLimit());
+
+				List<ProjectTag> projects = query.getResultList();
+				projects.forEach(project -> {
+					ProjectTagDto dto = ProjectTagDto.builder().id(project.getId()).name(project.getName()).description(project.getDescription()).build();
+					pagin.getResults().add(dto);
+				});
+			} else {
+				StringBuilder sqlBuilder = new StringBuilder("FROM UserProject ur");
+				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM UserProject ur");
+
+				StringBuilder sqlCommonBuilder = new StringBuilder();
+				sqlCommonBuilder.append(" WHERE ur.user.userId = " + user.getUserId());
+				sqlBuilder.append(" WHERE ur.user.userId = " + user.getUserId());
+				sqlCountBuilder.append(sqlCommonBuilder);
+
+				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+					pagin.setOffset(0);
+				}
+
+				if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+					pagin.setLimit(10000);
+				}
+
+				Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+				Long count = ((Number) queryCount.getSingleResult()).longValue();
+				pagin.setTotalRows(count);
+				pagin.setResults(new ArrayList<>());
+				if (count == 0l) {
+					return;
+				}
+
+				Query query = em.createQuery(sqlBuilder.toString());
+				query.setFirstResult(pagin.getOffset());
+				query.setMaxResults(pagin.getLimit());
+
+				List<UserProject> userProjects = query.getResultList();
+				userProjects.forEach(userProject -> {
+					ProjectTagDto dto = ProjectTagDto.builder().id(userProject.getProject().getId()).name(userProject.getProject().getName())
+							.description(userProject.getProject().getDescription()).build();
+					pagin.getResults().add(dto);
+				});
+			}
+		}
+	}	
+	
+	@Override
+	public void getProjectTagOfUser(PaginDto<ProjectTagDto> pagin) {
+
+		Map<String, Object> map = pagin.getOptions();
+
+		Object userId = (Object) map.get("userId");
+
+		Optional<Users> user = userRepository.findById(Long.parseLong(userId.toString()));
+
+		if (user.isPresent()) {
+			boolean check = false;
+			for (UserRole userRole : user.get().getRoles()) {
+				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+					check = true;
+				}
+			}
+			if (check == true) {
+				StringBuilder sqlBuilder = new StringBuilder("FROM ProjectTag");
+				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM ProjectTag");
+
+				StringBuilder sqlCommonBuilder = new StringBuilder();
+				sqlCommonBuilder.append(" WHERE 1 = 1");
+				sqlCountBuilder.append(sqlCommonBuilder);
+
+				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+					pagin.setOffset(0);
+				}
+
+				if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+					pagin.setLimit(20);
+				}
+
+				Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+				Long count = ((Number) queryCount.getSingleResult()).longValue();
+				pagin.setTotalRows(count);
+				pagin.setResults(new ArrayList<>());
+				if (count == 0l) {
+					return;
+				}
+
+				Query query = em.createQuery(sqlBuilder.toString());
+				query.setFirstResult(pagin.getOffset());
+				query.setMaxResults(pagin.getLimit());
+
+				List<ProjectTag> projects = query.getResultList();
+				projects.forEach(project -> {
+					ProjectTagDto dto = ProjectTagDto.builder().id(project.getId()).name(project.getName()).description(project.getDescription()).build();
+					pagin.getResults().add(dto);
+				});
+			} else {
+				StringBuilder sqlBuilder = new StringBuilder("FROM UserProject ur");
+				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM UserProject ur");
+
+				StringBuilder sqlCommonBuilder = new StringBuilder();
+				sqlCommonBuilder.append(" WHERE ur.user.userId = " + userId);
+				sqlBuilder.append(" WHERE ur.user.userId = " + userId);
+				sqlCountBuilder.append(sqlCommonBuilder);
+
+				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+					pagin.setOffset(0);
+				}
+
+				if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+					pagin.setLimit(20);
+				}
+
+				Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+				Long count = ((Number) queryCount.getSingleResult()).longValue();
+				pagin.setTotalRows(count);
+				pagin.setResults(new ArrayList<>());
+				if (count == 0l) {
+					return;
+				}
+
+				Query query = em.createQuery(sqlBuilder.toString());
+				query.setFirstResult(pagin.getOffset());
+				query.setMaxResults(pagin.getLimit());
+
+				List<UserProject> userProjects = query.getResultList();
+				userProjects.forEach(userProject -> {
+					ProjectTagDto dto = ProjectTagDto.builder().id(userProject.getProject().getId()).name(userProject.getProject().getName())
+							.description(userProject.getProject().getDescription()).build();
+					pagin.getResults().add(dto);
+				});
+			}
+		}
+	}
+	
 	@Override
 	public void getGroupOfUser(PaginDto<GroupUserDto> pagin) {
 		Map<String, Object> map = pagin.getOptions();

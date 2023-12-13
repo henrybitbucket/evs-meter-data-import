@@ -69,6 +69,9 @@ public class Users extends Base1Entity {
 	
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserPermission> permissions;
+	
+	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
+    private List<UserProject> projects;
     
     @Column(name = "avatar")
     private String avatar;
@@ -106,6 +109,10 @@ public class Users extends Base1Entity {
     @Transient
     @Builder.Default
     private List<String> allRoles = new ArrayList<>();
+    
+    @Transient
+    @Builder.Default
+    private List<String> allProjects = new ArrayList<>();
     
     public String getLastPwd() {
     	if (StringUtils.isBlank(lastPwd)) {

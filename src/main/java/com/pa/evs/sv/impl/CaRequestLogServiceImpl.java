@@ -414,7 +414,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     public PaginDto<CARequestLog> search(PaginDto<CARequestLog> pagin) {
         StringBuilder sqlBuilder = new StringBuilder("FROM CARequestLog ca ");
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM CARequestLog ca");
-        
+        List<String> tags = SecurityUtils.getProjectTags();
         StringBuilder sqlCommonBuilder = new StringBuilder();
         if (CollectionUtils.isEmpty(pagin.getOptions()) || (
                 pagin.getOptions().size() == 1 
@@ -528,6 +528,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 if (sqlCommonBuilder.length() >= 30) {
                     sqlCommonBuilder.append(" ) AND ");
                 }
+            }
+            
+            if (!tags.contains("ALL")) {
+            	sqlCommonBuilder.append(" " + querySn.toUpperCase() + "%' AND ");
             }
             
             if (StringUtils.isNotBlank(querySn)) {
