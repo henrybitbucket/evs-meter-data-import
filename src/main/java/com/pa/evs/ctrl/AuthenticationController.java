@@ -174,6 +174,16 @@ public class AuthenticationController {
         }
         return ResponseEntity.ok(ResponseDto.builder().success(true).build());
     }
+    
+    @PostMapping(value = {RestPath.UPDATEPROJECT})
+    public ResponseEntity<Object> saveProject(@RequestBody UserDto user) {
+        try {
+        	authenticationService.saveProject(user);
+        } catch (Exception e) {
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).build());
+    }
 
     @GetMapping(value = {RestPath.WHOAMI, RestPath.WHOAMI1})
     public ResponseDto<JwtUser> getUser(HttpServletRequest httpServletRequest){

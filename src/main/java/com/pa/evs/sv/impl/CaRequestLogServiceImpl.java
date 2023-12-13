@@ -53,6 +53,7 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.DeviceRemoveLog;
 import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.Group;
+import com.pa.evs.model.ProjectTag;
 import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
@@ -67,6 +68,7 @@ import com.pa.evs.repository.DeviceRemoveLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.repository.GroupRepository;
 import com.pa.evs.repository.LogRepository;
+import com.pa.evs.repository.ProjectTagRepository;
 import com.pa.evs.repository.RelayStatusLogRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
 import com.pa.evs.repository.UserRepository;
@@ -132,6 +134,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	private VendorRepository vendorRepository;
+	
+	@Autowired
+	private ProjectTagRepository projectTagRepository;
 	
 	@Autowired
 	EntityManager em;
@@ -335,6 +340,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             }
         } else {
             ca.setGroup(null);
+        }
+        if (!dto.getProjectTags().isEmpty()) {
+            List<ProjectTag> tags = projectTagRepository.findByIdIn(dto.getProjectTags());
+            ca.setProjectTags(tags);
+        } else {
+            ca.setProjectTags(null);
         }
         if (dto.getVendor() != null) {
             Optional<Vendor> vendorOpt = vendorRepository.findById(dto.getVendor().longValue());
@@ -631,6 +642,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         final List<CARequestLog> list = query.getResultList();
         list.forEach(ca -> {
         	ca.getVendor();
+        	ca.getProjectTags();
         	ca.setHomeAddress(Utils.formatHomeAddress(ca));
         	if (StringUtils.isBlank(ca.getDeviceCsrSignatureAlgorithm())) {
         		AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.getUid());

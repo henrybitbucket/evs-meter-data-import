@@ -138,6 +138,6 @@ public final class SecurityUtils {
 		if (user == null || "false".equalsIgnoreCase(AppProps.get("ENABLE_PROJECT_TAG", "false"))) {
 			return Arrays.asList("ALL");
 		}
-		return user.getProjectTags();
+		return user.getProjects();
 	}
 }

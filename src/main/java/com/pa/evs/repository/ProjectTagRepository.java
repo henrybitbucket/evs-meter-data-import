@@ -17,4 +17,6 @@ public interface ProjectTagRepository extends JpaRepository<ProjectTag, Long> {
 	@Query(value = "From ProjectTag where name = ?1 and id <> ?2")
 	List<ProjectTag> findByNameAndDifferenceId(String name, Long id);
 
+	List<ProjectTag> findByIdIn(List<Long> projectTags);
+
 }

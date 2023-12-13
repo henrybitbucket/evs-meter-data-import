@@ -61,4 +61,5 @@ public interface AuthenticationService {
 	void getRoleOfMemberSubGroup(PaginDto<RoleDto> pagin);
 	void getProjectTagOfUser(PaginDto<ProjectTagDto> pagin);
 	void getProjectTagOfUserLogin(PaginDto<ProjectTagDto> pagin);
+	void saveProject(UserDto dto);
 }

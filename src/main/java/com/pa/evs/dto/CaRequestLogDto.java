@@ -1,5 +1,7 @@
 package com.pa.evs.dto;
 
+import java.util.List;
+
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 
@@ -65,6 +67,8 @@ public class CaRequestLogDto {
     private AddressDto address;
     
     private Long vendor;
+    
+    private List<Long> projectTags;
     
     @Builder.Default
     private Boolean unCoupleAddress = false;

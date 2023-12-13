@@ -73,6 +73,7 @@ import com.pa.evs.model.Users;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.PermissionRepository;
 import com.pa.evs.repository.PlatformUserLoginRepository;
+import com.pa.evs.repository.ProjectTagRepository;
 import com.pa.evs.repository.RolePermissionRepository;
 import com.pa.evs.repository.RoleRepository;
 import com.pa.evs.repository.SubGroupMemberRepository;
@@ -139,6 +140,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	
 	@Autowired
 	private PlatformUserLoginRepository platformUserLoginRepository;
+	
+	@Autowired
+	private ProjectTagRepository projectTagRepository;
 
 	@Autowired
 	AuthorityService authorityService;
@@ -540,6 +544,40 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				if (!newPs.contains(en.getKey())) {
 					userPermissionRepository.deleteByUserIdAndPermissionId(dto.getId(), en.getKey());
 				}
+			}
+		}
+	}
+	
+	@Transactional
+	@Override
+	public void saveProject(UserDto dto) {
+		Optional<Users> user = userRepository.findById(dto.getId());
+		if (user.isPresent()) {
+			List<String> projectNames = userProjectRepository.findProjectNameByUserId(dto.getId());
+			Set<String> projectNamesInput = new HashSet<>();
+			for (String project : dto.getProjects()) {
+				projectNamesInput.add(project);
+				if (!projectNames.contains(project)) {
+					Optional<ProjectTag> tagOpt = projectTagRepository.findByName(project);
+					if (tagOpt.isPresent()) {
+						UserProject userProject = new UserProject();
+						userProject.setUser(user.get());
+						userProject.setProject(tagOpt.get());
+						try {
+							userProjectRepository.save(userProject);
+						} catch (Exception e) {
+							LOGGER.error(e.getMessage(), e);
+						}
+					}
+				}
+			}
+			
+			try {
+				userProjectRepository.deleteNotInProjects(user.get().getUserId(),
+						projectNamesInput.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : projectNamesInput);
+			} catch (Exception e) {
+				e.printStackTrace();
+				LOGGER.error(e.getMessage(), e);
 			}
 		}
 	}
