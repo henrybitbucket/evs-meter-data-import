@@ -424,7 +424,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		Set<String> projectNames = new HashSet<>();
 		dto.getProjects().forEach(projectNames::add);
 		userProjectRepository.deleteNotInProjects(userId,
-				roleNames.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : projectNames);
+				projectNames.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : projectNames);
 		List<String> existsProjectNames = userProjectRepository.findProjectNameByUserId(userId);
 		List<ProjectTag> projects = userProjectRepository.findProjectByProjectTagNameIn(projectNames);
 		for (ProjectTag project : projects) {

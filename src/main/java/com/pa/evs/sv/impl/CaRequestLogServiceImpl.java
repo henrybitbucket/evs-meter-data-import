@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -50,12 +51,14 @@ import com.pa.evs.model.Block;
 import com.pa.evs.model.Building;
 import com.pa.evs.model.BuildingUnit;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.DeviceProject;
 import com.pa.evs.model.DeviceRemoveLog;
 import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.ProjectTag;
 import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.model.ScreenMonitoring;
+import com.pa.evs.model.UserProject;
 import com.pa.evs.model.Users;
 import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.AddressLogRepository;
@@ -64,6 +67,7 @@ import com.pa.evs.repository.BlockRepository;
 import com.pa.evs.repository.BuildingRepository;
 import com.pa.evs.repository.BuildingUnitRepository;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.DeviceProjectRepository;
 import com.pa.evs.repository.DeviceRemoveLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.repository.GroupRepository;
@@ -150,6 +154,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	private AddressLogRepository addressLogRepository;
 	
 	@Autowired
+	private DeviceProjectRepository deviceProjectRepository;
+	
+	@Autowired
 	EVSPAService evsPAService;
 	
 	@Autowired
@@ -186,6 +193,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     }
 
     @Override
+    @Transactional
     public void save(CaRequestLogDto dto) throws Exception {
         CARequestLog ca = null;
         Calendar c = Calendar.getInstance();
@@ -341,12 +349,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         } else {
             ca.setGroup(null);
         }
-        if (!dto.getProjectTags().isEmpty()) {
-            List<ProjectTag> tags = projectTagRepository.findByIdIn(dto.getProjectTags());
-            ca.setProjectTags(tags);
-        } else {
-            ca.setProjectTags(null);
-        }
         if (dto.getVendor() != null) {
             Optional<Vendor> vendorOpt = vendorRepository.findById(dto.getVendor().longValue());
             if (vendorOpt.isPresent()) {
@@ -393,6 +395,26 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         caRequestLogRepository.save(ca);
         caRequestLogRepository.flush();
         
+        Long id = ca.getId();
+        
+        if (!dto.getProjectTags().isEmpty()) {
+        	Set<Long> projectNames = new HashSet<>();
+    		dto.getProjectTags().forEach(projectNames::add);
+    		deviceProjectRepository.deleteNotInProjects(id, projectNames.isEmpty() ? new HashSet<>() : projectNames);
+    		List<String> existsProjectNames = deviceProjectRepository.findProjectNameByDeviceId(id);
+    		List<ProjectTag> projects = deviceProjectRepository.findProjectByProjectTagNameIn(projectNames);
+    		for (ProjectTag project : projects) {
+    			if (!existsProjectNames.contains(project.getName())) {
+    				DeviceProject deviceProject = new DeviceProject();
+    				deviceProject.setDevice(ca);
+    				deviceProject.setProject(project);
+    				deviceProjectRepository.save(deviceProject);
+    			}
+    		}
+        } else {
+            ca.setProjectTags(null);
+        }
+        
         if (isCoupledAddress) {
 
         	// Add new log to address_log that this new address is linked to this device
@@ -426,12 +448,24 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         StringBuilder sqlBuilder = new StringBuilder("FROM CARequestLog ca ");
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM CARequestLog ca");
         List<String> tags = SecurityUtils.getProjectTags();
+        List<ProjectTag> projectTags = projectTagRepository.findByNameIn(tags);
+        Set<Long> tagIds = projectTags.stream().map(tag -> tag.getId()).collect(Collectors.toSet());
         StringBuilder sqlCommonBuilder = new StringBuilder();
+        
+        if (tags.isEmpty()) {
+        	return pagin;
+        }
+        
         if (CollectionUtils.isEmpty(pagin.getOptions()) || (
                 pagin.getOptions().size() == 1 
                 && BooleanUtils.isTrue(BooleanUtils.toBoolean((String) pagin.getOptions().get("queryAllDate")))
             )) {
-            sqlCommonBuilder.append(" WHERE 1=1 ");
+        	if (!tags.contains("ALL")) {
+        		sqlCommonBuilder.append(" WHERE (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds))    ");
+            } else {
+            	sqlCommonBuilder.append(" WHERE 1 = 1     ");	
+            }
+            
         } else {
             Map<String, Object> options = pagin.getOptions();
             Long fromDate = (Long) options.get("fromDate");
@@ -541,10 +575,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 }
             }
             
-            if (!tags.contains("ALL")) {
-            	sqlCommonBuilder.append(" " + querySn.toUpperCase() + "%' AND ");
-            }
-            
             if (StringUtils.isNotBlank(querySn)) {
                 sqlCommonBuilder.append(" upper(sn) like '%" + querySn.toUpperCase() + "%' AND ");
             }
@@ -554,15 +584,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (StringUtils.isNotBlank(querySnOrCid)) {
                 sqlCommonBuilder.append(" (lower(sn) like '%" + querySnOrCid.toLowerCase().trim() + "%' or lower(cid) like '%" + querySnOrCid.toLowerCase().trim() + "%') AND ");
             }
-                
             if (StringUtils.isNotBlank(status)) {
                 sqlCommonBuilder.append(" status = '" + status + "' AND ");
             }
-            
             if (StringUtils.isNotBlank(type)) {
                 sqlCommonBuilder.append(" type = '" + type + "' AND ");
             }
-            
             if (!CollectionUtils.isEmpty(cids)) {
                 sqlCommonBuilder.append(" (cid = '" + cids.get(0) + "'");
                 for (int i = 1; i < cids.size(); i++) {
@@ -598,9 +625,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (queryVendor != null) {
                 sqlCommonBuilder.append(" vendor.id = " + queryVendor + " AND ");
             }
-            
+        	if (!tags.contains("ALL")) {
+        		sqlCommonBuilder.append(" (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds))  AND ");
+            }
+        	
             sqlCommonBuilder.append(" sn is not null and sn <> ''  AND ");
-            
             sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
         }
         
@@ -626,8 +655,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             pagin.setLimit(100);
         }
         
-        Query queryCount = em.createQuery(sqlCountBuilder.toString());
-        
+    	Query queryCount = !tags.contains("ALL") ? em.createQuery(sqlCountBuilder.toString()).setParameter("tagIds", tagIds) : em.createQuery(sqlCountBuilder.toString());
         Long count = ((Number)queryCount.getSingleResult()).longValue();
         pagin.setTotalRows(count);
         pagin.setResults(new ArrayList<>());
@@ -635,19 +663,21 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             return pagin;
         }
         
-        Query query = em.createQuery(sqlBuilder.toString());
+    	Query query = !tags.contains("ALL") ? em.createQuery(sqlBuilder.toString()).setParameter("tagIds", tagIds) : em.createQuery(sqlBuilder.toString());
         query.setFirstResult(pagin.getOffset());
         query.setMaxResults(pagin.getLimit());
         
         final List<CARequestLog> list = query.getResultList();
-        list.forEach(ca -> {
+        for (CARequestLog ca : list) {
+        	List<ProjectTag> pTags = ca.getDeviceProject().isEmpty() ? new ArrayList<>() : ca.getDeviceProject().stream().map(dp -> (ProjectTag) Hibernate.unproxy(dp.getProject())).collect(Collectors.toList());
         	ca.getVendor();
-        	ca.getProjectTags();
+        	ca.setDeviceProject(null);
+        	ca.setProjectTags(pTags);
         	ca.setHomeAddress(Utils.formatHomeAddress(ca));
         	if (StringUtils.isBlank(ca.getDeviceCsrSignatureAlgorithm())) {
         		AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.getUid());
         	}
-        });
+        }
         
         pagin.setResults(list);
         getRLSLog(list);

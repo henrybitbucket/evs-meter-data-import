@@ -19,4 +19,6 @@ public interface ProjectTagRepository extends JpaRepository<ProjectTag, Long> {
 
 	List<ProjectTag> findByIdIn(List<Long> projectTags);
 
+	List<ProjectTag> findByNameIn(List<String> tags);
+
 }

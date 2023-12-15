@@ -11,6 +11,7 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
@@ -151,8 +152,11 @@ public class CARequestLog extends BaseEntity {
 	@JoinColumn(name = "vendor_id", nullable = false)
 	private Vendor vendor;
 	
-	@OneToMany
-    private List<ProjectTag> projectTags;
+	@OneToMany(fetch=FetchType.LAZY, mappedBy = "device", cascade = CascadeType.MERGE)
+    private List<DeviceProject> deviceProject;
+	
+	@Transient
+	private List<ProjectTag> projectTags;
 	
 	@Transient
 	private String profile;
