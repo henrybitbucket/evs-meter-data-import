@@ -26,6 +26,8 @@ public class CaRequestLogDto {
     
     private String msn;
     
+    private String sn;
+    
     private String certificate;
     
     private String raw;
@@ -72,4 +74,8 @@ public class CaRequestLogDto {
     
     @Builder.Default
     private Boolean unCoupleAddress = false;
+    
+    private Boolean isReplaced;
+    
+    private String replaceReason;
 }

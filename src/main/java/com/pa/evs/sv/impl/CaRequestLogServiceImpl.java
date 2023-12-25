@@ -200,6 +200,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         boolean isSetAddress = false;
         AddressLog addrLog = null;
         String msn = dto.getMsn();
+        String caUid = null;
+        String caSn = null;
         
         if (StringUtils.isNotBlank(dto.getMsn())) {
         	dto.setMsn(dto.getMsn().trim());
@@ -208,10 +210,56 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Optional<CARequestLog> opt = caRequestLogRepository.findById(dto.getId());
             if (opt.isPresent()) {
                 ca = opt.get();
-                
-                if (StringUtils.isNotBlank(dto.getMsn()) && !dto.getMsn().equalsIgnoreCase(ca.getMsn()) && BooleanUtils.isTrue(caRequestLogRepository.existsByMsn(dto.getMsn()))) {
-                    throw new Exception(Message.MSN_WAS_ASSIGNED);
+                if (BooleanUtils.isTrue(dto.getIsReplaced())) {
+                	String newUid = dto.getUid();
+                	String newSn = dto.getSn();
+                	String newReplaceReason = dto.getReplaceReason();
+                	String oldUid = ca.getOldUid();
+                	String oldSn = ca.getOldSn();
+                	String oldReplaceReason = ca.getReplaceReason();
+                	caUid = ca.getUid();
+                	caSn = ca.getSn();
+                	
+                	if (StringUtils.isBlank(newUid)) {
+                		throw new Exception("New MCU UUID is required!");
+                	}
+                	if (StringUtils.isBlank(newSn)) {
+                		throw new Exception("New MCU SN is required!");
+                	}
+                	if (StringUtils.isBlank(newReplaceReason)) {
+                		throw new Exception("Replace reason is required!");
+                	}
+                	if (caRequestLogRepository.findByUid(newUid).isPresent()) {
+                		throw new Exception(String.format("New MCU UUID %s exists!", newUid));
+                	}
+                	if (caRequestLogRepository.findBySn(newSn).isPresent()) {
+                		throw new Exception(String.format("New MCU SN %s exists!", newSn));
+                	}
+                	
+                	if (StringUtils.isNotBlank(oldUid)) {
+                		ca.setOldUid(oldUid + "," + caUid);
+                	} else {
+                		ca.setOldUid(caUid);
+                	}
+                	if (StringUtils.isNotBlank(oldSn)) {
+                		ca.setOldSn(oldSn + "," + caSn);
+                	} else {
+                		ca.setOldSn(caSn);
+                	}
+                	if (StringUtils.isNotBlank(oldReplaceReason)) {
+                		ca.setReplaceReason(oldReplaceReason + "," + newReplaceReason);
+                	} else {
+                		ca.setReplaceReason(newReplaceReason);
+                	}
+                	
+                	ca.setUid(newUid);
+                	ca.setSn(newSn);
+                	ca.setIsReplaced(true);
                 }
+                
+            	if (StringUtils.isNotBlank(dto.getMsn()) && !dto.getMsn().equalsIgnoreCase(ca.getMsn()) && BooleanUtils.isTrue(caRequestLogRepository.existsByMsn(dto.getMsn()))) {
+            		throw new Exception(Message.MSN_WAS_ASSIGNED);
+            	}
                 ca.setModifyDate(c.getTime());
                 if (StringUtils.isBlank(msn) && StringUtils.isNotBlank(ca.getMsn())) {
                 	msn = ca.getMsn();
@@ -427,7 +475,17 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         updateCacheUidMsnDevice(ca.getUid(), "update");
         try {
 			DeviceRemoveLog log = DeviceRemoveLog.build(ca);
-
+			
+			if (BooleanUtils.isTrue(dto.getIsReplaced())) {
+				String details = "New MCU UUID: " + dto.getUid() + "\r\nNew MCU SN: " + dto.getSn() + "\r\nReplace reason: " + dto.getReplaceReason();
+				log.setUid(caUid);
+				log.setSn(caSn);
+	        	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(log, details, "REPLACED", null);
+			}
+			
+			log.setUid(ca.getUid());
+			log.setSn(ca.getSn());
+			log.setReason(null);
 			if (isSetAddress) {
 	        	String operation = isCoupledAddress ? "COUPLE ADDRESS" : "DE-COUPLE ADDRESS";
 	        	AppProps.getContext().getBean(this.getClass()).updateDeviceLogs(log, null, operation, addrLog);

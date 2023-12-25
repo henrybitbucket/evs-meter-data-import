@@ -183,6 +183,18 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "device_key_type")
 	private String deviceKeyType;
 	
+	@Column(name = "is_replaced")
+	private Boolean isReplaced;
+	
+	@Column(name = "old_uid", columnDefinition="TEXT")
+	private String oldUid;
+
+	@Column(name = "old_sn", columnDefinition="TEXT")
+	private String oldSn;
+	
+	@Column(name = "replace_reason", columnDefinition="TEXT")
+	private String replaceReason;
+	
 	@Transient
 	private List<String> logs;
 	
