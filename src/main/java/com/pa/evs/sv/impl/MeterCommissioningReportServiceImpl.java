@@ -580,7 +580,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	@SuppressWarnings("unchecked")
 	public Object getOrNewP2Job(String jobName, String hasSubmitReport, String worker) {
 	
-		boolean isActionByWorker = SecurityUtils.getEmail().equalsIgnoreCase(worker);
+		boolean isActionByWorker = true;//SecurityUtils.getEmail().equalsIgnoreCase(worker);
 		if (!isActionByWorker && !SecurityUtils.hasAnyRole("STAFF")) {
 			Users user = userRepository.findByEmail(SecurityUtils.getEmail());
 			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
@@ -590,7 +590,7 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		} else if (isActionByWorker) {
 			Users user = userRepository.findByEmail(worker);
 			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
-			if (!SecurityUtils.hasAnyRole("P_P2_WORKER") && !SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
+			if (!SecurityUtils.hasAnyRole("P_P2_WORKER") && !SecurityUtils.hasAnyRole("STAFF") && !SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
 				throw new RuntimeException("Access denied!");
 			}
 		}
@@ -624,7 +624,8 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 			}
 			List<P2JobData> data = em.createQuery("FROM P2JobData where jobName = '" + jobName + "' and jobBy = '" + user + "' order by itNo asc ").getResultList();
 			P2JobDto rs = P2JobDto.from(p2Jobs.get(0));
-			rs.setJobBy(StringUtils.isBlank(p2Jobs.get(0).getJobByAlias()) ? user : p2Jobs.get(0).getJobByAlias());
+			// rs.setJobBy(StringUtils.isBlank(p2Jobs.get(0).getJobByAlias()) ? user : p2Jobs.get(0).getJobByAlias());
+			rs.setJobBy(user);
 			
 			for (P2JobData jobData : data) {
 				
@@ -678,6 +679,11 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		}
 		
 		String user = SecurityUtils.getEmail();
+		Users jobByUser = userRepository.findByEmail(dto.getJobBy());
+		if (jobByUser != null) {
+			user = dto.getJobBy();
+		}
+		
 		String jobName = dto.getName();
 		
 		// for validate exists job name
