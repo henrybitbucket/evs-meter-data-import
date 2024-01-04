@@ -445,7 +445,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         
         Long id = ca.getId();
         
-        if (!dto.getProjectTags().isEmpty()) {
+        if (dto.getProjectTags() != null && !dto.getProjectTags().isEmpty()) {
         	Set<Long> projectNames = new HashSet<>();
     		dto.getProjectTags().forEach(projectNames::add);
     		deviceProjectRepository.deleteNotInProjects(id, projectNames.isEmpty() ? new HashSet<>() : projectNames);

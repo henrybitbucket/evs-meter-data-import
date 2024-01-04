@@ -1,5 +1,6 @@
 package com.pa.evs.dto;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.pa.evs.enums.DeviceStatus;
@@ -70,7 +71,8 @@ public class CaRequestLogDto {
     
     private Long vendor;
     
-    private List<Long> projectTags;
+    @Builder.Default
+    private List<Long> projectTags = new ArrayList<>();
     
     @Builder.Default
     private Boolean unCoupleAddress = false;
