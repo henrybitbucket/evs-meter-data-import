@@ -11,7 +11,6 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
-import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
@@ -173,6 +172,9 @@ public class CARequestLog extends BaseEntity {
 	
 	@Column(name = "last_meter_commissioning_report")
 	private Date lastMeterCommissioningReport;
+	
+	@Column(name = "last_meter_commissioning_report_ack")
+	private Date lastMeterCommissioningReportAck;
 	
 	@Column(name = "latestINFFirmwaveRequest", length = 255)
 	private String latestINFFirmwaveRequest;//time_INF_version

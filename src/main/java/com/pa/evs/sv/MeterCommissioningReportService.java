@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.pa.evs.dto.MeterCommissioningReportDto;
 import com.pa.evs.dto.P2JobDto;
+import com.pa.evs.dto.P2ReportAckDto;
 import com.pa.evs.dto.PaginDto;
 
 public interface MeterCommissioningReportService {
@@ -21,4 +22,6 @@ public interface MeterCommissioningReportService {
 	List<Object> getP2WorkerByManager(String manager);
 	List<Object> getP2Managers();
 	void deleteP2Worker(String manager, String worker);
+	void saveP2ReportAck(P2ReportAckDto dto);
+	void saveP2ReportAck(List<P2ReportAckDto> dtos);
 }

@@ -52,8 +52,8 @@ import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.MeterCommissioningReportDto;
 import com.pa.evs.dto.P1OnlineStatusDto;
-import com.pa.evs.dto.P1ReportDto;
 import com.pa.evs.dto.P2JobDto;
+import com.pa.evs.dto.P2ReportAckDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.SFileDto;
@@ -829,6 +829,16 @@ public class CommonController {
 	public ResponseEntity<Object> saveBulkMeterCommissionSubmit(HttpServletResponse response, @RequestBody List<MeterCommissioningReportDto> dtos) {
     	try {
     		meterCommissioningReportService.save(dtos);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/bulk-submit-report-ack")
+	public ResponseEntity<Object> saveBulkReportAck(HttpServletResponse response, @RequestBody List<P2ReportAckDto> dtos) {
+    	try {
+    		meterCommissioningReportService.saveP2ReportAck(dtos);
     	} catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }

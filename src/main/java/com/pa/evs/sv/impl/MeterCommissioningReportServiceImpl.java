@@ -22,18 +22,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.dto.MeterCommissioningReportDto;
 import com.pa.evs.dto.P2JobDataDto;
 import com.pa.evs.dto.P2JobDto;
+import com.pa.evs.dto.P2ReportAckDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.MeterCommissioningReport;
 import com.pa.evs.model.P2Job;
 import com.pa.evs.model.P2JobData;
+import com.pa.evs.model.P2ReportAck;
 import com.pa.evs.model.P2Worker;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.MeterCommissioningReportRepository;
 import com.pa.evs.repository.P2JobDataRepository;
 import com.pa.evs.repository.P2JobRepository;
+import com.pa.evs.repository.P2ReportAckRepository;
 import com.pa.evs.repository.P2WorkerRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.sv.AuthenticationService;
@@ -69,6 +72,9 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 	
 	@Autowired
 	P2WorkerRepository p2WorkerRepository;
+	
+	@Autowired
+	P2ReportAckRepository p2ReportAckRepository;
 	
 	ObjectMapper mapper = new ObjectMapper();
 
@@ -160,6 +166,80 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		}
 	}
 	
+	@Transactional
+	@Override
+	public void saveP2ReportAck(P2ReportAckDto dto) {
+		
+		boolean isActionByWorker = SecurityUtils.getEmail().equalsIgnoreCase(dto.getUserSubmit());
+		if (!isActionByWorker && !SecurityUtils.hasAnyRole("STAFF")) {
+			Users user = userRepository.findByEmail(SecurityUtils.getEmail());
+			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
+			if (!SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P_P2_MANAGER")) {
+				throw new RuntimeException("Access denied!");
+			}
+		} else if (isActionByWorker) {
+			Users user = userRepository.findByEmail(dto.getUserSubmit());
+			user.setSubGroups(authenticationService.getSubGroupOfUser(user.getEmail()));
+			if (!SecurityUtils.hasAnyRole("P_P2_WORKER") && !SecurityUtils.hasAnySubGroupPermissions(user, "P2_GROUP", "P2_MANAGER", "P2_WORKER", "P_P2_MANAGER", "P_P2_WORKER")) {
+				throw new RuntimeException("Access denied!");
+			}
+		}
+		
+		P2ReportAck mcr = new P2ReportAck();
+		mcr.setCid(dto.getCid());
+		mcr.setUid(dto.getUid());
+		mcr.setType(dto.getType());
+		mcr.setStatus(dto.getStatus());
+		mcr.setSn(dto.getSn());
+		mcr.setMsn(dto.getMsn());
+		mcr.setLastOBRDate(dto.getLastOBRDate());
+		mcr.setMeterPhotos(dto.getMeterPhotos());
+		mcr.setIsPassed(dto.getIsPassed());
+		mcr.setKwh(dto.getKwh());
+		mcr.setKw(dto.getKw());
+		mcr.setI(dto.getI());
+		mcr.setPf(dto.getPf());
+		mcr.setV(dto.getV());
+		mcr.setDt(dto.getDt());
+		mcr.setIsLatest(true);
+		mcr.setUserSubmit(dto.getUserSubmit());
+		mcr.setTimeSubmit(dto.getTimeSubmit());
+		mcr.setCommentSubmit(dto.getCommentSubmit());
+		mcr.setJobSheetNo(dto.getJobSheetNo());
+		mcr.setJobBy(dto.getJobBy());
+		mcr.setCoupledUser(dto.getCoupledUser());
+		mcr.setManagerSubmit(dto.getManagerSubmit());
+		mcr.setContractOrder(dto.getContractOrder());
+		em.createQuery("UPDATE P2ReportAck set isLatest = false where uid = '" + mcr.getUid() + "'").executeUpdate();
+		em.flush();
+		
+		if (dto.getInstaller() != null) {
+			Optional<Users> installer = userRepository.findById(dto.getInstaller());
+			mcr.setInstaller(installer.orElse(null));
+		}
+		
+		p2ReportAckRepository.save(mcr);
+		
+		Optional<CARequestLog> caOpt = caRequestLogRepository.findByUid(dto.getUid());
+		
+		if (caOpt.isPresent()) {
+			caOpt.get().setLastMeterCommissioningReportAck(mcr.getCreateDate());
+			caRequestLogRepository.save(caOpt.get());
+		}
+		
+		String user = dto.getUserSubmit();
+		Optional<P2Job> p2JobOpt = p2JobRepository.findByJobByAndName(user, dto.getJobSheetNo());
+		
+		if (p2JobOpt.isPresent()) {
+			P2Job p2Job = p2JobOpt.get();
+			p2Job.setCommentSubmitAck(dto.getCommentSubmit());
+			p2Job.setTimeSubmitAck(dto.getTimeSubmit());
+			p2Job.setUserSubmitAck(dto.getUserSubmit());
+			p2Job.setManagerSubmitAck(dto.getManagerSubmit());
+			p2JobRepository.save(p2Job);
+		}
+	}
+	
 	@Override
 	@Transactional
 	public void addP2Worker(String manager, List<String> workers) {
@@ -231,6 +311,17 @@ public class MeterCommissioningReportServiceImpl implements MeterCommissioningRe
 		}
 		for (MeterCommissioningReportDto dto : dtos) {
 			save(dto);
+		}
+	}
+	
+	@Transactional
+	@Override
+	public void saveP2ReportAck(List<P2ReportAckDto> dtos) {
+		if (dtos == null || dtos.isEmpty()) {
+			return;
+		}
+		for (P2ReportAckDto dto : dtos) {
+			saveP2ReportAck(dto);
 		}
 	}
 	
