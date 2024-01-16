@@ -1131,7 +1131,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     	try {
 			log.setId(null);
 			log.setOperation(operation);
-			log.setOperationBy(SecurityUtils.getEmail());
+			if (StringUtils.isBlank(log.getOperationBy())) {
+				log.setOperationBy(SecurityUtils.getEmail());	
+			}
 			if (StringUtils.isNotBlank(reason)) {
 				log.setReason(reason);
 			}
@@ -1185,6 +1187,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		String queryEsimId = (String) options.get("queryEsimId");
 		String queryRemark = (String) options.get("queryRemark");
 		String queryOperation = (String) options.get("queryOperation");
+		String queryOperationBy = (String) options.get("queryOperationBy");
 		Boolean enrollmentDate = BooleanUtils.toBoolean((String) options.get("queryEnrollmentDate"));
 		boolean queryOperationDate = "true".equalsIgnoreCase(options.get("queryOperationDate") + "");
 		Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor"))
@@ -1236,6 +1239,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		if (StringUtils.isNotBlank(queryOperation)) {
 			sqlCommonBuilder.append(" upper(operation) = '" + queryOperation.toUpperCase() + "' AND ");
 		}
+		if (StringUtils.isNotBlank(queryOperationBy)) {
+			sqlCommonBuilder.append(" upper(operationBy) like '%" + queryOperationBy.toUpperCase().trim() + "%' AND ");
+		}
+		
 		if (queryVendor != null) {
 			sqlCommonBuilder.append(" vendor.id = " + queryVendor + " AND ");
 		}

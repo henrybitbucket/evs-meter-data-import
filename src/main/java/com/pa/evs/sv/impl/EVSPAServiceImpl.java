@@ -87,6 +87,7 @@ import com.pa.evs.enums.MqttCmdStatus;
 import com.pa.evs.enums.ScreenMonitorKey;
 import com.pa.evs.enums.ScreenMonitorStatus;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.DeviceRemoveLog;
 import com.pa.evs.model.Firmware;
 import com.pa.evs.model.GroupTask;
 import com.pa.evs.model.Log;
@@ -392,7 +393,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				LOG.info("> INF request update firmwave " + logP.getUid() + " -> " + CommonController.CMD_OPTIONS.get().get("selectVersion"));
 				Optional<CARequestLog> opt = caRequestLogRepository.findByUid(logP.getUid());
 				if (opt.isPresent()) {
-					opt.get().setLatestINFFirmwaveRequest(System.currentTimeMillis() + "_INF_" + logP.getMid() + "_" + CommonController.CMD_OPTIONS.get().get("selectVersion"));
+					opt.get().setLatestINFFirmwaveRequest(System.currentTimeMillis() + "@@INF@@" + logP.getMid() + "@@" + CommonController.CMD_OPTIONS.get().get("selectVersion") + "@@" + SecurityUtils.getEmail());
 					caRequestLogRepository.save(opt.get());
 				}
 			}
@@ -898,7 +899,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 		return false;
 	}
 	
-	private void handleINFRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
+	@Transactional
+	public void handleINFRes(Map<String, Object> data, String type, Log log, int status) throws Exception {
 		// chua validate resp signature
 		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 		
@@ -906,14 +908,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Map<String, Object> payload1 = (Map<String, Object>) data.get("payload");
 			Map<String, Object> data1 = (Map<String, Object>) payload1.get("data");
 			
+			String infBy = null;
 			if (opt.isPresent()) {
 				Long vendor = opt.get().getVendor().getId();
 				
-				String[] latestINFFirmwaveRequest = (opt.get().getLatestINFFirmwaveRequest() + "").split("_");
+				String[] latestINFFirmwaveRequest = (opt.get().getLatestINFFirmwaveRequest() + "").split("@@");
 				String nextVersion = firmwareService.getLatestFirmware().get(vendor).getVersion();
 				if (latestINFFirmwaveRequest.length >= 4) {
 					nextVersion = latestINFFirmwaveRequest[3];
 					LOG.debug("handleINFRes selectVersion - uid: {}, vendor: {}, firmware: {}", opt.get().getUid(), vendor, nextVersion);
+				}
+				if (latestINFFirmwaveRequest.length >= 5) {
+					infBy = latestINFFirmwaveRequest[4];
 				}
 				// System.currentTimeMillis() + "_INF_" + logP.getMid() + "_" + CommonController.CMD_OPTIONS.get().get("selectVersion")
 				if (nextVersion.equals(data1.get("ver"))) {
@@ -931,6 +937,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if (data1.get("ver") != null) {
 				LOG.debug("handleINFRes saving resp");
 				if (opt.isPresent()) {
+					
+					String currVer = opt.get().getVer();
 					opt.get().setVer(data1.get("ver") + "");
 					if (data1.get("rdti") != null) {
 						opt.get().setReadInterval(Long.parseLong(data1.get("rdti") + ""));
@@ -939,6 +947,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 						opt.get().setInterval(Long.parseLong(data1.get("pdti") + ""));
 					}
 					caRequestLogRepository.save(opt.get());
+					
+					DeviceRemoveLog opLog = DeviceRemoveLog.build(opt.get());
+					opLog.setOperationBy(infBy);
+					opLog.setVer(data1.get("ver") + "");
+					opLog.setRemark("ver before " + currVer);
+					LOG.debug("handleINFRes saving log OTA operation");
+					AppProps.getContext().getBean(CaRequestLogServiceImpl.class).updateDeviceLogs(opLog, null, "OTA", null);
 				}
 			}
 			if ("TCM_INFO".equalsIgnoreCase(CommonController.MID_TYPE.get(log.getOid()))) {
@@ -960,7 +975,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			if (opt.isPresent()) {
 				Long vendor = opt.get().getVendor().getId();
 				
-				String[] latestINFFirmwaveRequest = (opt.get().getLatestINFFirmwaveRequest() + "").split("_");
+				String[] latestINFFirmwaveRequest = (opt.get().getLatestINFFirmwaveRequest() + "").split("@@");
 				String nextVersion = firmwareService.getLatestFirmware().get(vendor).getVersion();
 				if (latestINFFirmwaveRequest.length >= 4) {
 					nextVersion = latestINFFirmwaveRequest[3];
@@ -1206,7 +1221,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 			
 			if ("INF".equalsIgnoreCase(type)) {
-				handleINFRes(data, type, log, status);
+				AppProps.getContext().getBean(this.getClass()).handleINFRes(data, type, log, status);
 			}
 
 			if ("OTA".equalsIgnoreCase(type)) {
