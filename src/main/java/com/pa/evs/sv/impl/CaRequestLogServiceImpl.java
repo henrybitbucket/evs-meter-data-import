@@ -1424,7 +1424,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	sqlCommonBuilder.append(" upper(comment) like '%" + comment.toUpperCase() + "%' AND ");
         }
         if (StringUtils.isNotBlank(commandBy)) {
-        	sqlCommonBuilder.append(" upper(commandBy) like '%" + commandBy.toUpperCase() + "%' AND ");
+        	sqlCommonBuilder.append(" upper(commandSendBy) like '%" + commandBy.toUpperCase() + "%' AND ");
         }
         if (StringUtils.isNotBlank(command)) {
         	sqlCommonBuilder.append(" command = '" + command + "' AND ");
