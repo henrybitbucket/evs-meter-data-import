@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
@@ -63,7 +64,9 @@ import com.pa.evs.enums.DeviceType;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
+import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.RelayStatusLogRepository;
 import com.pa.evs.sv.AddressLogService;
 import com.pa.evs.sv.AddressService;
 import com.pa.evs.sv.CaRequestLogService;
@@ -141,6 +144,8 @@ public class CommonController {
     @Autowired P1ReportService p1ReportService;
     
     @Autowired P1OnlineStatusService p1OnlineStatusService;
+    
+	@Autowired RelayStatusLogRepository relayStatusLogRepository;
 	
 	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
@@ -260,17 +265,31 @@ public class CommonController {
                     return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message("OTA is in processing. This request is skipped").build());
                 }
             }
-
+            
             LOG.info("> Calling api send cmd: " + command.getCmd() + " type: " + command.getType() + " for uid: " + command.getUid() + " mid: " + mid);
             if (StringUtils.isNotBlank(command.getType())) {
             	// Ex: ECH_P1_ONLINE_TEST
             	CMD_DESC.set(SimpleMap.init(command.getUid() + "_" + mid, command.getType()));
             }
-            evsPAService.publish(alias + command.getUid(), SimpleMap.init(
+            Log resultLog = evsPAService.publish(alias + command.getUid(), SimpleMap.init(
                     "header", SimpleMap.init("uid", command.getUid()).more("mid", mid).more("gid", command.getUid()).more("msn", ca.get().getMsn()).more("sig", sig)
                 ).more(
                     "payload", map
                 ), command.getCmd(), command.getBatchId());
+            
+            if ("RLS".equalsIgnoreCase(command.getCmd()) || "PW0".equalsIgnoreCase(command.getCmd()) || "PW1".equalsIgnoreCase(command.getCmd())) {
+            	String commandSendBy = SecurityUtils.getEmail();
+        		RelayStatusLog rl = new RelayStatusLog();
+        		rl.setBatchUuid(UUID.randomUUID().toString());
+        		rl.setCommand(command.getCmd());
+        		rl.setComment(command.getCmd());
+        		rl.setFilters("queryUuid=" + ca.get().getUid());
+        		rl.setCommandSendBy(commandSendBy);
+        		rl.setTotalCount(1);
+        		rl.setCurrentCount(resultLog == null ? 0 : 1);
+        		rl.setErrorCount(resultLog == null ? 1 : 0);
+        		relayStatusLogRepository.save(rl);
+            }
             
             Thread.sleep(2000l);
             return ResponseEntity.ok(ResponseDto.builder().success(true).response(mid).build());
