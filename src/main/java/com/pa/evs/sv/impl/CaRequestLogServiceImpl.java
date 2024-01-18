@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -58,7 +57,6 @@ import com.pa.evs.model.Group;
 import com.pa.evs.model.ProjectTag;
 import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.model.ScreenMonitoring;
-import com.pa.evs.model.UserProject;
 import com.pa.evs.model.Users;
 import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.AddressLogRepository;
@@ -1407,36 +1405,34 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         String command = (String) options.get("queryCommand");
         String comment = (String) options.get("queryComment");
         String batchUuid = (String) options.get("queryBatchUuid");
+        String filter = (String) options.get("queryFilter");
         
-        sqlCommonBuilder.append(" WHERE     ");
+        sqlCommonBuilder.append(" WHERE 1 = 1 ");
         
         if (fromDate != null && toDate == null) {
-            sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate + " AND ");
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
         }
         if (fromDate == null && toDate != null) {
-            sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + " AND ");
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate);
         }
         if (fromDate != null && toDate != null) {
-            sqlCommonBuilder.append(" ( EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
-            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + ") AND ");
+            sqlCommonBuilder.append(" AND ( EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
+            sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + ")");
         }
         if (StringUtils.isNotBlank(comment)) {
-        	sqlCommonBuilder.append(" upper(comment) like '%" + comment.toUpperCase() + "%' AND ");
+        	sqlCommonBuilder.append(" AND upper(comment) like '%" + comment.toUpperCase() + "%'");
         }
         if (StringUtils.isNotBlank(commandBy)) {
-        	sqlCommonBuilder.append(" upper(commandSendBy) like '%" + commandBy.toUpperCase() + "%' AND ");
+        	sqlCommonBuilder.append(" AND upper(commandSendBy) like '%" + commandBy.toUpperCase() + "%'");
         }
         if (StringUtils.isNotBlank(command)) {
-        	sqlCommonBuilder.append(" command = '" + command + "' AND ");
+        	sqlCommonBuilder.append(" AND upper(command) = '" + command.toUpperCase() + "'");
         }
         if (StringUtils.isNotBlank(batchUuid)) {
-        	sqlCommonBuilder.append(" batchUuid = '" + batchUuid + "' AND ");
+        	sqlCommonBuilder.append(" AND batchUuid = '" + batchUuid + "'");
         }
-        
-        sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
-        
-        if (sqlCommonBuilder.length() < 8) {
-            sqlCommonBuilder.append(" 1 = 1 ");
+        if (StringUtils.isNotBlank(filter)) {
+        	sqlCommonBuilder.append(" AND upper(filters) like '%" + filter.toUpperCase() + "%' ");
         }
         
         sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id DESC");
