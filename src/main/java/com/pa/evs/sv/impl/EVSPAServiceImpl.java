@@ -98,6 +98,7 @@ import com.pa.evs.model.MeterLog;
 import com.pa.evs.model.P1OnlineStatus;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.PiLog;
+import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.model.Vendor;
@@ -112,6 +113,7 @@ import com.pa.evs.repository.MeterLogRepository;
 import com.pa.evs.repository.P1OnlineStatusRepository;
 import com.pa.evs.repository.PiLogRepository;
 import com.pa.evs.repository.PiRepository;
+import com.pa.evs.repository.RelayStatusLogRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.repository.VendorRepository;
@@ -187,6 +189,8 @@ public class EVSPAServiceImpl implements EVSPAService {
     @Autowired private VendorRepository vendorRepository;
     
     @Autowired private FirmwareRepository firmwareRepository;
+    
+	@Autowired private RelayStatusLogRepository relayStatusLogRepository;
     
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
 	
@@ -1145,6 +1149,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 			log.setMqttAddress(evsPAMQTTAddress);
 			log.setTopic(evsPASubscribeTopic);
 			LOG.debug(">Subscribe " + log.getMid() + " " + log.getMsn() + " " + log.getPType() + " " + evsPASubscribeTopic);
+			
+			if ("RLS".equalsIgnoreCase(log.getPType()) || "PW0".equalsIgnoreCase(log.getPType()) || "PW1".equalsIgnoreCase(log.getPType())) {
+				Optional<RelayStatusLog> rlsOpt = relayStatusLogRepository.findByCommandAndUidAndMid(log.getPType(), log.getUid(), log.getOid());
+				if (rlsOpt.isPresent()) {
+					log.setRlsBatchUuid(rlsOpt.get().getBatchUuid());
+				}
+			}
+			
 			if (!"MDT".equalsIgnoreCase(type)) {
 				logRepository.save(log);
 				updatePublishStatus(log);				
@@ -1193,6 +1205,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 			log.setMqttAddress(evsPAMQTTAddress);
 			log.setTopic(evsPARespSubscribeTopic);
 			LOG.debug(">Subscribe " + log.getMid() + " " + log.getMsn() + " " + log.getPType() + " " + evsPARespSubscribeTopic);
+			
+			if ("RLS".equalsIgnoreCase(log.getPType()) || "PW0".equalsIgnoreCase(log.getPType()) || "PW1".equalsIgnoreCase(log.getPType())) {
+				Optional<RelayStatusLog> rlsOpt = relayStatusLogRepository.findByCommandAndUidAndMid(log.getPType(), log.getUid(), log.getOid());
+				if (rlsOpt.isPresent()) {
+					log.setRlsBatchUuid(rlsOpt.get().getBatchUuid());
+				}
+			}
+			
 			logRepository.save(log);
 			updatePublishStatus(log);
 

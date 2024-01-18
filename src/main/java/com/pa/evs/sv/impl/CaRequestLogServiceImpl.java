@@ -54,6 +54,7 @@ import com.pa.evs.model.DeviceProject;
 import com.pa.evs.model.DeviceRemoveLog;
 import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.Group;
+import com.pa.evs.model.Log;
 import com.pa.evs.model.ProjectTag;
 import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.model.ScreenMonitoring;
@@ -255,8 +256,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 	ca.setIsReplaced(true);
                 }
                 
-            	if (StringUtils.isNotBlank(dto.getMsn()) && !dto.getMsn().equalsIgnoreCase(ca.getMsn()) && BooleanUtils.isTrue(caRequestLogRepository.existsByMsn(dto.getMsn()))) {
-            		throw new Exception(Message.MSN_WAS_ASSIGNED);
+            	if (StringUtils.isNotBlank(dto.getMsn()) && StringUtils.isNotBlank(ca.getMsn()) && !dto.getMsn().equalsIgnoreCase(ca.getMsn())) {
+            		if (BooleanUtils.isTrue(caRequestLogRepository.existsByMsn(dto.getMsn()))) {
+            			throw new Exception(Message.MSN_WAS_ASSIGNED);
+            		}
+            		throw new Exception(Message.MCU_ALREADY_COUPLED);
+            	}
+            	if (ca.getBuildingUnit() != null && dto.getBuildingUnitId() != null && !ca.getBuildingUnit().getId().equals(dto.getBuildingUnitId())) {
+            		throw new Exception(Message.MCU_ALREADY_COUPLED_ADDRESS);
             	}
                 ca.setModifyDate(c.getTime());
                 if (StringUtils.isBlank(msn) && StringUtils.isNotBlank(ca.getMsn())) {
@@ -1370,9 +1377,15 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				SimpleMap<String, Object> map = SimpleMap.init("id", ca.getUid()).more("cmd", command);
 				Long mid = evsPAService.nextvalMID(ca.getVendor());
 				String sig = BooleanUtils.isTrue(ca.getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(ca.getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(map), ca.getVendor().getSignatureAlgorithm());
-				evsPAService.publish(alias + ca.getUid(), SimpleMap.init(
+				Log resultLog = evsPAService.publish(alias + ca.getUid(), SimpleMap.init(
 	                    "header", SimpleMap.init("uid", ca.getUid()).more("mid", mid).more("gid", ca.getUid()).more("msn", ca.getMsn()).more("sig", sig)
-	                ).more("payload", map), command, uuid);
+	                ).more("payload", map), command, null);
+				
+				if (resultLog != null) {
+					resultLog.setRlsBatchUuid(uuid);
+					logRepository.save(resultLog);
+				}
+				
 				successCount++;
 				rl.setCurrentCount(successCount);
 				updateRLSStatus(rl);

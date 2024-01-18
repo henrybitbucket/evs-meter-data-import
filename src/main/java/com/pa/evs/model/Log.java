@@ -100,6 +100,9 @@ public class Log extends BaseEntity {
     @Column(name = "handle_subscribe_desc")
     private String handleSubscribeDesc;
     
+	@Column(name = "rls_batch_uuid")
+	private String rlsBatchUuid;
+    
     @JsonIgnore
     public String getRepStatusDesc() {
     	return MqttCmdStatus.getDescription(repStatus);

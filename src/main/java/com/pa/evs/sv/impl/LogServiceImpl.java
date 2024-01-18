@@ -63,13 +63,10 @@ public class LogServiceImpl implements LogService {
         Object piId = (Object) map.get("piId");
         Object groupId = (Object) map.get("groupId");
         String ftpStatus = (String) map.get("ftpResStatus");
-        
         Object markView = (Object) map.get("markView");
-        
         String batchId = (String) map.get("batchId");
-        
-        
         Number repStatus = (Number) map.get("repStatus");
+        String rlsBatchUuid = (String) map.get("rlsBatchUuid");
         
         StringBuilder sqlBuilder = new StringBuilder(piId != null ? " Select l, pl, cl " : " Select l, true, cl ");
         
@@ -106,7 +103,9 @@ public class LogServiceImpl implements LogService {
         if (StringUtils.isNotBlank(ftpStatus)) {
         	sqlCommonBuilder.append(" AND pl.ftpResStatus = '" + ftpStatus + "'");
         }         
-        
+        if (StringUtils.isNotBlank(rlsBatchUuid)) {
+        	sqlCommonBuilder.append(" AND l.rlsBatchUuid = '" + rlsBatchUuid + "' ");
+        }
         if (StringUtils.isNotBlank(ptype)) {
         	if (ptype.trim().startsWith("(") && ptype.trim().endsWith(")")) {
         		sqlCommonBuilder.append(" AND l.pType IN " + ptype.toUpperCase() + "");

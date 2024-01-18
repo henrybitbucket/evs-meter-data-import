@@ -44,4 +44,10 @@ public class RelayStatusLog extends BaseEntity {
 	@Column(name = "error_count")
 	private Integer errorCount;
 	
+	@Column(name = "mid")
+	private Long mid;
+	
+	@Column(name = "uid")
+	private String uid;
+	
 }

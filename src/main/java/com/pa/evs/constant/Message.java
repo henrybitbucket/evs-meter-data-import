@@ -13,6 +13,8 @@ public interface Message {
     String YES_NO_MESSAGE = "Please say yes or no. Thanks";
     String FIRMWARE_NOT_FOUND = "Firmware not found!";
     String MSN_WAS_ASSIGNED = "MSN was assigned for another UID";
+    String MCU_ALREADY_COUPLED = "MCU is already coupled. If you want to re-couple it, de-couple it first!";
+    String MCU_ALREADY_COUPLED_ADDRESS = "MCU is already assigned to an address. If you want to re-couple it, de-couple it first!";
     String ADDRESS_IS_ASSIGNED = "The address is assigned to another MCU";
     String VENDOR_NOT_FOUND = "Vendor not found!";
 }

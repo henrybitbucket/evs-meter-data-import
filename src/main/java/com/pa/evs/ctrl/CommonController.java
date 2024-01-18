@@ -66,6 +66,7 @@ import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.RelayStatusLogRepository;
 import com.pa.evs.sv.AddressLogService;
 import com.pa.evs.sv.AddressService;
@@ -146,6 +147,8 @@ public class CommonController {
     @Autowired P1OnlineStatusService p1OnlineStatusService;
     
 	@Autowired RelayStatusLogRepository relayStatusLogRepository;
+	
+	@Autowired LogRepository logRepository;
 	
 	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
@@ -277,10 +280,13 @@ public class CommonController {
                     "payload", map
                 ), command.getCmd(), command.getBatchId());
             
+            Thread.sleep(2000l);
+            
             if ("RLS".equalsIgnoreCase(command.getCmd()) || "PW0".equalsIgnoreCase(command.getCmd()) || "PW1".equalsIgnoreCase(command.getCmd())) {
             	String commandSendBy = SecurityUtils.getEmail();
+            	String batchUuid = UUID.randomUUID().toString();
         		RelayStatusLog rl = new RelayStatusLog();
-        		rl.setBatchUuid(UUID.randomUUID().toString());
+        		rl.setBatchUuid(batchUuid);
         		rl.setCommand(command.getCmd());
         		rl.setComment(command.getCmd());
         		rl.setFilters("queryUuid=" + ca.get().getUid());
@@ -288,10 +294,17 @@ public class CommonController {
         		rl.setTotalCount(1);
         		rl.setCurrentCount(resultLog == null ? 0 : 1);
         		rl.setErrorCount(resultLog == null ? 1 : 0);
+        		rl.setUid(command.getUid());
+        		rl.setMid(mid);
+        		
+        		if (resultLog != null) {
+        			resultLog.setRlsBatchUuid(batchUuid);
+        			logRepository.save(resultLog);
+        		}
+        		
         		relayStatusLogRepository.save(rl);
             }
             
-            Thread.sleep(2000l);
             return ResponseEntity.ok(ResponseDto.builder().success(true).response(mid).build());
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
