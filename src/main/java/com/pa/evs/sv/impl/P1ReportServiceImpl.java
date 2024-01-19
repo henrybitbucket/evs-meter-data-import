@@ -248,7 +248,7 @@ public class P1ReportServiceImpl implements P1ReportService {
 		Long toDate = (Long) options.get("toDate");
 		String sn = (String) options.get("querySn");
 		String userSubmit = (String) options.get("userSent");
-		String searchLogFileName = (String) options.get("searchLogFileName");
+		String searchFileName = (String) options.get("searchFileName");
 		String searchTestSummary = (String) options.get("searchTestSummary");
 		String msn = (String) options.get("queryMsn");
 		String exportCSV = options.get("exportCSV") + "";
@@ -260,8 +260,8 @@ public class P1ReportServiceImpl implements P1ReportService {
 		if (StringUtils.isNotBlank(sn)) {
 			sqlCommonBuilder.append(" and exists (select 1 from P1ReportItem p1RPIt where p1RPIt.p1Report.id = p1RP.id AND lower(p1RPIt.sn) like lower('%" + sn + "%')) ");
 		}
-		if (StringUtils.isNotBlank(searchLogFileName)) {
-			sqlCommonBuilder.append(" and exists (select 1 from P1ReportItem p1RPIt where p1RPIt.p1Report.id = p1RP.id AND lower(p1RPIt.logReportFilename) like lower('%" + searchLogFileName + "%')) ");
+		if (StringUtils.isNotBlank(searchFileName)) {
+			sqlCommonBuilder.append(" and lower(p1RP.fileName) like '%" + searchFileName.toLowerCase() + "%' ");
 		}
 		if (StringUtils.isNotBlank(searchTestSummary)) {
 			sqlCommonBuilder.append(" and exists (select 1 from P1ReportItem p1RPIt where p1RPIt.p1Report.id = p1RP.id AND lower(p1RPIt.summaryTestResult) like lower('%" + searchTestSummary + "%')) ");
@@ -270,7 +270,7 @@ public class P1ReportServiceImpl implements P1ReportService {
 			sqlCommonBuilder.append(" and exists (select 1 from P1ReportItem p1RPIt where p1RPIt.p1Report.id = p1RP.id AND lower(p1RPIt.msn) like lower('%" + msn + "%')) ");
 		}
 		if (StringUtils.isNotBlank(userSubmit)) {
-			sqlCommonBuilder.append(" AND p1RP.userSubmit = '" + userSubmit + "' ");	
+			sqlCommonBuilder.append(" AND lower(p1RP.userSubmit) like '%" + userSubmit.toLowerCase() + "%' ");	
 		}
 		if (fromDate != null) {
 			sqlCommonBuilder.append(" AND p1RP.createDate >= :fromDate  ");	

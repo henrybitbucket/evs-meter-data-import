@@ -213,7 +213,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 	String newUid = dto.getUid();
                 	String newSn = dto.getSn();
                 	String newReplaceReason = dto.getReplaceReason();
-                	String oldUid = ca.getOldUid();
                 	String oldSn = ca.getOldSn();
                 	String oldReplaceReason = ca.getReplaceReason();
                 	caUid = ca.getUid();
@@ -228,17 +227,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 	if (StringUtils.isBlank(newReplaceReason)) {
                 		throw new Exception("Replace reason is required!");
                 	}
-                	if (caRequestLogRepository.findByUid(newUid).isPresent()) {
-                		throw new Exception(String.format("New MCU UUID %s exists!", newUid));
-                	}
                 	if (caRequestLogRepository.findBySn(newSn).isPresent()) {
                 		throw new Exception(String.format("New MCU SN %s exists!", newSn));
-                	}
-                	
-                	if (StringUtils.isNotBlank(oldUid)) {
-                		ca.setOldUid(oldUid + "," + caUid);
-                	} else {
-                		ca.setOldUid(caUid);
                 	}
                 	if (StringUtils.isNotBlank(oldSn)) {
                 		ca.setOldSn(oldSn + "," + caSn);
