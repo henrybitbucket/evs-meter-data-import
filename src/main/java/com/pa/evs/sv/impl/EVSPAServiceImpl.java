@@ -557,6 +557,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	private void logMDTSent(String msn, Integer mid, File file, Log log, Log publishLog, String defaultFname) {
+		CARequestLog ca = caRequestLogRepository.findByMsn(msn).orElse(null);
+		if (ca.getId() == null || ca.getSendMDTToPi() == null || ca.getSendMDTToPi().intValue() != 1) {
+			LOG.info("logMDTSent: " + msn + " not sent to pi");
+			return;
+		}
 		piRepository.findExists()
 		.forEach(pi -> {
 			PiLog piLog = new PiLog();

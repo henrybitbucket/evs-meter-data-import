@@ -275,6 +275,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         ca.setStartDate(dto.getStartDate());
         ca.setEndDate(dto.getEndDate());
         
+        if (dto.getSendMDTToPi() != null) {
+        	ca.setSendMDTToPi(dto.getSendMDTToPi());	
+        }
+        
         List<CARequestLog> list = null;
     	if (dto.getBuildingId() != null && dto.getFloorLevelId() != null && dto.getBuildingUnitId() != null) {
     		list = caRequestLogRepository.findByBuildingAndFloorLevelAndBuildingUnit(dto.getBuildingId(), dto.getFloorLevelId(), dto.getBuildingUnitId());

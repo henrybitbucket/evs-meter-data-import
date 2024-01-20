@@ -80,4 +80,6 @@ public class CaRequestLogDto {
     private Boolean isReplaced;
     
     private String replaceReason;
+    
+    private Integer sendMDTToPi;
 }

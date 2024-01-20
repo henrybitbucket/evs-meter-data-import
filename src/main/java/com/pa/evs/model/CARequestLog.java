@@ -197,6 +197,10 @@ public class CARequestLog extends BaseEntity {
 	@Transient
 	private List<String> logs;
 	
+	@Builder.Default
+	@Column(name = "send_mdt_to_pi", columnDefinition = "int default 1 not null")
+	private Integer sendMDTToPi = 1;//1 - to send data to the pi, 2 - do not send data to the pi
+	
 	public static CARequestLog build(Map<String, Object> data) throws Exception {
 		
 		return builder()
