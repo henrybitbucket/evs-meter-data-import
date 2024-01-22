@@ -1684,6 +1684,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 									caLog.setType(DeviceType.NOT_COUPLED);	
 								}
 								
+								if (caLog.getId() == null) {
+									caLog.setSendMDTToPi(2); // default not send
+								}
+								
 								caLog.setUid(uuid);
 								caLog.setSn(details[0]);
 								caLog.setCid(details[2]);
@@ -1731,6 +1735,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 						caLog.setVendor(vendorOpt.get());
 						caLog.setDeviceCsrSignatureAlgorithm(RSAUtil.getSignatureAlgorithm(ful.getAbsolutePath()));
 						caLog.setDeviceKeyType(RSAUtil.getKeyType(ful.getAbsolutePath()));
+						
+						if (caLog.getId() == null) {
+							caLog.setSendMDTToPi(2); // default not send
+						}
+						
 						caRequestLogRepository.save(caLog);
 						caRequestLogRepository.flush();
 						caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
