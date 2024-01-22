@@ -82,4 +82,6 @@ public class CaRequestLogDto {
     private String replaceReason;
     
     private Integer sendMDTToPi;
+    
+    private String remark;
 }

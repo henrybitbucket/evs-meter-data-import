@@ -65,9 +65,46 @@ public class CaRequestLogController {
     CaRequestLogService caRequestLogService;
     
     @PostMapping(RestPath.GET_CA_REQUEST_LOG)
-    public ResponseEntity<?> getGantryAccess(HttpServletResponse response, @RequestBody PaginDto<CARequestLog> pagin) throws IOException {
+    public ResponseEntity<?> getMCUs(HttpServletResponse response, @RequestBody PaginDto<CARequestLog> pagin) throws IOException {
         
         PaginDto<CARequestLog> result = caRequestLogService.search(pagin);
+        if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
+        	result.getResults().forEach(o -> o.setProfile((String)pagin.getOptions().get("profile")));
+            File file = caRequestLogService.downloadCsv(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
+            String fileName = file.getName();
+            
+            try (FileInputStream fis = new FileInputStream(file)) {
+                response.setContentLengthLong(file.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(file.getParentFile());
+            }
+            //set Activation date
+            if (pagin.getOptions().get("activateDate") != null) {
+                Set<Long> ids = result.getResults().stream().map(CARequestLog::getId).collect(Collectors.toSet());
+                caRequestLogService.setActivationDate((Long) pagin.getOptions().get("activateDate"), ids);
+            }
+        }
+        result.getResults().forEach(li -> {
+            Users user = li.getInstaller();
+            Users installer = new Users();
+            if (user != null) {
+                installer.setUserId(user.getUserId());
+                installer.setUsername(user.getUsername());
+                li.setInstaller(installer);
+            }
+        });
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+    }
+    
+    @PostMapping("/api/meters")
+    public ResponseEntity<?> getMeters(HttpServletResponse response, @RequestBody PaginDto<CARequestLog> pagin) throws IOException {
+        
+        PaginDto<CARequestLog> result = caRequestLogService.searchMMSMeter(pagin);
         if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
         	result.getResults().forEach(o -> o.setProfile((String)pagin.getOptions().get("profile")));
             File file = caRequestLogService.downloadCsv(result.getResults(), (Long) pagin.getOptions().get("activateDate"));

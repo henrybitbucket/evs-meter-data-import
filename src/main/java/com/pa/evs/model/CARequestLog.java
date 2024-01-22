@@ -201,6 +201,14 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "send_mdt_to_pi", columnDefinition = "int default 1 not null")
 	private Integer sendMDTToPi = 2;//1 - to send data to the pi, 2 - do not send data to the pi
 	
+	private String remark;
+	
+	@Transient
+    private Long lastestDecoupleTime;
+    
+	@Transient
+    private String lastestDecoupleUser;
+    
 	public static CARequestLog build(Map<String, Object> data) throws Exception {
 		
 		return builder()

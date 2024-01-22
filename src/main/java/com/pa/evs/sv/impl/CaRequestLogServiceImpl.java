@@ -55,6 +55,7 @@ import com.pa.evs.model.DeviceRemoveLog;
 import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.Log;
+import com.pa.evs.model.MMSMeter;
 import com.pa.evs.model.ProjectTag;
 import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.model.ScreenMonitoring;
@@ -71,6 +72,7 @@ import com.pa.evs.repository.DeviceRemoveLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.repository.GroupRepository;
 import com.pa.evs.repository.LogRepository;
+import com.pa.evs.repository.MMSMeterRepository;
 import com.pa.evs.repository.ProjectTagRepository;
 import com.pa.evs.repository.RelayStatusLogRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
@@ -104,6 +106,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
+	
+	@Autowired
+	private MMSMeterRepository mmsMeterRepository;
 	
 	@Autowired
 	private DeviceRemoveLogRepository deviceRemoveLogRepository;
@@ -167,6 +172,15 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     public void init() {
         LOG.debug("Loading CID into cache");
         cacheCids = caRequestLogRepository.getCids();
+        
+//        new Thread(() -> {
+//        	List<CARequestLog> list = caRequestLogRepository.findAll();
+//        	for (int i = 0; i < list.size(); i++) {
+//        		CARequestLog ca = list.get(i);
+//        		updateMMSMeter(ca, ca.getMsn());
+//        		System.out.println("Done updateMMSMeter " + i + " / " + list.size());
+//        	}
+//        }).start();
     }
 
 	@Override
@@ -177,6 +191,40 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@Override
 	public Optional<CARequestLog> findByMsn(String msn) {
 		return caRequestLogRepository.findByMsn(msn);
+	}
+	
+	@Override
+	@Transactional
+	public void updateMMSMeter(CARequestLog ca, String msn) {
+
+		msn = StringUtils.isBlank(ca.getMsn()) ? msn : ca.getMsn();
+		if (StringUtils.isBlank(msn)) {
+			return;
+		}
+		
+		MMSMeter mmsMeter = mmsMeterRepository.findByMsn(msn);
+		if (mmsMeter == null) {
+			mmsMeter = new MMSMeter();
+		}
+		
+		boolean isCoupled = StringUtils.isNotBlank(mmsMeter.getUid());
+		
+		if (isCoupled && StringUtils.isBlank(ca.getMsn())) {
+			mmsMeter.setLastestDecoupleTime(System.currentTimeMillis());
+			mmsMeter.setLastestDecoupleUser(SecurityUtils.getEmail());
+		}
+		
+		if (!isCoupled && StringUtils.isNotBlank(ca.getMsn())) {
+			mmsMeter.setLastestCoupledTime(System.currentTimeMillis());
+			mmsMeter.setLastestCoupledUser(SecurityUtils.getEmail());
+		}
+		
+		mmsMeter.setMsn(msn);
+		mmsMeter.setLastUid(ca.getUid());
+		
+		mmsMeter.setUid(StringUtils.isNotBlank(ca.getMsn()) ? ca.getUid() : null);
+		
+		mmsMeterRepository.save(mmsMeter);
 	}
 
 	@Override
@@ -194,6 +242,18 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     @Override
     @Transactional
     public void save(CaRequestLogDto dto) throws Exception {
+    	
+    	if (StringUtils.isNotBlank(dto.getMsn())) {
+    		// update remark meter device
+    		MMSMeter mmsMeter = mmsMeterRepository.findByMsn(dto.getMsn());
+    		if (mmsMeter != null) {
+    			mmsMeter.setRemark(dto.getRemark());
+    			mmsMeterRepository.save(mmsMeter);
+    		}
+    		if (StringUtils.isBlank(dto.getUid())) {
+    			return;
+    		}
+    	}
         CARequestLog ca = null;
         Calendar c = Calendar.getInstance();
         boolean isSetAddress = false;
@@ -472,6 +532,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         }
 
         updateCacheUidMsnDevice(ca.getUid(), "update");
+        
+        // backup de-couple msn to search Meter
+        updateMMSMeter(ca, msn);
         try {
 			DeviceRemoveLog log = DeviceRemoveLog.build(ca);
 			
@@ -499,11 +562,31 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		}
     }
 
+
+    // search MMSMeter
+	@Override
+    @Transactional(readOnly = true)
+    public PaginDto<CARequestLog> searchMMSMeter(PaginDto<CARequestLog> pagin) {
+		pagin.getOptions().put("searchMeter", true);
+		return search(pagin);
+    }
+    
+    // search MCU
     @Override
     @Transactional(readOnly = true)
     public PaginDto<CARequestLog> search(PaginDto<CARequestLog> pagin) {
-        StringBuilder sqlBuilder = new StringBuilder("FROM CARequestLog ca ");
-        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM CARequestLog ca");
+    	
+    	
+    	boolean searchMeter = "true".equalsIgnoreCase(pagin.getOptions().get("searchMeter") + "");
+    	
+        StringBuilder sqlBuilder = new StringBuilder("SELECT ca, 1 as m FROM CARequestLog ca ");
+        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(ca) FROM CARequestLog ca");
+        
+        if (searchMeter) {
+        	sqlBuilder = new StringBuilder("SELECT ca, m FROM MMSMeter m join CARequestLog ca on ca.uid = m.lastUid ");
+        	sqlCountBuilder = new StringBuilder("SELECT count(ca) FROM MMSMeter m join CARequestLog ca on ca.uid = m.lastUid ");
+        }
+        
         List<String> tags = SecurityUtils.getProjectTags();
         List<ProjectTag> projectTags = projectTagRepository.findByNameIn(tags);
         Set<Long> tagIds = projectTags.stream().map(tag -> tag.getId()).collect(Collectors.toSet());
@@ -554,75 +637,75 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             
             if (BooleanUtils.isTrue(allDate)) {
                 if (fromDate != null && toDate == null) {
-                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate + "AND");
+                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM ca.createDate) * 1000 >= " + fromDate + "AND");
                 }
                 if (fromDate == null && toDate != null) {
-                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + "AND");
+                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM ca.createDate) * 1000 <= " + toDate + "AND");
                 }
                 if (fromDate != null && toDate != null) {
-                    sqlCommonBuilder.append(" ( EXTRACT(EPOCH FROM createDate) * 1000 >= " + fromDate);
-                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM createDate) * 1000 <= " + toDate + ") AND ");
+                    sqlCommonBuilder.append(" ( EXTRACT(EPOCH FROM ca.createDate) * 1000 >= " + fromDate);
+                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM ca.createDate) * 1000 <= " + toDate + ") AND ");
                 }
             } else {
                 sqlCommonBuilder.append(" ( ");
                 if (BooleanUtils.isTrue(enrollmentDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" enrollmentDatetime >= " + fromDate + "OR");
+                        sqlCommonBuilder.append(" ca.enrollmentDatetime >= " + fromDate + "OR");
                     }
                     if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" enrollmentDatetime <= " + toDate + "OR");
+                        sqlCommonBuilder.append(" ca.enrollmentDatetime <= " + toDate + "OR");
                     }
                     if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( enrollmentDatetime >= " + fromDate);
-                        sqlCommonBuilder.append(" AND enrollmentDatetime <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" ( ca.enrollmentDatetime >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.enrollmentDatetime <= " + toDate + ") OR");
                     }
                 }
                 if (BooleanUtils.isTrue(coupledDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" coupledDatetime >= " + fromDate + "OR");
+                        sqlCommonBuilder.append(" ca.coupledDatetime >= " + fromDate + "OR");
                     }
                     if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" coupledDatetime <= " + toDate + "OR");
+                        sqlCommonBuilder.append(" ca.coupledDatetime <= " + toDate + "OR");
                     }
                     if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( coupledDatetime >= " + fromDate);
-                        sqlCommonBuilder.append(" AND coupledDatetime <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" ( ca.coupledDatetime >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.coupledDatetime <= " + toDate + ") OR");
                     }          
-                                }
+                }
                 if (BooleanUtils.isTrue(activationDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" activationDate >= " + fromDate + "OR");
+                        sqlCommonBuilder.append(" ca.activationDate >= " + fromDate + "OR");
                     }
                     if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" activationDate <= " + toDate + "OR");
+                        sqlCommonBuilder.append(" ca.activationDate <= " + toDate + "OR");
                     }
                     if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( activationDate >= " + fromDate);
-                        sqlCommonBuilder.append(" AND activationDate <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" ( ca.activationDate >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.activationDate <= " + toDate + ") OR");
                     }
                 }
                 if (BooleanUtils.isTrue(deactivationDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" deactivationDate >= " + fromDate + "OR");
+                        sqlCommonBuilder.append(" ca.deactivationDate >= " + fromDate + "OR");
                     }
                     if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" deactivationDate <= " + toDate + "OR");
+                        sqlCommonBuilder.append(" ca.deactivationDate <= " + toDate + "OR");
                     }
                     if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( deactivationDate >= " + fromDate);
-                        sqlCommonBuilder.append(" AND deactivationDate <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" ( ca.deactivationDate >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.deactivationDate <= " + toDate + ") OR");
                     }
                 }
                 if (BooleanUtils.isTrue(onboardingDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" lastOBRDate >= " + fromDate + "OR");
+                        sqlCommonBuilder.append(" ca.lastOBRDate >= " + fromDate + "OR");
                     }
                     if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" lastOBRDate <= " + toDate + "OR");
+                        sqlCommonBuilder.append(" ca.lastOBRDate <= " + toDate + "OR");
                     }
                     if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( lastOBRDate >= " + fromDate);
-                        sqlCommonBuilder.append(" AND lastOBRDate <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" ( ca.lastOBRDate >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.lastOBRDate <= " + toDate + ") OR");
                     }
                 }
                 
@@ -633,60 +716,65 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             }
             
             if (StringUtils.isNotBlank(querySn)) {
-                sqlCommonBuilder.append(" upper(sn) like '%" + querySn.toUpperCase() + "%' AND ");
+                sqlCommonBuilder.append(" upper(ca.sn) like '%" + querySn.toUpperCase() + "%' AND ");
             }
             if (StringUtils.isNotBlank(queryMsn)) {
-                sqlCommonBuilder.append(" msn like '%" + queryMsn + "%' AND ");
+            	if (searchMeter) {
+            		sqlCommonBuilder.append(" m.msn like '%" + queryMsn + "%' AND ");
+            	} else {
+            		sqlCommonBuilder.append(" ca.msn like '%" + queryMsn + "%' AND ");	
+            	}
+                
             }
             if (StringUtils.isNotBlank(querySnOrCid)) {
-                sqlCommonBuilder.append(" (lower(sn) like '%" + querySnOrCid.toLowerCase().trim() + "%' or lower(cid) like '%" + querySnOrCid.toLowerCase().trim() + "%') AND ");
+                sqlCommonBuilder.append(" (lower(ca.sn) like '%" + querySnOrCid.toLowerCase().trim() + "%' or lower(ca.cid) like '%" + querySnOrCid.toLowerCase().trim() + "%') AND ");
             }
             if (StringUtils.isNotBlank(status)) {
-                sqlCommonBuilder.append(" status = '" + status + "' AND ");
+                sqlCommonBuilder.append(" ca.status = '" + status + "' AND ");
             }
             if (StringUtils.isNotBlank(type)) {
-                sqlCommonBuilder.append(" type = '" + type + "' AND ");
+                sqlCommonBuilder.append(" ca.type = '" + type + "' AND ");
             }
             if (!CollectionUtils.isEmpty(cids)) {
-                sqlCommonBuilder.append(" (cid = '" + cids.get(0) + "'");
+                sqlCommonBuilder.append(" (ca.cid = '" + cids.get(0) + "'");
                 for (int i = 1; i < cids.size(); i++) {
-                    sqlCommonBuilder.append(" OR cid = '" + cids.get(i) + "'");
+                    sqlCommonBuilder.append(" OR ca.cid = '" + cids.get(i) + "'");
                 }
                 sqlCommonBuilder.append(" ) AND ");
             }
             if (StringUtils.isNotBlank(queryUuid)) {
-                sqlCommonBuilder.append(" upper(uid) like '%" + queryUuid.toUpperCase() + "%' AND ");
+                sqlCommonBuilder.append(" upper(ca.uid) like '%" + queryUuid.toUpperCase() + "%' AND ");
             }
             if (StringUtils.isNotBlank(queryEsimId)) {
-                sqlCommonBuilder.append(" upper(cid) like '%" + queryEsimId.toUpperCase() + "%' AND ");
+                sqlCommonBuilder.append(" upper(ca.cid) like '%" + queryEsimId.toUpperCase() + "%' AND ");
             }
             if (queryGroup != null) {
-                sqlCommonBuilder.append(" group = " + queryGroup + " AND ");
+                sqlCommonBuilder.append(" ca.group = " + queryGroup + " AND ");
             }
             if (StringUtils.isNotBlank(queryBuilding)) {
-                sqlCommonBuilder.append(" building.id= '" + queryBuilding + "' AND ");
+                sqlCommonBuilder.append(" ca.building.id= '" + queryBuilding + "' AND ");
             }
             if (StringUtils.isNotBlank(queryBlock)) {
-                sqlCommonBuilder.append(" block.id= '" + queryBlock + "' AND ");
+                sqlCommonBuilder.append(" ca.block.id= '" + queryBlock + "' AND ");
             }
             if (StringUtils.isNotBlank(queryFloorLevel)) {
-                sqlCommonBuilder.append(" floorLevel.id= '" + queryFloorLevel + "' AND ");
+                sqlCommonBuilder.append(" ca.floorLevel.id= '" + queryFloorLevel + "' AND ");
             }
             if (StringUtils.isNotBlank(queryBuildingUnit)) {
-                sqlCommonBuilder.append(" buildingUnit.id= '" + queryBuildingUnit + "' AND ");
+                sqlCommonBuilder.append(" ca.buildingUnit.id= '" + queryBuildingUnit + "' AND ");
             }
             if (StringUtils.isNotBlank(queryPostalCode)) {
                 sqlCommonBuilder.append(" ((exists (select 1 from Building bd where bd.id = ca.building.id and upper(bd.address.postalCode) = '" + queryPostalCode.toUpperCase() + "') ");
                 sqlCommonBuilder.append(" or (exists (select 1 FROM Address add1 where add1.id = ca.address.id and upper(add1.postalCode) = '" + queryPostalCode.toUpperCase() + "') ))) AND ");
             }
             if (queryVendor != null) {
-                sqlCommonBuilder.append(" vendor.id = " + queryVendor + " AND ");
+                sqlCommonBuilder.append(" ca.vendor.id = " + queryVendor + " AND ");
             }
         	if (!tags.contains("ALL")) {
         		sqlCommonBuilder.append(" (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds))  AND ");
             }
         	
-            sqlCommonBuilder.append(" sn is not null and sn <> ''  AND ");
+            sqlCommonBuilder.append(" ca.sn is not null and ca.sn <> ''  AND ");
             sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
         }
         
@@ -694,14 +782,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 //            if (StringUtils.isNotBlank((String) pagin.getOptions().get("querySnOrCid"))) {
 //                sqlCommonBuilder.append(" AND ");
 //            }
-            sqlCommonBuilder.append(" AND cid is not null AND cid <> '' ");
+            sqlCommonBuilder.append(" AND ca.cid is not null AND ca.cid <> '' ");
         }
         
         if (sqlCommonBuilder.length() < 10) {
             sqlCommonBuilder.append(" 1 = 1 ");
         }
         
-        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id asc");
+        sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY ca.id asc");
         sqlCountBuilder.append(sqlCommonBuilder);
         
         if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -724,20 +812,42 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         query.setFirstResult(pagin.getOffset());
         query.setMaxResults(pagin.getLimit());
         
-        final List<CARequestLog> list = query.getResultList();
-        for (CARequestLog ca : list) {
+        final List<Object[]> list = query.getResultList();
+        List<CARequestLog> rp = new ArrayList<>();
+        for (Object[] obj : list) {
+        	CARequestLog ca = (CARequestLog) obj[0];
         	List<ProjectTag> pTags = ca.getDeviceProject().isEmpty() ? new ArrayList<>() : ca.getDeviceProject().stream().map(dp -> (ProjectTag) Hibernate.unproxy(dp.getProject())).collect(Collectors.toList());
         	ca.getVendor();
         	ca.setDeviceProject(null);
         	ca.setProjectTags(pTags);
         	ca.setHomeAddress(Utils.formatHomeAddress(ca));
+        	
         	if (StringUtils.isBlank(ca.getDeviceCsrSignatureAlgorithm())) {
         		AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.getUid());
         	}
+        	rp.add(ca);
         }
         
-        pagin.setResults(list);
-        getRLSLog(list);
+        pagin.setResults(rp);
+        getRLSLog(rp);
+        
+        if (searchMeter) {
+        	for (Object[] obj : list) {
+            	CARequestLog ca = (CARequestLog) obj[0];
+            	MMSMeter meter = (MMSMeter) obj[1];
+            	if (searchMeter && meter != null && StringUtils.isBlank(ca.getMsn())) {
+            		ca.setUid(null);
+            		ca.setSn(null);
+            		ca.setCid(null);
+            		ca.setMsn(meter.getMsn());
+            		ca.setLastestDecoupleUser(meter.getLastestCoupledUser());
+            		ca.setLastestDecoupleTime(meter.getLastestDecoupleTime());;
+            	}
+            	if (searchMeter && meter != null) {
+            		ca.setRemark(meter.getRemark());
+            	}
+        	}
+        }
         return pagin;
         
     }
@@ -789,6 +899,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         			}
         			caRequestLogRepository.save(ca);
         			caRequestLogRepository.flush();
+        			
+        			updateMMSMeter(ca, (String)map.get("msn"));
         			updateCacheUidMsnDevice(ca.getUid(), "update");
         			
         			DeviceRemoveLog log = DeviceRemoveLog.build(ca);
@@ -1157,6 +1269,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			caRequestLog.setCoupledDatetime(null);
 			caRequestLogRepository.save(caRequestLog);
 			caRequestLogRepository.flush();
+			updateMMSMeter(caRequestLog, null);
 			updateCacheUidMsnDevice(caRequestLog.getUid(), "update");
 			
 			try {
@@ -1499,6 +1612,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		    				ca.setCoupledUser(SecurityUtils.getUsername());
 		        			caRequestLogRepository.save(ca);
 		        			caRequestLogRepository.flush();
+		        			updateMMSMeter(ca, msn);
 		        			
 							try {
 			        			updateCacheUidMsnDevice(ca.getUid(), "update");

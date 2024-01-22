@@ -70,4 +70,8 @@ public interface CaRequestLogService {
 	List<Map<String, String>> batchCoupleDevices(List<Map<String, String>> listInput);
 
 	void updateVendor(String msn, Long vendorId) throws Exception;
+
+	PaginDto<CARequestLog> searchMMSMeter(PaginDto<CARequestLog> pagin);
+
+	void updateMMSMeter(CARequestLog ca, String msn);
 }

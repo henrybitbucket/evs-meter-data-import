@@ -1695,6 +1695,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 								caLog.setVendor(vendorOpt.get());
 								caRequestLogRepository.save(caLog);
 								caRequestLogRepository.flush();
+								if (StringUtils.isNotBlank(caLog.getMsn())) {
+									AppProps.getContext().getBean(CaRequestLogService.class).updateMMSMeter(caLog, caLog.getMsn());
+								}
 								caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
 							}
 						}
@@ -1730,6 +1733,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 						if (caLog.getType() == null) {
 							caLog.setType(DeviceType.NOT_COUPLED);	
 						}
+						
 						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
 						caLog.setRequireRefresh(false);
 						caLog.setVendor(vendorOpt.get());
@@ -1742,6 +1746,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 						
 						caRequestLogRepository.save(caLog);
 						caRequestLogRepository.flush();
+						if (StringUtils.isNotBlank(caLog.getMsn())) {
+							AppProps.getContext().getBean(CaRequestLogService.class).updateMMSMeter(caLog, caLog.getMsn());
+						}
 						caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
 						File out = new File(ful.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));
 						Files.deleteIfExists(out.toPath());
