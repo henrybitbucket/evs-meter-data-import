@@ -23,6 +23,7 @@ import org.springframework.util.CollectionUtils;
 
 import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.BuildingDto;
+import com.pa.evs.dto.DeviceSettingDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.MeterCommissioningReportDto;
 import com.pa.evs.dto.P1OnlineStatusDto;
@@ -91,11 +92,27 @@ public class CsvUtils {
         
     }
     
-    
     public static File writeAlarmsLogCsv(List<LogDto> listInput, String fileName, Long activateDate) throws IOException{
         List<String> headers = Arrays.asList(
                 "TIME", "TYPE", "TOPIC", "MID", "MSN", "SN", "COMMAND", "RAW MESSAGE", "STATUS", "ADDRESS");
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
+    }
+    
+    public static File writeDeviceSettingsCsv(List<DeviceSettingDto> listInput, String fileName, Long activateDate) throws IOException{
+        List<String> headers = Arrays.asList(
+                "MSN", "PREVIOUS SETTING", "NEW SETTING", "STATUS");
+        return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
+    }
+
+    private static List<String> toCSVRecord(int idx, DeviceSettingDto setting, Long activateDate) {
+        List<String> record = new ArrayList<>();
+        
+        record.add(setting.getMsn());
+        record.add(setting.getPreviousSetting());
+        record.add(setting.getNewSetting());
+        record.add(setting.getStatus());
+        
+        return postProcessCsv(record);
     }
     
     private static List<String> toCSVRecord(int idx, LogDto log, Long activateDate) {

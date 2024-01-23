@@ -7,8 +7,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
+import com.pa.evs.dto.DeviceSettingDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.RelayStatusLogDto;
 import com.pa.evs.dto.ScreenMonitoringDto;
@@ -74,4 +77,6 @@ public interface CaRequestLogService {
 	PaginDto<CARequestLog> searchMMSMeter(PaginDto<CARequestLog> pagin);
 
 	void updateMMSMeter(CARequestLog ca, String msn);
+
+	List<DeviceSettingDto> uploadDeviceSettings(MultipartFile file, Boolean isProcess) throws IOException;
 }

@@ -1,7 +1,9 @@
 package com.pa.evs.sv.impl;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,6 +25,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,12 +33,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
+import com.pa.evs.dto.DeviceSettingDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.RelayStatusLogDto;
 import com.pa.evs.dto.ResponseDto;
@@ -82,6 +87,7 @@ import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.FileService;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.Mqtt;
@@ -103,6 +109,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@Value("${evs.pa.mqtt.publish.topic.alias}") private String alias;
 	
 	@Value("${evs.pa.privatekey.path}") private String pkPath;
+	
+	@Value("S{s3.device.settings.bucket.name}") private String deviceSettingsBucketName;
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
@@ -165,6 +173,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	private RelayStatusLogRepository relayStatusLogRepository;
+	
+	@Autowired
+	private FileService fileService;
 
     private List<String> cacheCids = Collections.EMPTY_LIST;
 
@@ -1628,5 +1639,102 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			return listInput.stream().filter(item -> item.get("error") != null).collect(Collectors.toList());
 		}
 		return Collections.emptyList();
+	}
+
+	@Override
+	public List<DeviceSettingDto> uploadDeviceSettings(MultipartFile file, Boolean isProcess) throws IOException {
+		List<DeviceSettingDto> settingList = new ArrayList<>();
+		
+		if (file != null && file.getOriginalFilename() != null && file.getOriginalFilename().endsWith(".csv")) {
+			String[] lines = null;
+			try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+				IOUtils.copy(file.getInputStream(), bos);
+				lines = new String(bos.toByteArray(), StandardCharsets.UTF_8).split("\r*\n");
+				if (StringUtils.isBlank(lines[0]) || !lines[0].startsWith("Identifier 1,Status to send or not")) {
+					LOG.info("Headers should start with: Identifier 1, Status to send or not");
+					throw new RuntimeException("Headers should start with: Identifier 1, Status to send or not");
+				}
+			} catch (IOException e) {
+				LOG.info("Error while reading file");
+				throw new RuntimeException("Error while reading file");
+			}
+			for (int i = 1; i < lines.length; i++) {
+				String[] details = lines[i].split(" *, *");
+				if (details.length >= 2) {
+
+					String msn = details[0];
+					String status = details[1];
+
+					if (StringUtils.isBlank(msn)) {
+						LOG.info("Identifier 1 is required!");
+						DeviceSettingDto dsd = new DeviceSettingDto();
+						dsd.setMsn(msn);
+						dsd.setPreviousSetting("");
+						dsd.setNewSetting(status);
+						dsd.setStatus("msn is required");
+						settingList.add(dsd);
+						continue;
+					}
+					if (StringUtils.isBlank(status)) {
+						LOG.info("Status to send or not is required!");
+						DeviceSettingDto dsd = new DeviceSettingDto();
+						dsd.setMsn(msn);
+						dsd.setPreviousSetting("");
+						dsd.setNewSetting(status);
+						dsd.setStatus("staus is required");
+						settingList.add(dsd);
+						continue;
+					}
+
+					Optional<CARequestLog> caOpt = caRequestLogRepository.findByMsn(msn);
+					if (!caOpt.isPresent()) {
+						LOG.info("No device with msn: " + msn + " found!");
+						DeviceSettingDto dsd = new DeviceSettingDto();
+						dsd.setMsn(msn);
+						dsd.setPreviousSetting("");
+						dsd.setNewSetting(status);
+						dsd.setStatus("Device not found");
+						settingList.add(dsd);
+						continue;
+					}
+					CARequestLog ca = caOpt.get();
+					
+					DeviceSettingDto dsd = new DeviceSettingDto();
+					dsd.setMsn(msn);
+					dsd.setPreviousSetting(ca.getSendMDTToPi().toString());
+					dsd.setNewSetting(status);
+					dsd.setStatus(BooleanUtils.isTrue(isProcess) ? "Updated" : "OK");
+					settingList.add(dsd);
+					
+					if (BooleanUtils.isTrue(isProcess)) {
+						ca.setSendMDTToPi(Integer.parseInt(status));
+						ca.setUpdatedBy(SecurityUtils.getEmail());
+						caRequestLogRepository.save(ca);
+						
+						fileService.saveFile(
+								new MultipartFile[] {file}, 
+								new String[] {"DEVICE_SETTINGS"}, 
+								new String[] {System.currentTimeMillis() + "_" + file.getOriginalFilename()}, 
+								null,
+								new String[] {"DEVICE_SETTINGS"}, 
+								null, 
+								deviceSettingsBucketName
+						);
+					}
+				}  else {
+					DeviceSettingDto dsd = new DeviceSettingDto();
+					dsd.setMsn(details[0]);
+					dsd.setPreviousSetting("");
+					dsd.setNewSetting("");
+					dsd.setStatus("status is required");
+					settingList.add(dsd);
+				}
+			}
+		} else {
+			LOG.info("Wrong file type. Accepted .csv file");
+			throw new RuntimeException("Wrong file type. Accepted .csv file");
+		}
+		
+		return settingList;
 	}
 }

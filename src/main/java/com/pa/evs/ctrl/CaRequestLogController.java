@@ -28,9 +28,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.CaRequestLogDto;
+import com.pa.evs.dto.DeviceSettingDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.RelayStatusLogDto;
 import com.pa.evs.dto.ResponseDto;
@@ -40,6 +42,7 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.ScreenMonitoring;
 import com.pa.evs.model.Users;
 import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
@@ -259,6 +262,39 @@ public class CaRequestLogController {
         } catch (Exception e) {
         	e.printStackTrace();
             return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+    }
+    
+    @PostMapping("/api/device-settings/upload")
+    public ResponseEntity<Object> uploadDeviceSettings(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response,
+            @RequestParam(value = "file") final MultipartFile file,
+            @RequestParam(required = false) final Boolean isProcess) throws Exception {
+
+        try {
+        	List<DeviceSettingDto> result = caRequestLogService.uploadDeviceSettings(file,isProcess);
+        	
+        	if (BooleanUtils.isTrue(isProcess)) {
+        		String fileName = file.getName() + "_result.csv";
+            	File resultFile = CsvUtils.writeDeviceSettingsCsv(result, fileName, null);
+
+                try (FileInputStream fis = new FileInputStream(resultFile)) {
+                    response.setContentLengthLong(resultFile.length());
+                    response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                    response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                    response.setHeader("name", fileName);
+                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                    IOUtils.copy(fis, response.getOutputStream());
+                } finally {
+                    FileUtils.deleteDirectory(resultFile.getParentFile());
+                }
+                return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+        	} else {
+        		return ResponseEntity.ok(ResponseDto.builder().success(true).response(result).build());
+        	}
+        } catch (Exception e) {
+        	return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
         }
     }
     
