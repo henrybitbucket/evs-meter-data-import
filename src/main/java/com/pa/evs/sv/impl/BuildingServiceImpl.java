@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -11,6 +12,7 @@ import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -133,15 +135,25 @@ public class BuildingServiceImpl implements BuildingService {
 	}
 
 	@Override
+	@Transactional
 	public void search(PaginDto<BuildingDto> pagin, String search) {
 
 		if (pagin.getOptions() == null) {
 			pagin.setOptions(new HashMap<>());
 		}
 		
-		String coupleState = (String) pagin.getOptions().get("coupleState");
-		boolean exportCsv = "true".equals(pagin.getOptions().get("exportCSV"));
-		boolean detailUnit = "true".equals(pagin.getOptions().get("detailUnit"));
+		Map<String, Object> options = pagin.getOptions();
+        String coupleState = (String) options.get("coupleState");
+        String querySn = (String) options.get("querySn");
+        String queryMsn = (String) options.get("queryMsn");
+        String queryBuilding = (String) options.get("queryBuilding");
+        String queryBlock = (String) options.get("queryBlock");
+        String queryFloorLevel = (String) options.get("queryFloorLevel");
+        String queryBuildingUnit = (String) options.get("queryBuildingUnit");
+        String queryPostalCode = (String) options.get("queryPostalCode");
+        String queryStreet = (String) options.get("queryStreet");
+		boolean exportCsv = "true".equals(options.get("exportCSV"));
+		boolean detailUnit = "true".equals(options.get("detailUnit"));
 		
 		StringBuilder sqlBuilder = new StringBuilder();
 		sqlBuilder.append(" select b.id, b.name, b.type, b.description, b.has_tenant, ");
@@ -175,6 +187,30 @@ public class BuildingServiceImpl implements BuildingService {
 				}
 			}
 		}
+		if (StringUtils.isNotBlank(queryMsn)) {
+			sqlBuilder.append(" and (LOWER((SELECT crl1.msn FROM pa_evs_db.ca_request_log crl1 WHERE crl1.building_unit_id = bu.id AND crl1.building_id = b.id LIMIT 1)) like '%" + queryMsn.toLowerCase() + "%')");
+		}
+		if (StringUtils.isNotBlank(querySn)) {
+			sqlBuilder.append(" and (LOWER((SELECT crl2.sn FROM pa_evs_db.ca_request_log crl2 WHERE crl2.building_unit_id = bu.id AND crl2.building_id = b.id LIMIT 1)) like '%" + querySn.toLowerCase() + "%')");
+		}
+		if (StringUtils.isNotBlank(queryBuilding)) {
+			sqlBuilder.append(" and b.id = " + queryBuilding);
+		}
+		if (StringUtils.isNotBlank(queryBlock)) {
+			sqlBuilder.append(" and bl.id = " + queryBlock);
+		}
+		if (StringUtils.isNotBlank(queryFloorLevel)) {
+			sqlBuilder.append(" and fl.id = " + queryFloorLevel);
+		}
+		if (StringUtils.isNotBlank(queryBuildingUnit)) {
+			sqlBuilder.append(" and bu.id = " + queryBuildingUnit);
+		}
+		if (StringUtils.isNotBlank(queryPostalCode)) {
+			sqlBuilder.append(" and a.postal_code like '%" + queryPostalCode + "%'");
+		}
+		if (StringUtils.isNotBlank(queryStreet)) {
+			sqlBuilder.append(" and lower(a.street) like '%" + queryStreet.toLowerCase() + "%'");
+		}
 		if ("coupled".equalsIgnoreCase(coupleState)) {
 			if ((exportCsv || detailUnit)) {
 				sqlBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id)");
@@ -194,7 +230,6 @@ public class BuildingServiceImpl implements BuildingService {
 		} else {
 			sqlBuilder.append(" order by b.id asc  ");	
 		}
-		
 		
 		if (!exportCsv) {
 			sqlBuilder.append(" offset " + pagin.getOffset() + " limit " + pagin.getLimit());	
@@ -224,7 +259,6 @@ public class BuildingServiceImpl implements BuildingService {
 				}
 			}
 		}
-		
 		if ("coupled".equalsIgnoreCase(coupleState)) {
 			if ((exportCsv || detailUnit)) {
 				sqlCountBuilder.append(" and exists (select 1 from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id)");
@@ -235,19 +269,51 @@ public class BuildingServiceImpl implements BuildingService {
 			if ((exportCsv || detailUnit)) {
 				sqlCountBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_unit_id = bu.id)");
 			} else {
-				sqlCountBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");	
+				sqlCountBuilder.append(" and not exists (select 1 from {h-schema}ca_request_log crl where crl.building_id = b.id)");
 			}
+		}
+		if (StringUtils.isNotBlank(queryMsn)) {
+			sqlCountBuilder.append(" and (LOWER((SELECT crl1.msn FROM pa_evs_db.ca_request_log crl1 WHERE crl1.building_unit_id = bu.id AND crl1.building_id = b.id LIMIT 1)) like '%" + queryMsn.toLowerCase() + "%')");
+		}
+		if (StringUtils.isNotBlank(querySn)) {
+			sqlCountBuilder.append(" and (LOWER((SELECT crl2.sn FROM pa_evs_db.ca_request_log crl2 WHERE crl2.building_unit_id = bu.id AND crl2.building_id = b.id LIMIT 1)) like '%" + querySn.toLowerCase() + "%')");
+		}
+		if (StringUtils.isNotBlank(queryBuilding)) {
+			sqlCountBuilder.append(" and b.id = " + queryBuilding);
+		}
+		if (StringUtils.isNotBlank(queryBlock)) {
+			sqlCountBuilder.append(" and bl.id = " + queryBlock);
+		}
+		if (StringUtils.isNotBlank(queryFloorLevel)) {
+			sqlCountBuilder.append(" and fl.id = " + queryFloorLevel);
+		}
+		if (StringUtils.isNotBlank(queryBuildingUnit)) {
+			sqlCountBuilder.append(" and bu.id = " + queryBuildingUnit);
+		}
+		if (StringUtils.isNotBlank(queryPostalCode)) {
+			sqlCountBuilder.append(" and a.postal_code like '%" + queryPostalCode + "%'");
+		}
+		if (StringUtils.isNotBlank(queryStreet)) {
+			sqlCountBuilder.append(" and lower(a.street) like '%" + queryStreet.toLowerCase() + "%'");
 		}
 		
 		Query qr = em.createNativeQuery(sqlCountBuilder.toString());
 		Number totalRows = (Number) qr.getSingleResult();
 		pagin.setTotalRows(totalRows.longValue());
+		List<BuildingDto> results = calculateResults(q.getResultList(), exportCsv, detailUnit, coupleState);
+		
+		pagin.setResults(results);
+	}
+	
+	@Transactional
+	public List<BuildingDto> calculateResults(List<?> list, boolean exportCsv, boolean detailUnit, String coupleState) {
 		List<BuildingDto> results = new ArrayList<>();
-		for (int i = 0; i < q.getResultList().size(); i++) {
+		
+		for (int i = 0; i < list.size(); i++) {
+			Object[] o = (Object[]) list.get(i);
 			BuildingDto a = new BuildingDto();
+			
 			AddressDto address = new AddressDto();
-
-			Object[] o = (Object[]) q.getResultList().get(i);
 
 			Number id = (Number) o[0];
 			a.setId(id.longValue());
@@ -305,9 +371,11 @@ public class BuildingServiceImpl implements BuildingService {
 			
 			a.setAddress(address);
 			a.setLabel(Utils.formatHomeAddress(a.getName(), address));
+			
 			results.add(a);
 		}
-		pagin.setResults(results);
+		
+		return results;
 	}
 
 	@Override

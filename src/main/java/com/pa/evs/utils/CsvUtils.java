@@ -57,12 +57,14 @@ public class CsvUtils {
     public static File writeAddressCsv(List<BuildingDto> listInput, String exportType, String fileName) throws IOException{
         List<String> headers = Arrays.asList(
 				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled", "UpdatedTime", "Remark");
-        headers = Arrays.asList(
-				/* "Address ID", */"Building Name", "Block", "Level", "Unit", "Postcode", "Street Address", "State.City", "Coupled Meter No.", "Coupled MCU SN");
+        List<String> headersWithMsnAndSn = Arrays.asList(
+				/* "Address ID", */"MCU SN", "Meter SN", "City", "Street", "Postcode", "Building", "Block", "Level", "Unit", "Remark", "Coupled Date Time");
 
         headers = Arrays.stream(AppProps.get(SettingService.EXPORT_ADDRESS_HEADER).trim().split(" *, *")).collect(Collectors.toList());
         if ("address-only".equalsIgnoreCase(exportType)) {
         	headers = Arrays.stream("Building,Block,Level,Unit,Postcode,Street Address,State.City,UpdatedTime,Remark".trim().split(" *, *")).collect(Collectors.toList());
+        } else {
+        	headers = headersWithMsnAndSn;
         }
         
         try {
@@ -136,21 +138,29 @@ public class CsvUtils {
         List<String> record = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         sdf.setTimeZone(TimeZoneHolder.get());
-        record.add(log.getAddress().getBuilding());
-        record.add(log.getAddress().getBlock());
-        record.add(log.getAddress().getLevel());
-        record.add(log.getAddress().getUnitNumber());
-        record.add(log.getAddress().getPostalCode());
-        record.add(log.getAddress().getStreet());
-        record.add(log.getAddress().getCity());
-        
         if (!"address-only".equalsIgnoreCase(KEY_PASS.get())) {
-            record.add(log.getAddress().getCoupleMsn());
-            record.add(log.getAddress().getCoupleSn());        	
+        	record.add(log.getAddress().getCoupleSn());
+        	record.add(log.getAddress().getCoupleMsn());
+        	record.add(log.getAddress().getCity());
+        	record.add(log.getAddress().getStreet());
+        	record.add(log.getAddress().getPostalCode());
+        	record.add(log.getAddress().getBuilding());
+            record.add(log.getAddress().getBlock());
+            record.add(log.getAddress().getLevel());
+            record.add(log.getAddress().getUnitNumber());
+            record.add(log.getAddress().getRemark());
+            record.add(log.getAddress().getCoupleTime() != null ? sdf.format(log.getAddress().getCoupleTime()) : "");
+        } else {
+        	record.add(log.getAddress().getBuilding());
+            record.add(log.getAddress().getBlock());
+            record.add(log.getAddress().getLevel());
+            record.add(log.getAddress().getUnitNumber());
+            record.add(log.getAddress().getPostalCode());
+            record.add(log.getAddress().getStreet());
+            record.add(log.getAddress().getCity());
+            record.add(log.getAddress().getCoupleTime() != null ? sdf.format(log.getAddress().getCoupleTime()) : "");
+            record.add(log.getAddress().getRemark());
         }
-
-        record.add(log.getAddress().getCoupleTime() != null ? sdf.format(log.getAddress().getCoupleTime()) : "");
-        record.add(log.getAddress().getRemark());
         return postProcessCsv(record);
     }
     
