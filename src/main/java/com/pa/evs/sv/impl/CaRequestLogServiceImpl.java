@@ -722,7 +722,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                         sqlCommonBuilder.append(" AND ca.lastOBRDate <= " + toDate + ") OR");
                     }
                 }
-                
+
                 sqlCommonBuilder.delete(sqlCommonBuilder.length() - 2, sqlCommonBuilder.length());
                 if (sqlCommonBuilder.length() >= 30) {
                     sqlCommonBuilder.append(" ) AND ");
@@ -732,6 +732,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (StringUtils.isNotBlank(querySn)) {
                 sqlCommonBuilder.append(" upper(ca.sn) like '%" + querySn.toUpperCase() + "%' AND ");
             }
+//            if (!searchMeter) {
+//            	sqlCommonBuilder.append(" AND ca.sn is not null and ca.sn <> '' ");
+//            }
+            
             if (StringUtils.isNotBlank(queryMsn)) {
             	if (searchMeter) {
             		sqlCommonBuilder.append(" m.msn like '%" + queryMsn + "%' AND ");
@@ -796,10 +800,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 //                sqlCommonBuilder.append(" AND ");
 //            }
             sqlCommonBuilder.append(" AND ca.cid is not null AND ca.cid <> '' ");
-        }
-        
-        if (!searchMeter) {
-        	sqlCommonBuilder.append(" AND ca.sn is not null and ca.sn <> '' ");
         }
         
         if (sqlCommonBuilder.length() < 10) {
