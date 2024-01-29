@@ -28,4 +28,7 @@ public interface BuildingRepository extends JpaRepository<Building, Long> {
 
 	@Query("FROM Building bd where bd.name in (?1) ")
 	List<Building> findAllByName(Set<String> names);
+	
+	@Query(value = "select sn from CARequestLog where building.id = ?1")
+	List<String> linkedSN(long buildingId);
 }

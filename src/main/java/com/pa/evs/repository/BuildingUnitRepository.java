@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,4 +22,7 @@ public interface BuildingUnitRepository extends JpaRepository<BuildingUnit, Long
 	
 	Optional<BuildingUnit> findByFloorLevelIdAndName(Long fId, String name);
 
+	
+	@Query(value = "select sn from CARequestLog where buildingUnit.id = ?1")
+	List<String> linkedSN(long buildingUnitId);
 }

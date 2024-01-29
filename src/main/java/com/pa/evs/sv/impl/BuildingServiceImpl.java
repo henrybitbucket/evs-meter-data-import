@@ -12,7 +12,6 @@ import java.util.stream.Stream;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -383,6 +382,13 @@ public class BuildingServiceImpl implements BuildingService {
 		Building entity = buildingRepository.findById(id)
 				.orElseThrow(() -> new ApiException(ResponseEnum.BUILDING_NOT_FOUND));
 		
+		List<String> sns = new ArrayList<>();
+		
+		sns = buildingRepository.linkedSN(id);
+		if (!sns.isEmpty()) {
+			throw new RuntimeException("Building is already linked to the device(MCU SN = " + sns + ")");
+		}
+		
 		List<Block> blocks = blockRepository.findAllByBuilding(entity);
 		if(!blocks.isEmpty()) {
 			for(Block block : blocks) {
@@ -390,9 +396,21 @@ public class BuildingServiceImpl implements BuildingService {
 				for(FloorLevel floorLevel : fls) {
 					List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(floorLevel);
 					for(BuildingUnit buildingUnit : buildingUnits) {
+						sns = buildingUnitRepository.linkedSN(buildingUnit.getId());
+						if (!sns.isEmpty()) {
+							throw new RuntimeException("Unit is already linked to the device(MCU SN = " + sns.get(0) + ")");
+						}
 						buildingUnitRepository.delete(buildingUnit);
 					}
+					sns = floorLevelRepository.linkedSN(floorLevel.getId());
+					if (!sns.isEmpty()) {
+						throw new RuntimeException("Floor is already linked to the device(MCU SN = " + sns.get(0) + ")");
+					}
 					floorLevelRepository.delete(floorLevel);
+				}
+				sns = blockRepository.linkedSN(block.getId());
+				if (!sns.isEmpty()) {
+					throw new RuntimeException("Block is already linked to the device(MCU SN = " + sns.get(0) + ")");
 				}
 				blockRepository.delete(block);
 			}
@@ -401,7 +419,15 @@ public class BuildingServiceImpl implements BuildingService {
 			for(FloorLevel floorLevel : fls) {
 				List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(floorLevel);
 				for(BuildingUnit buildingUnit : buildingUnits) {
+					sns = buildingUnitRepository.linkedSN(buildingUnit.getId());
+					if (!sns.isEmpty()) {
+						throw new RuntimeException("Unit is already linked to the device(MCU SN = " + sns.get(0) + ")");
+					}
 					buildingUnitRepository.delete(buildingUnit);
+				}
+				sns = floorLevelRepository.linkedSN(floorLevel.getId());
+				if (!sns.isEmpty()) {
+					throw new RuntimeException("Floor is already linked to the device(MCU SN = " + sns.get(0) + ")");
 				}
 				floorLevelRepository.delete(floorLevel);
 			}

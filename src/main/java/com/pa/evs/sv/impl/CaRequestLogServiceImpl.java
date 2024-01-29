@@ -384,6 +384,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			
 			if (dto.getBuildingId() == null) {
 				ca.setBuilding(null);
+				ca.setBlock(null);
+				ca.setFloorLevel(null);
+				ca.setBuildingUnit(null);
 			} else {	
 				ca.setBuilding(buildingRepository.findById(dto.getBuildingId()).orElse(null));
 				ca.setAddress(null);
@@ -785,7 +788,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         		sqlCommonBuilder.append(" (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds))  AND ");
             }
         	
-            sqlCommonBuilder.append(" ca.sn is not null and ca.sn <> ''  AND ");
             sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
         }
         
@@ -794,6 +796,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 //                sqlCommonBuilder.append(" AND ");
 //            }
             sqlCommonBuilder.append(" AND ca.cid is not null AND ca.cid <> '' ");
+        }
+        
+        if (!searchMeter) {
+        	sqlCommonBuilder.append(" AND ca.sn is not null and ca.sn <> '' ");
         }
         
         if (sqlCommonBuilder.length() < 10) {

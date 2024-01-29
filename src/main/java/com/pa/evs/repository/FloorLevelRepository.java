@@ -26,4 +26,7 @@ public interface FloorLevelRepository extends JpaRepository<FloorLevel, Long> {
 	Optional<FloorLevel> findByBuildingIdAndName(Long buildingId, String name);
 	
 	Optional<FloorLevel> findByBuildingIdAndBlockIdAndName(Long buildingId, Long blockId, String name);
+	
+	@Query(value = "select sn from CARequestLog where floorLevel.id = ?1")
+	List<String> linkedSN(long floorLevelId);
 }
