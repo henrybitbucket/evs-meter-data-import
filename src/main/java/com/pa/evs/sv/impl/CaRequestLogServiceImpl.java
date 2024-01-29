@@ -1655,6 +1655,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		
 		if (file != null && file.getOriginalFilename() != null && file.getOriginalFilename().endsWith(".csv")) {
 			String[] lines = null;
+			int success = 0;
+			int failed = 0;
 			try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
 				IOUtils.copy(file.getInputStream(), bos);
 				lines = new String(bos.toByteArray(), StandardCharsets.UTF_8).split("\r*\n");
@@ -1681,6 +1683,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 						dsd.setNewSetting(status);
 						dsd.setStatus("msn is required");
 						settingList.add(dsd);
+						failed++;
 						continue;
 					}
 					if (StringUtils.isBlank(status)) {
@@ -1691,6 +1694,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 						dsd.setNewSetting(status);
 						dsd.setStatus("staus is required");
 						settingList.add(dsd);
+						failed++;
 						continue;
 					}
 
@@ -1703,6 +1707,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 						dsd.setNewSetting(status);
 						dsd.setStatus("Device not found");
 						settingList.add(dsd);
+						failed++;
 						continue;
 					}
 					CARequestLog ca = caOpt.get();
@@ -1713,30 +1718,34 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 					dsd.setNewSetting(status);
 					dsd.setStatus(BooleanUtils.isTrue(isProcess) ? "Updated" : "OK");
 					settingList.add(dsd);
+					success++;
 					
 					if (BooleanUtils.isTrue(isProcess)) {
 						ca.setSendMDTToPi(Integer.parseInt(status));
 						ca.setUpdatedBy(SecurityUtils.getEmail());
 						caRequestLogRepository.save(ca);
-						
-						fileService.saveFile(
-								new MultipartFile[] {file}, 
-								new String[] {"DEVICE_SETTINGS"}, 
-								new String[] {System.currentTimeMillis() + "_" + file.getOriginalFilename()}, 
-								null,
-								new String[] {"DEVICE_SETTINGS"}, 
-								null, 
-								deviceSettingsBucketName
-						);
 					}
-				}  else {
+				} else {
 					DeviceSettingDto dsd = new DeviceSettingDto();
 					dsd.setMsn(details[0]);
 					dsd.setPreviousSetting("");
 					dsd.setNewSetting("");
 					dsd.setStatus("status is required");
 					settingList.add(dsd);
+					failed++;
 				}
+			}
+			if (BooleanUtils.isTrue(isProcess)) {
+				String description = "Total: " + (lines.length - 1) + ", Successful: " + success + ", Failed: " + failed;
+				fileService.saveFile(
+						new MultipartFile[] {file}, 
+						new String[] {"DEVICE_SETTINGS"}, 
+						new String[] {System.currentTimeMillis() + "_" + file.getOriginalFilename()}, 
+						null,
+						new String[] {description},
+						null, 
+						deviceSettingsBucketName
+				);
 			}
 		} else {
 			LOG.info("Wrong file type. Accepted .csv file");
