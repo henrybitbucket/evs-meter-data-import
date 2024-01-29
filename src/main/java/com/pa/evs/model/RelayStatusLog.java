@@ -2,6 +2,7 @@ package com.pa.evs.model;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
@@ -17,7 +18,13 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "relay_status_log", uniqueConstraints = @UniqueConstraint(columnNames = "batch_uuid"))
+@Table(
+		name = "relay_status_log", 
+		uniqueConstraints = @UniqueConstraint(columnNames = "batch_uuid"), 
+		indexes = {
+			@Index(columnList = "batch_uuid", name = "idx_relay_status_log_relay_status_log")
+		}
+)
 public class RelayStatusLog extends BaseEntity {
 
 	@Column(name = "command_send_by")

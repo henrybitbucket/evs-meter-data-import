@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
@@ -30,7 +31,11 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "log")
+@Table(name = "log",
+	indexes = {
+			@Index(columnList = "rls_batch_uuid", name = "idx_rls_batch_uuid_log")
+	}
+)
 public class Log extends BaseEntity {
 
 	private String type;

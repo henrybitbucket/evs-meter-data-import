@@ -1563,7 +1563,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	sqlCommonBuilder.append(" AND batchUuid = '" + batchUuid + "'");
         }
         if (StringUtils.isNotBlank(filter)) {
-        	sqlCommonBuilder.append(" AND upper(filters) like '%" + filter.toUpperCase() + "%' ");
+        	sqlCommonBuilder.append(" AND (upper(filters) like '%" + filter.toUpperCase() + "%' ");
+        	sqlCommonBuilder.append("      OR (exists (select 1 from Log cl where cl.rlsBatchUuid = ca.batchUuid and (upper(cl.msn) like upper('%" + filter + "%') OR upper(cl.uid) like upper('%" + filter + "%') )      )) ");
+        	sqlCommonBuilder.append("     ) ");
         }
         
         sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id DESC");
