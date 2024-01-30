@@ -47,7 +47,7 @@ public class BlockController {
 			blockService.delete(id);
 			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
 		} catch (Exception ex) {
-			return exceptionConvertor.createResponseDto(ex);
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
 	}
 }

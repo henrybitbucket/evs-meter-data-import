@@ -100,4 +100,26 @@ public class AddressLog extends BaseEntity {
 				.unitId(ca.getBuildingUnit() != null ? ca.getBuildingUnit().getId() : null)
 				.build();
 	}
+	
+	public static AddressLog buildMeterAddress(MMSMeter ca) {
+		boolean isAddress = ca.getBuilding() != null && ca.getBuilding().getAddress() != null;
+
+		return builder()
+				.msn(ca.getMsn())
+				.building(ca.getBuilding() != null ? ca.getBuilding().getName() : null)
+				.block(ca.getBlock() != null ? ca.getBlock().getName() : null)
+				.level(ca.getFloorLevel() != null ? ca.getFloorLevel().getName() : null)
+				.unitNumber(ca.getBuildingUnit() != null ? ca.getBuildingUnit().getName() : null)
+				.city(isAddress ? ca.getBuilding().getAddress().getCity() : null)
+				.country(isAddress ? ca.getBuilding().getAddress().getCountry() : null)
+				.street(isAddress ? ca.getBuilding().getAddress().getStreet() : null)
+				.streetNumber(isAddress ? ca.getBuilding().getAddress().getStreetNumber() : null)
+				.remark(isAddress ? ca.getBuilding().getAddress().getRemark() : null)
+				.postalCode(isAddress ? ca.getBuilding().getAddress().getPostalCode() : null)
+				.buildingId(ca.getBuilding() != null ? ca.getBuilding().getId() : null)
+				.blockId(ca.getBlock() != null ? ca.getBlock().getId() : null)
+				.levelId(ca.getFloorLevel() != null ? ca.getFloorLevel().getId() : null)
+				.unitId(ca.getBuildingUnit() != null ? ca.getBuildingUnit().getId() : null)
+				.build();
+	}
 }

@@ -2,6 +2,8 @@ package com.pa.evs.model;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
@@ -36,4 +38,27 @@ public class MMSMeter extends BaseEntity {
     private String lastestDecoupleUser;
     
     private String lastestCoupledUser;
+    
+    @ManyToOne
+	@JoinColumn(name = "building_id")
+	private Building building;
+	
+	@ManyToOne
+	@JoinColumn(name = "block_id")
+	private Block block;
+	
+	@ManyToOne
+	@JoinColumn(name = "floor_level_id")
+	private FloorLevel floorLevel;
+
+	@ManyToOne
+	@JoinColumn(name = "building_unit_id")
+	private BuildingUnit buildingUnit;
+	
+	@ManyToOne
+	@JoinColumn(name = "address_id")
+	private Address address;
+
+	@Column(name = "home_address")
+	private String homeAddress;
 }

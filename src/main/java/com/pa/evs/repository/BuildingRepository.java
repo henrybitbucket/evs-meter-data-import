@@ -31,4 +31,7 @@ public interface BuildingRepository extends JpaRepository<Building, Long> {
 	
 	@Query(value = "select sn from CARequestLog where building.id = ?1")
 	List<String> linkedSN(long buildingId);
+	
+	@Query(value = "select msn from MMSMeter where building.id = ?1")
+	List<String> linkedMSN(long buildingId);
 }

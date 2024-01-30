@@ -147,6 +147,15 @@ public class BuildingUnitServiceImpl implements BuildingUnitService {
 	public void delete(Long id) throws ApiException {
 		BuildingUnit entity = buildingUnitRepository.findById(id)
 				.orElseThrow(() -> new ApiException(ResponseEnum.BUILDING_NOT_FOUND));
+		List<String> sns = buildingUnitRepository.linkedSN(id);
+		sns = buildingUnitRepository.linkedSN(id);
+		if (!sns.isEmpty()) {
+			throw new RuntimeException("Unit is already linked to the device(MCU SN = " + sns.get(0) + ")");
+		}
+		List<String> msns = buildingUnitRepository.linkedMSN(id);
+		if (!msns.isEmpty()) {
+			throw new RuntimeException("Unit is already linked to the device(Meter SN = " + msns.get(0) + ")");
+		}
 		buildingUnitRepository.delete(entity);
 	}
 

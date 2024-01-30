@@ -157,6 +157,15 @@ public class FloorLevelServiceImpl implements FloorLevelService {
 	@Override
 	public void delete(Long id) throws ApiException {
 		FloorLevel entity = floorLevelRepository.findById(id).orElseThrow(() -> new ApiException(ResponseEnum.FLOOR_LEVEL_NOT_FOUND));
+		List<String> sns = floorLevelRepository.linkedSN(id);
+		if (!sns.isEmpty()) {
+			throw new RuntimeException("Floor is already linked to the device(MCU SN = " + sns.get(0) + ")");
+		}
+		List<String> msns = floorLevelRepository.linkedMSN(id);
+		if (!msns.isEmpty()) {
+			throw new RuntimeException("Floor is already linked to the device(Meter SN = " + msns.get(0) + ")");
+		}
+		
 		List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(entity);
 		for(BuildingUnit buildingUnit : buildingUnits) {
 			buildingUnitRepository.delete(buildingUnit);

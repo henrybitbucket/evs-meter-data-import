@@ -142,6 +142,15 @@ public class BlockServiceImpl implements BlockService {
 	@Override
 	public void delete(Long id) throws ApiException {
 		Block entity = blockRepository.findById(id).orElseThrow(() -> new ApiException(ResponseEnum.BLOCK_NOT_FOUND));
+		List<String> sns = blockRepository.linkedSN(id);
+		if (!sns.isEmpty()) {
+			throw new RuntimeException("Block is already linked to the device(MCU SN = " + sns.get(0) + ")");
+		}
+		List<String> msns = blockRepository.linkedMSN(id);
+		if (!msns.isEmpty()) {
+			throw new RuntimeException("Block is already linked to the device(Meter SN = " + msns.get(0) + ")");
+		}
+		
 		List<FloorLevel> fls = floorLevelRepository.findAllByBlock(entity);
 		for(FloorLevel floorLevel : fls) {
 			List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(floorLevel);

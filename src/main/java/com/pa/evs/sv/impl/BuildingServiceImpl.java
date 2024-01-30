@@ -383,10 +383,15 @@ public class BuildingServiceImpl implements BuildingService {
 				.orElseThrow(() -> new ApiException(ResponseEnum.BUILDING_NOT_FOUND));
 		
 		List<String> sns = new ArrayList<>();
+		List<String> msns = new ArrayList<>();
 		
 		sns = buildingRepository.linkedSN(id);
 		if (!sns.isEmpty()) {
-			throw new RuntimeException("Building is already linked to the device(MCU SN = " + sns + ")");
+			throw new RuntimeException("Building is already linked to the device(MCU SN = " + sns.get(0) + ")");
+		}
+		msns = buildingRepository.linkedMSN(id);
+		if (!msns.isEmpty()) {
+			throw new RuntimeException("Building is already linked to the device(Meter SN = " + msns.get(0) + ")");
 		}
 		
 		List<Block> blocks = blockRepository.findAllByBuilding(entity);
@@ -400,18 +405,32 @@ public class BuildingServiceImpl implements BuildingService {
 						if (!sns.isEmpty()) {
 							throw new RuntimeException("Unit is already linked to the device(MCU SN = " + sns.get(0) + ")");
 						}
+						msns = buildingUnitRepository.linkedMSN(buildingUnit.getId());
+						if (!msns.isEmpty()) {
+							throw new RuntimeException("Unit is already linked to the device(Meter SN = " + msns.get(0) + ")");
+						}
+						
 						buildingUnitRepository.delete(buildingUnit);
 					}
 					sns = floorLevelRepository.linkedSN(floorLevel.getId());
 					if (!sns.isEmpty()) {
 						throw new RuntimeException("Floor is already linked to the device(MCU SN = " + sns.get(0) + ")");
 					}
+					msns = floorLevelRepository.linkedMSN(floorLevel.getId());
+					if (!msns.isEmpty()) {
+						throw new RuntimeException("Floor is already linked to the device(Meter SN = " + msns.get(0) + ")");
+					}
+					
 					floorLevelRepository.delete(floorLevel);
 				}
 				sns = blockRepository.linkedSN(block.getId());
 				if (!sns.isEmpty()) {
 					throw new RuntimeException("Block is already linked to the device(MCU SN = " + sns.get(0) + ")");
 				}
+				msns = blockRepository.linkedMSN(block.getId());
+				if (!msns.isEmpty()) {
+					throw new RuntimeException("Block is already linked to the device(Meter SN = " + msns.get(0) + ")");
+				}				
 				blockRepository.delete(block);
 			}
 		} else {
@@ -423,12 +442,22 @@ public class BuildingServiceImpl implements BuildingService {
 					if (!sns.isEmpty()) {
 						throw new RuntimeException("Unit is already linked to the device(MCU SN = " + sns.get(0) + ")");
 					}
+					msns = buildingUnitRepository.linkedMSN(buildingUnit.getId());
+					if (!msns.isEmpty()) {
+						throw new RuntimeException("Unit is already linked to the device(Meter SN = " + msns.get(0) + ")");
+					}
+					
 					buildingUnitRepository.delete(buildingUnit);
 				}
 				sns = floorLevelRepository.linkedSN(floorLevel.getId());
 				if (!sns.isEmpty()) {
 					throw new RuntimeException("Floor is already linked to the device(MCU SN = " + sns.get(0) + ")");
 				}
+				msns = floorLevelRepository.linkedMSN(floorLevel.getId());
+				if (!msns.isEmpty()) {
+					throw new RuntimeException("Floor is already linked to the device(Meter SN = " + msns.get(0) + ")");
+				}			
+				
 				floorLevelRepository.delete(floorLevel);
 			}
 		}

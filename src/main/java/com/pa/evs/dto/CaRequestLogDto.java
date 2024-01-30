@@ -84,4 +84,7 @@ public class CaRequestLogDto {
     private Integer sendMDTToPi;
     
     private String remark;
+    
+    @Builder.Default
+    private boolean updateMeter = false;
 }

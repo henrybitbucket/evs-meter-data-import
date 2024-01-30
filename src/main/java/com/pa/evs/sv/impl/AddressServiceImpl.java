@@ -40,6 +40,7 @@ import com.pa.evs.repository.BuildingUnitRepository;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.sv.AddressService;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.SecurityUtils;
 
 @Service
@@ -282,6 +283,9 @@ public class AddressServiceImpl implements AddressService {
 					buildingUnitRepository.save(buildingUnit);
 					ca.setBuildingUnit(buildingUnit);
 					caRequestLogRepository.save(ca);
+					
+					// copy address to coupled Meter
+					AppProps.getContext().getBean(CaRequestLogServiceImpl.class).updateMMSMeter(ca, ca.getMsn());
 					
 					// Add new log to address_log that linked new address to this device
 					AddressLog newAddrLog = AddressLog.build(ca);

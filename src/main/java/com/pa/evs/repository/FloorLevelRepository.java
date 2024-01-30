@@ -29,4 +29,7 @@ public interface FloorLevelRepository extends JpaRepository<FloorLevel, Long> {
 	
 	@Query(value = "select sn from CARequestLog where floorLevel.id = ?1")
 	List<String> linkedSN(long floorLevelId);
+	
+	@Query(value = "select msn from MMSMeter where floorLevel.id = ?1")
+	List<String> linkedMSN(long floorLevelId);
 }

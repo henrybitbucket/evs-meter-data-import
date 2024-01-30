@@ -21,4 +21,7 @@ public interface BlockRepository extends JpaRepository<Block, Long> {
 	
 	@Query(value = "select sn from CARequestLog where block.id = ?1")
 	List<String> linkedSN(long blockId);
+	
+	@Query(value = "select msn from MMSMeter where block.id = ?1")
+	List<String> linkedMSN(long blockId);
 }

@@ -205,37 +205,74 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	}
 	
 	@Override
-	@Transactional
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void updateMMSMeter(CARequestLog ca, String msn) {
 
-		msn = StringUtils.isBlank(ca.getMsn()) ? msn : ca.getMsn();
-		if (StringUtils.isBlank(msn)) {
-			return;
+		try {
+			msn = StringUtils.isBlank(ca.getMsn()) ? msn : ca.getMsn();
+			if (StringUtils.isBlank(msn)) {
+				return;
+			}
+			
+			MMSMeter mmsMeter = mmsMeterRepository.findByMsn(msn);
+			if (mmsMeter == null) {
+				mmsMeter = new MMSMeter();
+			}
+			
+			boolean isCoupled = StringUtils.isNotBlank(mmsMeter.getUid());
+			
+			if (isCoupled && StringUtils.isBlank(ca.getMsn())) {
+				
+				// next-de-couple
+				mmsMeter.setLastestDecoupleTime(System.currentTimeMillis());
+				mmsMeter.setLastestDecoupleUser(SecurityUtils.getEmail());
+				
+				// copy address to meter
+				mmsMeter.setBuilding(ca.getBuilding());
+				mmsMeter.setBlock(ca.getBlock());
+				mmsMeter.setFloorLevel(ca.getFloorLevel());
+				mmsMeter.setBuildingUnit(ca.getBuildingUnit());
+				mmsMeter.setAddress(ca.getAddress());
+				mmsMeter.setHomeAddress(ca.getHomeAddress());
+			}
+			
+			if (!isCoupled && StringUtils.isNotBlank(ca.getMsn())) {
+				// next-couple
+				mmsMeter.setLastestCoupledTime(System.currentTimeMillis());
+				mmsMeter.setLastestCoupledUser(SecurityUtils.getEmail());
+				
+				// resume address meter -> mcu
+				if (mmsMeter.getBuildingUnit() != null) {
+					ca.setBuildingUnit(mmsMeter.getBuildingUnit());
+					ca.setFloorLevel(mmsMeter.getBuildingUnit().getFloorLevel());
+					ca.setBlock(mmsMeter.getBuildingUnit().getFloorLevel().getBlock());
+					ca.setBuilding(mmsMeter.getBuildingUnit().getFloorLevel().getBuilding());
+				}
+				ca.setAddress(mmsMeter.getAddress());
+				ca.setHomeAddress(mmsMeter.getHomeAddress());
+			}
+			
+			if (isCoupled && msn.equalsIgnoreCase(ca.getMsn())) {
+
+				// not change msn
+				// copy address to meter (because update address for couple device -> update address for mcu)
+				mmsMeter.setBuilding(ca.getBuilding());
+				mmsMeter.setBlock(ca.getBlock());
+				mmsMeter.setFloorLevel(ca.getFloorLevel());
+				mmsMeter.setBuildingUnit(ca.getBuildingUnit());
+				mmsMeter.setAddress(ca.getAddress());
+				mmsMeter.setHomeAddress(ca.getHomeAddress());
+			}
+			
+			mmsMeter.setMsn(msn);
+			mmsMeter.setLastUid(ca.getUid());
+			
+			mmsMeter.setUid(StringUtils.isNotBlank(ca.getMsn()) ? ca.getUid() : null);
+			
+			mmsMeterRepository.save(mmsMeter);
+		} catch (Exception e) {
+			LOG.error("ERROR in updateMMSMeter: " +  e.getMessage());
 		}
-		
-		MMSMeter mmsMeter = mmsMeterRepository.findByMsn(msn);
-		if (mmsMeter == null) {
-			mmsMeter = new MMSMeter();
-		}
-		
-		boolean isCoupled = StringUtils.isNotBlank(mmsMeter.getUid());
-		
-		if (isCoupled && StringUtils.isBlank(ca.getMsn())) {
-			mmsMeter.setLastestDecoupleTime(System.currentTimeMillis());
-			mmsMeter.setLastestDecoupleUser(SecurityUtils.getEmail());
-		}
-		
-		if (!isCoupled && StringUtils.isNotBlank(ca.getMsn())) {
-			mmsMeter.setLastestCoupledTime(System.currentTimeMillis());
-			mmsMeter.setLastestCoupledUser(SecurityUtils.getEmail());
-		}
-		
-		mmsMeter.setMsn(msn);
-		mmsMeter.setLastUid(ca.getUid());
-		
-		mmsMeter.setUid(StringUtils.isNotBlank(ca.getMsn()) ? ca.getUid() : null);
-		
-		mmsMeterRepository.save(mmsMeter);
 	}
 
 	@Override
@@ -254,7 +291,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     @Transactional
     public void save(CaRequestLogDto dto) throws Exception {
     	
-    	if (StringUtils.isNotBlank(dto.getMsn())) {
+    	if (dto.isUpdateMeter()) {
     		// update remark meter device
     		MMSMeter mmsMeter = mmsMeterRepository.findByMsn(dto.getMsn());
     		if (mmsMeter != null) {
@@ -262,9 +299,18 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     			mmsMeterRepository.save(mmsMeter);
     		}
     		if (StringUtils.isBlank(dto.getUid())) {
+    			// couple address for meter
+    			updateMMSMeterAddressOnly(dto);
     			return;
     		}
+    		Optional<CARequestLog> opt = caRequestLogRepository.findByMsn(dto.getMsn());
+    		if (!opt.isPresent()) {
+
+    		}
+    		// update address (if change) -> update mcu
+    		dto.setId(opt.get().getId());
     	}
+    	
         CARequestLog ca = null;
         Calendar c = Calendar.getInstance();
         boolean isSetAddress = false;
@@ -576,6 +622,116 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		}
     }
 
+    private void updateMMSMeterAddressOnly(CaRequestLogDto dto) {
+    	
+    	MMSMeter meter = mmsMeterRepository.findByMsn(dto.getMsn());
+        AddressLog addrLog = null;
+        
+        if (StringUtils.isNotBlank(dto.getMsn())) {
+        	dto.setMsn(dto.getMsn().trim());
+        }
+        
+        List<MMSMeter> list = null;
+    	if (dto.getBuildingId() != null && dto.getFloorLevelId() != null && dto.getBuildingUnitId() != null) {
+    		list = mmsMeterRepository.findByBuildingAndFloorLevelAndBuildingUnit(dto.getBuildingId(), dto.getFloorLevelId(), dto.getBuildingUnitId());
+    	} else if (dto.getBuildingId() != null && dto.getFloorLevelId() != null && dto.getBuildingUnitId() == null) {
+    		list = mmsMeterRepository.findByBuildingAndFloorLevel(dto.getBuildingId(), dto.getFloorLevelId());
+    	} else if (dto.getBuildingId() != null && dto.getFloorLevelId() == null && dto.getBuildingUnitId() == null) {
+    		list = mmsMeterRepository.findByBuilding(dto.getBuildingId());
+    	}
+    	
+    	if (list != null && !list.isEmpty() && (list.size() > 1 || meter.getId() == null || (list.get(0).getId().longValue() != meter.getId().longValue()))) {
+    		throw new RuntimeException("The address is assigned to another Meter");
+    	}
+    	
+    	if ((meter.getBuildingUnit() != null && dto.getBuildingUnitId() != null && !meter.getBuildingUnit().getId().equals(dto.getBuildingUnitId()))
+    			|| (meter.getBuildingUnit() != null && dto.getBuildingUnitId() == null)) {
+    		
+    		// Add new log to address_log that this address is unlinked to this device
+			addrLog = AddressLog.buildMeterAddress(meter);
+			addrLog.setType(DeviceType.NOT_COUPLED);
+			addressLogRepository.save(addrLog);
+    	}
+        
+        try {
+        	
+        	if(StringUtils.isNotEmpty(dto.getHomeAddress())) {
+				meter.setHomeAddress(dto.getHomeAddress());
+			}
+			
+			if (dto.getBuildingId() == null) {
+				meter.setBuilding(null);
+				meter.setBlock(null);
+				meter.setFloorLevel(null);
+				meter.setBuildingUnit(null);
+			} else {	
+				meter.setBuilding(buildingRepository.findById(dto.getBuildingId()).orElse(null));
+				meter.setAddress(null);
+			}
+			
+			if (dto.getFloorLevelId() == null) {
+				meter.setFloorLevel(null);
+			} else {
+				FloorLevel fl = floorLevelRepository.findById(dto.getFloorLevelId()).orElse(null);
+				meter.setFloorLevel(fl);
+				if (fl != null) {
+					meter.setBlock(fl.getBlock());
+				}
+			}
+			
+			if (dto.getBuildingUnitId() == null) {
+				if (meter.getBuildingUnit() != null) {
+					meter.getBuildingUnit().setCoupledDate(null);
+					buildingUnitRepository.save(meter.getBuildingUnit());
+				}
+				meter.setBuildingUnit(null);
+			} else {
+				
+				BuildingUnit next = buildingUnitRepository.findById(dto.getBuildingUnitId()).orElse(null);
+				BuildingUnit old = meter.getBuildingUnit();
+				if (old != null && (next == null || next.getId().longValue() != old.getId().longValue())) {
+					old.setCoupledDate(null);
+					buildingUnitRepository.save(old);
+				}
+				if (next != null && (old == null || next.getId().longValue() != old.getId().longValue())) {
+					next.setCoupledDate(new Date());
+					buildingUnitRepository.save(next);
+				}
+				meter.setBuildingUnit(next);
+			}
+			
+			if (dto.getAddress() == null) {
+				meter.setAddress(null);
+			} else if (dto.getBuildingId() == null && StringUtils.isNotBlank(dto.getAddress().getStreetNumber())
+				&& StringUtils.isNotBlank(dto.getAddress().getStreet())
+				&& StringUtils.isNotBlank(dto.getAddress().getCity())
+				&& StringUtils.isNotBlank(dto.getAddress().getCountry())
+				&& dto.getAddress().getPostalCode() != null
+						) {
+				
+				Address address;
+				if (dto.getAddress().getId() == null) {
+					address = new Address();
+				} else {
+					address = addressRepository.findById(dto.getAddress().getId()).orElse(new Address());
+				}
+				address.setStreetNumber(dto.getAddress().getStreetNumber());
+				address.setStreet(dto.getAddress().getStreet());
+				address.setTown(dto.getAddress().getTown());
+				address.setCity(dto.getAddress().getCity());
+				address.setCountry(dto.getAddress().getCountry());
+				address.setPostalCode(dto.getAddress().getPostalCode());
+				addressRepository.save(address);
+
+				meter.setAddress(address);
+				meter.setBuilding(null);
+				meter.setFloorLevel(null);
+				meter.setBuildingUnit(null);
+
+			}
+		} catch (Exception e) {/**/}
+    }
+    
 
     // search MMSMeter
 	@Override
@@ -751,7 +907,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 sqlCommonBuilder.append(" ca.status = '" + status + "' AND ");
             }
             if (StringUtils.isNotBlank(type)) {
-                sqlCommonBuilder.append(" ca.type = '" + type + "' AND ");
+            	if (searchMeter) {
+            		sqlCommonBuilder.append(" m.uid IS " + ("COUPLED".equalsIgnoreCase(type) ? " NOT NULL " : "NULL ") + " AND ");
+            	} else {
+            		sqlCommonBuilder.append(" ca.type = '" + type + "' AND ");            		
+            	}
             }
             if (!CollectionUtils.isEmpty(cids)) {
                 sqlCommonBuilder.append(" (ca.cid = '" + cids.get(0) + "'");
@@ -769,18 +929,36 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (queryGroup != null) {
                 sqlCommonBuilder.append(" ca.group = " + queryGroup + " AND ");
             }
+            
             if (StringUtils.isNotBlank(queryBuilding)) {
-                sqlCommonBuilder.append(" ca.building.id= '" + queryBuilding + "' AND ");
+            	if (searchMeter) {
+            		sqlCommonBuilder.append(" m.building.id= '" + queryBuilding + "' AND ");
+            	} else {
+            		sqlCommonBuilder.append(" ca.building.id= '" + queryBuilding + "' AND ");	
+            	}
             }
             if (StringUtils.isNotBlank(queryBlock)) {
-                sqlCommonBuilder.append(" ca.block.id= '" + queryBlock + "' AND ");
+            	if (searchMeter) {
+            		sqlCommonBuilder.append(" m.block.id= '" + queryBlock + "' AND ");
+            	} else {
+            		sqlCommonBuilder.append(" ca.block.id= '" + queryBlock + "' AND ");	
+            	}
             }
             if (StringUtils.isNotBlank(queryFloorLevel)) {
-                sqlCommonBuilder.append(" ca.floorLevel.id= '" + queryFloorLevel + "' AND ");
+            	if (searchMeter) {
+            		sqlCommonBuilder.append(" m.floorLevel.id= '" + queryFloorLevel + "' AND ");
+            	} else {
+            		sqlCommonBuilder.append(" ca.floorLevel.id= '" + queryFloorLevel + "' AND ");
+            	}
             }
             if (StringUtils.isNotBlank(queryBuildingUnit)) {
-                sqlCommonBuilder.append(" ca.buildingUnit.id= '" + queryBuildingUnit + "' AND ");
+            	if (searchMeter) {
+            		sqlCommonBuilder.append(" m.buildingUnit.id= '" + queryBuildingUnit + "' AND ");
+            	} else {
+            		sqlCommonBuilder.append(" ca.buildingUnit.id= '" + queryBuildingUnit + "' AND ");
+            	}
             }
+            
             if (StringUtils.isNotBlank(queryPostalCode)) {
                 sqlCommonBuilder.append(" ((exists (select 1 from Building bd where bd.id = ca.building.id and upper(bd.address.postalCode) = '" + queryPostalCode.toUpperCase() + "') ");
                 sqlCommonBuilder.append(" or (exists (select 1 FROM Address add1 where add1.id = ca.address.id and upper(add1.postalCode) = '" + queryPostalCode.toUpperCase() + "') ))) AND ");
@@ -858,10 +1036,18 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             		ca.setCid(null);
             		ca.setMsn(meter.getMsn());
             		ca.setLastestDecoupleUser(meter.getLastestCoupledUser());
-            		ca.setLastestDecoupleTime(meter.getLastestDecoupleTime());;
+            		ca.setLastestDecoupleTime(meter.getLastestDecoupleTime());
+            		
             	}
             	if (searchMeter && meter != null) {
             		ca.setRemark(meter.getRemark());
+            		
+            		ca.setBuilding(meter.getBuilding());
+            		ca.setBlock(meter.getBlock());
+            		ca.setFloorLevel(meter.getFloorLevel());
+            		ca.setBuildingUnit(meter.getBuildingUnit());
+            		ca.setAddress(meter.getAddress());
+            		ca.setHomeAddress(meter.getHomeAddress());
             	}
         	}
         }

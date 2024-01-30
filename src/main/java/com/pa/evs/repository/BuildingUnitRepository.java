@@ -25,4 +25,7 @@ public interface BuildingUnitRepository extends JpaRepository<BuildingUnit, Long
 	
 	@Query(value = "select sn from CARequestLog where buildingUnit.id = ?1")
 	List<String> linkedSN(long buildingUnitId);
+	
+	@Query(value = "select msn from MMSMeter where buildingUnit.id = ?1")
+	List<String> linkedMSN(long buildingUnitId);
 }
