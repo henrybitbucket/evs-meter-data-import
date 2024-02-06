@@ -205,7 +205,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	}
 	
 	@Override
-	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Transactional
 	public void updateMMSMeter(CARequestLog ca, String msn) {
 
 		try {

@@ -281,6 +281,7 @@ public class AddressServiceImpl implements AddressService {
 					
 					a.setCoupleTime(buildingUnit.getCoupledDate() == null ? buildingUnit.getCreateDate() : buildingUnit.getCoupledDate());
 					buildingUnitRepository.save(buildingUnit);
+					buildingUnitRepository.flush();
 					ca.setBuildingUnit(buildingUnit);
 					caRequestLogRepository.save(ca);
 					
