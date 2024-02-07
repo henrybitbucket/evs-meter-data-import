@@ -1520,7 +1520,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		List<String> members = (List<String>) payload.get("members");
 		
-		Set<String> existsUserEmails = userRepository.findByEmailIn(members).stream().map(u -> u.getEmail()).collect(Collectors.toSet());
+		Map<String, Users> existsUsers = new LinkedHashMap<>();
+		
+		userRepository.findByEmailIn(members)
+				.forEach(u -> {
+			existsUsers.put(u.getEmail(), u);
+		});
 		
 		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
 		
@@ -1530,9 +1535,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		members.forEach(mb -> {
 			
-			if (!existsUserEmails.contains(mb)) {
+			Users us = existsUsers.get(mb);
+			if (us == null) {
 				throw new RuntimeException("Email " + mb + " doesn't exist!");
 			}
+//			if (us.getProjects().stream().anyMatch(up -> "ALL".equalsIgnoreCase(up.getProject().getName()))) {
+//				throw new RuntimeException("Email " + mb + " doesn't exist!");
+//			}
 			if (map.get(mb) != null) {
 				throw new RuntimeException("Email " + mb + " already exist in this group!");
 			}
