@@ -291,6 +291,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     @Transactional
     public void save(CaRequestLogDto dto) throws Exception {
     	
+        if (StringUtils.isNotBlank(dto.getMsn())) {
+        	dto.setMsn(dto.getMsn().trim());
+        } else {
+        	dto.setMsn(null);
+        }
+        
     	if (dto.isUpdateMeter()) {
     		// update remark meter device
     		MMSMeter mmsMeter = mmsMeterRepository.findByMsn(dto.getMsn());
@@ -304,11 +310,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     			return;
     		}
     		Optional<CARequestLog> opt = caRequestLogRepository.findByMsn(dto.getMsn());
-    		if (!opt.isPresent()) {
-
+    		if (opt.isPresent()) {
+        		// update address (if change) -> update mcu
+        		dto.setId(opt.get().getId());
     		}
-    		// update address (if change) -> update mcu
-    		dto.setId(opt.get().getId());
     	}
     	
         CARequestLog ca = null;
@@ -319,9 +324,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         String caUid = null;
         String caSn = null;
         
-        if (StringUtils.isNotBlank(dto.getMsn())) {
-        	dto.setMsn(dto.getMsn().trim());
-        }
         if (dto.getId() != null) {
             Optional<CARequestLog> opt = caRequestLogRepository.findById(dto.getId());
             if (opt.isPresent()) {
@@ -336,16 +338,16 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 	caSn = ca.getSn();
                 	
                 	if (StringUtils.isBlank(newUid)) {
-                		throw new Exception("New MCU UUID is required!");
+                		throw new RuntimeException("New MCU UUID is required!");
                 	}
                 	if (StringUtils.isBlank(newSn)) {
-                		throw new Exception("New MCU SN is required!");
+                		throw new RuntimeException("New MCU SN is required!");
                 	}
                 	if (StringUtils.isBlank(newReplaceReason)) {
-                		throw new Exception("Replace reason is required!");
+                		throw new RuntimeException("Replace reason is required!");
                 	}
                 	if (caRequestLogRepository.findBySn(newSn).isPresent()) {
-                		throw new Exception(String.format("New MCU SN %s exists!", newSn));
+                		throw new RuntimeException(String.format("New MCU SN %s exists!", newSn));
                 	}
                 	if (StringUtils.isNotBlank(oldSn)) {
                 		ca.setOldSn(oldSn + "," + caSn);
@@ -362,15 +364,15 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 	ca.setSn(newSn);
                 	ca.setIsReplaced(true);
                 }
-                
+
             	if (StringUtils.isNotBlank(dto.getMsn()) && StringUtils.isNotBlank(ca.getMsn()) && !dto.getMsn().equalsIgnoreCase(ca.getMsn())) {
-            		if (BooleanUtils.isTrue(caRequestLogRepository.existsByMsn(dto.getMsn()))) {
-            			throw new Exception(Message.MSN_WAS_ASSIGNED);
-            		}
-            		throw new Exception(Message.MCU_ALREADY_COUPLED);
+            		throw new RuntimeException(Message.MCU_ALREADY_COUPLED);
+            	}
+            	if (StringUtils.isNotBlank(dto.getMsn()) && !dto.getMsn().equalsIgnoreCase(ca.getMsn()) && caRequestLogRepository.existsByMsn(dto.getMsn())) {
+            		throw new RuntimeException(Message.MSN_WAS_ASSIGNED);
             	}
             	if (ca.getBuildingUnit() != null && dto.getBuildingUnitId() != null && !ca.getBuildingUnit().getId().equals(dto.getBuildingUnitId())) {
-            		throw new Exception(Message.MCU_ALREADY_COUPLED_ADDRESS);
+            		throw new RuntimeException(Message.MCU_ALREADY_COUPLED_ADDRESS);
             	}
                 ca.setModifyDate(c.getTime());
                 if (StringUtils.isBlank(msn) && StringUtils.isNotBlank(ca.getMsn())) {
@@ -406,7 +408,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     	}
     	
     	if (list != null && !list.isEmpty() && (list.size() > 1 || ca.getId() == null || (list.get(0).getId().longValue() != ca.getId().longValue()))) {
-    		throw new Exception(Message.ADDRESS_IS_ASSIGNED);
+    		throw new RuntimeException(Message.ADDRESS_IS_ASSIGNED);
     	}
     	
     	boolean isCoupledAddress = (ca.getBuildingUnit() != null && dto.getBuildingUnitId() != null && !ca.getBuildingUnit().getId().equals(dto.getBuildingUnitId()))
@@ -531,7 +533,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 	if (vendor != null) {
                 		ca.setVendor(vendor);
                 	} else {
-                		throw new Exception("Default vendor not found!");
+                		throw new RuntimeException("Default vendor not found!");
                 	}
                 }
         	} else {
@@ -539,7 +541,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             	if (vendor != null) {
             		ca.setVendor(vendor);
             	} else {
-            		throw new Exception("Default vendor not found!");
+            		throw new RuntimeException("Default vendor not found!");
             	}
         	}
         }
@@ -1071,6 +1073,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	public void linkMsn(Map<String, Object> map) {
     	
     	if (map.get("sn") != null) {
+    		String msn = (String) map.get("msn");
+    		if (StringUtils.isBlank(msn)) {
+    			map.put("msn", null);
+    		}
             if (BooleanUtils.isTrue(caRequestLogRepository.existsByMsn((String)map.get("msn")))) {
                 throw new RuntimeException("Invalid MSN, MSN is being linked !");
             }
