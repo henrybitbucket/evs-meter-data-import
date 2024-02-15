@@ -309,10 +309,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     			updateMMSMeterAddressOnly(dto);
     			return;
     		}
-    		Optional<CARequestLog> opt = caRequestLogRepository.findByMsn(dto.getMsn());
-    		if (opt.isPresent()) {
-        		// update address (if change) -> update mcu
-        		dto.setId(opt.get().getId());
+    		if (StringUtils.isNotBlank(dto.getMsn())) {
+	    		Optional<CARequestLog> opt = caRequestLogRepository.findByMsn(dto.getMsn().trim());
+	    		if (opt.isPresent()) {
+	        		// update address (if change) -> update mcu
+	        		dto.setId(opt.get().getId());
+	    		}
     		}
     	}
     	
