@@ -54,6 +54,7 @@ import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.exception.customException.AuthenticationException;
 import com.pa.evs.exception.customException.DuplicateUserException;
+import com.pa.evs.model.AppCode;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.OTP;
 import com.pa.evs.model.Permission;
@@ -65,11 +66,13 @@ import com.pa.evs.model.SubGroup;
 import com.pa.evs.model.SubGroupMember;
 import com.pa.evs.model.SubGroupMemberRole;
 import com.pa.evs.model.Token;
+import com.pa.evs.model.UserAppCode;
 import com.pa.evs.model.UserGroup;
 import com.pa.evs.model.UserPermission;
 import com.pa.evs.model.UserProject;
 import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
+import com.pa.evs.repository.AppCodeRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.PermissionRepository;
 import com.pa.evs.repository.PlatformUserLoginRepository;
@@ -79,6 +82,7 @@ import com.pa.evs.repository.RoleRepository;
 import com.pa.evs.repository.SubGroupMemberRepository;
 import com.pa.evs.repository.SubGroupMemberRoleRepository;
 import com.pa.evs.repository.SubGroupRepository;
+import com.pa.evs.repository.UserAppCodeRepository;
 import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.repository.UserPermissionRepository;
 import com.pa.evs.repository.UserProjectRepository;
@@ -91,6 +95,7 @@ import com.pa.evs.sv.AuthorityService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.SettingService;
 import com.pa.evs.utils.ApiResponse;
+import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
@@ -102,6 +107,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	static final Logger LOGGER = LoggerFactory.getLogger(AuthenticationServiceImpl.class);
 
+	@Autowired
+	private UserAppCodeRepository userAppCodeRepository;
+	
+	@Autowired
+	private AppCodeRepository appCodeRepository;
+	
 	@Autowired
 	private UserRepository userRepository;
 
@@ -246,6 +257,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				LoginResponseDto.builder().token(token).authorities(
 						userDetails.getAuthorities().stream().map(au -> au.getAuthority()).collect(Collectors.toList()))
 						.changePwdRequire(userDetails.getChangePwdRequire())
+						.appCodes(userDetails.getAppCodes())
 						.phoneNumber(userDetails.getPhoneNumber())
 						.email(userDetails.getEmail())
 						.firstName(user.getFirstName())
@@ -436,6 +448,34 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 		}
 		// End Project 
+		
+		// App code
+		
+		if (en.getAppCodes() == null) {
+			en.setAppCodes(new ArrayList<>());
+		}
+		if (en.getAppCodes().isEmpty()) {
+			if (dto.getAppCodes().isEmpty()) {
+				dto.getAppCodes().add(AppCodeSelectedHolder.get());
+			}
+			
+			userAppCodeRepository.deleteNotInAppCodes(en.getUserId(), dto.getAppCodes());
+			userAppCodeRepository.flush();
+			List<String> existAppCodes = userAppCodeRepository.findAppCodeNameByUserUserId(en.getUserId());
+			
+			for (AppCode ac : appCodeRepository.findByNameIn(dto.getAppCodes())) {
+				if (!existAppCodes.contains(ac.getName())) {
+					UserAppCode uac = new UserAppCode();
+					uac.setUser(en);
+					uac.setAppCode(ac);
+					userAppCodeRepository.save(uac);
+					en.getAppCodes().add(uac);
+				}
+			}
+		}
+		
+		userRepository.save(en);
+		//
 	}
 
 	@Transactional
@@ -671,16 +711,60 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			user1.setRoles(Arrays.asList("SUPER_ADMIN"));
 			save(user1);
 		}
+		
+		
+		///update user appcode
+		Map<String, String> appCodeMap = new LinkedHashMap<>();
+		appCodeMap.put("MMS", "MMS");
+		appCodeMap.put("DMS", "DMS");
+		
+		List<String> existsAppCodes = appCodeRepository.findByNameIn(appCodeMap.keySet()).stream().map(ac -> ac.getName())
+				.collect(Collectors.toList());
+		appCodeMap.forEach((k, v) -> {
+			if (!existsAppCodes.contains(k)) {
+				AppCode ac = new AppCode();
+				ac.setName(k);
+				ac.setDesc(v);
+				appCodeRepository.save(ac);
+			}
+		});
+		appCodeRepository.flush();
+		
+		userRepository.findAll()
+		.forEach(us -> {
+			List<UserAppCode> uacs = us.getAppCodes();
+			if (uacs == null || uacs.isEmpty()) {
+				us.setAppCodes(new ArrayList<>());
+				UserAppCode userAppCodeMMS = new UserAppCode();
+				userAppCodeMMS.setUser(us);
+				userAppCodeMMS.setAppCode(appCodeRepository.findByName("MMS"));
+				
+				userAppCodeRepository.save(userAppCodeMMS);
+				us.getAppCodes().add(userAppCodeMMS);
+				
+				if ("henry@gmail.com".equalsIgnoreCase(us.getEmail())) {
+					UserAppCode userAppCodeDMS = new UserAppCode();
+					userAppCodeDMS.setUser(us);
+					userAppCodeDMS.setAppCode(appCodeRepository.findByName("DMS"));
+					
+					userAppCodeRepository.save(userAppCodeDMS);
+					us.getAppCodes().add(userAppCodeDMS);
+				}
+				userRepository.save(us);
+			}
+		});
 	}
 
 	@Override
 	public void getUsers(PaginDto<UserDto> pagin) {
-		StringBuilder sqlBuilder = new StringBuilder("FROM Users");
-		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Users");
+		
+		StringBuilder sqlBuilder = new StringBuilder("FROM Users us");
+		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Users us");
 
 		StringBuilder sqlCommonBuilder = new StringBuilder();
 		sqlCommonBuilder.append(" WHERE 1=1 ");
-		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY userId asc");
+		sqlCommonBuilder.append(" AND (exists (select 1 from UserAppCode uac where uac.appCode.name = '" + AppCodeSelectedHolder.get() + "' and uac.user.userId = us.userId)) ");
+		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY us.userId asc");
 		sqlCountBuilder.append(sqlCommonBuilder);
 
 		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -726,6 +810,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		});
 	}
 
+	@Transactional
 	@Override
 	public void getPermissionsOfUser(PaginDto<UserDto> pagin) {
 		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
@@ -735,8 +820,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		List<PermissionDto> permissionsDto = new ArrayList<>();
 		for (UserRole userRole : user.getRoles()) {
+			if (!userRole.getRole().getAppCode().getName().equals(AppCodeSelectedHolder.get())) {
+				continue;
+			}
 			if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
 				for (Permission per : permissionRepository.findAll()) {
+					if (!per.getAppCode().getName().equals(AppCodeSelectedHolder.get())) {
+						continue;
+					}
 					if (StringUtils.equals(per.getName(), "PAGE_ROLES_EDIT_ROLE_BUTTON_PERM")
 							|| StringUtils.equals(per.getName(), "PAGE_ROLES_REMOVE_ROLE_BUTTON_PERM")) {
 
@@ -754,6 +845,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					Map.Entry<String, List<Permission>> it = itr.next();
 					List<PermissionDto> permissionss = new ArrayList();
 					for (Permission permission : it.getValue()) {
+						if (!permission.getAppCode().getName().equals(AppCodeSelectedHolder.get())) {
+							continue;
+						}
 						PermissionDto perDto = new PermissionDto();
 						perDto.setId(permission.getId());
 						perDto.setName(permission.getName());
@@ -778,23 +872,29 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				}
 			}
 		}
-		List<UserPermission> userPermissions = userPermissionRepository.findByUserUserId(user.getUserId());
-		for (UserPermission userPer : userPermissions) {
-			if (userPer.getUser().getUserId() == user.getUserId()) {
-				List<PermissionDto> permissionss = new ArrayList();
-				boolean check = false;
-				for (PermissionDto per : permissionsDto) {
-					if (per.getId() == userPer.getPermission().getId()) {
-						check = true;
-					}
+		List<Permission> allPermissions = userPermissionRepository.findByUserUserId(user.getUserId()).stream().map(up -> up.getPermission()).collect(Collectors.toList());
+		boolean isSuperAdmin = SecurityUtils.hasAnyRole("SUPER_ADMIN");
+		if (isSuperAdmin) {
+			allPermissions = permissionRepository.findAll();
+		}
+		for (Permission permission : allPermissions) {
+			// UserPermission userPer : userPermissions
+			if (!permission.getAppCode().getName().equals(AppCodeSelectedHolder.get())) {
+				continue;
+			}
+			List<PermissionDto> permissionss = new ArrayList();
+			boolean check = false;
+			for (PermissionDto per : permissionsDto) {
+				if (per.getId() == permission.getId()) {
+					check = true;
 				}
-				if (check != true) {
-					PermissionDto PerDto = new PermissionDto();
-					PerDto.setId(userPer.getPermission().getId());
-					PerDto.setName(userPer.getPermission().getName());
-					PerDto.setDescription(userPer.getPermission().getDescription());
-					permissionsDto.add(PerDto);
-				}
+			}
+			if (check != true) {
+				PermissionDto PerDto = new PermissionDto();
+				PerDto.setId(permission.getId());
+				PerDto.setName(permission.getName());
+				PerDto.setDescription(permission.getDescription());
+				permissionsDto.add(PerDto);
 			}
 		}
 		UserDto dto = UserDto.builder().permissions(permissionsDto).build();
@@ -823,6 +923,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 				StringBuilder sqlCommonBuilder = new StringBuilder();
 				sqlCommonBuilder.append(" WHERE 1 = 1");
+				// sqlCommonBuilder.append(" AND appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+				
+				sqlBuilder.append(sqlCommonBuilder);
 				sqlCountBuilder.append(sqlCommonBuilder);
 
 				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -858,7 +961,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 				StringBuilder sqlCommonBuilder = new StringBuilder();
 				sqlCommonBuilder.append(" WHERE ur.user.userId = " + user.getUserId());
-				sqlBuilder.append(" WHERE ur.user.userId = " + user.getUserId());
+				sqlCommonBuilder.append(" AND ur.role.appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+				sqlCommonBuilder.append(" AND (exists (select 1 from UserAppCode uac where uac.appCode.name = '" + AppCodeSelectedHolder.get() + "' and uac.user.userId = ur.user.userId)) ");
+				
+				sqlBuilder.append(sqlCommonBuilder);
 				sqlCountBuilder.append(sqlCommonBuilder);
 
 				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -909,12 +1015,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					check = true;
 				}
 			}
+			
 			if (check == true) {
-				StringBuilder sqlBuilder = new StringBuilder("FROM Role");
-				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Role");
+				StringBuilder sqlBuilder = new StringBuilder("FROM Role r");
+				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Role r");
 
 				StringBuilder sqlCommonBuilder = new StringBuilder();
 				sqlCommonBuilder.append(" WHERE 1 = 1");
+				sqlCommonBuilder.append(" AND r.appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+				
+				sqlBuilder.append(sqlCommonBuilder);
 				sqlCountBuilder.append(sqlCommonBuilder);
 
 				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -950,7 +1060,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 				StringBuilder sqlCommonBuilder = new StringBuilder();
 				sqlCommonBuilder.append(" WHERE ur.user.userId = " + userId);
-				sqlBuilder.append(" WHERE ur.user.userId = " + userId);
+				
+				sqlCommonBuilder.append(" AND ur.role.appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+				sqlCommonBuilder.append(" AND (exists (select 1 from UserAppCode uac where uac.appCode.name = '" + AppCodeSelectedHolder.get() + "' and uac.user.userId = ur.user.userId)) ");
+				
+				sqlBuilder.append(sqlCommonBuilder);
 				sqlCountBuilder.append(sqlCommonBuilder);
 
 				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -1176,7 +1290,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 		StringBuilder sqlCommonBuilder = new StringBuilder();
 		sqlCommonBuilder.append(" WHERE ur.user.userId = " + userId);
-		sqlBuilder.append(" WHERE ur.user.userId = " + userId);
+		
+		sqlCommonBuilder.append(" AND ur.groupUser.appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+		sqlCommonBuilder.append(" AND (exists (select 1 from UserAppCode uac where uac.appCode.name = '" + AppCodeSelectedHolder.get() + "' and uac.user.userId = ur.user.userId)) ");
+		
+		
+		sqlBuilder.append(sqlCommonBuilder);
 		sqlCountBuilder.append(sqlCommonBuilder);
 
 		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -1226,11 +1345,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				}
 			}
 			if (check == true) {
-				StringBuilder sqlBuilder = new StringBuilder("FROM Permission");
-				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Permission");
+				StringBuilder sqlBuilder = new StringBuilder("FROM Permission ");
+				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Permission ");
 
 				StringBuilder sqlCommonBuilder = new StringBuilder();
 				sqlCommonBuilder.append(" WHERE 1 = 1");
+				
+				sqlCommonBuilder.append(" AND appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+				
+				sqlBuilder.append(sqlCommonBuilder);
 				sqlCountBuilder.append(sqlCommonBuilder);
 
 				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
@@ -1269,7 +1392,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 				StringBuilder sqlCommonBuilder = new StringBuilder();
 				sqlCommonBuilder.append(" WHERE up.user.userId = " + userId);
-				sqlBuilder.append(" WHERE up.user.userId = " + userId);
+				
+				sqlCommonBuilder.append(" AND up.permission.appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+				sqlCommonBuilder.append(" AND (exists (select 1 from UserAppCode uac where uac.appCode.name = '" + AppCodeSelectedHolder.get() + "' and uac.user.userId = up.user.userId)) ");
+				
+				
+				sqlBuilder.append(sqlCommonBuilder);
 				sqlCountBuilder.append(sqlCommonBuilder);
 
 				if (pagin.getOffset() == null || pagin.getOffset() < 0) {

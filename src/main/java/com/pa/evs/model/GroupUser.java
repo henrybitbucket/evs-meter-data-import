@@ -2,9 +2,12 @@ package com.pa.evs.model;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
 
@@ -33,5 +36,9 @@ public class GroupUser extends Base1Entity {
 	
 	@Column(name = "description")
     private String description;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "app_code_id", columnDefinition = "bigint default 1 not null")
+	private AppCode appCode;
 
 }

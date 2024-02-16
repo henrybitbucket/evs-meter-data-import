@@ -16,6 +16,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import com.pa.evs.ctrl.CommonController;
+import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.TimeZoneHolder;
 import com.pa.evs.utils.Version;
 
@@ -49,11 +50,20 @@ public class TopFilter implements Filter {
 			} catch (Exception e) {
 				LOG.error(e.getMessage(), e);
 			}
+			if (StringUtils.isNotBlank(request.getHeader("Authorization"))) {
+				String ac = request.getHeader("A_C");
+				if (StringUtils.isBlank(ac)) {
+					AppCodeSelectedHolder.set("MMS");
+				} else {
+					AppCodeSelectedHolder.set(ac);	
+				}
+			}
 			chain.doFilter(req, res);
 		} finally {
 			TimeZoneHolder.remove();
 			CommonController.CMD_DESC.remove();
 			CommonController.CMD_OPTIONS.remove();
+			AppCodeSelectedHolder.remove();
 		}
 	}
 

@@ -20,4 +20,5 @@ public class LoginResponseDto {
     private String email;
     private String firstName;
     private String lastName;
+    private List<String> appCodes;
 }

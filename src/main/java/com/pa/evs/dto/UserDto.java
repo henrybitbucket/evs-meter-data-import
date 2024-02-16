@@ -36,6 +36,9 @@ public class UserDto {
     private Long approved;
     
     @Builder.Default
+    private List<String> appCodes = new ArrayList<>();
+    
+    @Builder.Default
     private List<String> roles = new ArrayList<>();
     
     @Builder.Default

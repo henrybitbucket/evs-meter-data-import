@@ -1,16 +1,10 @@
 package com.pa.evs.model;
 
-import java.util.List;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import lombok.AllArgsConstructor;
@@ -25,24 +19,17 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "role")
-public class Role extends Base1Entity {
+@Table(name = "app_code")
+public class AppCode extends Base1Entity {
 
 	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "id")
     private Long id;
     
-	@Column(name = "r_name", unique = true)
+	@Column(name = "name", unique = true, nullable = false)
     private String name;
 	
-	@Column(name = "r_desc")
+	@Column(name = "a_desc")
     private String desc;
-	
-	@OneToMany(mappedBy = "role")
-    private List<UserRole> roles;
-	
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "app_code_id", columnDefinition = "bigint default 1 not null")
-	private AppCode appCode;
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -139,5 +140,30 @@ public final class SecurityUtils {
 			return Arrays.asList("ALL");
 		}
 		return user.getProjects();
+	}
+
+	public static boolean hasAnyAppCode(String... appCodes) {
+		try {
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+			Object obj = auth.getPrincipal();
+			
+			if (obj instanceof String) {
+				return false;
+			}
+			
+			if (obj instanceof JwtUser) {
+				Set<String> rs = Arrays.stream(appCodes).map(ac -> ac.trim()).collect(Collectors.toSet());
+				JwtUser user = (JwtUser) obj;
+				return user.getAppCodes().stream().anyMatch(ac -> rs.contains(ac));
+			}
+		} catch (Exception e) {
+			//
+		}
+		return false;
+	}
+	
+	public static boolean hasSelectedAppCode(String appCode) {
+		
+		return appCode == null || hasAnyAppCode(appCode) && appCode.equals(AppCodeSelectedHolder.get());
 	}
 }

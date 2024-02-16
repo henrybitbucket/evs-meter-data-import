@@ -22,11 +22,13 @@ import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.RoleGroup;
+import com.pa.evs.repository.AppCodeRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.RoleGroupRepository;
 import com.pa.evs.repository.RoleRepository;
 import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.sv.GroupUserService;
+import com.pa.evs.utils.AppCodeSelectedHolder;
 
 @Service
 @SuppressWarnings("unchecked")
@@ -41,8 +43,11 @@ public class GroupUserServiceImpl implements GroupUserService {
     RoleGroupRepository roleGroupRepository;
     
     @Autowired
-    UserGroupRepository userGroupRepository;
+    AppCodeRepository appCodeRepository;
     
+    @Autowired
+    UserGroupRepository userGroupRepository;
+
     @Autowired
     RoleRepository roleRepository;
 
@@ -55,11 +60,13 @@ public class GroupUserServiceImpl implements GroupUserService {
 	@Override
 	public void getGroupUser(PaginDto<GroupUserDto> pagin) {
 		
-		StringBuilder sqlBuilder = new StringBuilder("FROM GroupUser");
-        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM GroupUser");
+		StringBuilder sqlBuilder = new StringBuilder("FROM GroupUser ");
+        StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM GroupUser ");
 
         StringBuilder sqlCommonBuilder = new StringBuilder();
         sqlCommonBuilder.append(" WHERE 1=1 ");
+        sqlCommonBuilder.append(" AND appCode.name = '" + AppCodeSelectedHolder.get()  + "' ");
+        
         sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY createDate DESC");
         sqlCountBuilder.append(sqlCommonBuilder);
 
@@ -96,16 +103,18 @@ public class GroupUserServiceImpl implements GroupUserService {
         });
 	}
 
+	@Transactional
 	@Override
 	public void createGroupUser(GroupUserDto dto) throws ApiException {
-		// TODO Auto-generated method stub
 		GroupUser groupUser = new GroupUser();
 		groupUser.setName(dto.getName().toUpperCase());
 		groupUser.setDescription(dto.getDescription());
+		groupUser.setAppCode(appCodeRepository.findByName(AppCodeSelectedHolder.get()));
 		groupUserRepository.save(groupUser);
 	
 	}
 
+	@Transactional
 	@Override
 	public void updateGroupUser(GroupUserDto dto) throws Exception {
 	
@@ -120,7 +129,7 @@ public class GroupUserServiceImpl implements GroupUserService {
       if (dto.getRoles() != null) {
       	for (RoleDto roleDto : dto.getRoles()) {
       		Optional<Role> role = roleRepository.findById(roleDto.getId());
-      		if(role.isPresent()) {
+      		if(role.isPresent() && role.get().getAppCode().getName().equals(group.getAppCode().getName())) {
       			RoleGroup roleGroup = new RoleGroup();
           		roleGroup.setGroupUser(opt.get());
           		roleGroup.setRole(role.get());
@@ -140,12 +149,12 @@ public class GroupUserServiceImpl implements GroupUserService {
 		roleGroupRepository.findByGroupUserId(id)
 		.stream()
 		.forEach(roleGroupRepository::delete);
-		
+
 		roleGroupRepository.flush();
 		userGroupRepository.findByGroupUserId(id)
 		.stream()
 		.forEach(userGroupRepository::delete);
-		
+
 		userGroupRepository.flush();
 		groupUserRepository.deleteById(id);
 	}

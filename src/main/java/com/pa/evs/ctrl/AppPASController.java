@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
@@ -19,6 +21,7 @@ import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.DESUtil;
 import com.pa.evs.utils.SchedulerHelper;
+import com.pa.evs.utils.SecurityUtils;
 
 
 @DependsOn(value = "settingsController")
@@ -33,6 +36,10 @@ public class AppPASController {
 	@GetMapping("/api/pas_locks")
 	public Object search() {
 		try {
+			
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
 			String url = DESUtil.getInstance().decrypt(AppProps.get("APP_PAS_LIST_LOCKS"));
 			HttpEntity<Object> entity = new HttpEntity<Object>(null);
 			return MAPPER.readValue(resttemplate.exchange(url.replace("${token}", token), HttpMethod.GET, entity, String.class).getBody(), Map.class);
@@ -41,7 +48,7 @@ public class AppPASController {
 			res.put("code", -1);
 			res.put("data", null);
 			res.put("info", e.getMessage());
-			return null;
+			return res;
 		}
 	}
 	

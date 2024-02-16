@@ -26,11 +26,13 @@ import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.Permission;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.RolePermission;
+import com.pa.evs.repository.AppCodeRepository;
 import com.pa.evs.repository.PermissionRepository;
 import com.pa.evs.repository.RolePermissionRepository;
 import com.pa.evs.repository.RoleRepository;
 import com.pa.evs.repository.UserRoleRepository;
 import com.pa.evs.sv.RoleService;
+import com.pa.evs.utils.AppCodeSelectedHolder;
 
 @Service
 @SuppressWarnings("unchecked")
@@ -46,9 +48,12 @@ public class RoleServiceImpl implements RoleService {
     
     @Autowired
     UserRoleRepository userRoleRepository;
-    
+
     @Autowired
     PermissionRepository permissionRepository;
+
+    @Autowired
+    AppCodeRepository appCodeRepository;
 
     @Autowired
     EntityManager em;
@@ -64,6 +69,8 @@ public class RoleServiceImpl implements RoleService {
 
         StringBuilder sqlCommonBuilder = new StringBuilder();
         sqlCommonBuilder.append(" WHERE 1=1 ");
+        sqlCommonBuilder.append(" AND appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+
         sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY createDate DESC");
         sqlCountBuilder.append(sqlCommonBuilder);
 
@@ -121,13 +128,14 @@ public class RoleServiceImpl implements RoleService {
 		for(Role role : roles) {
 			if (role.getName() == dto.getName().toUpperCase()) {
 				check = true;
-				new ApiException(ResponseEnum.ROLE_EXIST);
+				throw new ApiException(ResponseEnum.ROLE_EXIST);
 			}
 		}
 		if(!check) {
 			Role role = new Role();
 			role.setName(dto.getName().toUpperCase());
 			role.setDesc(dto.getDesc());
+			role.setAppCode(appCodeRepository.findByName(AppCodeSelectedHolder.get()));
 			roleRepository.save(role);
 		}
 	}
@@ -148,10 +156,12 @@ public class RoleServiceImpl implements RoleService {
 			if (!dto.getPermissions().isEmpty()) {
 				List<Permission> newPrms = permissionRepository.findByNameIn(dto.getPermissions().stream().map(pm -> pm.getName()).collect(Collectors.toList()));
 				for (Permission pms : newPrms) {
-					RolePermission rolePer = new RolePermission();
-					rolePer.setPermission(pms);
-					rolePer.setRole(role.get());
-					rolePermissionRepository.save(rolePer);
+					if (role.get().getAppCode().getName().equals(pms.getAppCode().getName())) {
+						RolePermission rolePer = new RolePermission();
+						rolePer.setPermission(pms);
+						rolePer.setRole(role.get());
+						rolePermissionRepository.save(rolePer);
+					}
 				}
 				
 			}
@@ -164,12 +174,12 @@ public class RoleServiceImpl implements RoleService {
 		rolePermissionRepository.findByRoleId(id)
 		.stream().forEach(rolePermissionRepository::delete);
 		rolePermissionRepository.flush();
-		
+
 		userRoleRepository.findByRoleId(id)
 		.stream().forEach(userRoleRepository::delete);
-		
+
 		userRoleRepository.flush();
-		
+
 		roleRepository.deleteById(id);
 	}
 	
@@ -180,6 +190,9 @@ public class RoleServiceImpl implements RoleService {
 
         StringBuilder sqlCommonBuilder = new StringBuilder();
         sqlCommonBuilder.append(" WHERE 1=1 ");
+
+        sqlCommonBuilder.append(" AND appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+
         sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY createDate DESC");
         sqlCountBuilder.append(sqlCommonBuilder);
 

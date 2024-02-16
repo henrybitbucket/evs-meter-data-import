@@ -65,6 +65,9 @@ public class JwtUser implements UserDetails {
     
     @Builder.Default
     private List<String> projects = new ArrayList<>();
+    
+    @Builder.Default
+    private List<String> appCodes = new ArrayList<>();
 
     @JsonIgnore
     private  boolean enabled;

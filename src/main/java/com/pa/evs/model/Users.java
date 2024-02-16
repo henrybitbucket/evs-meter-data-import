@@ -65,6 +65,9 @@ public class Users extends Base1Entity {
     private String status;
 
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
+    private List<UserAppCode> appCodes;
+	
+	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserRole> roles;
 	
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
@@ -102,6 +105,10 @@ public class Users extends Base1Entity {
     @Builder.Default
     private List<SubGroup> subGroups = new ArrayList<>();
 
+    @Transient
+    @Builder.Default
+    private List<String> allAppCodes = new ArrayList<>();
+    
     @Transient
     @Builder.Default
     private List<String> allPermissions = new ArrayList<>();
