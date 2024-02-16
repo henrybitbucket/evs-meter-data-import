@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +29,7 @@ import com.pa.evs.model.RolePermission;
 import com.pa.evs.repository.PermissionRepository;
 import com.pa.evs.repository.RolePermissionRepository;
 import com.pa.evs.repository.RoleRepository;
+import com.pa.evs.repository.UserRoleRepository;
 import com.pa.evs.sv.RoleService;
 
 @Service
@@ -43,6 +43,9 @@ public class RoleServiceImpl implements RoleService {
     
     @Autowired
     RolePermissionRepository rolePermissionRepository;
+    
+    @Autowired
+    UserRoleRepository userRoleRepository;
     
     @Autowired
     PermissionRepository permissionRepository;
@@ -155,9 +158,19 @@ public class RoleServiceImpl implements RoleService {
 		}
 	}
 
+	@Transactional
 	@Override
 	public void deleteRole(Long id) {
-		roleRepository.deleteById(id);;
+		rolePermissionRepository.findByRoleId(id)
+		.stream().forEach(rolePermissionRepository::delete);
+		rolePermissionRepository.flush();
+		
+		userRoleRepository.findByRoleId(id)
+		.stream().forEach(userRoleRepository::delete);
+		
+		userRoleRepository.flush();
+		
+		roleRepository.deleteById(id);
 	}
 	
 	@Override

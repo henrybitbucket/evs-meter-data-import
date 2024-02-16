@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
@@ -24,6 +25,7 @@ import com.pa.evs.model.RoleGroup;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.RoleGroupRepository;
 import com.pa.evs.repository.RoleRepository;
+import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.sv.GroupUserService;
 
 @Service
@@ -37,6 +39,9 @@ public class GroupUserServiceImpl implements GroupUserService {
     
     @Autowired
     RoleGroupRepository roleGroupRepository;
+    
+    @Autowired
+    UserGroupRepository userGroupRepository;
     
     @Autowired
     RoleRepository roleRepository;
@@ -129,9 +134,20 @@ public class GroupUserServiceImpl implements GroupUserService {
       }
 	}
 
+	@Transactional
 	@Override
 	public void deleteGroupUser(Long id) {
-		roleGroupRepository.deleteById(id);;
+		roleGroupRepository.findByGroupUserId(id)
+		.stream()
+		.forEach(roleGroupRepository::delete);
+		
+		roleGroupRepository.flush();
+		userGroupRepository.findByGroupUserId(id)
+		.stream()
+		.forEach(userGroupRepository::delete);
+		
+		userGroupRepository.flush();
+		groupUserRepository.deleteById(id);
 	}
 
 }
