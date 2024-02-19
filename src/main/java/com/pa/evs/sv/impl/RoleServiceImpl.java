@@ -123,10 +123,14 @@ public class RoleServiceImpl implements RoleService {
 	@Override
 	public void createRole(RoleDto dto)throws ApiException {
 		
+		dto.setName(dto.getName().toUpperCase());
+		if (!dto.getName().startsWith("ALL_") && !dto.getName().startsWith(AppCodeSelectedHolder.get() + "_")) {
+			throw new ApiException("Please use prefix: " + AppCodeSelectedHolder.get() + "_ " + " for name!");
+		}
 		boolean check = false;
 		List<Role> roles = roleRepository.findAll();
-		for(Role role : roles) {
-			if (role.getName() == dto.getName().toUpperCase()) {
+		for (Role role : roles) {
+			if (role.getName().equalsIgnoreCase(dto.getName().toUpperCase())) {
 				check = true;
 				throw new ApiException(ResponseEnum.ROLE_EXIST);
 			}
@@ -148,8 +152,7 @@ public class RoleServiceImpl implements RoleService {
 		permissionRepository.findAll();
 		List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleId(dto.getId());
 		if (role.isPresent()) {
-			role.get().setName(dto.getName());
-			role.get().setDesc(dto.getDesc());
+			// role.get().setDesc(dto.getDesc());
 			roleRepository.save(role.get());
 			rolePermissionRepository.deleteAll(rolePermissions);
 			rolePermissionRepository.flush();

@@ -13,8 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,7 +39,8 @@ import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
-import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.utils.AppCodeSelectedHolder;
+import com.pa.evs.utils.SecurityUtils;
 
 @RestController
 public class AuthenticationController {
@@ -105,17 +107,25 @@ public class AuthenticationController {
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
-    @Secured(value = "SUPER_ADMIN")
     @GetMapping(value = {RestPath.USERPLATFORM})
     public Object getPfOfUser(@RequestParam(required = true) String email) {
-        Object pfs = authenticationService.getPfOfUser(email);
-        return ResponseDto.<Object>builder().success(true).response(pfs).build();
+    	try {
+			if (!SecurityUtils.hasAnyRole(AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+	        Object pfs = authenticationService.getPfOfUser(email);
+	        return ResponseDto.<Object>builder().success(true).response(pfs).build();
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
     }
     
-    @Secured(value = "SUPER_ADMIN")
     @PostMapping(value = {RestPath.USERPLATFORM})
     public Object savePfOfUser(@RequestBody PlatformUserLoginDto dto) {
         try {
+			if (!SecurityUtils.hasAnyRole(AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
         	authenticationService.savePfOfUser(dto);
 		} catch (Exception e) {
 			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();

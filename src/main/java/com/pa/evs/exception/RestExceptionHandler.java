@@ -1,7 +1,7 @@
 package com.pa.evs.exception;
 
 
-import java.nio.file.AccessDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 
 import com.pa.evs.constant.ValueConstant;
 import com.pa.evs.dto.ApiErrorDto;

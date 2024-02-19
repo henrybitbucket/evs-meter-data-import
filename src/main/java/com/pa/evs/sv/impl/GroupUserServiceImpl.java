@@ -106,6 +106,11 @@ public class GroupUserServiceImpl implements GroupUserService {
 	@Transactional
 	@Override
 	public void createGroupUser(GroupUserDto dto) throws ApiException {
+		
+		dto.setName(dto.getName().toUpperCase());
+		if (!dto.getName().startsWith("ALL_") && !dto.getName().startsWith(AppCodeSelectedHolder.get() + "_")) {
+			throw new ApiException("Please use prefix: " + AppCodeSelectedHolder.get() + "_ " + " for name!");
+		}
 		GroupUser groupUser = new GroupUser();
 		groupUser.setName(dto.getName().toUpperCase());
 		groupUser.setDescription(dto.getDescription());
@@ -123,7 +128,7 @@ public class GroupUserServiceImpl implements GroupUserService {
           throw new Exception(String.format("No groupUser with id %d found!", dto.getId()));
       }
       GroupUser group = opt.get();
-      group.setName(dto.getName());
+      // group.setName(dto.getName());
       group.setDescription(dto.getDescription());
       groupUserRepository.save(group);
       if (dto.getRoles() != null) {

@@ -53,20 +53,20 @@ public class JwtUserDetailsService implements UserDetailsService {
         Set<Long> allRoleIds = new HashSet<>();
         List<String> roles = user.getRoles().stream().map(r -> {
         	allRoleIds.add(r.getRole().getId());
-        	if ("MMS".equalsIgnoreCase(r.getRole().getAppCode().getName())) {
+//        	if ("MMS".equalsIgnoreCase(r.getRole().getAppCode().getName())) {
         		return r.getRole().getName();
-        	}
-        	return r.getRole().getAppCode().getName() + "_" + r.getRole().getName();
+//        	}
+//        	return r.getRole().getAppCode().getName() + "_" + r.getRole().getName();
         }).collect(Collectors.toList());
         
         List<String> allRls = user.getAllRoles();
         allRls.addAll(roles);
         List<String> groups = userGroupRepository.findByUserUserIdIn(Arrays.asList(user.getUserId()))
         .stream().map(ug -> {
-        	if ("MMS".equalsIgnoreCase(ug.getGroupUser().getAppCode().getName())) {
+//        	if ("MMS".equalsIgnoreCase(ug.getGroupUser().getAppCode().getName())) {
         		return ug.getGroupUser().getName();
-        	}
-        	return ug.getGroupUser().getAppCode().getName() + "_" + ug.getGroupUser().getName();
+//        	}
+//        	return ug.getGroupUser().getAppCode().getName() + "_" + ug.getGroupUser().getName();
         }).collect(Collectors.toList());
         
         if (!groups.isEmpty()) {
@@ -75,11 +75,11 @@ public class JwtUserDetailsService implements UserDetailsService {
         		
         		allRoleIds.add(rg.getRole().getId());
         		if (!allRls.contains(rg.getRole().getName())) {
-        			if ("MMS".equalsIgnoreCase(rg.getRole().getAppCode().getName())) {
+//        			if ("MMS".equalsIgnoreCase(rg.getRole().getAppCode().getName())) {
         				allRls.add(rg.getRole().getName());
-                	} else {
-                		allRls.add(rg.getRole().getAppCode().getName() + "_" + rg.getRole().getName());                		
-                	}
+//                	} else {
+//                		allRls.add(rg.getRole().getAppCode().getName() + "_" + rg.getRole().getName());                		
+//                	}
         		}
         	});
         }
@@ -88,21 +88,21 @@ public class JwtUserDetailsService implements UserDetailsService {
         List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleIdIn(allRoleIds);
         for (RolePermission rolePermission : rolePermissions) {
         	if (!allPms.contains(rolePermission.getPermission().getName())) {
-        		if ("MMS".equalsIgnoreCase(rolePermission.getPermission().getAppCode().getName())) {
+//        		if ("MMS".equalsIgnoreCase(rolePermission.getPermission().getAppCode().getName())) {
         			allPms.add(rolePermission.getPermission().getName());
-        		} else {
-        			allPms.add(rolePermission.getPermission().getAppCode().getName() + "_" + rolePermission.getPermission().getName());	
-        		}
+//        		} else {
+//        			allPms.add(rolePermission.getPermission().getAppCode().getName() + "_" + rolePermission.getPermission().getName());	
+//        		}
         	}
         }
         
         user.getPermissions().forEach(up -> {
         	if (!allPms.contains(up.getPermission().getName())) {
-        		if ("MMS".equalsIgnoreCase(up.getPermission().getAppCode().getName())) {
+//        		if ("MMS".equalsIgnoreCase(up.getPermission().getAppCode().getName())) {
         			allPms.add(up.getPermission().getName());
-        		} else {
-        			allPms.add(up.getPermission().getAppCode().getName() + "_" + up.getPermission().getName());	
-        		}
+//        		} else {
+//        			allPms.add(up.getPermission().getAppCode().getName() + "_" + up.getPermission().getName());	
+//        		}
         	}
         });
         

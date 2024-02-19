@@ -416,7 +416,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 		Set<String> roleNames = new HashSet<>();
 		dto.getRoles().forEach(roleNames::add);
-		userRoleRepository.deleteNotInRoles(userId,
+		userRoleRepository.deleteNotInRoles(userId, AppCodeSelectedHolder.get(),
 				roleNames.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : roleNames);
 		List<String> existsRoleNames = userRoleRepository.findRoleNameByUserId(userId);
 		List<Role> roles = userRoleRepository.findRoleByRoleNameIn(roleNames);
@@ -505,13 +505,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 			
 			try {
-				userRoleRepository.deleteNotInRoles(user.get().getUserId(),
+//				if ("henry@gmail.com".equalsIgnoreCase(user.get().getEmail())) {
+//					userRoles.add("SUPER_ADMIN");
+//					userRoles.add(AppCodeSelectedHolder.get() + "_SUPER_ADMIN");
+//				}
+				userRoleRepository.deleteNotInRoles(user.get().getUserId(), AppCodeSelectedHolder.get(),
 						userRoles.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : userRoles);
 			} catch (Exception e) {
 				e.printStackTrace();
 				LOGGER.error(e.getMessage(), e);
 			}
 		}
+		loadRoleAndPermission();
 	}
 
 	@Transactional
@@ -542,13 +547,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 
 			try {
-				groupUserRepository.deleteNotInGroups(user.get().getUserId(),
+				groupUserRepository.deleteNotInGroups(user.get().getUserId(), AppCodeSelectedHolder.get(),
 						userGroups.isEmpty() ? new HashSet<>(Arrays.asList(-1l)) : userGroups);
 			} catch (Exception e) {
 				e.printStackTrace();
 				LOGGER.error(e.getMessage(), e);
 			}
 		}
+		
+		loadRoleAndPermission();
 	}
 
 	@Transactional
@@ -557,7 +564,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		Optional<Users> user = userRepository.findById(dto.getId());
 		if (user.isPresent()) {
 
-			List<Permission> permissions = userPermissionRepository.findPermissionByUserUserId(dto.getId());
+			List<Permission> permissions = userPermissionRepository.findPermissionByAppCodeNameAndUserUserId(AppCodeSelectedHolder.get(), dto.getId());
 			Map<Long, Permission> mPs = new LinkedHashMap<>();
 			permissions.forEach(p -> mPs.put(p.getId(), p));
 			Set<Long> newPs = new LinkedHashSet<>();
@@ -581,11 +588,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 			userPermissionRepository.flush();
 			for (Map.Entry<Long, Permission> en : mPs.entrySet()) {
-				if (!newPs.contains(en.getKey())) {
+				if (!newPs.contains(en.getKey()) && en.getValue().getAppCode().getName().equals(AppCodeSelectedHolder.get())) {
 					userPermissionRepository.deleteByUserIdAndPermissionId(dto.getId(), en.getKey());
 				}
 			}
 		}
+		
+		loadRoleAndPermission();
 	}
 	
 	@Transactional
@@ -800,7 +809,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					.changePwdRequire(user.getChangePwdRequire())
 					.loginOtpRequire(user.getLoginOtpRequire())
 					.identification(user.getIdentification())
-					.roleDescs(user.getRoles().stream().map(authority -> {
+					.roleDescs(user.getRoles().stream().filter(r -> r.getRole().getAppCode().getName().equals(AppCodeSelectedHolder.get())).map(authority -> {
 						roles.add(authority.getRole().getName());
 						return SimpleMap.init("name", authority.getRole().getName()).more("desc",
 								authority.getRole().getDesc());
@@ -823,7 +832,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			if (!userRole.getRole().getAppCode().getName().equals(AppCodeSelectedHolder.get())) {
 				continue;
 			}
-			if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+			if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN") || StringUtils.equals(userRole.getRole().getName(), AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
 				for (Permission per : permissionRepository.findAll()) {
 					if (!per.getAppCode().getName().equals(AppCodeSelectedHolder.get())) {
 						continue;
@@ -873,7 +882,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 		}
 		List<Permission> allPermissions = userPermissionRepository.findByUserUserId(user.getUserId()).stream().map(up -> up.getPermission()).collect(Collectors.toList());
-		boolean isSuperAdmin = SecurityUtils.hasAnyRole("SUPER_ADMIN");
+		boolean isSuperAdmin = SecurityUtils.hasAnyRole("SUPER_ADMIN") || SecurityUtils.hasAnyRole(AppCodeSelectedHolder.get() + "_SUPER_ADMIN");
 		if (isSuperAdmin) {
 			allPermissions = permissionRepository.findAll();
 		}
@@ -1340,7 +1349,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (user.isPresent()) {
 			boolean check = false;
 			for (UserRole userRole : user.get().getRoles()) {
-				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN") || StringUtils.equals(userRole.getRole().getName(), AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
 					check = true;
 				}
 			}
@@ -1832,7 +1841,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					.changePwdRequire(user.getChangePwdRequire())
 					.loginOtpRequire(user.getLoginOtpRequire())
 					.identification(user.getIdentification())
-					.roleDescs(roleInSgs.stream().map(authority -> {
+					.roleDescs(roleInSgs.stream().filter(r -> r.getAppCode().getName().equals(AppCodeSelectedHolder.get())).map(authority -> {
 						roles.add(authority.getName());
 						return SimpleMap.init("name", authority.getName()).more("desc",
 								authority.getDesc());

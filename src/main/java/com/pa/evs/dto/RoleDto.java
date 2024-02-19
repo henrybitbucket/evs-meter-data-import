@@ -18,7 +18,8 @@ import lombok.Setter;
 public class RoleDto {
 
     private Long id;
-    private String name;
+    @Builder.Default
+    private String name = "";
     private String desc;
     private List<PermissionDto> permissions;
 
