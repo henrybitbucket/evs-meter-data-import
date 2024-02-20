@@ -770,14 +770,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	return pagin;
         }
         
+        sqlCommonBuilder.append(" WHERE 1 = 1  ");
+        
         if (CollectionUtils.isEmpty(pagin.getOptions()) || (
                 pagin.getOptions().size() == 1 
                 && BooleanUtils.isTrue(BooleanUtils.toBoolean((String) pagin.getOptions().get("queryAllDate")))
             )) {
         	if (!tags.contains("ALL")) {
-        		sqlCommonBuilder.append(" WHERE (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds))    ");
-            } else {
-            	sqlCommonBuilder.append(" WHERE 1 = 1     ");	
+        		sqlCommonBuilder.append(" AND (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds)) ");
             }
             
         } else {
@@ -807,90 +807,73 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             String queryPostalCode = (String) options.get("queryPostalCode");
             Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor")) ? Long.parseLong((String) options.get("queryVendor")) : null;
             
-            sqlCommonBuilder.append(" WHERE     ");
-            
             if (BooleanUtils.isTrue(allDate)) {
                 if (fromDate != null && toDate == null) {
-                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM ca.createDate) * 1000 >= " + fromDate + "AND");
+                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM ca.createDate) * 1000 >= " + fromDate + " ");
                 }
                 if (fromDate == null && toDate != null) {
-                    sqlCommonBuilder.append(" EXTRACT(EPOCH FROM ca.createDate) * 1000 <= " + toDate + "AND");
+                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM ca.createDate) * 1000 <= " + toDate + " ");
                 }
                 if (fromDate != null && toDate != null) {
-                    sqlCommonBuilder.append(" ( EXTRACT(EPOCH FROM ca.createDate) * 1000 >= " + fromDate);
-                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM ca.createDate) * 1000 <= " + toDate + ") AND ");
+                    sqlCommonBuilder.append(" AND ( EXTRACT(EPOCH FROM ca.createDate) * 1000 >= " + fromDate);
+                    sqlCommonBuilder.append(" AND EXTRACT(EPOCH FROM ca.createDate) * 1000 <= " + toDate + ")  ");
                 }
             } else {
-                sqlCommonBuilder.append(" ( ");
                 if (BooleanUtils.isTrue(enrollmentDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" ca.enrollmentDatetime >= " + fromDate + "OR");
-                    }
-                    if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" ca.enrollmentDatetime <= " + toDate + "OR");
-                    }
-                    if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( ca.enrollmentDatetime >= " + fromDate);
-                        sqlCommonBuilder.append(" AND ca.enrollmentDatetime <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" AND ca.enrollmentDatetime >= " + fromDate + " ");
+                    } else if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ca.enrollmentDatetime <= " + toDate + " ");
+                    } else if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ( ca.enrollmentDatetime >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.enrollmentDatetime <= " + toDate + ")");
                     }
                 }
                 if (BooleanUtils.isTrue(coupledDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" ca.coupledDatetime >= " + fromDate + "OR");
-                    }
-                    if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" ca.coupledDatetime <= " + toDate + "OR");
-                    }
-                    if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( ca.coupledDatetime >= " + fromDate);
-                        sqlCommonBuilder.append(" AND ca.coupledDatetime <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" AND ca.coupledDatetime >= " + fromDate + " ");
+                    } else if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ca.coupledDatetime <= " + toDate + " ");
+                    } else if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ( ca.coupledDatetime >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.coupledDatetime <= " + toDate + ") ");
                     }          
                 }
                 if (BooleanUtils.isTrue(activationDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" ca.activationDate >= " + fromDate + "OR");
-                    }
-                    if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" ca.activationDate <= " + toDate + "OR");
-                    }
-                    if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( ca.activationDate >= " + fromDate);
-                        sqlCommonBuilder.append(" AND ca.activationDate <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" AND ca.activationDate >= " + fromDate + " ");
+                    } else if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ca.activationDate <= " + toDate + " ");
+                    } else if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ( ca.activationDate >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.activationDate <= " + toDate + ") ");
                     }
                 }
                 if (BooleanUtils.isTrue(deactivationDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" ca.deactivationDate >= " + fromDate + "OR");
-                    }
-                    if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" ca.deactivationDate <= " + toDate + "OR");
-                    }
-                    if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( ca.deactivationDate >= " + fromDate);
-                        sqlCommonBuilder.append(" AND ca.deactivationDate <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" AND ca.deactivationDate >= " + fromDate + " ");
+                    } else if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ca.deactivationDate <= " + toDate + " ");
+                    } else if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ( ca.deactivationDate >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.deactivationDate <= " + toDate + ") ");
                     }
                 }
                 if (BooleanUtils.isTrue(onboardingDate)) {
                     if (fromDate != null && toDate == null) {
-                        sqlCommonBuilder.append(" ca.lastOBRDate >= " + fromDate + "OR");
-                    }
-                    if (fromDate == null && toDate != null) {
-                        sqlCommonBuilder.append(" ca.lastOBRDate <= " + toDate + "OR");
-                    }
-                    if (fromDate != null && toDate != null) {
-                        sqlCommonBuilder.append(" ( ca.lastOBRDate >= " + fromDate);
-                        sqlCommonBuilder.append(" AND ca.lastOBRDate <= " + toDate + ") OR");
+                        sqlCommonBuilder.append(" AND ca.lastOBRDate >= " + fromDate + " ");
+                    } else if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ca.lastOBRDate <= " + toDate + " ");
+                    } else if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ( ca.lastOBRDate >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.lastOBRDate <= " + toDate + ") ");
                     }
                 }
 
-                sqlCommonBuilder.delete(sqlCommonBuilder.length() - 2, sqlCommonBuilder.length());
-                if (sqlCommonBuilder.length() >= 30) {
-                    sqlCommonBuilder.append(" ) AND ");
-                }
             }
             
             if (StringUtils.isNotBlank(querySn)) {
-                sqlCommonBuilder.append(" upper(ca.sn) like '%" + querySn.toUpperCase() + "%' AND ");
+                sqlCommonBuilder.append(" AND upper(ca.sn) like '%" + querySn.toUpperCase() + "%' ");
             }
 //            if (!searchMeter) {
 //            	sqlCommonBuilder.append(" AND ca.sn is not null and ca.sn <> '' ");
@@ -898,83 +881,82 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             
             if (StringUtils.isNotBlank(queryMsn)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" m.msn like '%" + queryMsn + "%' AND ");
+            		sqlCommonBuilder.append(" AND m.msn like '%" + queryMsn + "%' ");
             	} else {
-            		sqlCommonBuilder.append(" ca.msn like '%" + queryMsn + "%' AND ");	
+            		sqlCommonBuilder.append(" AND ca.msn like '%" + queryMsn + "%' ");	
             	}
                 
             }
             if (StringUtils.isNotBlank(querySnOrCid)) {
-                sqlCommonBuilder.append(" (lower(ca.sn) like '%" + querySnOrCid.toLowerCase().trim() + "%' or lower(ca.cid) like '%" + querySnOrCid.toLowerCase().trim() + "%') AND ");
+                sqlCommonBuilder.append(" AND (lower(ca.sn) like '%" + querySnOrCid.toLowerCase().trim() + "%' or lower(ca.cid) like '%" + querySnOrCid.toLowerCase().trim() + "%') ");
             }
             if (StringUtils.isNotBlank(status)) {
-                sqlCommonBuilder.append(" ca.status = '" + status + "' AND ");
+                sqlCommonBuilder.append(" AND ca.status = '" + status + "' ");
             }
             if (StringUtils.isNotBlank(type)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" m.uid IS " + ("COUPLED".equalsIgnoreCase(type) ? " NOT NULL " : "NULL ") + " AND ");
+            		sqlCommonBuilder.append(" AND m.uid IS " + ("COUPLED".equalsIgnoreCase(type) ? " NOT NULL " : "NULL ") + " ");
             	} else {
-            		sqlCommonBuilder.append(" ca.type = '" + type + "' AND ");            		
+            		sqlCommonBuilder.append(" AND ca.type = '" + type + "' ");            		
             	}
             }
             if (!CollectionUtils.isEmpty(cids)) {
-                sqlCommonBuilder.append(" (ca.cid = '" + cids.get(0) + "'");
+                sqlCommonBuilder.append(" AND (ca.cid = '" + cids.get(0) + "'");
                 for (int i = 1; i < cids.size(); i++) {
                     sqlCommonBuilder.append(" OR ca.cid = '" + cids.get(i) + "'");
                 }
-                sqlCommonBuilder.append(" ) AND ");
+                sqlCommonBuilder.append(" ) ");
             }
             if (StringUtils.isNotBlank(queryUuid)) {
-                sqlCommonBuilder.append(" upper(ca.uid) like '%" + queryUuid.toUpperCase() + "%' AND ");
+                sqlCommonBuilder.append(" AND upper(ca.uid) like '%" + queryUuid.toUpperCase() + "%' ");
             }
             if (StringUtils.isNotBlank(queryEsimId)) {
-                sqlCommonBuilder.append(" upper(ca.cid) like '%" + queryEsimId.toUpperCase() + "%' AND ");
+                sqlCommonBuilder.append(" AND upper(ca.cid) like '%" + queryEsimId.toUpperCase() + "%' ");
             }
             if (queryGroup != null) {
-                sqlCommonBuilder.append(" ca.group = " + queryGroup + " AND ");
+                sqlCommonBuilder.append(" AND ca.group = " + queryGroup + " ");
             }
             
             if (StringUtils.isNotBlank(queryBuilding)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" m.building.id= '" + queryBuilding + "' AND ");
+            		sqlCommonBuilder.append(" AND m.building.id= '" + queryBuilding + "' ");
             	} else {
-            		sqlCommonBuilder.append(" ca.building.id= '" + queryBuilding + "' AND ");	
+            		sqlCommonBuilder.append(" AND ca.building.id= '" + queryBuilding + "' ");	
             	}
             }
             if (StringUtils.isNotBlank(queryBlock)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" m.block.id= '" + queryBlock + "' AND ");
+            		sqlCommonBuilder.append(" AND m.block.id= '" + queryBlock + "' ");
             	} else {
-            		sqlCommonBuilder.append(" ca.block.id= '" + queryBlock + "' AND ");	
+            		sqlCommonBuilder.append(" AND ca.block.id= '" + queryBlock + "' ");	
             	}
             }
             if (StringUtils.isNotBlank(queryFloorLevel)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" m.floorLevel.id= '" + queryFloorLevel + "' AND ");
+            		sqlCommonBuilder.append(" AND m.floorLevel.id= '" + queryFloorLevel + "' ");
             	} else {
-            		sqlCommonBuilder.append(" ca.floorLevel.id= '" + queryFloorLevel + "' AND ");
+            		sqlCommonBuilder.append(" AND ca.floorLevel.id= '" + queryFloorLevel + "' ");
             	}
             }
             if (StringUtils.isNotBlank(queryBuildingUnit)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" m.buildingUnit.id= '" + queryBuildingUnit + "' AND ");
+            		sqlCommonBuilder.append(" AND m.buildingUnit.id= '" + queryBuildingUnit + "' ");
             	} else {
-            		sqlCommonBuilder.append(" ca.buildingUnit.id= '" + queryBuildingUnit + "' AND ");
+            		sqlCommonBuilder.append(" AND ca.buildingUnit.id= '" + queryBuildingUnit + "' ");
             	}
             }
             
             if (StringUtils.isNotBlank(queryPostalCode)) {
-                sqlCommonBuilder.append(" ((exists (select 1 from Building bd where bd.id = ca.building.id and upper(bd.address.postalCode) = '" + queryPostalCode.toUpperCase() + "') ");
-                sqlCommonBuilder.append(" or (exists (select 1 FROM Address add1 where add1.id = ca.address.id and upper(add1.postalCode) = '" + queryPostalCode.toUpperCase() + "') ))) AND ");
+                sqlCommonBuilder.append(" AND ((exists (select 1 from Building bd where bd.id = ca.building.id and upper(bd.address.postalCode) = '" + queryPostalCode.toUpperCase() + "') ");
+                sqlCommonBuilder.append(" or (exists (select 1 FROM Address add1 where add1.id = ca.address.id and upper(add1.postalCode) = '" + queryPostalCode.toUpperCase() + "') ))) ");
             }
             if (queryVendor != null) {
-                sqlCommonBuilder.append(" ca.vendor.id = " + queryVendor + " AND ");
+                sqlCommonBuilder.append(" AND ca.vendor.id = " + queryVendor + " ");
             }
         	if (!tags.contains("ALL")) {
-        		sqlCommonBuilder.append(" (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds))  AND ");
+        		sqlCommonBuilder.append(" AND (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds)) ");
             }
         	
-            sqlCommonBuilder.delete(sqlCommonBuilder.length() - 4, sqlCommonBuilder.length());
         }
         
         if (Boolean.parseBoolean(pagin.getOptions().get("cidIsNotNull") + "")) {
@@ -982,10 +964,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 //                sqlCommonBuilder.append(" AND ");
 //            }
             sqlCommonBuilder.append(" AND ca.cid is not null AND ca.cid <> '' ");
-        }
-        
-        if (sqlCommonBuilder.length() < 10) {
-            sqlCommonBuilder.append(" 1 = 1 ");
         }
         
         sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY ca.id asc");
