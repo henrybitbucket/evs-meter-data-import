@@ -123,7 +123,7 @@ public final class SecurityUtils {
 			Set<String> rs = Arrays.stream(permisisons).map(r -> r.trim()).collect(Collectors.toSet());
 			boolean has = user.getSubGroups()
 			.stream()
-			.filter(sg -> group.equals(sg.getParentGroupName()))
+			.filter(sg -> (group.equals(sg.getGroupType()) || group.equals(sg.getParentGroupName())))
 			.anyMatch(sg -> {
 				return sg.getPermissions().stream().anyMatch(rs::contains) || sg.getRoles().stream().anyMatch(rs::contains);
 			});

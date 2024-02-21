@@ -822,6 +822,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	@Transactional
 	@Override
 	public void getPermissionsOfUser(PaginDto<UserDto> pagin) {
+		
+		if (map.isEmpty()) {
+			loadRoleAndPermission();
+		}
+		
 		Users user = userRepository.findByEmail(SecurityUtils.getEmail());
 
 		if (user == null) {
@@ -1623,24 +1628,30 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new RuntimeException("Group name must not be empty!");
 		}
 		
-		String parentGroupName = (String) payload.get("parentGroupName");
+		String groupType = (String) payload.get("groupType");
 		String desc = (String) payload.get("desc");
 		
-		if (StringUtils.isNotBlank(parentGroupName)) {
-			groupUserRepository.findByName(parentGroupName).orElseThrow(() -> new RuntimeException("Parent group doesn't exists"));
-		}
+//		if (StringUtils.isNotBlank(parentGroupName)) {
+//			groupUserRepository.findByName(parentGroupName).orElseThrow(() -> new RuntimeException("Parent group doesn't exists"));
+//		}
 		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElse(new SubGroup());
 		subGroup.setDesc(desc);
 		subGroup.setName(name);
 		subGroup.setOwner(SecurityUtils.getEmail());
-		subGroup.setParentGroupName(parentGroupName);
+		// subGroup.setParentGroupName(parentGroupName);
+		subGroup.setGroupType(groupType);
 		subGroupRepository.save(subGroup);
 	}
 
 	@Override
 	@Transactional
 	public void deleteSubGroup(Long id) {
-		SubGroup subGroup = subGroupRepository.findByIdAndOwner(id, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		SubGroup subGroup;
+		if (SecurityUtils.hasAnyRole("STAFF")) {
+			subGroup = subGroupRepository.findById(id).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		} else {
+			subGroup = subGroupRepository.findByIdAndOwner(id, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		}
 		subGroup.setOwner(subGroup.getOwner() + "_delete" + System.currentTimeMillis());
 		subGroup.setName(subGroup.getName() + "_delete" + System.currentTimeMillis());
 		subGroupRepository.save(subGroup);
@@ -1664,7 +1675,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			existsUsers.put(u.getEmail(), u);
 		});
 		
-		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		SubGroup subGroup = SecurityUtils.hasAnyRole("STAFF") ? subGroupRepository.findByName(name).orElseThrow(() -> new RuntimeException("Group doesn't exists")) 
+				: subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
 		
 		Map<String, SubGroupMember> map = new LinkedHashMap<>();
 		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), members)
@@ -1700,7 +1712,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		
 		List<String> members = (List<String>) payload.get("members");
-		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		SubGroup subGroup;
+		if (SecurityUtils.hasAnyRole("STAFF")) {
+			subGroup = subGroupRepository.findByName(name).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		} else {
+			subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		}
 		
 		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), members)
 		.forEach(mb -> {
@@ -1721,7 +1738,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		String member = (String) payload.get("member"); 
 		List<String> roles = (List<String>) payload.get("roles");
-		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		SubGroup subGroup;
+		if (SecurityUtils.hasAnyRole("STAFF")) {
+			subGroup = subGroupRepository.findByName(name).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		} else {
+			subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		}
 		
 		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), Arrays.asList(member))
 		.forEach(mb -> {
@@ -1758,7 +1780,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		String member = (String) payload.get("member"); 
 		List<String> roles = (List<String>) payload.get("roles");
-		SubGroup subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		SubGroup subGroup;
+		if (SecurityUtils.hasAnyRole("STAFF")) {
+			subGroup = subGroupRepository.findByName(name).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		} else {
+			subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		}
 		
 		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), Arrays.asList(member))
 		.forEach(mb -> {

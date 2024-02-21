@@ -33,6 +33,9 @@ public class SubGroup extends BaseEntity {
 	@JoinColumn(name = "parent_group_name")
 	private String parentGroupName; // Group
 	
+	@JoinColumn(name = "group_type")
+	private String groupType; // P2_GROUP ....
+	
 	@Column(name = "name", nullable = false, unique = true)
 	private String name;
 
