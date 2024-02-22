@@ -37,7 +37,7 @@ public class Users extends Base1Entity {
 	@Column(name = "user_id")
     private Long userId;
 	
-	@Column(name = "username")
+	@Column(name = "username", unique = true)
     private String username;
 	
 	@Column(name = "email", unique = true)

@@ -47,6 +47,10 @@ public class JwtUserDetailsService implements UserDetailsService {
         }
         
         if (user == null) {
+        	user = userRepository.findByPhoneNumber(email);
+        }
+        
+        if (user == null) {
             return null;
         }
         

@@ -62,4 +62,5 @@ public interface AuthenticationService {
 	void getProjectTagOfUser(PaginDto<ProjectTagDto> pagin);
 	void getProjectTagOfUserLogin(PaginDto<ProjectTagDto> pagin);
 	void saveProject(UserDto dto);
+	void logout(String token);
 }

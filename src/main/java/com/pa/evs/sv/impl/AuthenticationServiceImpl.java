@@ -56,6 +56,7 @@ import com.pa.evs.exception.customException.AuthenticationException;
 import com.pa.evs.exception.customException.DuplicateUserException;
 import com.pa.evs.model.AppCode;
 import com.pa.evs.model.GroupUser;
+import com.pa.evs.model.Login;
 import com.pa.evs.model.OTP;
 import com.pa.evs.model.Permission;
 import com.pa.evs.model.PlatformUserLogin;
@@ -74,6 +75,7 @@ import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.AppCodeRepository;
 import com.pa.evs.repository.GroupUserRepository;
+import com.pa.evs.repository.LoginRepository;
 import com.pa.evs.repository.PermissionRepository;
 import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.repository.ProjectTagRepository;
@@ -101,6 +103,8 @@ import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.Utils;
 
+import io.jsonwebtoken.Claims;
+
 @Service
 @SuppressWarnings("unchecked")
 public class AuthenticationServiceImpl implements AuthenticationService {
@@ -112,6 +116,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	
 	@Autowired
 	private AppCodeRepository appCodeRepository;
+
+	@Autowired
+	private LoginRepository loginRepository;
 	
 	@Autowired
 	private UserRepository userRepository;
@@ -204,6 +211,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new AuthenticationException(Message.USER_IS_DISABLE, e);
 		} catch (BadCredentialsException e) {
 			throw new AuthenticationException(Message.INVALID_USERNAME_PASSWORD, e);
+		} catch (Exception e) {
+			throw new AuthenticationException(Message.INVALID_USERNAME_PASSWORD, e);
 		}
 
 		// Reload password post-security so we can generate the token
@@ -266,6 +275,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 						.build());
 	}
 
+	@Transactional
+	@Override
+	public void logout(String token) {
+		Claims claims = jwtTokenUtil.getAllClaimsFromToken(token);
+        final String username = claims.getSubject();
+        final String tokenId = claims.getAudience();
+        
+        Optional<Login> loginOpt = loginRepository.findByTokenIdAndUserName(tokenId, username);
+        
+        if (!loginOpt.isPresent()) {
+        	throw new RuntimeException("Token invalid!");
+        }
+        loginRepository.deleteByTokenIdAndUserName(tokenId, username);
+	}
+	
 	@Override
 	@Transactional
 	public void changePwd(ChangePasswordDto changePasswordDto) {
@@ -322,6 +346,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (user == null) {
 			user = userRepository.findByUsername(email);
 		}
+		if (user == null) {
+			user = userRepository.findByPhoneNumber(email);
+		}
+		if (user == null) {
+			return;
+		}
 		user.setLastLogin(new Date());
 		userRepository.save(user);
 	}
@@ -351,15 +381,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (StringUtils.isBlank(dto.getUsername())) {
 			dto.setUsername(dto.getEmail());
 		}
-		if (dto.getId() != null) {
+		if (dto.getId() != null && dto.getId().longValue() > 0) {
+			
 			Optional<Users> opt = userRepository.findById(dto.getId());
 			if (opt.isPresent()) {
+				if (!SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN") && !opt.get().getEmail().equals(SecurityUtils.getEmail())) {
+					throw new RuntimeException("Access denied!");
+				}
 				en = opt.get();
 			} else {
-				en = new Users();
-				en.setUsername(dto.getUsername());
-				en.setEmail(dto.getEmail());
-				en.setChangePwdRequire(true);
+				throw new RuntimeException("User not found!");
 			}
 		} else {
 			en = new Users();
@@ -387,8 +418,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		en.setFirstName(dto.getFirstName());
 		en.setLastName(dto.getLastName());
 		en.setPhoneNumber(dto.getPhoneNumber());
-		en.setStatus(dto.getStatus());
-		en.setLoginOtpRequire(dto.getLoginOtpRequire());
+		if (SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+			en.setStatus(dto.getStatus());
+			if (dto.getLoginOtpRequire() != null) {
+				en.setLoginOtpRequire(dto.getLoginOtpRequire());
+			}
+		}
 
 		if (dto.getId() != null && dto.getUpdatePwd() == Boolean.TRUE && StringUtils.isBlank(dto.getPassword())) {
 			throw new RuntimeException("Password is required!");
@@ -413,22 +448,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		Long userId = en.getUserId();
 
 		// Role
-
-		Set<String> roleNames = new HashSet<>();
-		dto.getRoles().forEach(roleNames::add);
-		userRoleRepository.deleteNotInRoles(userId, AppCodeSelectedHolder.get(),
-				roleNames.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : roleNames);
-		List<String> existsRoleNames = userRoleRepository.findRoleNameByUserId(userId);
-		List<Role> roles = userRoleRepository.findRoleByRoleNameIn(roleNames);
-		for (Role role : roles) {
-			if (!existsRoleNames.contains(role.getName())) {
-				UserRole userRole = new UserRole();
-				userRole.setUser(en);
-				userRole.setRole(role);
-				userRoleRepository.save(userRole);
-			}
-		}
-		;
+//		Set<String> roleNames = new HashSet<>();
+//		dto.getRoles().forEach(roleNames::add);
+//		userRoleRepository.deleteNotInRoles(userId, AppCodeSelectedHolder.get(),
+//				roleNames.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : roleNames);
+//		List<String> existsRoleNames = userRoleRepository.findRoleNameByUserId(userId);
+//		List<Role> roles = userRoleRepository.findRoleByRoleNameIn(roleNames);
+//		for (Role role : roles) {
+//			if (!existsRoleNames.contains(role.getName())) {
+//				UserRole userRole = new UserRole();
+//				userRole.setUser(en);
+//				userRole.setRole(role);
+//				userRoleRepository.save(userRole);
+//			}
+//		}
 		// End role
 		
 		// Project
@@ -473,25 +506,30 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				}
 			}
 		}
-		
 		userRepository.save(en);
+		dto.setId(en.getUserId());
 		//
 	}
 
 	@Transactional
 	@Override
 	public void saveRole(UserDto dto) {
+		
+		if (!SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+			 throw new RuntimeException("Access denied!");
+		}
+		
 		Optional<Users> user = userRepository.findById(dto.getId());
 		if (user.isPresent()) {
 			List<Role> rus = roleRepository.findRoleByUserUserId(dto.getId());
 			Map<Long, Role> mRs = new LinkedHashMap<>();
 			rus.forEach(ru -> mRs.put(ru.getId(), ru));
-			Set<String> userRoles = new HashSet<>();
+			Set<Long> userRoles = new HashSet<>();
 			for (RoleDto roleDto : dto.getRole()) {
-				userRoles.add(roleDto.getName());
-				if (!mRs.containsKey(roleDto.getId())) {
+				
+				if (!mRs.containsKey(roleDto.getId()) && !userRoles.contains(roleDto.getId())) {
 					Optional<Role> role = roleRepository.findById(roleDto.getId());
-					if (role.isPresent()) {
+					if (role.isPresent() && AppCodeSelectedHolder.get().equals(role.get().getAppCode().getName())) {
 						UserRole userRole1 = new UserRole();
 						userRole1.setRole(role.get());
 						userRole1.setUser(user.get());
@@ -502,6 +540,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 						}
 					}
 				}
+				userRoles.add(roleDto.getId());
 			}
 			
 			try {
@@ -509,12 +548,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 //					userRoles.add("SUPER_ADMIN");
 //					userRoles.add(AppCodeSelectedHolder.get() + "_SUPER_ADMIN");
 //				}
-				userRoleRepository.deleteNotInRoles(user.get().getUserId(), AppCodeSelectedHolder.get(),
-						userRoles.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : userRoles);
+				userRoleRepository.deleteNotInRoleIds(user.get().getUserId(), AppCodeSelectedHolder.get(),
+						userRoles.isEmpty() ? new HashSet<>(Arrays.asList(-1l)) : userRoles);
 			} catch (Exception e) {
 				e.printStackTrace();
 				LOGGER.error(e.getMessage(), e);
 			}
+		} else {
+			throw new RuntimeException("User not found!");
 		}
 		loadRoleAndPermission();
 	}
@@ -522,6 +563,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	@Transactional
 	@Override
 	public void saveGroup(UserDto dto) {
+		
+		if (!SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+			 throw new RuntimeException("Access denied!");
+		}
+		
 		Optional<Users> user = userRepository.findById(dto.getId());
 		if (user.isPresent()) {
 			Set<Long> userGroups = new HashSet<>();
@@ -530,11 +576,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			gus.forEach(gu -> mGs.put(gu.getId(), gu));
 
 			for (GroupUserDto groupUserDto : dto.getGroupUsers()) {
-				userGroups.add(groupUserDto.getId());
-				if (!mGs.containsKey(groupUserDto.getId())) {
+				
+				if (!mGs.containsKey(groupUserDto.getId()) && !userGroups.contains(groupUserDto.getId())) {
 					Optional<GroupUser> groupUser = groupUserRepository.findById(groupUserDto.getId());
 					UserGroup userGroup = new UserGroup();
-					if (groupUser.isPresent()) {
+					if (groupUser.isPresent() && AppCodeSelectedHolder.get().equals(groupUser.get().getAppCode().getName()) ) {
 						userGroup.setGroupUser(groupUser.get());
 						userGroup.setUser(user.get());
 						try {
@@ -544,6 +590,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 						}
 					}
 				}
+				
+				userGroups.add(groupUserDto.getId());
 			}
 
 			try {
@@ -553,6 +601,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				e.printStackTrace();
 				LOGGER.error(e.getMessage(), e);
 			}
+		} else {
+			throw new RuntimeException("User not found!");
 		}
 		
 		loadRoleAndPermission();
@@ -561,6 +611,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	@Transactional
 	@Override
 	public void savePermission(UserDto dto) {
+		
+		if (!SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+			 throw new RuntimeException("Access denied!");
+		}
+		
 		Optional<Users> user = userRepository.findById(dto.getId());
 		if (user.isPresent()) {
 
@@ -570,11 +625,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			Set<Long> newPs = new LinkedHashSet<>();
 			for (PermissionDto permissionDto : dto.getPermissions()) {
 
-				newPs.add(permissionDto.getId());
-				if (!mPs.containsKey(permissionDto.getId())) {
+				if (!mPs.containsKey(permissionDto.getId()) && !newPs.contains(permissionDto.getId())) {
 					Optional<Permission> permission = permissionRepository.findById(permissionDto.getId());
 					UserPermission userPermission = new UserPermission();
-					if (permission.isPresent()) {
+					if (permission.isPresent() && AppCodeSelectedHolder.get().equals(permission.get().getAppCode().getName())) {
 						userPermission.setPermission(permission.get());
 						userPermission.setUser(user.get());
 						try {
@@ -585,6 +639,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 						}
 					}
 				}
+				
+				newPs.add(permissionDto.getId());
 			}
 			userPermissionRepository.flush();
 			for (Map.Entry<Long, Permission> en : mPs.entrySet()) {
@@ -592,6 +648,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					userPermissionRepository.deleteByUserIdAndPermissionId(dto.getId(), en.getKey());
 				}
 			}
+		} else {
+			throw new RuntimeException("User not found!");
 		}
 		
 		loadRoleAndPermission();
@@ -675,6 +733,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	@Override
 	@Transactional
 	public void removeUserById(Long userId) {
+		
+		if (!SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+			 throw new RuntimeException("Access denied!");
+		}
+		
+		Optional<Users> user = userRepository.findById(userId);
+		if (!user.isPresent()) {
+			throw new RuntimeException("User not found!");
+		}
+		
 		em.createQuery("UPDATE CARequestLog c set installer = null where c.installer.userId = " + userId)
 				.executeUpdate();
 		em.createQuery("UPDATE Log c set user = null where c.user.userId = " + userId).executeUpdate();
@@ -683,8 +751,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		em.createQuery("DELETE FROM UserGroup c where c.user.userId = " + userId).executeUpdate();
 		em.createQuery("DELETE FROM UserPermission c where c.user.userId = " + userId).executeUpdate();
 		em.createQuery("DELETE FROM UserRole c where c.user.userId = " + userId).executeUpdate();
+		em.createQuery("DELETE FROM UserAppCode c where c.user.userId = " + userId).executeUpdate();
 		em.flush();
-		userRepository.deleteById(userId);
+		
+		userRepository.delete(user.get());
+		
 	}
 
 	@Transactional
@@ -1506,13 +1577,26 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	@Override
 	public ResponseDto<? extends Object> sendOtp(Map<String, Object> dto) {
 		String email = (String) dto.get("email");
+		String account = (String) dto.get("account");
+		if (StringUtils.isBlank(email)) {
+			email = account;
+		}
 		if (StringUtils.isBlank(email)) {
 			throw new ApiException("email is required");
 		}
+		
 		String otpType = (String) dto.get("otpType");
 		String actionType = (String) dto.get("actionType");
 		Users user = userRepository.findByEmail(email);
+		
+		if (user == null) {
+			user = userRepository.findByPhoneNumber(email);
+		}
+		
 		if (("reset_pwd".equalsIgnoreCase(actionType) || "login".equalsIgnoreCase(actionType)) && user == null) {
+			if (StringUtils.isNotBlank((String) dto.get("account")) && StringUtils.isBlank((String) dto.get("email"))) {
+				throw new ApiException("account doesn't exists!");	
+			}
 			throw new ApiException("email doesn't exists!");
 		}
 		String phone = user == null ? null : user.getPhoneNumber();
@@ -1521,7 +1605,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			otpType = "email";
 			// throw new ApiException("phone is required");
 		}
-		OTP otp = OTP.builder().actionType(actionType).phone(phone).email(email).build();
+		email = user.getEmail();
+		OTP otp = OTP.builder().actionType(actionType).phone(phone).email(user.getEmail()).build();
 		int otpLenth = 6;
 		try {
 			otpLenth = Integer.parseInt(AppProps.get("otp_length", "6"));
@@ -1539,6 +1624,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			otp.setTrack("AWS SNS: " + msgId + " SMS: " + "MMS-" + otp.getOtp());	
 			reMsg = "OTP has been sent to " + phone;
 		}
+		
 		if ("email".equalsIgnoreCase(otpType)) {
 			msgId = evsPAService.sendEmail("<html><body>" + "MMS-" + otp.getOtp() + "</body></html>", email.trim(), AppProps.get("EMAIL_OTP_SUBJECT", "MMS-OTP"));
 			otp.setTrack("AWS SES: " + msgId + " EMAIL: " + "<html><body>" + "MMS-" + otp.getOtp() + "</body></html>");

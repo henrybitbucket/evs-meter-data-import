@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Function;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import com.pa.evs.dto.SettingDto;
+import com.pa.evs.model.Login;
+import com.pa.evs.repository.LoginRepository;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.SettingService;
 
@@ -30,6 +34,8 @@ public class JwtTokenUtil implements Serializable {
     private Clock clock = DefaultClock.INSTANCE;
     
     @Autowired SettingService settingService;
+    
+    @Autowired LoginRepository loginRepository;
 
     @Value("${jwt.secret}")
     private String secret;
@@ -91,9 +97,18 @@ public class JwtTokenUtil implements Serializable {
     public String doGenerateToken(Map<String, Object> claims, String subject) {
         final Date createdDate = clock.now();
         final Date expirationDate = calculateExpirationDate(createdDate);
-
+        String tokenId = UUID.randomUUID().toString();
+        
+        Login login = new Login();
+        login.setTokenId(tokenId);
+        login.setStartTime(createdDate.getTime());
+        login.setEndTime(expirationDate.getTime());
+        login.setUserName(subject);
+        loginRepository.save(login);
+        
         return Jwts.builder()
             .setClaims(claims)
+            .setAudience(tokenId)
             .setSubject(subject)
             .setIssuedAt(createdDate)
             .setExpiration(expirationDate)
@@ -124,11 +139,19 @@ public class JwtTokenUtil implements Serializable {
     public Boolean validateToken(String token, UserDetails userDetails) {
         JwtUser user = (JwtUser) userDetails;
         final String username = getUsernameFromToken(token);
-        return (
-            username.equals(user.getUsername())
-                && !isTokenExpired(token)
-               /* && !isCreatedBeforeLastPasswordReset(created, user.getLastPasswordResetDate())*/
-        );
+        Claims claims = getAllClaimsFromToken(token);
+        final String tokenId = claims.getAudience();
+        
+        Optional<Login> loginOpt = loginRepository.findByTokenIdAndUserName(tokenId, username);
+        
+        if (!loginOpt.isPresent()) {
+        	return false;
+        }
+        
+        Login login = loginOpt.get();
+        Boolean isTokenExpr = login.getEndTime() <= System.currentTimeMillis() || isTokenExpired(token);
+        
+        return (user != null && tokenId != null && username.equals(user.getUsername()) && !isTokenExpr);
     }
 
     private Date calculateExpirationDate(Date createdDate) {

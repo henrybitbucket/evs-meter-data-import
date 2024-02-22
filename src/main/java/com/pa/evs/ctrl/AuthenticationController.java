@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +75,17 @@ public class AuthenticationController {
     public ResponseDto<? extends Object> createAuthenticationToken(@RequestBody LoginRequestDto loginRequestDTO) {
         try {
         	return authenticationService.login(loginRequestDTO);
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
+    }
+    
+    @PostMapping(value = {"/api/logout"})
+    public ResponseDto<?> logout(HttpServletRequest httpServletRequest) {
+        try {
+        	String accessToken = httpServletRequest.getHeader("Authorization");
+        	authenticationService.logout(accessToken);
+        	return ResponseDto.builder().success(true).message("Logout successfully!").build();
 		} catch (Exception e) {
 			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
 		}
@@ -322,10 +334,13 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.CREATE_NEW_USER})
-    public Object createNewUser(@RequestBody CreateUserDto dto) {
+    public Object createNewUser(@RequestBody CreateUserDto dto, HttpServletRequest request) {
         try {
-        	AppCodeSelectedHolder.set("DMS");
-        	
+        	if (StringUtils.isBlank(request.getHeader("A_C"))) {
+        		AppCodeSelectedHolder.set("DMS");
+        	} else {
+        		AppCodeSelectedHolder.set(request.getHeader("A_C"));
+        	}
         	UserDto userDto = new UserDto();
         	userDto.setEmail(dto.getEmail());
         	userDto.setFullName(dto.getFullName());
@@ -370,8 +385,9 @@ public class AuthenticationController {
     			pf.setEndTime(4102444800000l);
         		platformUserLoginRepository.save(pf);	
     		}
+    		dto.setId(userDto.getId());
     		
-        	return ResponseDto.<Object>builder().success(true).build();
+        	return ResponseDto.<Object>builder().success(true).response(dto).build();
 		} catch (Exception e) {
 			return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
 		} finally {
