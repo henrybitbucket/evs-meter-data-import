@@ -36,7 +36,10 @@ import com.pa.evs.sv.ReportService;
 import com.pa.evs.utils.JasperUtil;
 import com.pa.evs.utils.TimeZoneHolder;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 @RestController
+@ApiIgnore
 public class ReportController {
 
     static final Logger logger = LogManager.getLogger(ReportController.class);

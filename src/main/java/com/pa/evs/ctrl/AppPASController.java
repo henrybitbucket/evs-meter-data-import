@@ -23,9 +23,12 @@ import com.pa.evs.utils.DESUtil;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 
 @DependsOn(value = "settingsController")
 @RestController
+@ApiIgnore
 public class AppPASController {
 	static final Logger LOGGER = LoggerFactory.getLogger(AppPASController.class);
 	

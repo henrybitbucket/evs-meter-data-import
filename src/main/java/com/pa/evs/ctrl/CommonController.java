@@ -90,7 +90,10 @@ import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.TimeZoneHolder;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 @RestController
+@ApiIgnore
 public class CommonController {
 
 	static final Logger LOG = LogManager.getLogger(CommonController.class);

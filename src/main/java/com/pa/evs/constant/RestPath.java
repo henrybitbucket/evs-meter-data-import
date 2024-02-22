@@ -24,6 +24,7 @@ public interface RestPath {
 	String UPDATEPERMISSON = API + "/update/permission";
 	String UPDATEPROJECT = API + "/update/project";
 	String WHOAMI1 = API + "/whoami";
+	String CREATE_NEW_USER = API + "/user/save";
 	
 	String GET_CA_REQUEST_LOG = API + "/ca-request-logs";
 	String CA_REQUEST_LOG = API + "/ca-request-log";

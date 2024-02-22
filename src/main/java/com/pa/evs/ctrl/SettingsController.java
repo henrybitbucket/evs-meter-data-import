@@ -17,7 +17,10 @@ import com.pa.evs.dto.SettingDto;
 import com.pa.evs.sv.SettingService;
 import com.pa.evs.utils.AppProps;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 @Controller
+@ApiIgnore
 public class SettingsController {
 
 	@Autowired

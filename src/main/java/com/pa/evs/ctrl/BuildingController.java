@@ -26,9 +26,12 @@ import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.BuildingService;
 import com.pa.evs.utils.CsvUtils;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 
 @SuppressWarnings("rawtypes")
 @RestController
+@ApiIgnore
 public class BuildingController {
 
 	@Autowired

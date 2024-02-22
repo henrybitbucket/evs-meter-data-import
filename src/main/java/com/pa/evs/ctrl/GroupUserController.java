@@ -1,11 +1,9 @@
 package com.pa.evs.ctrl;
 
-import com.pa.evs.dto.GroupUserDto;
-import com.pa.evs.dto.PaginDto;
-import com.pa.evs.dto.ResponseDto;
-import com.pa.evs.sv.AuthenticationService;
-import com.pa.evs.sv.GroupUserService;
-import com.pa.evs.utils.SecurityUtils;
+import java.io.IOException;
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,12 +18,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.util.Map;
+import com.pa.evs.dto.GroupUserDto;
+import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.sv.AuthenticationService;
+import com.pa.evs.sv.GroupUserService;
+
+import springfox.documentation.annotations.ApiIgnore;
 
 
 @RestController
+@ApiIgnore
 public class GroupUserController {
 
     static final Logger logger = LogManager.getLogger(GroupUserController.class);

@@ -374,7 +374,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		if (dto.getPhoneNumber() != null) {
 			Users existsUser = userRepository.findByPhoneNumber(dto.getPhoneNumber());
-			if (existsUser != null && en.getUserId() != null && existsUser.getUserId().longValue() != en.getUserId().longValue()) {
+			if ((existsUser != null && en.getUserId() != null && existsUser.getUserId().longValue() != en.getUserId().longValue()) || (en.getUserId() == null && existsUser != null)) {
 				throw new RuntimeException("Phone already exists!");
 			}
 		}

@@ -12,6 +12,8 @@ import com.pa.evs.dto.ScheduleDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.ScheduleService;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 @RestController
+@ApiIgnore
 public class ScheduleController {
 
     static final Logger logger = LogManager.getLogger(ScheduleController.class);

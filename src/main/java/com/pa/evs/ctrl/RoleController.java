@@ -5,6 +5,9 @@ import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.sv.RoleService;
+
+import springfox.documentation.annotations.ApiIgnore;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +25,7 @@ import java.io.IOException;
 
 
 @RestController
+@ApiIgnore
 public class RoleController {
 
     static final Logger logger = LogManager.getLogger(RoleController.class);

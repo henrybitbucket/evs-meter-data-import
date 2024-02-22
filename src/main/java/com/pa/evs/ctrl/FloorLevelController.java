@@ -14,9 +14,12 @@ import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.FloorLevelService;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 
 @SuppressWarnings("rawtypes")
 @RestController
+@ApiIgnore
 public class FloorLevelController {
 
 	@Autowired

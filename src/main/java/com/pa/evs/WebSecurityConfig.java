@@ -121,6 +121,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers("/api/submit-meter-commission").permitAll()
 	            .antMatchers("/api/last-submitted-meter-commission**").permitAll()
 	            .antMatchers("/api/add-device-test/**").permitAll()
+	            .antMatchers("/api/user/save").permitAll()
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

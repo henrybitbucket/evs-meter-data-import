@@ -15,7 +15,10 @@ import com.pa.evs.dto.ProjectTagDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.sv.ProjectTagService;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 @RestController
+@ApiIgnore
 public class ProjectTagController {
 	
 	@Autowired

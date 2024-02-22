@@ -47,7 +47,10 @@ import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 @RestController
+@ApiIgnore
 public class CaRequestLogController {
 	
 	@Value("${evs.pa.mqtt.address}") private String evsPAMQTTAddress;

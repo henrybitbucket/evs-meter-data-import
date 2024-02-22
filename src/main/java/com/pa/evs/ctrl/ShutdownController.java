@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pa.evs.sv.AppEventLogService;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 @RestController
+@ApiIgnore
 public class ShutdownController implements ApplicationContextAware {
     
     private ApplicationContext context;
