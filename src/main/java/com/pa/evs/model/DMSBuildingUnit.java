@@ -70,6 +70,9 @@ public class DMSBuildingUnit extends BaseEntity {
 	@Column(name = "remark", length = 500)
 	private String remark;
 	
+	@Column(name = "location_tag", length = 500)
+	private String locationTag;
+	
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "coupled_date")
     private Date coupledDate;

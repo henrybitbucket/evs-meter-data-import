@@ -13,6 +13,9 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.BuildingUnitService;
+import com.pa.evs.sv.DMSBuildingUnitService;
+import com.pa.evs.utils.AppCodeSelectedHolder;
+import com.pa.evs.utils.AppProps;
 
 import springfox.documentation.annotations.ApiIgnore;
 
@@ -31,7 +34,12 @@ public class BuildingUnitController {
 	@PostMapping("/api/buildingunit")
 	public ResponseDto save(@RequestBody BuildingUnitDto dto) {
 		try {
-			buildingUnitService.save(dto);
+			if ("DMS".equals(AppCodeSelectedHolder.get())) {
+				AppProps.context.getBean(DMSBuildingUnitService.class).save(dto);
+			} else {
+				buildingUnitService.save(dto);
+			}
+			
 			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
 		} catch (Exception ex) {
 			return exceptionConvertor.createResponseDto(ex);
@@ -40,14 +48,24 @@ public class BuildingUnitController {
 	
 	@PostMapping("/api/buildingunits")
 	public PaginDto<BuildingUnitDto> search(@RequestBody PaginDto<BuildingUnitDto> pagin) {
-		buildingUnitService.search(pagin);
+		if ("DMS".equals(AppCodeSelectedHolder.get())) {
+			AppProps.context.getBean(DMSBuildingUnitService.class).search(pagin);
+		} else {
+			buildingUnitService.search(pagin);
+		}
+		
 		return pagin;
 	}
 	
 	@DeleteMapping("/api/buildingunit/{id}")
 	public ResponseDto delete(@PathVariable Long id) {
 		try {
-			buildingUnitService.delete(id);
+			if ("DMS".equals(AppCodeSelectedHolder.get())) {
+				AppProps.context.getBean(DMSBuildingUnitService.class).delete(id);
+			} else {
+				buildingUnitService.delete(id);
+			}
+			
 			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
 		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();

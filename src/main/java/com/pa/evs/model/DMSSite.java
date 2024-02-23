@@ -1,5 +1,7 @@
 package com.pa.evs.model;
 
+import java.math.BigDecimal;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
@@ -31,5 +33,11 @@ public class DMSSite extends BaseEntity {
 
 	@Column(name = "radius", length = 500)
 	private String radius;
+	
+	@Column(name = "lng", precision = 19, scale = 14)
+	private BigDecimal lng;
+	
+	@Column(name = "lat", precision = 19, scale = 14)
+	private BigDecimal lat;
 
 }

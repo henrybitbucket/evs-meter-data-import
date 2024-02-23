@@ -13,6 +13,9 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.BlockService;
+import com.pa.evs.sv.DMSBlockService;
+import com.pa.evs.utils.AppCodeSelectedHolder;
+import com.pa.evs.utils.AppProps;
 
 import springfox.documentation.annotations.ApiIgnore;
 
@@ -31,7 +34,12 @@ public class BlockController {
 	@PostMapping("/api/block")
 	public ResponseDto save(@RequestBody BlockDto block) {
 		try {
-			blockService.save(block);
+			if ("DMS".equals(AppCodeSelectedHolder.get())) {
+				AppProps.context.getBean(DMSBlockService.class).save(block);
+			} else {
+				blockService.save(block);
+			}
+			
 			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
 		} catch (Exception ex) {
 			return exceptionConvertor.createResponseDto(ex);
@@ -40,14 +48,24 @@ public class BlockController {
 	
 	@PostMapping("/api/blocks")
 	public PaginDto<BlockDto> search(@RequestBody PaginDto<BlockDto> pagin) {
-		blockService.search(pagin);
+		if ("DMS".equals(AppCodeSelectedHolder.get())) {
+			AppProps.context.getBean(DMSBlockService.class).search(pagin);
+		} else {
+			blockService.search(pagin);
+		}
+		
 		return pagin;
 	}
 	
 	@DeleteMapping("/api/block/{id}")
 	public ResponseDto delete(@PathVariable Long id) {
 		try {
-			blockService.delete(id);
+			if ("DMS".equals(AppCodeSelectedHolder.get())) {
+				AppProps.context.getBean(DMSBlockService.class).delete(id);
+			} else {
+				blockService.delete(id);
+			}
+			
 			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
 		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();

@@ -20,5 +20,7 @@ public interface GroupUserRepository extends JpaRepository<GroupUser, Long> {
 	List<GroupUser> findGroupByUserUserId(Long id);
 	
 	Optional<GroupUser> findByName(String name);
+	
+	List<GroupUser> findByAppCodeName(String name);
 }
  

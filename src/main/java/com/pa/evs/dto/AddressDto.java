@@ -28,6 +28,7 @@ public class AddressDto {
 	private String createdBy;
 	private String updatedBy;
 	private String remark;
+	private String locationTag;
 	private String coupleState;
 	private String coupleMsn;
 
@@ -278,6 +279,14 @@ public class AddressDto {
 
 	public void setHead(Map<String, Integer> head) {
 		this.head = head;
+	}
+
+	public String getLocationTag() {
+		return locationTag;
+	}
+
+	public void setLocationTag(String locationTag) {
+		this.locationTag = locationTag;
 	}
 
 }

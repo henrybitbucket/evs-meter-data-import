@@ -12,7 +12,10 @@ import com.pa.evs.dto.FloorLevelDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
+import com.pa.evs.sv.DMSFloorLevelService;
 import com.pa.evs.sv.FloorLevelService;
+import com.pa.evs.utils.AppCodeSelectedHolder;
+import com.pa.evs.utils.AppProps;
 
 import springfox.documentation.annotations.ApiIgnore;
 
@@ -31,7 +34,11 @@ public class FloorLevelController {
 	@PostMapping("/api/floorlevel")
 	public ResponseDto save(@RequestBody FloorLevelDto floorLevel) {
 		try {
-			floorLevelService.save(floorLevel);
+			if ("DMS".equals(AppCodeSelectedHolder.get())) {
+				AppProps.context.getBean(DMSFloorLevelService.class).save(floorLevel);
+			} else {
+				floorLevelService.save(floorLevel);
+			}
 			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
 		} catch (Exception ex) {
 			return exceptionConvertor.createResponseDto(ex);
@@ -40,14 +47,22 @@ public class FloorLevelController {
 	
 	@PostMapping("/api/floorlevels")
 	public PaginDto<FloorLevelDto> search(@RequestBody PaginDto<FloorLevelDto> pagin) {
-		floorLevelService.search(pagin);
+		if ("DMS".equals(AppCodeSelectedHolder.get())) {
+			AppProps.context.getBean(DMSFloorLevelService.class).search(pagin);
+		} else {
+			floorLevelService.search(pagin);
+		}
 		return pagin;
 	}
 	
 	@DeleteMapping("/api/floorlevel/{id}")
 	public ResponseDto delete(@PathVariable Long id) {
 		try {
-			floorLevelService.delete(id);
+			if ("DMS".equals(AppCodeSelectedHolder.get())) {
+				AppProps.context.getBean(DMSFloorLevelService.class).delete(id);
+			} else {
+				floorLevelService.delete(id);
+			}
 			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
 		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();

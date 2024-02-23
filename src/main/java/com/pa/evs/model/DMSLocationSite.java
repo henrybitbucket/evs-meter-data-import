@@ -23,14 +23,30 @@ import lombok.Setter;
 @Table(
 		name = "dms_location_site",
 		indexes = {
-				@Index(name = "idx_location_id_site_id_dms_location_site", columnList="location_id,site_id", unique = true)
+				@Index(name = "idx_building_2_unit_site_id_dms_location", columnList="building_id,block_id,floor_level_id,building_unit_id,site_id", unique = true)
 		}
 )
 public class DMSLocationSite extends BaseEntity {
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "location_id")
-	private DMSLocation location;
+    @ManyToOne
+	@JoinColumn(name = "building_id")
+	private DMSBuilding building;
+	
+	@ManyToOne
+	@JoinColumn(name = "block_id")
+	private DMSBlock block;
+	
+	@ManyToOne
+	@JoinColumn(name = "floor_level_id")
+	private DMSFloorLevel floorLevel;
+
+	@ManyToOne
+	@JoinColumn(name = "building_unit_id", nullable = false)
+	private DMSBuildingUnit buildingUnit;
+	
+	@ManyToOne
+	@JoinColumn(name = "address_id")
+	private DMSAddress address;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "site_id")

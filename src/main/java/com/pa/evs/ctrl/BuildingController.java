@@ -24,6 +24,9 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.BuildingService;
+import com.pa.evs.sv.DMSBuildingService;
+import com.pa.evs.utils.AppCodeSelectedHolder;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CsvUtils;
 
 import springfox.documentation.annotations.ApiIgnore;
@@ -43,7 +46,12 @@ public class BuildingController {
 	@PostMapping("/api/building")
 	public ResponseDto save(@RequestBody BuildingDto building) {
         try {
-        	buildingService.save(building);
+			if ("DMS".equals(AppCodeSelectedHolder.get())) {
+				AppProps.context.getBean(DMSBuildingService.class).save(building);
+			} else {
+				buildingService.save(building);
+			}
+        	
             return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
         }catch (Exception ex) {
             return exceptionConvertor.createResponseDto(ex);
@@ -53,7 +61,15 @@ public class BuildingController {
 	@PostMapping("/api/buildings")
 	public ResponseEntity<?> search(@RequestBody PaginDto<BuildingDto> pagin, @RequestParam(required = false) String search, HttpServletResponse response) throws IOException {
 		try {
-			buildingService.search(pagin, search);
+			if ("true".equals(pagin.getOptions().get("exportCSV") + "")) {
+				System.out.println(1);
+			}
+			if ("DMS".equals(AppCodeSelectedHolder.get())) {
+				AppProps.context.getBean(DMSBuildingService.class).search(pagin, search);
+			} else {
+				buildingService.search(pagin, search);	
+			}
+			
 			if ("true".equals(pagin.getOptions().get("exportCSV") + "")) {
 				String exportType = (String) pagin.getOptions().get("exportType");
 				File file = CsvUtils.writeAddressCsv(pagin.getResults(), exportType, "address_" + System.currentTimeMillis() + ".csv");
@@ -79,7 +95,12 @@ public class BuildingController {
 	@DeleteMapping("/api/building/{id}")
 	public ResponseDto delete(@PathVariable Long id) {
 		try {
-        	buildingService.delete(id);
+			if ("DMS".equals(AppCodeSelectedHolder.get())) {
+				AppProps.context.getBean(DMSBuildingService.class).delete(id);
+			} else {
+				buildingService.delete(id);
+			}
+        	
             return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
         }catch (Exception ex) {
             return ResponseDto.builder().success(false).message(ex.getMessage()).build();

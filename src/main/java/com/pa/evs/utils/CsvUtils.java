@@ -63,6 +63,9 @@ public class CsvUtils {
         headers = Arrays.stream(AppProps.get(SettingService.EXPORT_ADDRESS_HEADER).trim().split(" *, *")).collect(Collectors.toList());
         if ("address-only".equalsIgnoreCase(exportType)) {
         	headers = Arrays.stream("Building,Block,Level,Unit,Postcode,Street Address,State.City,UpdatedTime,Remark".trim().split(" *, *")).collect(Collectors.toList());
+        	if ("DMS".equals(AppCodeSelectedHolder.get())) {
+        		headers = Arrays.stream("Building,Block,Level,Unit,Postcode,Street Address,State.City,UpdatedTime,Location Tag,Remark".trim().split(" *, *")).collect(Collectors.toList());
+        	}
         } else {
         	headers = headersWithMsnAndSn;
         }
@@ -159,6 +162,10 @@ public class CsvUtils {
             record.add(log.getAddress().getStreet());
             record.add(log.getAddress().getCity());
             record.add(log.getAddress().getCoupleTime() != null ? sdf.format(log.getAddress().getCoupleTime()) : "");
+            
+            if ("DMS".equals(AppCodeSelectedHolder.get())) {
+            	record.add(log.getAddress().getLocationTag());
+            }
             record.add(log.getAddress().getRemark());
         }
         return postProcessCsv(record);

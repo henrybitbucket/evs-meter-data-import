@@ -19,6 +19,7 @@ public class BuildingUnitDto {
 	private Date modifiedDate;
 	private List<String> names;
 	private String remark;
+	private String locationTag;
 
 	public BuildingUnitDto() {
 
@@ -124,6 +125,14 @@ public class BuildingUnitDto {
 
 	public void setRemark(String remark) {
 		this.remark = remark;
+	}
+
+	public String getLocationTag() {
+		return locationTag;
+	}
+
+	public void setLocationTag(String locationTag) {
+		this.locationTag = locationTag;
 	}
 
 }
