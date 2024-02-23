@@ -41,9 +41,9 @@ public class DMSLockServiceImpl implements DMSLockService {
 	public Object getChinaLockPadLock() {
 		try {
 			
-			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
-				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
-			}
+//			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+//				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+//			}
 			String url = DESUtil.getInstance().decrypt(AppProps.get("APP_PAS_LIST_LOCKS"));
 			HttpEntity<Object> entity = new HttpEntity<Object>(null);
 			return MAPPER.readValue(resttemplate.exchange(url.replace("${token}", token), HttpMethod.GET, entity, String.class).getBody(), Map.class);
