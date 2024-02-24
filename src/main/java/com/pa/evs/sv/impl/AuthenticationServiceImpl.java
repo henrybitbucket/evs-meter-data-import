@@ -99,6 +99,7 @@ import com.pa.evs.sv.SettingService;
 import com.pa.evs.utils.ApiResponse;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.AppProps;
+import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.Utils;
@@ -713,9 +714,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Override
 	public ResponseDto<JwtUser> getUser(HttpServletRequest request) {
-		String token = request.getHeader(tokenHeader);
-		String email = jwtTokenUtil.getUsernameFromToken(token);
-		JwtUser jwtUser = (JwtUser) userDetailsService.loadUserByUsername(email);
+		JwtUser jwtUser = (JwtUser) userDetailsService.loadUserByUsername(SecurityUtils.getEmail());
 		jwtUser.setGroups(groupUserRepository.findGroupByUserUserId(jwtUser.getId()).stream().map(ug -> ug.getName()).collect(Collectors.toList()));
 		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE, jwtUser);
 	}
@@ -833,6 +832,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				userRepository.save(us);
 			}
 		});
+		
+		loginRepository.deleteExpiredLogin(System.currentTimeMillis());
+		SchedulerHelper.scheduleJob("0 0/5 * * * ? *", () -> {
+			loginRepository.deleteExpiredLogin(System.currentTimeMillis());
+		}, "REMOVE_LOGIN");
 	}
 
 	@Override

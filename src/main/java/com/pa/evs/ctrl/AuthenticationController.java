@@ -137,9 +137,6 @@ public class AuthenticationController {
     @ApiIgnore
     public Object getPfOfUser(@RequestParam(required = true) String email) {
     	try {
-			if (!SecurityUtils.hasAnyRole(AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
-				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
-			}
 	        Object pfs = authenticationService.getPfOfUser(email);
 	        return ResponseDto.<Object>builder().success(true).response(pfs).build();
 		} catch (Exception e) {
@@ -151,7 +148,7 @@ public class AuthenticationController {
     @ApiIgnore
     public Object savePfOfUser(@RequestBody PlatformUserLoginDto dto) {
         try {
-			if (!SecurityUtils.hasAnyRole(AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+			if (!SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
 				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
 			}
         	authenticationService.savePfOfUser(dto);

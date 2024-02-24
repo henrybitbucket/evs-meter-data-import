@@ -57,6 +57,7 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
 			}
 		};*/
 		
+        boolean hrApiLogin = false;
         if (authToken != null) {
             if (authToken.startsWith("Basic")) {
                 chain.doFilter(request, response);
@@ -66,8 +67,9 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
             	// m3 module app token
             	if ("Bearer m3a3ec06e6-d8b7-4e85-aa25-0fb5a3e95ee1".equalsIgnoreCase(authToken)) {
             		username = "henry";
-            		UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
-            		authToken = "Bearer " + jwtTokenUtil.generateToken(userDetails);
+            		//UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+            		hrApiLogin = true;
+            		// authToken = "Bearer " + jwtTokenUtil.generateToken(userDetails);
             	} else {
             		username = jwtTokenUtil.getUsernameFromToken(authToken);	
             	}
@@ -84,7 +86,7 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
             // For simple validation it is completely sufficient to just check the token integrity. You don't have to call
             // the database compellingly. Again it's up to you ;)
-            if (jwtTokenUtil.validateToken(authToken, userDetails)) {
+            if (hrApiLogin || jwtTokenUtil.validateToken(authToken, userDetails)) {
             	if (!RestPath.LOGIN.equalsIgnoreCase(request.getRequestURI())
             			&& !RestPath.LOGIN1.equalsIgnoreCase(request.getRequestURI())
             			&& "/api/otp".equalsIgnoreCase(request.getRequestURI())
