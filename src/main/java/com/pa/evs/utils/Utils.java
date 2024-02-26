@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.pa.evs.dto.AddressDto;
 import com.pa.evs.model.Address;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.DMSLocationLock;
 import com.pa.evs.model.FloorLevel;
 
 
@@ -82,6 +83,44 @@ public class Utils {
                     .append(caRqlog.getBuilding().getAddress().getPostalCode());
         } else if (caRqlog.getAddress() != null) {
         	return formatHomeAddress(null, caRqlog.getAddress());
+        }
+        return address.toString();
+    }
+    
+    public static String formatHomeAddress(DMSLocationLock caRqlog) {
+        StringBuilder address = new StringBuilder("");
+        if (caRqlog.getBuilding() != null) {
+        	Object streetNumber = caRqlog.getBuilding().getAddress().getStreetNumber();
+        	if (streetNumber == null) {
+        		streetNumber = "";
+        	} else {
+        		streetNumber = streetNumber + " ";
+        	}
+        	
+        	if (caRqlog.getBlock() != null) {
+        		address.append("Block ").append(caRqlog.getBlock().getName()).append(", ");
+        	}
+        	if (caRqlog.getBuildingUnit() != null && caRqlog.getFloorLevel() != null) {
+        		String fName = caRqlog.getFloorLevel().getName();
+        		if (fName == null) {
+        			fName = caRqlog.getFloorLevel().getLevel();
+        		}
+        		String uName = caRqlog.getBuildingUnit().getName();
+        		if (uName == null) {
+        			uName = caRqlog.getBuildingUnit().getUnit();
+        		}
+        		address.append(fName).append("-").append(uName).append(" ");
+        	} else if (caRqlog.getFloorLevel() != null) {
+        		address.append(caRqlog.getFloorLevel().getName()).append(" ");
+        	}
+        	
+            address.append(caRqlog.getBuilding().getName()).append(", ")
+                    .append(streetNumber)
+                    .append(StringUtils.isBlank(caRqlog.getBuilding().getAddress().getStreet()) ? "" : (caRqlog.getBuilding().getAddress().getStreet() + ", "))
+                    .append(StringUtils.isBlank(caRqlog.getBuilding().getAddress().getTown()) ? "" : (caRqlog.getBuilding().getAddress().getTown() + ", "))
+                    .append(StringUtils.isNotBlank(caRqlog.getBuilding().getAddress().getCity()) ? (caRqlog.getBuilding().getAddress().getCity() + ", ") : "")
+                    .append(StringUtils.isNotBlank(caRqlog.getBuilding().getAddress().getCountry()) ? (caRqlog.getBuilding().getAddress().getCountry() + ", ") : "")
+                    .append(caRqlog.getBuilding().getAddress().getPostalCode());
         }
         return address.toString();
     }

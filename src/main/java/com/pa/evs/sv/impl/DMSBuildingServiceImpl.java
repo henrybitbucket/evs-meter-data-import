@@ -172,7 +172,7 @@ public class DMSBuildingServiceImpl implements DMSBuildingService {
 			sqlBuilder.append(" left join {h-schema}dms_block bl on (fl.block_id = bl.id and (bl.id is null or bl.building_id = b.id)) ");
 			sqlBuilder.append(" inner join {h-schema}dms_building_unit bu on bu.floor_level_id = fl.id ");
 		}
-		sqlBuilder.append(" left join {h-schema}address a on b.address_id = a.id ");
+		sqlBuilder.append(" left join {h-schema}dms_address a on b.address_id = a.id ");
 		sqlBuilder.append(" where 1=1 ");
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlBuilder.append(" and (b.name like '%" + pagin.getKeyword() + "%' or a.display_name like '%" + pagin.getKeyword() + "%')");
@@ -244,7 +244,7 @@ public class DMSBuildingServiceImpl implements DMSBuildingService {
 			sqlCountBuilder.append(" left join {h-schema}dms_block bl on (fl.block_id = bl.id and (bl.id is null or bl.building_id = b.id)) ");
 			sqlCountBuilder.append(" inner join {h-schema}dms_building_unit bu on bu.floor_level_id = fl.id ");
 		}
-		sqlCountBuilder.append(" left join {h-schema}address a on b.address_id = a.id ");
+		sqlCountBuilder.append(" left join {h-schema}dms_address a on b.address_id = a.id ");
 		sqlCountBuilder.append(" where 1=1 ");
 		if (StringUtils.isNotBlank(pagin.getKeyword())) {
 			sqlCountBuilder.append(" and (b.name like '%" + pagin.getKeyword() + "%' or a.display_name like '%" + pagin.getKeyword() + "%')");
@@ -464,7 +464,7 @@ public class DMSBuildingServiceImpl implements DMSBuildingService {
 		}
 		
 		buildingRepository.delete(entity);
-		em.createNativeQuery("delete from {h-schema}address where id = " + entity.getAddress().getId()).executeUpdate();
+		em.createNativeQuery("delete from {h-schema}dms_address where id = " + entity.getAddress().getId()).executeUpdate();
 	}
 
 	@Override

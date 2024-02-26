@@ -19,14 +19,30 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.dto.BlockDto;
+import com.pa.evs.dto.BuildingDto;
+import com.pa.evs.dto.BuildingUnitDto;
+import com.pa.evs.dto.DMSLocationLockDto;
 import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.DMSLockVendorDto;
+import com.pa.evs.dto.FloorLevelDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.model.DMSBlock;
+import com.pa.evs.model.DMSBuilding;
+import com.pa.evs.model.DMSBuildingUnit;
+import com.pa.evs.model.DMSFloorLevel;
+import com.pa.evs.model.DMSLocationLock;
 import com.pa.evs.model.DMSLock;
 import com.pa.evs.model.DMSLockVendor;
+import com.pa.evs.repository.DMSBlockRepository;
+import com.pa.evs.repository.DMSBuildingRepository;
+import com.pa.evs.repository.DMSBuildingUnitRepository;
+import com.pa.evs.repository.DMSFloorLevelRepository;
+import com.pa.evs.repository.DMSLocationLockRepository;
 import com.pa.evs.repository.DMSLockRepository;
 import com.pa.evs.repository.DMSLockVendorRepository;
 import com.pa.evs.sv.DMSLockService;
@@ -34,6 +50,7 @@ import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.DESUtil;
 import com.pa.evs.utils.SchedulerHelper;
+import com.pa.evs.utils.Utils;
 
 @Service
 @SuppressWarnings("unchecked")
@@ -54,14 +71,30 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Autowired
 	private EntityManager em;
 	
+	@Autowired
+	DMSFloorLevelRepository floorLevelRepository;
+	
+	@Autowired
+	DMSBuildingRepository buildingRepository;
+	
+	@Autowired
+	DMSBlockRepository blockRepository;
+	
+	@Autowired
+	DMSBuildingUnitRepository buildingUnitRepository;
+	
+	@Autowired
+	DMSLocationLockRepository dmsLocationLockRepository;
+	
+	@Transactional(readOnly = true)
 	@Override
 	public PaginDto<DMSLockDto> search(PaginDto<DMSLockDto> pagin) {
 		LOGGER.info("Get DMS LOCK");
 		
-		StringBuilder sqlBuilder = new StringBuilder("FROM DMSLock lock ");
-		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM DMSLock lock");
+		StringBuilder sqlBuilder = new StringBuilder(" SELECT lock, locationLock ");
+		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(lock) ");
 
-		StringBuilder sqlCommonBuilder = new StringBuilder();
+		StringBuilder sqlCommonBuilder = new StringBuilder(" FROM DMSLock lock LEFT JOIN DMSLocationLock locationLock on lock.id = locationLock.lock.id ");
 		sqlCommonBuilder.append(" WHERE 1=1 ");
 		
 		Map<String, Object> options = pagin.getOptions();
@@ -71,7 +104,7 @@ public class DMSLockServiceImpl implements DMSLockService {
             sqlCommonBuilder.append(" AND lock.vendor.id = " + queryVendor + " ");
         }
         
-		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY id ASC");
+		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY lock.id ASC");
 		sqlCountBuilder.append(sqlCommonBuilder);
 
 		Query queryCount = em.createQuery(sqlCountBuilder.toString());
@@ -87,10 +120,28 @@ public class DMSLockServiceImpl implements DMSLockService {
 		query.setFirstResult(pagin.getOffset());
 		query.setMaxResults(pagin.getLimit());
 
-		List<DMSLock> list = query.getResultList();
+		List<Object[]> list = query.getResultList();
 		
 		list.forEach(li -> {
-			DMSLockDto dto = DMSLockDto.build(li);
+			DMSLockDto dto = DMSLockDto.build((DMSLock) li[0]);
+			if (li[1] != null) {
+				DMSLocationLock locationLock = (DMSLocationLock) li[1];
+				dto.setHomeAddress(Utils.formatHomeAddress(locationLock));	
+				if (locationLock.getBuilding() != null) {
+					dto.setBuilding(BuildingDto.builder().id(locationLock.getBuilding().getId()).name(locationLock.getBuilding().getName()).build());
+				}
+				if (locationLock.getBlock() != null) {
+					dto.setBlock(BlockDto.builder().id(locationLock.getBlock().getId()).name(locationLock.getBlock().getName()).build());
+				}
+				if (locationLock.getFloorLevel() != null) {
+					dto.setFloorLevel(FloorLevelDto.builder().id(locationLock.getFloorLevel().getId()).name(locationLock.getFloorLevel().getName()).build());
+				}
+				if (locationLock.getBuildingUnit() != null) {
+					dto.setBuildingUnit(BuildingUnitDto.builder().id(locationLock.getBuildingUnit().getId()).name(locationLock.getBuildingUnit().getName()).build());
+				}
+				dto.setLinkLockLocationId(locationLock.getId());
+			}
+			
             pagin.getResults().add(dto);
         });
 		
@@ -147,6 +198,17 @@ public class DMSLockServiceImpl implements DMSLockService {
 	public void getDefaultAndChinaLock() {
 		Object data = getChinaLockPadLock();
 		if (data instanceof Map) {
+			Optional<DMSLockVendor> dmsLockVendorOpt = dmsLockVendorRepository.findByName("CHINA_LOCK_PADLOCK");
+        	DMSLockVendor vendor = null;
+        	if (!dmsLockVendorOpt.isPresent()) {
+        		DMSLockVendor newVendor = new DMSLockVendor();
+        		newVendor.setName("CHINA LOCK PADLOCK");
+        		dmsLockVendorRepository.save(newVendor);
+        		vendor = newVendor;
+        	} else {
+        		vendor = dmsLockVendorOpt.get();
+        	}
+        	
 			Map<String, Object> dataMap = (Map<String, Object>) data;
 			if (dataMap.containsKey("data")) {
                 Map<String, Object> dataObject = (Map<String, Object>) dataMap.get("data");
@@ -168,20 +230,10 @@ public class DMSLockServiceImpl implements DMSLockService {
                         	BigDecimal lng = StringUtils.isNotBlank(lngStr) ? new BigDecimal(lngStr) : null;
                         	
                         	Optional<DMSLock> lockOpt = dmsLockRepository.findByOriginalIdAndLockNumber(lockId, lockNumber);
-                        	Optional<DMSLockVendor> dmsLockVendorOpt = dmsLockVendorRepository.findByName("CHINA_LOCK_PADLOCK");
-                        	DMSLockVendor vendor = null;
-                        	if (!dmsLockVendorOpt.isPresent()) {
-                        		DMSLockVendor newVendor = new DMSLockVendor();
-                        		newVendor.setName("CHINA LOCK PADLOCK");
-                        		dmsLockVendorRepository.save(newVendor);
-                        		vendor = newVendor;
-                        	} else {
-                        		vendor = dmsLockVendorOpt.get();
-                        	}
-                        	
+
                             if (lockOpt.isPresent()) {
                             	DMSLock existingLock = lockOpt.get();
-                            	existingLock.setAreaId(areaId + "");
+                            	existingLock.setAreaId(areaId);
                             	existingLock.setLat(lat);
                             	existingLock.setLng(lng);
                             	existingLock.setLockBid(lockBid);
@@ -194,8 +246,8 @@ public class DMSLockServiceImpl implements DMSLockService {
                             } else {
                             	DMSLock newLock = new DMSLock();
                             	newLock.setLockNumber(lockNumber);
-                            	newLock.setOriginalId(lockId + "");
-                            	newLock.setAreaId(areaId + "");
+                            	newLock.setOriginalId(lockId);
+                            	newLock.setAreaId(areaId);
                             	newLock.setLat(lat);
                             	newLock.setLng(lng);
                             	newLock.setLockBid(lockBid);
@@ -240,7 +292,6 @@ public class DMSLockServiceImpl implements DMSLockService {
 		syncLock(null);
 	}
 	
-	@SuppressWarnings("unchecked")
 	void loginPAS() {
 		try {
 			HttpEntity<Object> entity = new HttpEntity<Object>(null);
@@ -252,5 +303,44 @@ public class DMSLockServiceImpl implements DMSLockService {
 		} catch (Exception e) {
 			LOGGER.error(e.getMessage(), e);
 		}
+	}
+
+	@Transactional
+	@Override
+	public void linkLocation(DMSLocationLockDto dto) {
+		DMSBuildingUnit unit = buildingUnitRepository.findById(dto.getBuildingUnitId()).orElseThrow(() -> new RuntimeException("Building unit is required"));
+		
+		DMSFloorLevel level = unit.getFloorLevel();
+		
+		if (!level.getId().equals(dto.getFloorLevelId())) {
+			throw new RuntimeException("FloorLevel invalid!");
+		}
+
+		DMSBlock block = level.getBlock();
+		if (!block.getId().equals(dto.getBlockId())) {
+			throw new RuntimeException("Block invalid!");
+		}
+		
+		DMSBuilding building = block.getBuilding();
+		if (!building.getId().equals(dto.getBuildingId())) {
+			throw new RuntimeException("Building invalid!");
+		}
+		
+		String locationKey = unit.getId() + "__" + level.getId() + "__" + block.getId() + "__" + building.getId();
+		
+		DMSLocationLock locationLock = dmsLocationLockRepository.findByLockId(dto.getLockId()).orElse(new DMSLocationLock());
+		locationLock.setBuilding(building);
+		locationLock.setBlock(block);
+		locationLock.setFloorLevel(level);
+		locationLock.setBuildingUnit(unit);
+		locationLock.setLock(dmsLockRepository.findById(dto.getLockId()).orElseThrow(() -> new RuntimeException("Lock not found!")));
+		locationLock.setLocationKey(locationKey);
+		dmsLocationLockRepository.save(locationLock);
+	}
+
+	@Transactional
+	@Override
+	public void unLinkLocation(Long linkLockLocationId) {
+		dmsLocationLockRepository.deleteById(linkLockLocationId);
 	}
 }

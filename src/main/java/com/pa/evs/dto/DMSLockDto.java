@@ -1,7 +1,5 @@
 package com.pa.evs.dto;
 
-import java.math.BigDecimal;
-
 import com.pa.evs.model.DMSLock;
 
 import lombok.AllArgsConstructor;
@@ -19,6 +17,8 @@ import lombok.Setter;
 @Data
 public class DMSLockDto {
 
+	private Long id;
+	
     private String originalId;
 	
     private String lockBid;
@@ -32,11 +32,24 @@ public class DMSLockDto {
     private boolean lastSyncExist;
 	
 	private DMSLockVendorDto vendor;
+	
+	private String homeAddress;
+	
+    private BuildingDto building;
+    
+    private BlockDto block;
+    
+    private FloorLevelDto floorLevel;
+    
+    private BuildingUnitDto buildingUnit;
+    
+    private Long linkLockLocationId;
 
 	public static DMSLockDto build(DMSLock li) {
 		
 		return DMSLockDto
 				.builder()
+				.id(li.getId())
 				.lockBid(li.getLockBid())
 				.lockEsn(li.getLockEsn())
 				.lockName(li.getLockName())
@@ -45,5 +58,4 @@ public class DMSLockDto {
 				.vendor(DMSLockVendorDto.build(li.getVendor()))
 				.build();
 	}
-	
 }

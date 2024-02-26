@@ -333,6 +333,8 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 			
 			a.setAddress(address);
 			a.setLabel(Utils.formatHomeAddress(a.getName(), address));
+			
+			a.setLocationSiteId(wod.getId());
 			dtos.add(a);
 		});
 		pagin.setResults(dtos);
@@ -378,4 +380,11 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 				.build()
 		);
 	}
+
+	@Transactional
+	@Override
+	public void unLinkLocation(Long linkSiteLocationId) {
+		dmsLocationSiteRepository.deleteById(linkSiteLocationId);
+	}
+	
 }

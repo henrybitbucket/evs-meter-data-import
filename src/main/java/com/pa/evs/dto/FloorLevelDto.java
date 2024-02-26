@@ -4,6 +4,15 @@ import java.util.List;
 
 import com.pa.evs.model.FloorLevel;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+
+@AllArgsConstructor
+@Getter
+@Setter
+@Builder
 public class FloorLevelDto {
 	private Long id;
 	private String name;

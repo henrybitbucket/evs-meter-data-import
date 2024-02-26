@@ -14,7 +14,6 @@ import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
-import com.pa.evs.model.DMSLocationSite;
 import com.pa.evs.sv.DMSSiteService;
 import com.pa.evs.sv.WorkOrdersService;
 
@@ -86,6 +85,17 @@ public class DMSSiteController {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
 	}
+	
+	@DeleteMapping("/api/site/{siteId}/location/{linkSiteLocationId}")
+	public ResponseDto unLinkLocation(@PathVariable Long siteId, @PathVariable Long linkSiteLocationId) {
+		try {
+			dmsSiteService.unLinkLocation(linkSiteLocationId);
+			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+
 	
 	@DeleteMapping("/api/site/{id}")
 	public ResponseDto delete(@PathVariable Long id) {

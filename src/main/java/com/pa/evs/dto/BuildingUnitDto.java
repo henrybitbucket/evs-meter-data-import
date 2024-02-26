@@ -5,6 +5,15 @@ import java.util.List;
 
 import com.pa.evs.model.BuildingUnit;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
+
+@AllArgsConstructor
+@Getter
+@Setter
+@Builder
 public class BuildingUnitDto {
 	private Long id;
 	private String name;

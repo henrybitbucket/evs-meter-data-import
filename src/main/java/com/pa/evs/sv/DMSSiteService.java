@@ -21,4 +21,6 @@ public interface DMSSiteService {
 	void searchLocations(PaginDto pagin);
 
 	void linkLocation(DMSLocationSiteDto dto);
+
+	void unLinkLocation(Long linkSiteLocationId);
 }

@@ -4,7 +4,15 @@ import java.util.List;
 
 import com.pa.evs.model.Block;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
+@AllArgsConstructor
+@Getter
+@Setter
+@Builder
 public class BlockDto {
 	private Long id;
 	private String name;

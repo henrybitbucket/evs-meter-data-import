@@ -5,8 +5,16 @@ import java.util.List;
 
 import com.pa.evs.model.Building;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
 
+@AllArgsConstructor
+@Getter
+@Setter
+@Builder
 public class BuildingDto {
 	private Long id;
 	private String name;
@@ -20,6 +28,8 @@ public class BuildingDto {
 	private List<FloorLevelDto> floors;
 	private List<BuildingUnitDto> buildingUnits;
 	private String label;
+	
+	private Long locationSiteId;
 	
 	public BuildingDto() {
 		

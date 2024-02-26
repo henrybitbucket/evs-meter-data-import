@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.dto.DMSLocationLockDto;
 import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.DMSLockService;
 import com.pa.evs.utils.ApiUtils;
 
@@ -59,6 +62,29 @@ public class AppPASController {
 	@GetMapping("/api/dms-lock-vendors")
 	public ResponseEntity<Object> getVendors(HttpServletRequest httpServletRequest) throws Exception {
 		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(dmsLockService.getDMSLockVendors()).success(true).build());
+	}
+	
+	@SuppressWarnings("rawtypes")
+	@PostMapping("/api/lock/{lockId}/location")
+	public ResponseDto linkLocation(@RequestBody DMSLocationLockDto dto, @PathVariable Long lockId) {
+		try {
+			dto.setLockId(lockId);
+			dmsLockService.linkLocation(dto);
+			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
+	@SuppressWarnings("rawtypes")
+	@DeleteMapping("/api/lock/{lockId}/location/{linkLockLocationId}")
+	public ResponseDto unLinkLocation(@PathVariable Long lockId, @PathVariable Long linkLockLocationId) {
+		try {
+			dmsLockService.unLinkLocation(linkLockLocationId);
+			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
 	}
 
 }
