@@ -26,18 +26,32 @@ import lombok.Setter;
 @Table(name = "dms_lock")
 @JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
 public class DMSLock extends BaseEntity {
-
 	
 	@Column(name = "original_id")
-    private String originalId;
+    private Integer originalId;
+	
+	@Column(name = "area_id")
+    private Integer areaId;
+	
+	@Column(name = "lock_bid")
+    private String lockBid;
+	
+	@Column(name = "lock_esn")
+    private String lockEsn;
+	
+	@Column(name = "lock_name")
+    private String lockName;
+	
+	@Column(name = "secret_key")
+    private String secretKey;
 	
 	@Column(name = "lock_number")
     private String lockNumber;
 	
-	@Column(name = "long")
+	@Column(name = "long", columnDefinition = "decimal")
     private BigDecimal lng;
 	
-	@Column(name = "lat")
+	@Column(name = "lat", columnDefinition = "decimal")
     private BigDecimal lat;
 	
 	@Column(name = "lastSyncExist")
