@@ -12,6 +12,6 @@ import com.pa.evs.model.DMSLock;
 @Repository
 public interface DMSLockRepository extends JpaRepository<DMSLock, Long> {
 
-	Optional<DMSLock> findByOriginalIdAndLockNumber(Integer lockId, String lockNumber);
+	Optional<DMSLock> findByOriginalIdAndLockNumber(String lockId, String lockNumber);
 
 }

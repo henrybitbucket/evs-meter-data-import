@@ -154,13 +154,13 @@ public class DMSLockServiceImpl implements DMSLockService {
                     List<Map<String, Object>> arealocks = (List<Map<String, Object>>) dataObject.get("arealocks");
                     for (Map<String, Object> lock : arealocks) {
                         String lockName = lock.get("lockname") != null ? (String) lock.get("lockname") : null;
-                        Integer lockId = lock.get("id") != null ? (Integer) lock.get("id") : null;
+                        String lockId = lock.get("id") != null ? (lock.get("id") + "") : null;
                         String lockEsn = lock.get("lockesn") != null ? (String) lock.get("lockesn") : null;
                         String lockBid = lock.get("lockbid") != null ? (String) lock.get("lockbid") : null;
                         String lngStr = lock.get("long") != null ? (String) lock.get("long") : null;
                         String latStr = lock.get("lat") != null ? (String) lock.get("lat") : null;
                         String secretKey = lock.get("secretkey") != null ? (String) lock.get("secretkey") : null;
-                        Integer areaId = lock.get("areaid") != null ? (Integer) lock.get("areaid") : null;
+                        String areaId = lock.get("areaid") != null ? (lock.get("areaid") + "") : null;
                         String lockNumber = lock.get("locknumber") != null ? (String) lock.get("locknumber") : null;
                         
                         if (lockId != null && lockNumber != null) {
@@ -181,7 +181,7 @@ public class DMSLockServiceImpl implements DMSLockService {
                         	
                             if (lockOpt.isPresent()) {
                             	DMSLock existingLock = lockOpt.get();
-                            	existingLock.setAreaId(areaId);
+                            	existingLock.setAreaId(areaId + "");
                             	existingLock.setLat(lat);
                             	existingLock.setLng(lng);
                             	existingLock.setLockBid(lockBid);
@@ -194,8 +194,8 @@ public class DMSLockServiceImpl implements DMSLockService {
                             } else {
                             	DMSLock newLock = new DMSLock();
                             	newLock.setLockNumber(lockNumber);
-                            	newLock.setOriginalId(lockId);
-                            	newLock.setAreaId(areaId);
+                            	newLock.setOriginalId(lockId + "");
+                            	newLock.setAreaId(areaId + "");
                             	newLock.setLat(lat);
                             	newLock.setLng(lng);
                             	newLock.setLockBid(lockBid);

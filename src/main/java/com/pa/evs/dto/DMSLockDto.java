@@ -19,7 +19,7 @@ import lombok.Setter;
 @Data
 public class DMSLockDto {
 
-    private Integer originalId;
+    private String originalId;
 	
     private String lockBid;
 	

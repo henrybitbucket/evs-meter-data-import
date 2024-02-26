@@ -28,10 +28,10 @@ import lombok.Setter;
 public class DMSLock extends BaseEntity {
 	
 	@Column(name = "original_id")
-    private Integer originalId;
+    private String originalId;
 	
 	@Column(name = "area_id")
-    private Integer areaId;
+    private String areaId;
 	
 	@Column(name = "lock_bid")
     private String lockBid;
