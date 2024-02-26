@@ -1,5 +1,6 @@
 package com.pa.evs.sv;
 
+import com.pa.evs.dto.DMSLocationSiteDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.exception.ApiException;
@@ -18,4 +19,6 @@ public interface DMSSiteService {
 	void searchWorkOrders(PaginDto pagin);
 
 	void searchLocations(PaginDto pagin);
+
+	void linkLocation(DMSLocationSiteDto dto);
 }

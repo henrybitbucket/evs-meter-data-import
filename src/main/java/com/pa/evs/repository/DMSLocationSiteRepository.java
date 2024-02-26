@@ -15,5 +15,6 @@ public interface DMSLocationSiteRepository extends JpaRepository<DMSLocationSite
 
 	Optional<DMSLocationSite> findBySiteLabel(String siteLabel);
 	Optional<DMSLocationSite> findBySiteId(String siteId);
+	Optional<DMSLocationSite> findBySiteIdAndLocationKey(Long siteId, String locationKey);
 	
 }

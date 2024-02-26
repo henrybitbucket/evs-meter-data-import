@@ -71,8 +71,12 @@ public class DMSWorkOrders extends BaseEntity {
 	// timePeriod time in day
 	@Builder.Default
 	private boolean timePeriodTimeInDayIsAlways = false;
-	private Integer timePeriodTimeInDayHourStart;
-	private Integer timePeriodTimeInDayHourEnd;
-	private Integer timePeriodTimeInDayMinuteStart;
-	private Integer timePeriodTimeInDayMinuteEnd;
+	@Builder.Default
+	private Integer timePeriodTimeInDayHourStart = 0;
+	@Builder.Default
+	private Integer timePeriodTimeInDayHourEnd = 0;
+	@Builder.Default
+	private Integer timePeriodTimeInDayMinuteStart = 0;
+	@Builder.Default
+	private Integer timePeriodTimeInDayMinuteEnd = 0;
 }

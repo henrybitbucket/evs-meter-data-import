@@ -7,12 +7,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pa.evs.dto.DMSLocationSiteDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
+import com.pa.evs.model.DMSLocationSite;
 import com.pa.evs.sv.DMSSiteService;
 import com.pa.evs.sv.WorkOrdersService;
 
@@ -74,6 +76,17 @@ public class DMSSiteController {
 		return pagin;
 	}
 	
+	@PostMapping("/api/site/{siteId}/location")
+	public ResponseDto linkLocation(@RequestBody DMSLocationSiteDto dto, @PathVariable Long siteId) {
+		try {
+			dto.setSiteId(siteId);
+			dmsSiteService.linkLocation(dto);
+			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
 	@DeleteMapping("/api/site/{id}")
 	public ResponseDto delete(@PathVariable Long id) {
 		try {
@@ -83,4 +96,14 @@ public class DMSSiteController {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
 	}
+	
+	@DeleteMapping("/api/work-order/{id}")
+	public ResponseDto deleteWorkOrder(@PathVariable Long id) {
+		try {
+			workOrdersService.delete(id);
+			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}	
 }

@@ -1,5 +1,6 @@
 package com.pa.evs.model;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Index;
@@ -23,11 +24,17 @@ import lombok.Setter;
 @Table(
 		name = "dms_location_site",
 		indexes = {
-				@Index(name = "idx_building_2_unit_site_id_dms_location", columnList="building_id,block_id,floor_level_id,building_unit_id,site_id", unique = true)
+				@Index(name = "idx_building_2_unit_site_id_dms_location", columnList="building_id,block_id,floor_level_id,building_unit_id,site_id", unique = true),
+				@Index(name = "idx_location_key_site_id_dms_location", columnList="location_key,site_id", unique = true)
+				
 		}
 )
 public class DMSLocationSite extends BaseEntity {
 
+	
+	@Column(name = "location_key")
+	private String locationKey;// location key to get location lock
+	
     @ManyToOne
 	@JoinColumn(name = "building_id")
 	private DMSBuilding building;

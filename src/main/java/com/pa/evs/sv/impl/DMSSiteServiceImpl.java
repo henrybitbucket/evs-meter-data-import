@@ -2,7 +2,6 @@ package com.pa.evs.sv.impl;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
@@ -16,18 +15,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.BuildingDto;
+import com.pa.evs.dto.DMSLocationSiteDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.exception.ApiException;
+import com.pa.evs.model.DMSBlock;
 import com.pa.evs.model.DMSBuilding;
+import com.pa.evs.model.DMSBuildingUnit;
+import com.pa.evs.model.DMSFloorLevel;
 import com.pa.evs.model.DMSLocationSite;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
 import com.pa.evs.model.GroupUser;
-import com.pa.evs.repository.DMSAddressRepository;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
@@ -190,7 +192,7 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 			dmsSiteRepository.flush();
 		}
 		
-		if (!dmsWorkOrdersRepository.findBySiteLabel("HENRY Site Test").isPresent()) {
+		if (dmsWorkOrdersRepository.findBySiteLabel("HENRY Site Test").isEmpty()) {
 			dmsWorkOrdersRepository.save(
 					DMSWorkOrders.builder()
 					.name("HENRY Site Test")
@@ -200,17 +202,17 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 			);
 		}
 		
-		if (!dmsLocationSiteRepository.findBySiteLabel("HENRY Site Test").isPresent()) {
-			dmsLocationSiteRepository.save(
-					DMSLocationSite.builder()
-					.building(buildingRepository.findById(1l).get())
-					.block(blockRepository.findById(1l).get())
-					.floorLevel(floorLevelRepository.findById(1l).get())
-					.buildingUnit(buildingUnitRepository.findById(1l).get())
-					.site(dmsSiteRepository.findByLabel("HENRY Site Test").get())
-					.build()
-			);
-		}		
+//		if (!dmsLocationSiteRepository.findBySiteLabel("HENRY Site Test").isPresent()) {
+//			dmsLocationSiteRepository.save(
+//					DMSLocationSite.builder()
+//					.building(buildingRepository.findById(1l).get())
+//					.block(blockRepository.findById(1l).get())
+//					.floorLevel(floorLevelRepository.findById(1l).get())
+//					.buildingUnit(buildingUnitRepository.findById(1l).get())
+//					.site(dmsSiteRepository.findByLabel("HENRY Site Test").get())
+//					.build()
+//			);
+//		}		
 		
 	}
 
@@ -335,5 +337,45 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 		});
 		pagin.setResults(dtos);
 		pagin.setTotalRows(((Number)qCount.getSingleResult()).longValue());
+	}
+
+	@Transactional
+	@Override
+	public void linkLocation(DMSLocationSiteDto dto) {
+		
+		DMSBuildingUnit unit = buildingUnitRepository.findById(dto.getBuildingUnitId()).orElseThrow(() -> new RuntimeException("Building unit is required"));
+		
+		DMSFloorLevel level = unit.getFloorLevel();
+		
+		if (!level.getId().equals(dto.getFloorLevelId())) {
+			throw new RuntimeException("FloorLevel invalid!");
+		}
+
+		DMSBlock block = level.getBlock();
+		if (!block.getId().equals(dto.getBlockId())) {
+			throw new RuntimeException("Block invalid!");
+		}
+		
+		DMSBuilding building = block.getBuilding();
+		if (!building.getId().equals(dto.getBuildingId())) {
+			throw new RuntimeException("Building invalid!");
+		}
+		
+		String locationKey = unit.getId() + "__" + level.getId() + "__" + block.getId() + "__" + building.getId();
+		
+		if (dmsLocationSiteRepository.findBySiteIdAndLocationKey(dto.getSiteId(), locationKey).isPresent()) {
+			throw new RuntimeException("Location already exists in this site!");
+		}
+		
+		dmsLocationSiteRepository.save(
+				DMSLocationSite.builder()
+				.building(building)
+				.block(block)
+				.floorLevel(level)
+				.buildingUnit(unit)
+				.locationKey(locationKey)
+				.site(dmsSiteRepository.findById(dto.getSiteId()).orElseThrow(() -> new RuntimeException("Site not found!")))
+				.build()
+		);
 	}
 }
