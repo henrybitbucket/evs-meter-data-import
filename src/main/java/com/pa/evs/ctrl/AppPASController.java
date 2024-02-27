@@ -90,8 +90,13 @@ public class AppPASController {
 
 	@GetMapping("/api/dms-assigned-locks")
 	public ResponseDto getAssignedLocks(HttpServletRequest httpServletRequest, @RequestParam(required = false) Boolean lockOnly) throws Exception {
-		String email = SecurityUtils.getEmail();
-		// email = "hr.dms1.2@gmail.com";
-		return ResponseDto.<Object>builder().response(dmsLockService.getAssignedLocks(email, lockOnly)).success(true).build();
+
+		try {
+			String email = SecurityUtils.getEmail();
+			// email = "hr.dms1.2@gmail.com";
+			return ResponseDto.<Object>builder().response(dmsLockService.getAssignedLocks(email, lockOnly)).success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
 	}
 }

@@ -360,13 +360,22 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Override
 	public Object getAssignedLocks(String email, Boolean lockOnly) {
 		
+		DMSLocationSiteLockDto rs = DMSLocationSiteLockDto.builder().build();
 		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
 				.setParameter("email", email)
 				.getResultList();
 		
+		if (groupIdOfUsers.isEmpty()) {
+			return rs;
+		}
+		
 		List<DMSSite> sitesOfUser = em.createQuery(" SELECT wod.site FROM DMSWorkOrders wod where wod.group.id in (:groupIds) order by wod.site.id desc " )
 		.setParameter("groupIds", groupIdOfUsers)
 		.getResultList();
+		
+		if (sitesOfUser.isEmpty()) {
+			return rs;
+		}
 		
 		List<Object[]> locationLockSites = em.createQuery("SELECT locationLock, locationSite FROM DMSLocationLock locationLock join DMSLocationSite locationSite on locationLock.locationKey = locationSite.locationKey where locationSite.site.id in (:siteIdOfUsers) " )
 		.setParameter("siteIdOfUsers", sitesOfUser.stream().map(s -> s.getId()).collect(Collectors.toSet()))
@@ -442,7 +451,6 @@ public class DMSLockServiceImpl implements DMSLockService {
 			}
 		}
 		
-		DMSLocationSiteLockDto rs = DMSLocationSiteLockDto.builder().build();
 		Set<String> checkLockKey = new LinkedHashSet<>();
 		
 		// map location to site
