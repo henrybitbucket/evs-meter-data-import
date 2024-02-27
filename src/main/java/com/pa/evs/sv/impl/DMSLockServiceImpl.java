@@ -4,9 +4,13 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
@@ -26,9 +30,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.dto.BlockDto;
 import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.BuildingUnitDto;
+import com.pa.evs.dto.DMSLocationDto;
 import com.pa.evs.dto.DMSLocationLockDto;
+import com.pa.evs.dto.DMSLocationSiteLockDto;
 import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.DMSLockVendorDto;
+import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.FloorLevelDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.DMSBlock;
@@ -36,8 +43,10 @@ import com.pa.evs.model.DMSBuilding;
 import com.pa.evs.model.DMSBuildingUnit;
 import com.pa.evs.model.DMSFloorLevel;
 import com.pa.evs.model.DMSLocationLock;
+import com.pa.evs.model.DMSLocationSite;
 import com.pa.evs.model.DMSLock;
 import com.pa.evs.model.DMSLockVendor;
+import com.pa.evs.model.DMSSite;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
@@ -45,6 +54,7 @@ import com.pa.evs.repository.DMSFloorLevelRepository;
 import com.pa.evs.repository.DMSLocationLockRepository;
 import com.pa.evs.repository.DMSLockRepository;
 import com.pa.evs.repository.DMSLockVendorRepository;
+import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.sv.DMSLockService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
@@ -85,6 +95,9 @@ public class DMSLockServiceImpl implements DMSLockService {
 	
 	@Autowired
 	DMSLocationLockRepository dmsLocationLockRepository;
+	
+	@Autowired
+	GroupUserRepository groupUserRepository;
 	
 	@Transactional(readOnly = true)
 	@Override
@@ -342,5 +355,130 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Override
 	public void unLinkLocation(Long linkLockLocationId) {
 		dmsLocationLockRepository.deleteById(linkLockLocationId);
+	}
+	
+	@Override
+	public Object getAssignedLocks(String email, Boolean lockOnly) {
+		
+		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
+				.setParameter("email", email)
+				.getResultList();
+		
+		List<DMSSite> sitesOfUser = em.createQuery(" SELECT wod.site FROM DMSWorkOrders wod where wod.group.id in (:groupIds) order by wod.site.id desc " )
+		.setParameter("groupIds", groupIdOfUsers)
+		.getResultList();
+		
+		List<Object[]> locationLockSites = em.createQuery("SELECT locationLock, locationSite FROM DMSLocationLock locationLock join DMSLocationSite locationSite on locationLock.locationKey = locationSite.locationKey where locationSite.site.id in (:siteIdOfUsers) " )
+		.setParameter("siteIdOfUsers", sitesOfUser.stream().map(s -> s.getId()).collect(Collectors.toSet()))
+		.getResultList();
+		
+		Map<Long, DMSSiteDto> siteMap = new LinkedHashMap<>();
+		
+		for (DMSSite site : sitesOfUser) {
+			DMSSiteDto siteDto = siteMap.computeIfAbsent(site.getId(), k -> DMSSiteDto.builder().build());
+			siteDto.setId(site.getId());
+			siteDto.setLabel(site.getLabel());
+			siteDto.setDescription(site.getDescription());
+			siteDto.setRadius(site.getRadius());
+			siteDto.setLng(site.getLng());
+			siteDto.setLat(site.getLat());
+			siteDto.setRemark(site.getRemark());
+			siteDto.setCreateDate(site.getCreateDate());
+			siteDto.setModifyDate(site.getModifyDate());
+		}
+		
+		
+		Map<Long, Map<String, DMSLocationDto>> siteLocationKeyMap = new LinkedHashMap<>();
+		Map<Long, Map<String, Map<Long, DMSLockDto>>> siteLocationKeyLockMap = new LinkedHashMap<>();
+		
+		for (Object[] obj : locationLockSites) {
+			DMSLocationLock locationLock = (DMSLocationLock) obj[0];
+			DMSLocationSite locationSite = (DMSLocationSite) obj[1];
+			DMSLock lock = locationLock.getLock();
+
+			Long siteId = locationSite.getSite().getId();
+			String locationKey = locationSite.getLocationKey();
+			
+			// prepare location
+			Map<String, DMSLocationDto> locationKeyMap = siteLocationKeyMap.computeIfAbsent(siteId, k -> new LinkedHashMap<>());
+			DMSLocationDto locationDto = locationKeyMap.computeIfAbsent(locationKey, k -> DMSLocationDto.builder().build());
+			
+			locationDto.setBuilding(locationLock.getBuilding().getName());
+			locationDto.setBlock(locationLock.getBlock().getName());
+			locationDto.setLevel(locationLock.getFloorLevel().getName());
+			locationDto.setUnitNumber(locationLock.getBuildingUnit().getName());
+			
+			locationDto.setCountry(locationLock.getBuilding().getAddress().getCountry());
+			locationDto.setCity(locationLock.getBuilding().getAddress().getCity());
+			locationDto.setTown(locationLock.getBuilding().getAddress().getTown());
+			locationDto.setStreet(locationLock.getBuilding().getAddress().getStreet());
+			locationDto.setDisplayName(locationLock.getBuilding().getAddress().getDisplayName());
+			locationDto.setPostalCode(locationLock.getBuilding().getAddress().getPostalCode());
+
+			// prepare lock
+			Map<String, Map<Long, DMSLockDto>> locationKeyLockMap = siteLocationKeyLockMap.computeIfAbsent(siteId, k -> new LinkedHashMap<>());
+			Map<Long, DMSLockDto> lockMap = locationKeyLockMap.computeIfAbsent(locationKey, k -> new LinkedHashMap<>());
+			DMSLockDto lockDto = lockMap.computeIfAbsent(lock.getId(), k -> DMSLockDto.build(lock));
+			lockDto.setHomeAddress(Utils.formatHomeAddress(locationLock));
+			
+			lockDto.setSiteLabel(locationSite.getSite().getLabel());
+			lockDto.setSiteId(siteId);
+			
+			if (locationLock.getBuilding() != null) {
+				lockDto.setBuilding(BuildingDto.builder().id(locationLock.getBuilding().getId())
+						.name(locationLock.getBuilding().getName()).build());
+			}
+			if (locationLock.getBlock() != null) {
+				lockDto.setBlock(BlockDto.builder().id(locationLock.getBlock().getId())
+						.name(locationLock.getBlock().getName()).build());
+			}
+			if (locationLock.getFloorLevel() != null) {
+				lockDto.setFloorLevel(FloorLevelDto.builder().id(locationLock.getFloorLevel().getId())
+						.name(locationLock.getFloorLevel().getName()).build());
+			}
+			if (locationLock.getBuildingUnit() != null) {
+				lockDto.setBuildingUnit(BuildingUnitDto.builder().id(locationLock.getBuildingUnit().getId())
+						.name(locationLock.getBuildingUnit().getName()).build());
+			}
+		}
+		
+		DMSLocationSiteLockDto rs = DMSLocationSiteLockDto.builder().build();
+		Set<String> checkLockKey = new LinkedHashSet<>();
+		
+		// map location to site
+		for (Entry<Long, DMSSiteDto> en : siteMap.entrySet()) {
+			DMSSiteDto siteDto = en.getValue();
+			rs.getSites().add(siteDto);
+			
+			Map<String, DMSLocationDto> locationKeyMap = siteLocationKeyMap.get(en.getKey());
+			for (Entry<String, DMSLocationDto> enLocation : locationKeyMap.entrySet()) {
+				siteDto.getLocations().add(enLocation.getValue());
+				
+				// map lock to location
+				DMSLocationDto locationDto = enLocation.getValue();
+				Map<String, Map<Long, DMSLockDto>> locationKeyLockMap = siteLocationKeyLockMap.get(siteDto.getId());
+				Map<Long, DMSLockDto> lockMap = locationKeyLockMap.computeIfAbsent(enLocation.getKey(), k -> new LinkedHashMap<>());
+				for (Entry<Long, DMSLockDto> lockEn : lockMap.entrySet()) {
+					
+					DMSLockDto lockDto = lockEn.getValue();
+					locationDto.getLocks().add(lockDto);
+					
+					if (!checkLockKey.contains(lockDto.getId() + "-|-" + lockDto.getSiteLabel())) {
+						checkLockKey.add(lockDto.getId() + "-|-" + lockDto.getSiteLabel());
+						rs.getLocks().add(lockDto);
+					}
+				}
+			}
+		}
+		
+		
+		
+		if (lockOnly == Boolean.TRUE) {
+			rs.setSites(null);
+		} else {
+			rs.setLocks(null);
+		}
+		
+		return rs;
 	}
 }

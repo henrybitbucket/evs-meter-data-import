@@ -1,5 +1,7 @@
 package com.pa.evs.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.pa.evs.model.DMSLock;
 
 import lombok.AllArgsConstructor;
@@ -15,6 +17,7 @@ import lombok.Setter;
 @Setter
 @Builder
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class DMSLockDto {
 
 	private Long id;
@@ -29,6 +32,7 @@ public class DMSLockDto {
 	
     private String lockNumber;
 	
+    @JsonIgnore
     private boolean lastSyncExist;
 	
 	private DMSLockVendorDto vendor;
@@ -44,6 +48,11 @@ public class DMSLockDto {
     private BuildingUnitDto buildingUnit;
     
     private Long linkLockLocationId;
+    
+	@JsonIgnore
+	private Long siteId;
+	
+    private String siteLabel;
 
 	public static DMSLockDto build(DMSLock li) {
 		

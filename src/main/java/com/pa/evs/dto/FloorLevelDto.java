@@ -2,6 +2,7 @@ package com.pa.evs.dto;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.pa.evs.model.FloorLevel;
 
 import lombok.AllArgsConstructor;
@@ -13,6 +14,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class FloorLevelDto {
 	private Long id;
 	private String name;

@@ -1,7 +1,9 @@
 package com.pa.evs.dto;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,5 +36,8 @@ public class DMSSiteDto {
     private Date createDate;
 
     private Date modifyDate;
+    
+    @Builder.Default
+    private List<DMSLocationDto> locations = new ArrayList<>();
 
 }

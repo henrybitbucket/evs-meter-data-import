@@ -3,12 +3,14 @@ package com.pa.evs.dto;
 import java.util.Date;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.pa.evs.model.Address;
 
 /**
  * @author tonyk
  *
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AddressDto {
 	private Long id;
 	private String country;

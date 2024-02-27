@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,12 +25,14 @@ import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.DMSLockService;
 import com.pa.evs.utils.ApiUtils;
+import com.pa.evs.utils.SecurityUtils;
 
 import springfox.documentation.annotations.ApiIgnore;
 
 @DependsOn(value = "settingsController")
 @RestController
 @ApiIgnore
+@SuppressWarnings("rawtypes")
 public class AppPASController {
 	static final Logger LOGGER = LoggerFactory.getLogger(AppPASController.class);
 
@@ -64,7 +67,6 @@ public class AppPASController {
 		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(dmsLockService.getDMSLockVendors()).success(true).build());
 	}
 	
-	@SuppressWarnings("rawtypes")
 	@PostMapping("/api/lock/{lockId}/location")
 	public ResponseDto linkLocation(@RequestBody DMSLocationLockDto dto, @PathVariable Long lockId) {
 		try {
@@ -76,7 +78,6 @@ public class AppPASController {
 		}
 	}
 	
-	@SuppressWarnings("rawtypes")
 	@DeleteMapping("/api/lock/{lockId}/location/{linkLockLocationId}")
 	public ResponseDto unLinkLocation(@PathVariable Long lockId, @PathVariable Long linkLockLocationId) {
 		try {
@@ -87,4 +88,10 @@ public class AppPASController {
 		}
 	}
 
+	@GetMapping("/api/dms-assigned-locks")
+	public ResponseDto getAssignedLocks(HttpServletRequest httpServletRequest, @RequestParam(required = false) Boolean lockOnly) throws Exception {
+		String email = SecurityUtils.getEmail();
+		email = "hr.dms1.2@gmail.com";
+		return ResponseDto.<Object>builder().response(dmsLockService.getAssignedLocks(email, lockOnly)).success(true).build();
+	}
 }

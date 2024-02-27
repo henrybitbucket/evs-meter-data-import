@@ -3,6 +3,7 @@ package com.pa.evs.dto;
 import java.util.Date;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.pa.evs.model.BuildingUnit;
 
 import lombok.AllArgsConstructor;
@@ -14,6 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class BuildingUnitDto {
 	private Long id;
 	private String name;

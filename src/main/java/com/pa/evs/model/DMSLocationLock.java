@@ -26,7 +26,8 @@ import lombok.Setter;
 		indexes = {
 				@Index(name = "idx_building_2_unit_lock_id_dms_location_lock", columnList="building_id,block_id,floor_level_id,building_unit_id,lock_id", unique = true),
 				@Index(name = "idx_location_key_lock_id_dms_location_lock", columnList="location_key,lock_id", unique = true),
-				@Index(name = "idx_lock_id_dms_location_lock", columnList="lock_id", unique = true)
+				@Index(name = "idx_lock_id_dms_location_lock", columnList="lock_id", unique = true),
+				@Index(name = "idx_location_key_dms_location_lock", columnList="location_key", unique = false)
 				
 		}
 )

@@ -18,4 +18,6 @@ public interface DMSLockService {
 	void linkLocation(DMSLocationLockDto dto);
 
 	void unLinkLocation(Long linkLockLocationId);
+
+	Object getAssignedLocks(String email, Boolean lockOnly);
 }
