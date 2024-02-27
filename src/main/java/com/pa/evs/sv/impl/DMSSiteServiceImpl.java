@@ -197,6 +197,11 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 	public void delete(Long id) {
 		DMSSite entity = dmsSiteRepository.findById(id).orElseThrow(() -> new ApiException(ResponseEnum.FLOOR_LEVEL_NOT_FOUND));
 		
+		List<DMSWorkOrders> workOrders = dmsWorkOrdersRepository.findBySiteId(entity.getId());
+		if (!workOrders.isEmpty()) {
+			throw new RuntimeException("Site is already linked to the work order (name=" + workOrders.get(0).getName() + ")");
+		}
+		
 		dmsLocationSiteRepository.findBySiteId(entity.getId())
 		.forEach(dmsLocationSiteRepository::delete);
 		dmsLocationSiteRepository.flush();
@@ -205,28 +210,28 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 	
 	@PostConstruct
 	public void init() {
-		if (!dmsSiteRepository.findByLabel("HENRY Site Test").isPresent()) {
-			save(DMSSiteDto.builder()
-					.label("HENRY Site Test")
-					.radius("1234")
-					.description("HENRY Site Test")
-					.lng(new BigDecimal("103.98890742478571"))
-					.lat(new BigDecimal("1.362897698151024"))
-					.remark("HENRY Site Test")
-					.build()
-					);
-			dmsSiteRepository.flush();
-		}
-		
-		if (dmsWorkOrdersRepository.findBySiteLabel("HENRY Site Test").isEmpty()) {
-			dmsWorkOrdersRepository.save(
-					DMSWorkOrders.builder()
-					.name("HENRY Site Test")
-					.group(groupUserRepository.findByAppCodeName("DMS").get(0))
-					.site(dmsSiteRepository.findByLabel("HENRY Site Test").get())
-					.build()
-			);
-		}
+//		if (!dmsSiteRepository.findByLabel("HENRY Site Test").isPresent()) {
+//			save(DMSSiteDto.builder()
+//					.label("HENRY Site Test")
+//					.radius("1234")
+//					.description("HENRY Site Test")
+//					.lng(new BigDecimal("103.98890742478571"))
+//					.lat(new BigDecimal("1.362897698151024"))
+//					.remark("HENRY Site Test")
+//					.build()
+//					);
+//			dmsSiteRepository.flush();
+//		}
+//		
+//		if (dmsWorkOrdersRepository.findBySiteLabel("HENRY Site Test").isEmpty()) {
+//			dmsWorkOrdersRepository.save(
+//					DMSWorkOrders.builder()
+//					.name("HENRY Site Test")
+//					.group(groupUserRepository.findByAppCodeName("DMS").get(0))
+//					.site(dmsSiteRepository.findByLabel("HENRY Site Test").get())
+//					.build()
+//			);
+//		}
 		
 //		if (!dmsLocationSiteRepository.findBySiteLabel("HENRY Site Test").isPresent()) {
 //			dmsLocationSiteRepository.save(

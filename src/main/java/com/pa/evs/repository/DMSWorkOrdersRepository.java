@@ -15,7 +15,7 @@ import com.pa.evs.model.DMSWorkOrders;
 public interface DMSWorkOrdersRepository extends JpaRepository<DMSWorkOrders, Long> {
 
 	List<DMSWorkOrders> findBySiteLabel(String siteLabel);
-	Optional<DMSWorkOrders> findBySiteId(String siteId);
+	List<DMSWorkOrders> findBySiteId(Long siteId);
 	Optional<DMSWorkOrders> findByName(String name);
 	Optional<DMSWorkOrders> findByGroupIdAndSiteId(Long groupId, Long siteId);
 	
