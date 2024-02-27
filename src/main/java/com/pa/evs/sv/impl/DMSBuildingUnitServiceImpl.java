@@ -22,6 +22,8 @@ import com.pa.evs.model.DMSBuildingUnit;
 import com.pa.evs.model.DMSFloorLevel;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
 import com.pa.evs.repository.DMSFloorLevelRepository;
+import com.pa.evs.repository.DMSLocationLockRepository;
+import com.pa.evs.repository.DMSLocationSiteRepository;
 import com.pa.evs.sv.DMSBuildingUnitService;
 
 
@@ -37,6 +39,12 @@ public class DMSBuildingUnitServiceImpl implements DMSBuildingUnitService {
 
 	@Autowired
 	DMSFloorLevelRepository floorLevelRepository;
+	
+	@Autowired
+	DMSLocationSiteRepository dmsLocationSiteRepository;
+	
+	@Autowired
+	DMSLocationLockRepository dmsLocationLockRepository;
 
 	@Override
 	public void save(BuildingUnitDto dto) throws ApiException {
@@ -146,15 +154,14 @@ public class DMSBuildingUnitServiceImpl implements DMSBuildingUnitService {
 	public void delete(Long id) throws ApiException {
 		DMSBuildingUnit entity = buildingUnitRepository.findById(id)
 				.orElseThrow(() -> new ApiException(ResponseEnum.BUILDING_NOT_FOUND));
-//		List<String> sns = buildingUnitRepository.linkedSN(id);
-//		sns = buildingUnitRepository.linkedSN(id);
-//		if (!sns.isEmpty()) {
-//			throw new RuntimeException("Unit is already linked to the device(MCU SN = " + sns.get(0) + ")");
-//		}
-//		List<String> msns = buildingUnitRepository.linkedMSN(id);
-//		if (!msns.isEmpty()) {
-//			throw new RuntimeException("Unit is already linked to the device(Meter SN = " + msns.get(0) + ")");
-//		}
+		List<String> sites = dmsLocationSiteRepository.findSiteByBuildingUnitId(entity.getId());
+		if (!sites.isEmpty()) {
+			throw new RuntimeException("Unit is already linked to the site(Site label = " + sites.get(0) + ")");
+		}
+		List<String> locks = dmsLocationLockRepository.findLockByBuildingUnitId(entity.getId());
+		if (!locks.isEmpty()) {
+			throw new RuntimeException("Unit is already linked to the lock(Lock Number = " + locks.get(0) + ")");
+		}
 		buildingUnitRepository.delete(entity);
 	}
 

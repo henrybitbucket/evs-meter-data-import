@@ -11,61 +11,50 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.pa.evs.constant.Message;
 import com.pa.evs.dto.AddressDto;
-import com.pa.evs.enums.DeviceType;
-import com.pa.evs.model.Address;
-import com.pa.evs.model.AddressLog;
-import com.pa.evs.model.Block;
-import com.pa.evs.model.Building;
-import com.pa.evs.model.BuildingUnit;
-import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.FloorLevel;
-import com.pa.evs.repository.AddressLogRepository;
-import com.pa.evs.repository.AddressRepository;
-import com.pa.evs.repository.BlockRepository;
-import com.pa.evs.repository.BuildingRepository;
-import com.pa.evs.repository.BuildingUnitRepository;
-import com.pa.evs.repository.CARequestLogRepository;
-import com.pa.evs.repository.FloorLevelRepository;
-import com.pa.evs.sv.AddressService;
-import com.pa.evs.utils.AppProps;
-import com.pa.evs.utils.SecurityUtils;
+import com.pa.evs.model.DMSAddress;
+import com.pa.evs.model.DMSBlock;
+import com.pa.evs.model.DMSBuilding;
+import com.pa.evs.model.DMSBuildingUnit;
+import com.pa.evs.model.DMSFloorLevel;
+import com.pa.evs.repository.DMSAddressRepository;
+import com.pa.evs.repository.DMSBlockRepository;
+import com.pa.evs.repository.DMSBuildingRepository;
+import com.pa.evs.repository.DMSBuildingUnitRepository;
+import com.pa.evs.repository.DMSFloorLevelRepository;
+import com.pa.evs.sv.DMSAddressService;
 
 @Service
-public class AddressServiceImpl implements AddressService {
+public class DMSAddressServiceImpl implements DMSAddressService {
 
-	@Autowired
-	AddressRepository addressRepository;
+	static final Logger LOGGER = LoggerFactory.getLogger(DMSAddressServiceImpl.class);
 	
 	@Autowired
-	CARequestLogRepository caRequestLogRepository;
+	DMSAddressRepository addressRepository;
 	
 	@Autowired
-	BuildingRepository buildingRepository;
+	DMSBuildingRepository buildingRepository;
 	
 	@Autowired
-	BlockRepository blockRepository;
+	DMSBlockRepository blockRepository;
 	
 	@Autowired
-	FloorLevelRepository floorLevelRepository;
+	DMSFloorLevelRepository floorLevelRepository;
 	
 	@Autowired
-	BuildingUnitRepository buildingUnitRepository;
-	
-	@Autowired
-	AddressLogRepository addressLogRepository;
+	DMSBuildingUnitRepository buildingUnitRepository;
 
 	@Override
 	@Transactional
@@ -74,30 +63,26 @@ public class AddressServiceImpl implements AddressService {
 		List<AddressDto> dtos = parseCsv(file.getInputStream());
 		updateNullBlock();
 		Map<String, AddressDto> mapA = new LinkedHashMap<>();
-		Map<String, CARequestLog> msnCA = new LinkedHashMap<>();
 		dtos.forEach(a -> {
 			 mapA.put((a.getPostalCode() + "__" + a.getCity() + "__" + a.getBuilding()).toUpperCase(), a);
-			 if (StringUtils.isNotBlank(a.getCoupleMsn())) {
-				 msnCA.put(a.getCoupleMsn(), null);	 
-			 }
 		});
-		List<Building> buildings = buildingRepository.findAllByPostalCodeAndCityAndName(mapA.keySet());
-		caRequestLogRepository.findByMsnIn(msnCA.keySet())
-		.forEach(ca -> msnCA.put(ca.getMsn(), ca));
+		List<DMSBuilding> buildings = buildingRepository.findAllByPostalCodeAndCityAndName(mapA.keySet());
 		
-		Map<String, Address> mapAE = new LinkedHashMap<>();
+		Map<String, DMSAddress> mapAE = new LinkedHashMap<>();
 		
 		buildings.forEach(b -> {
-			Address e = b.getAddress();
+			DMSAddress e = b.getAddress();
 			mapAE.put((e.getPostalCode() + "__" + e.getCity() + "__" + b.getName()).trim().replaceAll(" *__ *", "__"), e);
 		});
+		
+		int[] count = new int[] {0};
 		dtos.forEach(a -> {
 			if (StringUtils.isNotBlank(a.getMessage())) {
 				// ignore
 				return;
 			}
 			String combineKey = (a.getPostalCode() + "__" + a.getCity() + "__" + a.getBuilding()).trim().replaceAll(" *__ *", "__");
-			Address add = mapAE.computeIfAbsent(combineKey, st -> new Address());
+			DMSAddress add = mapAE.computeIfAbsent(combineKey, st -> new DMSAddress());
 			
 			add.setStreet(StringUtils.isBlank(a.getStreet()) ? "-" : a.getStreet());
 			add.setCity(a.getCity());
@@ -107,10 +92,10 @@ public class AddressServiceImpl implements AddressService {
 			add.setModifyDate(new Date());
 			addressRepository.save(add);
 			
-			Building building = null;
-			Block block = null;
-			FloorLevel floor = null;
-			BuildingUnit buildingUnit = null;
+			DMSBuilding building = null;
+			DMSBlock block = null;
+			DMSFloorLevel floor = null;
+			DMSBuildingUnit buildingUnit = null;
 			
 			String bd = a.getBuilding();
 			String bl = a.getBlock();
@@ -118,7 +103,7 @@ public class AddressServiceImpl implements AddressService {
 			String unit = a.getUnitNumber();
 
 			if (StringUtils.isNotBlank(lvl) || StringUtils.isNotBlank(bl)) {
-				building = add.getId() == null ? new Building() : buildingRepository.findByAddressId(add.getId()).orElse(new Building());
+				building = add.getId() == null ? new DMSBuilding() : buildingRepository.findByAddressId(add.getId()).orElse(new DMSBuilding());
 				if (building.getId() == null) {
 					building.setName(StringUtils.isBlank(bd) ? add.getStreet() : bd);
 				}
@@ -128,7 +113,7 @@ public class AddressServiceImpl implements AddressService {
 				buildingRepository.flush();
 				
 				if (StringUtils.isNotBlank(bl)) {
-					block = building.getId() == null ? new Block() : blockRepository.findByBuildingIdAndName(building.getId(), bl).orElse(new Block());
+					block = building.getId() == null ? new DMSBlock() : blockRepository.findByBuildingIdAndName(building.getId(), bl).orElse(new DMSBlock());
 					block.setName(bl);
 					block.setBuilding(building);
 					add.setBlock(bl);
@@ -139,11 +124,11 @@ public class AddressServiceImpl implements AddressService {
 				
 				if (StringUtils.isNotBlank(lvl)) {
 					if (building.getId() != null && block != null && block.getId() != null) {
-						floor = floorLevelRepository.findByBuildingIdAndBlockIdAndName(building.getId(), block.getId(), lvl).orElse(new FloorLevel());
+						floor = floorLevelRepository.findByBuildingIdAndBlockIdAndName(building.getId(), block.getId(), lvl).orElse(new DMSFloorLevel());
 					} else if (building.getId() != null && (block == null || block.getId() == null)) {
-						floor = floorLevelRepository.findByBuildingIdAndName(building.getId(), lvl).orElse(new FloorLevel());
+						floor = floorLevelRepository.findByBuildingIdAndName(building.getId(), lvl).orElse(new DMSFloorLevel());
 					} else {
-						floor = new FloorLevel();
+						floor = new DMSFloorLevel();
 					}
 					floor.setBuilding(building);
 					floor.setBlock(block);
@@ -155,12 +140,16 @@ public class AddressServiceImpl implements AddressService {
 			}
 
 			if (StringUtils.isNotBlank(unit) && floor != null) {
-				buildingUnit = floor.getId() == null ? new BuildingUnit() : buildingUnitRepository.findByFloorLevelIdAndName(floor.getId(), unit).orElse(new BuildingUnit());
+				buildingUnit = floor.getId() == null ? new DMSBuildingUnit() : buildingUnitRepository.findByFloorLevelIdAndName(floor.getId(), unit).orElse(new DMSBuildingUnit());
 				buildingUnit.setName(unit);
 				buildingUnit.setFloorLevel(floor);
 				buildingUnit.setRemark(a.getRemark());
+				buildingUnit.setLocationTag(a.getLocationTag());
 				buildingUnitRepository.save(buildingUnit);
 				buildingUnitRepository.flush();
+				
+				count[0] = count[0] + 1;
+				LOGGER.info("dont unit line " + count[0] + "/" + dtos.size());
 			}
 			
 			if (building != null) {
@@ -190,111 +179,6 @@ public class AddressServiceImpl implements AddressService {
 					buildingUnitRepository.save(buildingUnit);
 				}
 				buildingRepository.save(building);
-			}
-
-			if ("couple-with-msn".equalsIgnoreCase(importType)) {
-				String msn = a.getCoupleMsn();
-				if (StringUtils.isNotBlank(a.getCoupleMsn())) {
-
-					CARequestLog caUnitCoupled = caRequestLogRepository.findByBuildingUnitId(buildingUnit.getId()).orElse(null);
-					
-					if (caUnitCoupled != null && "de-couple".equalsIgnoreCase(msn)) {
-						
-						// Add new log to address_log that this address is unlinked to this device
-						AddressLog addrLog = AddressLog.build(caUnitCoupled);
-						addrLog.setType(DeviceType.NOT_COUPLED);
-						addrLog.setUpdatedBy(SecurityUtils.getUsername());
-						addressLogRepository.save(addrLog);
-						
-						caUnitCoupled.setBuildingUnit(null);
-						caUnitCoupled.setFloorLevel(null);
-						caUnitCoupled.setBlock(null);
-						caUnitCoupled.setBuilding(null);
-						caUnitCoupled.setAddress(null);
-						caRequestLogRepository.save(caUnitCoupled);
-						return;
-					}
-					
-					if (caUnitCoupled != null && caUnitCoupled.getBuildingUnit() != null) {
-						a.setMessage(Message.ADDRESS_IS_ASSIGNED);
-						return;
-					}
-					
-					CARequestLog ca = msnCA.get(a.getCoupleMsn());
-					if (ca == null) {
-						a.setMessage("Meter SN doesn't exists!");
-						return;
-					}
-					
-					if (StringUtils.isNotBlank(a.getCoupleSn()) && !ca.getSn().equalsIgnoreCase(a.getCoupleSn())) {
-						Optional<CARequestLog> caBySnOpt = caRequestLogRepository.findBySn(a.getCoupleSn());
-						if (!caBySnOpt.isPresent()) {
-							a.setMessage("MCU SN doesn't exists!");
-							return;
-						}
-				    	
-				    	CARequestLog caBySn = caBySnOpt.get();
-				    	
-				    	if (caBySn.getBuildingUnit() != null) {
-				    		// Add new log to address_log that unlinked exists address to this device
-							AddressLog addrLog = AddressLog.build(caBySn);
-							addrLog.setType(DeviceType.NOT_COUPLED);
-							addressLogRepository.save(addrLog);
-				    	}
-				    	
-				    	caBySn.setBuilding(building);
-				    	caBySn.setFloorLevel(floor);
-				    	caBySn.setBlock(block);
-				    	
-				    	if (caBySn.getBuildingUnit() == null || caBySn.getBuildingUnit().getId().longValue() != buildingUnit.getId().longValue()) {
-				    		caBySn.setBuildingUnit(buildingUnit);
-							buildingUnit.setCoupledDate(new Date());
-						}
-						
-						a.setCoupleTime(buildingUnit.getCoupledDate() == null ? buildingUnit.getCreateDate() : buildingUnit.getCoupledDate());
-						buildingUnitRepository.save(buildingUnit);
-						caBySn.setBuildingUnit(buildingUnit);
-				    	caRequestLogRepository.save(caBySn);
-				    	
-				    	// Add new log to address_log that linked new address to this device
-						AddressLog newAddrLog = AddressLog.build(caBySn);
-						newAddrLog.setType(DeviceType.COUPLED);
-						addressLogRepository.save(newAddrLog);
-						
-				    	return;
-					}
-					
-					if (ca.getBuildingUnit() != null) {
-			    		// Add new log to address_log that unlinked exists address to this device
-						AddressLog addrLog = AddressLog.build(ca);
-						addrLog.setType(DeviceType.NOT_COUPLED);
-						addressLogRepository.save(addrLog);
-			    	}
-
-					ca.setBuilding(building);
-					ca.setBlock(block);
-					ca.setFloorLevel(floor);
-					if (ca.getBuildingUnit() == null || ca.getBuildingUnit().getId().longValue() != buildingUnit.getId().longValue()) {
-						ca.setBuildingUnit(buildingUnit);
-						buildingUnit.setCoupledDate(new Date());
-					}
-					
-					a.setCoupleTime(buildingUnit.getCoupledDate() == null ? buildingUnit.getCreateDate() : buildingUnit.getCoupledDate());
-					buildingUnitRepository.save(buildingUnit);
-					buildingUnitRepository.flush();
-					ca.setBuildingUnit(buildingUnit);
-					caRequestLogRepository.save(ca);
-					
-					// copy address to coupled Meter
-					AppProps.getContext().getBean(CaRequestLogServiceImpl.class).updateMMSMeter(ca, ca.getMsn());
-					
-					// Add new log to address_log that linked new address to this device
-					AddressLog newAddrLog = AddressLog.build(ca);
-					newAddrLog.setType(DeviceType.COUPLED);
-					addressLogRepository.save(newAddrLog);
-				} else {
-					a.setMessage("Meter SN is required!");
-				}
 			}
 		});
 		
@@ -336,6 +220,8 @@ public class AddressServiceImpl implements AddressService {
 						dto.setCoupleSn(it);
 					} else if (head.computeIfAbsent("Coupled Meter No.", k->-1) == count) {
 						dto.setCoupleMsn(it);
+					} else if (head.computeIfAbsent("Location Tag", k->-1) == count) {
+						dto.setLocationTag(it);;
 					}
 				}
 				count++;
@@ -357,9 +243,9 @@ public class AddressServiceImpl implements AddressService {
 	}
 	
 	public void updateNullBlock() {
-		List<FloorLevel> fls = floorLevelRepository.findAllByBlockIsNull();
+		List<DMSFloorLevel> fls = floorLevelRepository.findAllByBlockIsNull();
 		fls.forEach(fl -> {
-			Block block = blockRepository.findByBuildingIdAndName(fl.getBuilding().getId(), "NA").orElse(new Block());
+			DMSBlock block = blockRepository.findByBuildingIdAndName(fl.getBuilding().getId(), "NA").orElse(new DMSBlock());
 			block.setName("NA");
 			block.setBuilding(fl.getBuilding());
 			blockRepository.save(block);

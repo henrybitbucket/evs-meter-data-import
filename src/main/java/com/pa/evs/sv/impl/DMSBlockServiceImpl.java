@@ -24,6 +24,8 @@ import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
 import com.pa.evs.repository.DMSFloorLevelRepository;
+import com.pa.evs.repository.DMSLocationLockRepository;
+import com.pa.evs.repository.DMSLocationSiteRepository;
 import com.pa.evs.sv.DMSBlockService;
 
 
@@ -45,6 +47,12 @@ public class DMSBlockServiceImpl implements DMSBlockService {
 	
 	@Autowired
 	DMSBuildingUnitRepository buildingUnitRepository;
+	
+	@Autowired
+	DMSLocationSiteRepository dmsLocationSiteRepository;
+	
+	@Autowired
+	DMSLocationLockRepository dmsLocationLockRepository;
 	
 	@Override
 	public void save(BlockDto dto) throws ApiException{
@@ -142,17 +150,18 @@ public class DMSBlockServiceImpl implements DMSBlockService {
 	@Override
 	public void delete(Long id) throws ApiException {
 		DMSBlock entity = blockRepository.findById(id).orElseThrow(() -> new ApiException(ResponseEnum.BLOCK_NOT_FOUND));
-//		List<String> sns = blockRepository.linkedSN(id);
-//		if (!sns.isEmpty()) {
-//			throw new RuntimeException("Block is already linked to the device(MCU SN = " + sns.get(0) + ")");
-//		}
-//		List<String> msns = blockRepository.linkedMSN(id);
-//		if (!msns.isEmpty()) {
-//			throw new RuntimeException("Block is already linked to the device(Meter SN = " + msns.get(0) + ")");
-//		}
+		
+		List<String> sites = dmsLocationSiteRepository.findSiteByBlockId(entity.getId());
+		if (!sites.isEmpty()) {
+			throw new RuntimeException("Block is already linked to the site(Site label = " + sites.get(0) + ")");
+		}
+		List<String> locks = dmsLocationLockRepository.findLockByBlockId(entity.getId());
+		if (!locks.isEmpty()) {
+			throw new RuntimeException("Block is already linked to the lock(Lock Number = " + locks.get(0) + ")");
+		}
 		
 		List<DMSFloorLevel> fls = floorLevelRepository.findAllByBlock(entity);
-		for(DMSFloorLevel floorLevel : fls) {
+		for (DMSFloorLevel floorLevel : fls) {
 			List<DMSBuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(floorLevel);
 			for (DMSBuildingUnit buildingUnit : buildingUnits) {
 				buildingUnitRepository.delete(buildingUnit);

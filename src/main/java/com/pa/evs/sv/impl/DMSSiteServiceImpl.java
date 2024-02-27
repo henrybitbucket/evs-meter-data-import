@@ -3,6 +3,7 @@ package com.pa.evs.sv.impl;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
@@ -108,6 +109,13 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 			pagin.setOffset(0);
 		}
 		
+		Map<String, Object> options = pagin.getOptions();
+        String queryBuilding = (String) options.get("queryBuilding");
+        String queryBlock = (String) options.get("queryBlock");
+        String queryFloorLevel = (String) options.get("queryFloorLevel");
+        String queryBuildingUnit = (String) options.get("queryBuildingUnit");
+        
+		
 		StringBuilder sqlBuilder = new StringBuilder(" select fl ");
 		StringBuilder cmmBuilder = new StringBuilder(" FROM DMSSite fl where 1=1");
 		if (pagin.getOptions().get("label") != null) {
@@ -117,6 +125,20 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 		if (pagin.getOptions().get("description") != null) {
 			cmmBuilder.append(" AND upper(fl.description) like upper('%" + pagin.getOptions().get("description") + "%')");
 		}
+		
+        if (StringUtils.isNotBlank(queryBuilding)) {
+        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.building.id= '" + queryBuilding + "') ");	
+        }
+        if (StringUtils.isNotBlank(queryBlock)) {
+        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.block.id= '" + queryBlock + "') ");	
+        }
+        if (StringUtils.isNotBlank(queryFloorLevel)) {
+        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.floorLevel.id= '" + queryFloorLevel + "') ");
+        }
+        if (StringUtils.isNotBlank(queryBuildingUnit)) {
+        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.buildingUnit.id= '" + queryBuildingUnit + "') ");
+        }
+		
 		
 		sqlBuilder.append(cmmBuilder);
 		sqlBuilder.append(" ORDER BY fl.modifyDate DESC ");

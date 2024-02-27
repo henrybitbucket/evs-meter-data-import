@@ -107,14 +107,33 @@ public class DMSLockServiceImpl implements DMSLockService {
 	public PaginDto<DMSLockDto> search(PaginDto<DMSLockDto> pagin) {
 		LOGGER.info("Get DMS LOCK");
 		
+		Map<String, Object> options = pagin.getOptions();
+        String queryBuilding = (String) options.get("queryBuilding");
+        String queryBlock = (String) options.get("queryBlock");
+        String queryFloorLevel = (String) options.get("queryFloorLevel");
+        String queryBuildingUnit = (String) options.get("queryBuildingUnit");
+        
+        Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor")) ? Long.parseLong((String) options.get("queryVendor")) : null;
+		
 		StringBuilder sqlBuilder = new StringBuilder(" SELECT lock, locationLock ");
 		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(lock) ");
 
 		StringBuilder sqlCommonBuilder = new StringBuilder(" FROM DMSLock lock LEFT JOIN DMSLocationLock locationLock on lock.id = locationLock.lock.id ");
 		sqlCommonBuilder.append(" WHERE 1=1 ");
 		
-		Map<String, Object> options = pagin.getOptions();
-        Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor")) ? Long.parseLong((String) options.get("queryVendor")) : null;
+		
+        if (StringUtils.isNotBlank(queryBuilding)) {
+        	sqlCommonBuilder.append(" AND locationLock.building.id= '" + queryBuilding + "' ");	
+        }
+        if (StringUtils.isNotBlank(queryBlock)) {
+        	sqlCommonBuilder.append(" AND locationLock.block.id= '" + queryBlock + "' ");	
+        }
+        if (StringUtils.isNotBlank(queryFloorLevel)) {
+        	sqlCommonBuilder.append(" AND locationLock.floorLevel.id= '" + queryFloorLevel + "' ");
+        }
+        if (StringUtils.isNotBlank(queryBuildingUnit)) {
+        	sqlCommonBuilder.append(" AND locationLock.buildingUnit.id= '" + queryBuildingUnit + "' ");
+        }
 		
         if (queryVendor != null) {
             sqlCommonBuilder.append(" AND lock.vendor.id = " + queryVendor + " ");
@@ -572,7 +591,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 			}
 			
 			if (h > hEnd || h == hEnd && m > mEnd) {
-				LOGGER.info(" workOrder " + workOrder.getName() + " not match time in day and at hh:mm = " + h + ":" + m + " tz: " + TimeZoneHolder.get());
+				LOGGER.info(" workOrder " + workOrder.getName() + " not match time in day end at hh:mm = " + h + ":" + m + " tz: " + TimeZoneHolder.get());
 				return false;				
 			}
 		}

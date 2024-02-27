@@ -71,6 +71,7 @@ import com.pa.evs.repository.RelayStatusLogRepository;
 import com.pa.evs.sv.AddressLogService;
 import com.pa.evs.sv.AddressService;
 import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.sv.DMSAddressService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FileService;
 import com.pa.evs.sv.FirmwareService;
@@ -81,6 +82,7 @@ import com.pa.evs.sv.P1OnlineStatusService;
 import com.pa.evs.sv.P1ReportService;
 import com.pa.evs.sv.VendorService;
 import com.pa.evs.sv.impl.EVSPAServiceImpl;
+import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.CsvUtils;
@@ -114,6 +116,8 @@ public class CommonController {
 	@Autowired GroupService groupService;
 	
 	@Autowired AddressService addressService;
+	
+	@Autowired DMSAddressService dmsAddressService;
 	
 	@Autowired AddressLogService addressLogService;
 
@@ -723,9 +727,13 @@ public class CommonController {
             @RequestParam(value = "file") final MultipartFile file, HttpServletResponse response) throws Exception {
         
         try {
-        	
-        	File csv = CsvUtils.writeImportAddressCsv(addressService.handleUpload(file, importType), importType, "import_result_" + System.currentTimeMillis() + ".csv");
-            String fileName = file.getName();
+        	File csv;
+        	if ("DMS".equals(AppCodeSelectedHolder.get())) {
+        		csv = CsvUtils.writeImportAddressCsv(dmsAddressService.handleUpload(file, importType), importType, "import_result_" + System.currentTimeMillis() + ".csv");
+        	} else {
+        		csv = CsvUtils.writeImportAddressCsv(addressService.handleUpload(file, importType), importType, "import_result_" + System.currentTimeMillis() + ".csv");
+        	}
+        	String fileName = file.getName();
             
             try (FileInputStream fis = new FileInputStream(csv)) {
                 response.setContentLengthLong(csv.length());
