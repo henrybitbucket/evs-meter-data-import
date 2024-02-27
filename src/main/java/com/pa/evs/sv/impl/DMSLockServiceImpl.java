@@ -364,7 +364,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Transactional(readOnly = true)
 	public Object getSecretCode(String email, Long dmsLockId) {
 	
-		DMSLocationLock dmsLocationLock = dmsLocationLockRepository.findByLockId(dmsLockId).orElseThrow(() -> new RuntimeException("Lock not found!"));
+		DMSLocationLock dmsLocationLock = dmsLocationLockRepository.findByLockId(dmsLockId).orElseThrow(() -> new RuntimeException("Lock not found or not link location!"));
 		
 		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
 				.setParameter("email", email)
