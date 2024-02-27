@@ -196,6 +196,10 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 	@Override
 	public void delete(Long id) {
 		DMSSite entity = dmsSiteRepository.findById(id).orElseThrow(() -> new ApiException(ResponseEnum.FLOOR_LEVEL_NOT_FOUND));
+		
+		dmsLocationSiteRepository.findBySiteId(entity.getId())
+		.forEach(dmsLocationSiteRepository::delete);
+		dmsLocationSiteRepository.flush();
 		dmsSiteRepository.delete(entity);
 	}
 	

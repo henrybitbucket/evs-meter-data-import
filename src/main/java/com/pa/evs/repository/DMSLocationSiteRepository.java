@@ -16,7 +16,7 @@ import com.pa.evs.model.DMSLocationSite;
 public interface DMSLocationSiteRepository extends JpaRepository<DMSLocationSite, Long> {
 
 	Optional<DMSLocationSite> findBySiteLabel(String siteLabel);
-	Optional<DMSLocationSite> findBySiteId(String siteId);
+	List<DMSLocationSite> findBySiteId(Long siteId);
 	Optional<DMSLocationSite> findBySiteIdAndLocationKey(Long siteId, String locationKey);
 	
 	
