@@ -2,6 +2,7 @@ package com.pa.evs.sv.impl;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -47,6 +48,7 @@ import com.pa.evs.model.DMSLocationSite;
 import com.pa.evs.model.DMSLock;
 import com.pa.evs.model.DMSLockVendor;
 import com.pa.evs.model.DMSSite;
+import com.pa.evs.model.DMSWorkOrders;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
@@ -60,6 +62,7 @@ import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.DESUtil;
 import com.pa.evs.utils.SchedulerHelper;
+import com.pa.evs.utils.TimeZoneHolder;
 import com.pa.evs.utils.Utils;
 
 @Service
@@ -356,7 +359,42 @@ public class DMSLockServiceImpl implements DMSLockService {
 	public void unLinkLocation(Long linkLockLocationId) {
 		dmsLocationLockRepository.deleteById(linkLockLocationId);
 	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Object getSecretCode(String email, Long dmsLockId) {
 	
+		DMSLocationLock dmsLocationLock = dmsLocationLockRepository.findByLockId(dmsLockId).orElseThrow(() -> new RuntimeException("Lock not found!"));
+		
+		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
+				.setParameter("email", email)
+				.getResultList();
+		
+		if (groupIdOfUsers.isEmpty()) {
+			throw new RuntimeException("user not in any group");
+		}
+		
+		List<DMSSite> sitesOfUser = em.createQuery("SELECT locationSite.site FROM DMSLocationSite locationSite where locationSite.locationKey = '" + dmsLocationLock.getLocationKey() + "' ")
+		.getResultList();
+		
+		if (sitesOfUser.isEmpty()) {
+			throw new RuntimeException("user not in any site");
+		}
+		
+		List<DMSWorkOrders> dmsWorkOrders = em.createQuery("SELECT dmsWorkOrders FROM DMSWorkOrders dmsWorkOrders where dmsWorkOrders.site.id in (:siteIdOfUsers) ")
+		.setParameter("siteIdOfUsers", sitesOfUser.stream().map(s -> s.getId()).collect(Collectors.toSet()))
+		.getResultList();
+		
+		for (DMSWorkOrders workOrders : dmsWorkOrders) {
+			if (groupIdOfUsers.contains(workOrders.getGroup().getId()) && isMatch(dmsLocationLock.getLock(), workOrders)) {
+				return dmsLocationLock.getLock().getSecretKey();
+			}
+		}
+		
+		throw new RuntimeException("not match any time period");
+	}
+	
+	@Transactional(readOnly = true)
 	@Override
 	public Object getAssignedLocks(String email, Boolean lockOnly) {
 		
@@ -486,5 +524,60 @@ public class DMSLockServiceImpl implements DMSLockService {
 		}
 		
 		return rs;
+	}
+	
+	boolean isMatch(DMSLock lock, DMSWorkOrders workOrder) {
+		Calendar c = Calendar.getInstance(TimeZoneHolder.get());
+		LOGGER.info("lockId = " + lock.getId() + "check time timePeriod " + workOrder.getName() + " at " + c.getTime() + " tz: " + TimeZoneHolder.get());
+		
+		// check dates
+		long dateStart = workOrder.getTimePeriodDatesStart() == null ? 0 : workOrder.getTimePeriodDatesStart();
+		long dateEnd = workOrder.getTimePeriodDatesEnd() == null ? Long.MAX_VALUE : workOrder.getTimePeriodDatesEnd();
+		if (!workOrder.isTimePeriodDatesIsAlways() && !(c.getTimeInMillis() >= dateStart && c.getTimeInMillis() <= dateEnd)) {
+			LOGGER.info("lockId = " + lock.getId() + " workOrder " + workOrder.getName() + " not match dates at " + c.getTime() + " tz: " + TimeZoneHolder.get());
+			return false;
+		}
+		
+		// check day in week
+		int dayOfWeek = c.get(Calendar.DAY_OF_WEEK);
+		if (!workOrder.isTimePeriodDayInWeeksIsAlways()
+				&& !(
+						dayOfWeek == 1 && workOrder.isTimePeriodDayInWeeksIsSun() ||
+						dayOfWeek == 2 && workOrder.isTimePeriodDayInWeeksIsMon() ||
+						dayOfWeek == 3 && workOrder.isTimePeriodDayInWeeksIsTue() ||
+						dayOfWeek == 4 && workOrder.isTimePeriodDayInWeeksIsWed() ||
+						dayOfWeek == 5 && workOrder.isTimePeriodDayInWeeksIsThu() ||
+						dayOfWeek == 6 && workOrder.isTimePeriodDayInWeeksIsFri() ||
+						dayOfWeek == 7 && workOrder.isTimePeriodDayInWeeksIsSat()
+				)
+		) {
+			LOGGER.info("lockId = " + lock.getId() + " workOrder " + workOrder.getName() + " not match day of week at dayOfWeek = " + dayOfWeek + " tz: " + TimeZoneHolder.get());
+			return false;
+		}
+		
+		// check time in day
+		int h = c.get(Calendar.HOUR_OF_DAY);
+		int m = c.get(Calendar.MINUTE);
+		if (!workOrder.isTimePeriodTimeInDayIsAlways()) {
+			
+			long hStart = workOrder.getTimePeriodTimeInDayHourStart() == null ? 0 : workOrder.getTimePeriodTimeInDayHourStart();
+			long mStart = workOrder.getTimePeriodTimeInDayMinuteStart() == null ? 0 : workOrder.getTimePeriodTimeInDayMinuteStart();
+
+			long hEnd = workOrder.getTimePeriodTimeInDayHourEnd() == null ? 23 : workOrder.getTimePeriodTimeInDayHourEnd();
+			long mEnd = workOrder.getTimePeriodTimeInDayMinuteEnd() == null ? 59 : workOrder.getTimePeriodTimeInDayMinuteEnd();
+			
+			if (h < hStart || h == hStart && m < mStart) {
+				LOGGER.info("lockId = " + lock.getId() + " workOrder " + workOrder.getName() + " not match time in day start at hh:mm = " + h + ":" + m + " tz: " + TimeZoneHolder.get());
+				return false;				
+			}
+			
+			if (h > hEnd || h == hEnd && m > mEnd) {
+				LOGGER.info(" workOrder " + workOrder.getName() + " not match time in day and at hh:mm = " + h + ":" + m + " tz: " + TimeZoneHolder.get());
+				return false;				
+			}
+		}
+		
+		LOGGER.info("lockId = " + lock.getId() + " workOrder " + workOrder.getName() + " is full match at dayOfWeek=" + dayOfWeek + " hh:mm = " + h + ":" + m + " tz: " + TimeZoneHolder.get());
+		return true;
 	}
 }

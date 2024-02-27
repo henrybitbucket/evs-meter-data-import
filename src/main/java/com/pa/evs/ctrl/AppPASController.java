@@ -3,11 +3,14 @@ package com.pa.evs.ctrl;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +29,7 @@ import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.DMSLockService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.SecurityUtils;
+import com.pa.evs.utils.TimeZoneHolder;
 
 import springfox.documentation.annotations.ApiIgnore;
 
@@ -99,4 +103,23 @@ public class AppPASController {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
 	}
+	
+	@GetMapping("/api/lock/{lockId}/code")
+	public ResponseDto getLockSecretCode(HttpServletRequest httpServletRequest, @PathVariable Long lockId, @RequestParam(required = false) String timeZone) throws Exception {
+
+		try {
+			if (StringUtils.isNotBlank(timeZone)) {
+				TimeZoneHolder.set(timeZone);
+			}
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			String email = SecurityUtils.getEmail();
+			return ResponseDto.<Object>builder().response(dmsLockService.getSecretCode(email, lockId)).success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
+	
 }
