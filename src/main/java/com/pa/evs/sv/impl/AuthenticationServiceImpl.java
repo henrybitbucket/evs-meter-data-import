@@ -844,9 +844,25 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		StringBuilder sqlBuilder = new StringBuilder("FROM Users us");
 		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Users us");
+		
+		Map<String, Object> options = pagin.getOptions();
+        String queryUserName = options.get("queryUserName") != null ?  (String) options.get("queryUserName") : null;
+        String queryFirstName = options.get("queryFirstName") != null ?  (String) options.get("queryFirstName") : null;
+        String queryLastName = options.get("queryLastName") != null ?  (String) options.get("queryLastName") : null;
 
 		StringBuilder sqlCommonBuilder = new StringBuilder();
 		sqlCommonBuilder.append(" WHERE 1=1 ");
+		
+		if (StringUtils.isNotBlank(queryUserName)) {
+			sqlCommonBuilder.append(" AND lower(username) like '%" + queryUserName.toLowerCase() + "%' ");
+		}
+		if (StringUtils.isNotBlank(queryFirstName)) {
+			sqlCommonBuilder.append(" AND lower(firstName) like '%" + queryFirstName.toLowerCase() + "%' ");
+		}
+		if (StringUtils.isNotBlank(queryLastName)) {
+			sqlCommonBuilder.append(" AND lower(lastName) like '%" + queryLastName.toLowerCase() + "%' ");
+		}
+		
 		sqlCommonBuilder.append(" AND (exists (select 1 from UserAppCode uac where uac.appCode.name = '" + AppCodeSelectedHolder.get() + "' and uac.user.userId = us.userId)) ");
 		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY us.userId asc");
 		sqlCountBuilder.append(sqlCommonBuilder);
