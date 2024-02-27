@@ -471,8 +471,6 @@ public class DMSLockServiceImpl implements DMSLockService {
 			}
 		}
 		
-		
-		
 		if (lockOnly == Boolean.TRUE) {
 			rs.setSites(null);
 		} else {
