@@ -12,16 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pa.evs.dto.AddressDto;
-import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
-import com.pa.evs.enums.ResponseEnum;
-import com.pa.evs.exception.ApiException;
-import com.pa.evs.model.DMSBuilding;
-import com.pa.evs.model.DMSLocationSite;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
 import com.pa.evs.model.GroupUser;
@@ -34,7 +28,6 @@ import com.pa.evs.repository.DMSSiteRepository;
 import com.pa.evs.repository.DMSWorkOrdersRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.sv.WorkOrdersService;
-import com.pa.evs.utils.Utils;
 
 @SuppressWarnings("rawtypes")
 @Service
@@ -80,10 +73,10 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 			if (dmsWorkOrdersRepository.findByName(dto.getName().trim()).isPresent()) {
 				throw new RuntimeException("Name exitst!");
 			}
-			Optional<DMSWorkOrders> opt = dmsWorkOrdersRepository.findByGroupIdAndSiteId(dto.getGroup().getId(), dto.getSite().getId());
-			if (opt.isPresent()) {
-				throw new RuntimeException("Work order with group and site exitst!");
-			}
+//			Optional<DMSWorkOrders> opt = dmsWorkOrdersRepository.findByGroupIdAndSiteId(dto.getGroup().getId(), dto.getSite().getId());
+//			if (opt.isPresent()) {
+//				throw new RuntimeException("Work order with group and site exist!");
+//			}
 			dmsWorkOrdersRepository.save(
 					DMSWorkOrders.builder()
 					.name(dto.getName())
@@ -208,10 +201,10 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 			throw new RuntimeException("Name exitst!");
 		}
 		
-		Optional<DMSWorkOrders> opt = dmsWorkOrdersRepository.findByGroupIdAndSiteId(dto.getGroup().getId(), dto.getSite().getId());
-		if (opt.isPresent() && opt.get().getId().longValue() != entity.getId().longValue()) {
-			throw new RuntimeException("Work order with group and site exitst!");
-		}
+//		Optional<DMSWorkOrders> opt = dmsWorkOrdersRepository.findByGroupIdAndSiteId(dto.getGroup().getId(), dto.getSite().getId());
+//		if (opt.isPresent() && opt.get().getId().longValue() != entity.getId().longValue()) {
+//			throw new RuntimeException("Work order with group and site exitst!");
+//		}
 		
 		entity.setName(dto.getName());
 		entity.setTimePeriodDatesIsAlways(dto.isTimePeriodDatesIsAlways());

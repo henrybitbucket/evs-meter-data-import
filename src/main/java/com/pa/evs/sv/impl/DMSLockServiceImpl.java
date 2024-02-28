@@ -49,6 +49,7 @@ import com.pa.evs.model.DMSLock;
 import com.pa.evs.model.DMSLockVendor;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
+import com.pa.evs.model.Users;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
@@ -57,6 +58,7 @@ import com.pa.evs.repository.DMSLocationLockRepository;
 import com.pa.evs.repository.DMSLockRepository;
 import com.pa.evs.repository.DMSLockVendorRepository;
 import com.pa.evs.repository.GroupUserRepository;
+import com.pa.evs.repository.UserRepository;
 import com.pa.evs.sv.DMSLockService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
@@ -101,6 +103,9 @@ public class DMSLockServiceImpl implements DMSLockService {
 	
 	@Autowired
 	GroupUserRepository groupUserRepository;
+	
+	@Autowired
+	UserRepository userRepository;
 	
 	@Transactional(readOnly = true)
 	@Override
@@ -381,6 +386,23 @@ public class DMSLockServiceImpl implements DMSLockService {
 
 	@Override
 	@Transactional(readOnly = true)
+	public Object getSecretCode2(String userMobile, Long dmsLockId) {
+		
+		Users user = userRepository.findByPhoneNumber(userMobile);
+		
+		if (StringUtils.isBlank(userMobile)) {
+			throw new RuntimeException("userMobile is required!"); 
+		}
+		
+		if (user == null) {
+			throw new RuntimeException("account not found!"); 
+		}
+		
+		return getSecretCode(user.getEmail(), dmsLockId);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
 	public Object getSecretCode(String email, Long dmsLockId) {
 	
 		DMSLocationLock dmsLocationLock = dmsLocationLockRepository.findByLockId(dmsLockId).orElseThrow(() -> new RuntimeException("Lock not found or not link location!"));
@@ -411,6 +433,23 @@ public class DMSLockServiceImpl implements DMSLockService {
 		}
 		
 		throw new RuntimeException("not match any time period");
+	}
+
+	@Transactional(readOnly = true)
+	@Override
+	public Object getAssignedLocks2(String userMobile, Boolean lockOnly) {
+		
+		Users user = userRepository.findByPhoneNumber(userMobile);
+		
+		if (StringUtils.isBlank(userMobile)) {
+			throw new RuntimeException("userMobile is required!"); 
+		}
+		
+		if (user == null) {
+			throw new RuntimeException("account not found!"); 
+		}
+		
+		return getAssignedLocks(user.getEmail(), lockOnly);
 	}
 	
 	@Transactional(readOnly = true)
@@ -515,13 +554,13 @@ public class DMSLockServiceImpl implements DMSLockService {
 			DMSSiteDto siteDto = en.getValue();
 			rs.getSites().add(siteDto);
 			
-			Map<String, DMSLocationDto> locationKeyMap = siteLocationKeyMap.get(en.getKey());
+			Map<String, DMSLocationDto> locationKeyMap = siteLocationKeyMap.computeIfAbsent(en.getKey(), k -> new LinkedHashMap<>());
 			for (Entry<String, DMSLocationDto> enLocation : locationKeyMap.entrySet()) {
 				siteDto.getLocations().add(enLocation.getValue());
 				
 				// map lock to location
 				DMSLocationDto locationDto = enLocation.getValue();
-				Map<String, Map<Long, DMSLockDto>> locationKeyLockMap = siteLocationKeyLockMap.get(siteDto.getId());
+				Map<String, Map<Long, DMSLockDto>> locationKeyLockMap = siteLocationKeyLockMap.computeIfAbsent(siteDto.getId(), k -> new LinkedHashMap<>());
 				Map<Long, DMSLockDto> lockMap = locationKeyLockMap.computeIfAbsent(enLocation.getKey(), k -> new LinkedHashMap<>());
 				for (Entry<Long, DMSLockDto> lockEn : lockMap.entrySet()) {
 					

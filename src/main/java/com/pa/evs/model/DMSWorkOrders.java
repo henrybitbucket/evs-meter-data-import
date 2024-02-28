@@ -24,7 +24,7 @@ import lombok.Setter;
 @Table(
 		name = "dms_work_orders",
 		indexes = {
-				@Index(name = "idx_group_user_id_site_id_dms_work_orders", columnList="group_user_id,site_id", unique = true)
+				@Index(name = "idx_group_user_id_site_id_dms_work_orders", columnList="group_user_id,site_id", unique = false)
 		}
 )
 public class DMSWorkOrders extends BaseEntity {

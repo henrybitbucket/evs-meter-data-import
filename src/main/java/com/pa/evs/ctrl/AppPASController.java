@@ -1,5 +1,7 @@
 package com.pa.evs.ctrl;
 
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -104,6 +106,17 @@ public class AppPASController {
 		}
 	}
 	
+	@PostMapping("/api/dms-assigned-locks2")
+	public ResponseDto getAssignedLocks2(HttpServletRequest httpServletRequest, @RequestParam(required = false) Boolean lockOnly, @RequestBody Map<String, Object> payload) throws Exception {
+
+		try {
+			String userMobile = (String) payload.get("user_mobile");
+			return ResponseDto.<Object>builder().response(dmsLockService.getAssignedLocks2(userMobile, lockOnly)).success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
 	@GetMapping("/api/lock/{lockId}/code")
 	public ResponseDto getLockSecretCode(HttpServletRequest httpServletRequest, @PathVariable Long lockId, @RequestParam(required = false) String timeZone) throws Exception {
 
@@ -116,6 +129,24 @@ public class AppPASController {
 			}
 			String email = SecurityUtils.getEmail();
 			return ResponseDto.<Object>builder().response(dmsLockService.getSecretCode(email, lockId)).success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
+	@PostMapping("/api/lock/{lockId}/code2")
+	public ResponseDto getLockSecretCode2(HttpServletRequest httpServletRequest, 
+			@PathVariable Long lockId, 
+			@RequestParam(required = false) String timeZone, 
+			@RequestBody Map<String, Object> payload) throws Exception {
+
+		try {
+			if (StringUtils.isNotBlank(timeZone)) {
+				TimeZoneHolder.set(timeZone);
+			}
+
+			String userMobile = (String) payload.get("user_mobile");
+			return ResponseDto.<Object>builder().response(dmsLockService.getSecretCode2(userMobile, lockId)).success(true).build();
 		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}

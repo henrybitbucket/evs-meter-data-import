@@ -20,6 +20,10 @@ public interface DMSLockService {
 	void unLinkLocation(Long linkLockLocationId);
 
 	Object getAssignedLocks(String email, Boolean lockOnly);
+	
+	Object getAssignedLocks2(String mobileNumber, Boolean lockOnly);
 
 	Object getSecretCode(String email, Long dmsLockId);
+
+	Object getSecretCode2(String userMobile, Long dmsLockId);
 }

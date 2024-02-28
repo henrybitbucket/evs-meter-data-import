@@ -7,6 +7,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,7 +59,7 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
 		};*/
 		
         boolean hrApiLogin = false;
-        if (authToken != null) {
+        if (StringUtils.isNotBlank(authToken)) {
             if (authToken.startsWith("Basic")) {
                 chain.doFilter(request, response);
                 return;
