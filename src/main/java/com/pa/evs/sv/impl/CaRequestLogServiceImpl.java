@@ -42,6 +42,7 @@ import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.DeviceSettingDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.ProjectTagDto;
 import com.pa.evs.dto.RelayStatusLogDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.ScreenMonitoringDto;
@@ -993,10 +994,16 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         List<CARequestLog> rp = new ArrayList<>();
         for (Object[] obj : list) {
         	CARequestLog ca = (CARequestLog) obj[0];
-        	List<ProjectTag> pTags = ca.getDeviceProject().isEmpty() ? new ArrayList<>() : ca.getDeviceProject().stream().map(dp -> (ProjectTag) Hibernate.unproxy(dp.getProject())).collect(Collectors.toList());
+//        	List<ProjectTag> pTags = ca.getDeviceProject().isEmpty() ? new ArrayList<>() : ca.getDeviceProject().stream().map(dp -> (ProjectTag) Hibernate.unproxy(dp.getProject())).collect(Collectors.toList());
+        	if (ca.getDeviceProject() != null) {
+        		for (DeviceProject t : ca.getDeviceProject()) {
+        			if (t.getProject() != null) {
+	        			ca.getProjectTags().add(ProjectTagDto.build(t.getProject()));
+        			}
+        		}
+        	}
         	ca.getVendor();
         	ca.setDeviceProject(null);
-        	ca.setProjectTags(pTags);
         	ca.setHomeAddress(Utils.formatHomeAddress(ca));
         	
         	if (StringUtils.isBlank(ca.getDeviceCsrSignatureAlgorithm())) {

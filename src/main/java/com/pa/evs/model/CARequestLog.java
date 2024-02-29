@@ -1,5 +1,6 @@
 package com.pa.evs.model;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
+import com.pa.evs.dto.ProjectTagDto;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 
@@ -155,7 +157,8 @@ public class CARequestLog extends BaseEntity {
     private List<DeviceProject> deviceProject;
 	
 	@Transient
-	private List<ProjectTag> projectTags;
+	@Builder.Default
+	private List<ProjectTagDto> projectTags = new ArrayList<>();
 	
 	@Transient
 	private String profile;
