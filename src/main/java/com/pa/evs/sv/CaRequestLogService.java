@@ -76,7 +76,7 @@ public interface CaRequestLogService {
 
 	PaginDto<CARequestLog> searchMMSMeter(PaginDto<CARequestLog> pagin);
 
-	void updateMMSMeter(CARequestLog ca, String msn);
+	String updateMMSMeter(CARequestLog ca, String msn);
 
 	List<DeviceSettingDto> uploadDeviceSettings(MultipartFile file, Boolean isProcess) throws IOException;
 }

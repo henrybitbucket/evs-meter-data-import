@@ -207,12 +207,13 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Override
 	@Transactional
-	public void updateMMSMeter(CARequestLog ca, String msn) {
+	public String updateMMSMeter(CARequestLog ca, String msn) {
 
+		String message = null;
 		try {
 			msn = StringUtils.isBlank(ca.getMsn()) ? msn : ca.getMsn();
 			if (StringUtils.isBlank(msn)) {
-				return;
+				return null;
 			}
 			
 			MMSMeter mmsMeter = mmsMeterRepository.findByMsn(msn);
@@ -229,12 +230,20 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				mmsMeter.setLastestDecoupleUser(SecurityUtils.getEmail());
 				
 				// copy address to meter
-				mmsMeter.setBuilding(ca.getBuilding());
-				mmsMeter.setBlock(ca.getBlock());
-				mmsMeter.setFloorLevel(ca.getFloorLevel());
-				mmsMeter.setBuildingUnit(ca.getBuildingUnit());
-				mmsMeter.setAddress(ca.getAddress());
-				mmsMeter.setHomeAddress(ca.getHomeAddress());
+				if (ca.getBuildingUnit() != null) {
+					List<MMSMeter> list = mmsMeterRepository.findByBuildingAndFloorLevelAndBuildingUnit(ca.getBuilding().getId(), ca.getFloorLevel().getId(), ca.getBuildingUnit().getId());
+				
+					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != mmsMeter.getId().longValue()) {
+						message = null; // "Because the MCU address is already linked to another Meter, the meter address will not be copied from the MCU address."; 
+					} else {
+						mmsMeter.setBuilding(ca.getBuilding());
+						mmsMeter.setBlock(ca.getBlock());
+						mmsMeter.setFloorLevel(ca.getFloorLevel());
+						mmsMeter.setBuildingUnit(ca.getBuildingUnit());
+						mmsMeter.setAddress(ca.getAddress());
+						mmsMeter.setHomeAddress(ca.getHomeAddress());
+					}
+				}
 			}
 			
 			if (!isCoupled && StringUtils.isNotBlank(ca.getMsn())) {
@@ -244,25 +253,41 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				
 				// resume address meter -> mcu
 				if (mmsMeter.getBuildingUnit() != null) {
-					ca.setBuildingUnit(mmsMeter.getBuildingUnit());
-					ca.setFloorLevel(mmsMeter.getBuildingUnit().getFloorLevel());
-					ca.setBlock(mmsMeter.getBuildingUnit().getFloorLevel().getBlock());
-					ca.setBuilding(mmsMeter.getBuildingUnit().getFloorLevel().getBuilding());
+					
+					List<CARequestLog> list = caRequestLogRepository.findByBuildingAndFloorLevelAndBuildingUnit(mmsMeter.getBuilding().getId(), mmsMeter.getFloorLevel().getId(), mmsMeter.getBuildingUnit().getId());
+					
+					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != ca.getId().longValue()) {
+						message = "Because the meter address is already linked to another MCU, the MCU address will not resume from the Meter address."; 
+					} else {
+						ca.setBuildingUnit(mmsMeter.getBuildingUnit());
+						ca.setFloorLevel(mmsMeter.getBuildingUnit().getFloorLevel());
+						ca.setBlock(mmsMeter.getBuildingUnit().getFloorLevel().getBlock());
+						ca.setBuilding(mmsMeter.getBuildingUnit().getFloorLevel().getBuilding());
+						ca.setAddress(mmsMeter.getAddress());
+						ca.setHomeAddress(mmsMeter.getHomeAddress());
+					}
 				}
-				ca.setAddress(mmsMeter.getAddress());
-				ca.setHomeAddress(mmsMeter.getHomeAddress());
 			}
 			
 			if (isCoupled && msn.equalsIgnoreCase(ca.getMsn())) {
 
 				// not change msn
 				// copy address to meter (because update address for couple device -> update address for mcu)
-				mmsMeter.setBuilding(ca.getBuilding());
-				mmsMeter.setBlock(ca.getBlock());
-				mmsMeter.setFloorLevel(ca.getFloorLevel());
-				mmsMeter.setBuildingUnit(ca.getBuildingUnit());
-				mmsMeter.setAddress(ca.getAddress());
-				mmsMeter.setHomeAddress(ca.getHomeAddress());
+				if (ca.getBuildingUnit() == null) {
+					List<MMSMeter> list = mmsMeterRepository.findByBuildingAndFloorLevelAndBuildingUnit(ca.getBuilding().getId(), ca.getFloorLevel().getId(), ca.getBuildingUnit().getId());
+					
+					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != mmsMeter.getId().longValue()) {
+						message = "Because the MCU address is already linked to another Meter, the meter address will not be copied from the MCU address."; 
+					} else {
+						mmsMeter.setBuilding(ca.getBuilding());
+						mmsMeter.setBlock(ca.getBlock());
+						mmsMeter.setFloorLevel(ca.getFloorLevel());
+						mmsMeter.setBuildingUnit(ca.getBuildingUnit());
+						mmsMeter.setAddress(ca.getAddress());
+						mmsMeter.setHomeAddress(ca.getHomeAddress());
+					}				
+				}
+
 			}
 			
 			mmsMeter.setMsn(msn);
@@ -274,6 +299,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		} catch (Exception e) {
 			LOG.error("ERROR in updateMMSMeter: " +  e.getMessage());
 		}
+		
+		return message;
 	}
 
 	@Override
@@ -599,7 +626,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         updateCacheUidMsnDevice(ca.getUid(), "update");
         
         // backup de-couple msn to search Meter
-        updateMMSMeter(ca, msn);
+        String message = updateMMSMeter(ca, msn);
+        dto.setMessage(message);
         try {
 			DeviceRemoveLog log = DeviceRemoveLog.build(ca);
 			

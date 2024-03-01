@@ -85,6 +85,8 @@ public class CaRequestLogDto {
     
     private String remark;
     
+    private String message;
+    
     @Builder.Default
     private boolean updateMeter = false;
 }

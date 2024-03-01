@@ -148,7 +148,7 @@ public class CaRequestLogController {
     public ResponseDto<?> save(HttpServletRequest httpServletRequest, @RequestBody CaRequestLogDto dto) {
         try {
             caRequestLogService.save(dto);
-            return ResponseDto.<Object>builder().success(true).build();
+            return ResponseDto.<Object>builder().message(dto.getMessage()).success(true).build();
         } catch (Exception e) {
             return ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build();
         }
