@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.pa.evs.model.UserAppCode;
+import com.pa.evs.model.Users;
 
 @Repository
 public interface UserAppCodeRepository extends JpaRepository<UserAppCode, Long> {
@@ -19,4 +20,10 @@ public interface UserAppCodeRepository extends JpaRepository<UserAppCode, Long> 
 	
 	@Query("SELECT appCode.name FROM UserAppCode WHERE user.userId = ?1")
 	List<String> findAppCodeNameByUserUserId(Long userId);
+	
+	@Query("SELECT ac.user FROM UserAppCode ac WHERE ac.appCode.name = ?1 and ac.user.email in (?2)")
+	List<Users> findByAppCodeNameAndUserEmailIn(String appCode, Collection<String> emails);
+	
+	@Query("SELECT ac.user FROM UserAppCode ac WHERE ac.appCode.name = ?1 and ac.user.email = ?2")
+	Users findByAppCodeNameAndUserEmail(String appCode, String emails);
 }

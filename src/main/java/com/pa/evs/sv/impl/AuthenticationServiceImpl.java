@@ -40,6 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.pa.evs.constant.Message;
 import com.pa.evs.constant.ValueConstant;
 import com.pa.evs.dto.ChangePasswordDto;
+import com.pa.evs.dto.CompanyDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
@@ -55,6 +56,7 @@ import com.pa.evs.exception.ApiException;
 import com.pa.evs.exception.customException.AuthenticationException;
 import com.pa.evs.exception.customException.DuplicateUserException;
 import com.pa.evs.model.AppCode;
+import com.pa.evs.model.Company;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.Login;
 import com.pa.evs.model.OTP;
@@ -68,12 +70,14 @@ import com.pa.evs.model.SubGroupMember;
 import com.pa.evs.model.SubGroupMemberRole;
 import com.pa.evs.model.Token;
 import com.pa.evs.model.UserAppCode;
+import com.pa.evs.model.UserCompany;
 import com.pa.evs.model.UserGroup;
 import com.pa.evs.model.UserPermission;
 import com.pa.evs.model.UserProject;
 import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.AppCodeRepository;
+import com.pa.evs.repository.CompanyRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.LoginRepository;
 import com.pa.evs.repository.PermissionRepository;
@@ -85,6 +89,7 @@ import com.pa.evs.repository.SubGroupMemberRepository;
 import com.pa.evs.repository.SubGroupMemberRoleRepository;
 import com.pa.evs.repository.SubGroupRepository;
 import com.pa.evs.repository.UserAppCodeRepository;
+import com.pa.evs.repository.UserCompanyRepository;
 import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.repository.UserPermissionRepository;
 import com.pa.evs.repository.UserProjectRepository;
@@ -123,7 +128,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	
 	@Autowired
 	private UserRepository userRepository;
-
+	
 	@Autowired
 	private RoleRepository roleRepository;
 
@@ -132,6 +137,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Autowired
 	private UserProjectRepository userProjectRepository;
+	
+	@Autowired
+	private UserCompanyRepository userCompanyRepository;
+	
+	@Autowired
+	private CompanyRepository companyRepository;
 
 	@Autowired
 	private RolePermissionRepository rolePermissionRepository;
@@ -689,6 +700,42 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 		}
 	}
+	
+	@Override
+	@Transactional
+	public void saveCompany(UserDto dto) {
+		Optional<Users> user = userRepository.findById(dto.getId());
+		if (user.isPresent()) {
+			
+			List<String> companyNames = userCompanyRepository.findCompanyNameByUserId(dto.getId());
+			Set<String> companyNamesInput = new HashSet<>();
+			for (String company : dto.getCompanies()) {
+				companyNamesInput.add(company);
+				if (!companyNames.contains(company)) {
+					Optional<Company> cpnOpt = companyRepository.findByNameAndAppCodeName(company, AppCodeSelectedHolder.get());
+					if (cpnOpt.isPresent()) {
+						UserCompany userCompany = new UserCompany();
+						userCompany.setUser(user.get());
+						userCompany.setCompany(cpnOpt.get());
+						try {
+							userCompanyRepository.save(userCompany);
+						} catch (Exception e) {
+							LOGGER.error(e.getMessage(), e);
+						}
+					}
+				}
+			}
+			
+			try {
+				userCompanyRepository.deleteNotInCompanies(user.get().getUserId(),
+						AppCodeSelectedHolder.get(),
+						companyNamesInput.isEmpty() ? new HashSet<>(Arrays.asList("-1")) : companyNamesInput);
+			} catch (Exception e) {
+				e.printStackTrace();
+				LOGGER.error(e.getMessage(), e);
+			}
+		}
+	}
 
 	public ResponseDto<LoginResponseDto> passLogin(LoginRequestDto loginRequestDTO) {
 		String email = loginRequestDTO.getEmail();
@@ -1018,7 +1065,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (user != null) {
 			boolean check = false;
 			for (UserRole userRole : user.getRoles()) {
-				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN") || StringUtils.equals(userRole.getRole().getName(), AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
 					check = true;
 				}
 			}
@@ -1116,7 +1163,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (user.isPresent()) {
 			boolean check = false;
 			for (UserRole userRole : user.get().getRoles()) {
-				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN") || StringUtils.equals(userRole.getRole().getName(), AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
 					check = true;
 				}
 			}
@@ -1216,7 +1263,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (user != null) {
 			boolean check = false;
 			for (UserRole userRole : user.getRoles()) {
-				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN") || StringUtils.equals(userRole.getRole().getName(), AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
 					check = true;
 				}
 			}
@@ -1306,7 +1353,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (user.isPresent()) {
 			boolean check = false;
 			for (UserRole userRole : user.get().getRoles()) {
-				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN")) {
+				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN") || StringUtils.equals(userRole.getRole().getName(), AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
 					check = true;
 				}
 			}
@@ -1383,6 +1430,100 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 		}
 	}
+	
+	@Override
+	public void getCompanyOfUser(PaginDto<CompanyDto> pagin) {
+
+		Map<String, Object> map = pagin.getOptions();
+
+		Object userId = (Object) map.get("userId");
+
+		Optional<Users> user = userRepository.findById(Long.parseLong(userId.toString()));
+
+		if (user.isPresent()) {
+			boolean check = false;
+			for (UserRole userRole : user.get().getRoles()) {
+				if (StringUtils.equals(userRole.getRole().getName(), "SUPER_ADMIN") || StringUtils.equals(userRole.getRole().getName(), AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+					check = true;
+				}
+			}
+			if (check == true) {
+				StringBuilder sqlBuilder = new StringBuilder("FROM Company");
+				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Company");
+
+				StringBuilder sqlCommonBuilder = new StringBuilder();
+				sqlCommonBuilder.append(" WHERE 1 = 1");
+				
+				sqlCommonBuilder.append(" and appCode.name = '" + AppCodeSelectedHolder.get() + "'");
+				sqlCountBuilder.append(sqlCommonBuilder);
+
+				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+					pagin.setOffset(0);
+				}
+
+				if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+					pagin.setLimit(20);
+				}
+
+				Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+				Long count = ((Number) queryCount.getSingleResult()).longValue();
+				pagin.setTotalRows(count);
+				pagin.setResults(new ArrayList<>());
+				if (count == 0l) {
+					return;
+				}
+
+				Query query = em.createQuery(sqlBuilder.toString());
+				query.setFirstResult(pagin.getOffset());
+				query.setMaxResults(pagin.getLimit());
+
+				List<Company> companies = query.getResultList();
+				companies.forEach(company -> {
+					CompanyDto dto = CompanyDto.builder().id(company.getId()).name(company.getName()).description(company.getDescription()).build();
+					pagin.getResults().add(dto);
+				});
+			} else {
+				StringBuilder sqlBuilder = new StringBuilder("FROM UserCompany ur");
+				StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM UserCompany ur");
+
+				StringBuilder sqlCommonBuilder = new StringBuilder();
+				sqlCommonBuilder.append(" WHERE ur.user.userId = " + userId);
+				sqlCommonBuilder.append(" AND ur.company.appCode.name = '" + AppCodeSelectedHolder.get() + "' ");
+				
+				sqlBuilder.append(sqlCommonBuilder);
+				sqlCountBuilder.append(sqlCommonBuilder);
+
+				if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+					pagin.setOffset(0);
+				}
+
+				if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+					pagin.setLimit(20);
+				}
+
+				Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+				Long count = ((Number) queryCount.getSingleResult()).longValue();
+				pagin.setTotalRows(count);
+				pagin.setResults(new ArrayList<>());
+				if (count == 0l) {
+					return;
+				}
+
+				Query query = em.createQuery(sqlBuilder.toString());
+				query.setFirstResult(pagin.getOffset());
+				query.setMaxResults(pagin.getLimit());
+
+				List<UserCompany> userCompanies = query.getResultList();
+				userCompanies.forEach(userCpn -> {
+					CompanyDto dto = CompanyDto.builder().id(userCpn.getCompany().getId()).name(userCpn.getCompany().getName())
+							.description(userCpn.getCompany().getDescription()).build();
+					pagin.getResults().add(dto);
+				});
+			}
+		}
+	}	
 	
 	@Override
 	public void getGroupOfUser(PaginDto<GroupUserDto> pagin) {
@@ -1788,7 +1929,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), members)
 		.forEach(mb -> map.put(mb.getEmail(), mb));
 		
+		boolean isPaStaff = SecurityUtils.hasAnyRole("STAFF");
+		
 		members.forEach(mb -> {
+			
+			
+			if (!isPaStaff && !checkMatchAnyCompany(SecurityUtils.getEmail(), mb)) {
+				throw new RuntimeException(mb + " not in your company!");
+			}
 			
 			Users us = existsUsers.get(mb);
 			if (us == null) {
@@ -1819,6 +1967,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		List<String> members = (List<String>) payload.get("members");
 		SubGroup subGroup;
+		boolean isPaStaff = SecurityUtils.hasAnyRole("STAFF");
 		if (SecurityUtils.hasAnyRole("STAFF")) {
 			subGroup = subGroupRepository.findByName(name).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
 		} else {
@@ -1827,10 +1976,31 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), members)
 		.forEach(mb -> {
+			if (!isPaStaff && !checkMatchAnyCompany(SecurityUtils.getEmail(), mb.getEmail())) {
+				throw new RuntimeException(mb.getEmail() + " not in your company!");
+			}
 			subGroupMemberRoleRepository.findByMemberId(mb.getId())
 			.forEach(subGroupMemberRoleRepository::delete);
 			subGroupMemberRepository.delete(mb);
 		});
+	}
+	
+	private boolean checkMatchAnyCompany(String email1, String email2) {
+		List<String> currCpns = userCompanyRepository.findCompanyNameByUserEmail(email1);
+		Users user = userAppCodeRepository.findByAppCodeNameAndUserEmail(AppCodeSelectedHolder.get(), email2);
+		if (user == null) {
+			return false;
+		}
+
+		if (currCpns.indexOf("ALL") > -1) {
+			return true;
+		}
+		
+		if (currCpns.isEmpty() && (user.getCompanies() == null || user.getCompanies().isEmpty())) {
+			return true;
+		}
+		
+		return user.getCompanies().stream().anyMatch(cp -> "ALL".equalsIgnoreCase(cp.getCompany().getName()) || currCpns.contains(cp.getCompany().getName()));
 	}
 	
 	@Override
@@ -1849,6 +2019,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			subGroup = subGroupRepository.findByName(name).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
 		} else {
 			subGroup = subGroupRepository.findByNameAndOwner(name, SecurityUtils.getEmail()).orElseThrow(() -> new RuntimeException("Group doesn't exists"));
+		}
+		
+		boolean isPaStaff = SecurityUtils.hasAnyRole("STAFF");
+		if (!isPaStaff && !checkMatchAnyCompany(SecurityUtils.getEmail(), member)) {
+			throw new RuntimeException(member + " not in your company!");
 		}
 		
 		subGroupMemberRepository.findByGroupIdAndEmailIn(subGroup.getId(), Arrays.asList(member))
@@ -1885,6 +2060,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		
 		String member = (String) payload.get("member"); 
+		
+		boolean isPaStaff = SecurityUtils.hasAnyRole("STAFF");
+		if (!isPaStaff && !checkMatchAnyCompany(SecurityUtils.getEmail(), member)) {
+			throw new RuntimeException(member + " not in your company!");
+		}
+		
 		List<String> roles = (List<String>) payload.get("roles");
 		SubGroup subGroup;
 		if (SecurityUtils.hasAnyRole("STAFF")) {
@@ -1962,26 +2143,30 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 		});
 		
-		return userRepository.findByEmailIn(emailMemberIds.keySet()).stream().map(user -> {
-			
-			List<Role> roleInSgs = mRoles.computeIfAbsent(emailMemberIds.get(user.getEmail()), k -> new ArrayList<>());
-			List<String> roles = new ArrayList<>();
-
-			UserDto dto = UserDto.builder().id(user.getUserId()).username(user.getUsername()).email(user.getEmail())
-					.fullName(user.getFullName()).firstName(user.getFirstName()).lastName(user.getLastName())
-					.phoneNumber(user.getPhoneNumber()).avatar(user.getAvatar())
-					.fullName(user.getFirstName() + " " + user.getLastName()).status(user.getStatus())
-					.changePwdRequire(user.getChangePwdRequire())
-					.loginOtpRequire(user.getLoginOtpRequire())
-					.identification(user.getIdentification())
-					.roleDescs(roleInSgs.stream().filter(r -> r.getAppCode().getName().equals(AppCodeSelectedHolder.get())).map(authority -> {
-						roles.add(authority.getName());
-						return SimpleMap.init("name", authority.getName()).more("desc",
-								authority.getDesc());
-					}).collect(Collectors.toList())).build();
-			dto.setRoles(roles);
-			return dto;
-		}).collect(Collectors.toList());
+		return userAppCodeRepository.findByAppCodeNameAndUserEmailIn(AppCodeSelectedHolder.get(), emailMemberIds.keySet())
+				.stream()
+				.map(user -> {
+					List<Role> roleInSgs = mRoles.computeIfAbsent(emailMemberIds.get(user.getEmail()), k -> new ArrayList<>());
+					List<String> roles = new ArrayList<>();
+		
+					UserDto dto = UserDto.builder().id(user.getUserId()).username(user.getUsername()).email(user.getEmail())
+							.fullName(user.getFullName()).firstName(user.getFirstName()).lastName(user.getLastName())
+							.phoneNumber(user.getPhoneNumber()).avatar(user.getAvatar())
+							.fullName(user.getFirstName() + " " + user.getLastName()).status(user.getStatus())
+							.changePwdRequire(user.getChangePwdRequire())
+							.loginOtpRequire(user.getLoginOtpRequire())
+							.identification(user.getIdentification())
+							.companies(user.getCompanies().stream().map(uc -> uc.getCompany().getName()).collect(Collectors.toList()))
+							.roleDescs(roleInSgs.stream().filter(r -> r.getAppCode().getName().equals(AppCodeSelectedHolder.get())).map(authority -> {
+								roles.add(authority.getName());
+								return SimpleMap.init("name", authority.getName()).more("desc",
+										authority.getDesc());
+							}).collect(Collectors.toList())).build();
+					dto.setRoles(roles);
+					return dto;
+				})
+				.filter(it -> it != null)
+				.collect(Collectors.toList());
 	}
 	
 	@Override

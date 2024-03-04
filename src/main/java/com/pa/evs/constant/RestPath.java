@@ -16,6 +16,8 @@ public interface RestPath {
 	String USER_PROJECT_LOGGING = API + "/user/project/logging";
 	String USERROLE = API + "/user/role";
 	String USER_PROJECT = API + "/user/project";
+	String USER_COMPANY_LOGGING = API + "/user/company/logging";
+	String USER_COMPANY = API + "/user/company";
 	String USERPLATFORM = API + "/user/pf";
 	String USERGROUP = API + "/user/group";
 	String EACHUSERPERMISSION = API + "/each-user/permission";
@@ -23,6 +25,7 @@ public interface RestPath {
 	String UPDATEGROUP = API + "/update/group";
 	String UPDATEPERMISSON = API + "/update/permission";
 	String UPDATEPROJECT = API + "/update/project";
+	String UPDATECOMPANY = API + "/update/company";
 	String WHOAMI1 = API + "/whoami";
 	String CREATE_NEW_USER = API + "/user/save";
 	

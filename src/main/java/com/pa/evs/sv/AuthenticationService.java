@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import com.pa.evs.dto.ChangePasswordDto;
+import com.pa.evs.dto.CompanyDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
@@ -63,4 +64,6 @@ public interface AuthenticationService {
 	void getProjectTagOfUserLogin(PaginDto<ProjectTagDto> pagin);
 	void saveProject(UserDto dto);
 	void logout(String token);
+	void getCompanyOfUser(PaginDto<CompanyDto> pagin);
+	void saveCompany(UserDto dto);
 }

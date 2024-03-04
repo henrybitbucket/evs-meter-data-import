@@ -75,6 +75,10 @@ public class Users extends Base1Entity {
 	
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserProject> projects;
+	
+	@Builder.Default
+	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
+    private List<UserCompany> companies = new ArrayList<>();
     
     @Column(name = "avatar")
     private String avatar;

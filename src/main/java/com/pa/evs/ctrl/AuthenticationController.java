@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.ChangePasswordDto;
+import com.pa.evs.dto.CompanyDto;
 import com.pa.evs.dto.CreateUserDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
@@ -133,6 +134,14 @@ public class AuthenticationController {
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
+    @PostMapping(value = {RestPath.USER_COMPANY})
+    @ApiIgnore
+    public Object getCompanyOfUser(@RequestBody PaginDto<CompanyDto> pagin) {
+        authenticationService.getCompanyOfUser(pagin);
+        return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
+    
     @GetMapping(value = {RestPath.USERPLATFORM})
     @ApiIgnore
     public Object getPfOfUser(@RequestParam(required = true) String email) {
@@ -226,7 +235,18 @@ public class AuthenticationController {
         }
         return ResponseEntity.ok(ResponseDto.builder().success(true).build());
     }
-
+    
+    @PostMapping(value = {RestPath.UPDATECOMPANY})
+    @ApiIgnore
+    public ResponseEntity<Object> saveCompany(@RequestBody UserDto user) {
+        try {
+        	authenticationService.saveCompany(user);
+        } catch (Exception e) {
+            return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.ok(ResponseDto.builder().success(true).build());
+    }
+    
     @GetMapping(value = {RestPath.WHOAMI, RestPath.WHOAMI1})
     public ResponseDto<JwtUser> getUser(HttpServletRequest httpServletRequest){
         return authenticationService.getUser(httpServletRequest);
