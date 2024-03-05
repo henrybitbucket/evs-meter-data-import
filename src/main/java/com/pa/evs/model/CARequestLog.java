@@ -200,6 +200,12 @@ public class CARequestLog extends BaseEntity {
 	@Transient
 	private List<String> logs;
 	
+	@Transient
+	private DeviceType typeP2;
+	
+	@Transient
+	private DeviceType typeP3;
+	
 	@Builder.Default
 	@Column(name = "send_mdt_to_pi", columnDefinition = "int default 1 not null")
 	private Integer sendMDTToPi = 2;//1 - to send data to the pi, 2 - do not send data to the pi

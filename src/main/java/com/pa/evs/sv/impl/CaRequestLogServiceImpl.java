@@ -26,7 +26,6 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
-import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -273,7 +272,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 
 				// not change msn
 				// copy address to meter (because update address for couple device -> update address for mcu)
-				if (ca.getBuildingUnit() == null) {
+				if (ca.getBuildingUnit() != null) {
 					List<MMSMeter> list = mmsMeterRepository.findByBuildingAndFloorLevelAndBuildingUnit(ca.getBuilding().getId(), ca.getFloorLevel().getId(), ca.getBuildingUnit().getId());
 					
 					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != mmsMeter.getId().longValue()) {
@@ -293,7 +292,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			mmsMeter.setMsn(msn);
 			mmsMeter.setLastUid(ca.getUid());
 			
-			mmsMeter.setUid(StringUtils.isNotBlank(ca.getMsn()) ? ca.getUid() : null);
+			mmsMeter.setUid(msn.equalsIgnoreCase(ca.getMsn()) ? ca.getUid() : null);
 			
 			mmsMeterRepository.save(mmsMeter);
 		} catch (Exception e) {
@@ -815,6 +814,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Long toDate = (Long) options.get("toDate");
             String status = (String) options.get("status");
             String type = (String) options.get("type");
+            String typeP2 = (String) options.get("typeP2");
+            String typeP3 = (String) options.get("typeP3");
+            if (StringUtils.isBlank(typeP2) && StringUtils.isNotBlank(type)) {
+            	typeP2 = type;
+            }
             String querySn = (String) options.get("querySn");
             String queryMsn = (String) options.get("queryMsn");
             String querySnOrCid = (String) options.get("querySnOrCid");
@@ -922,13 +926,20 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (StringUtils.isNotBlank(status)) {
                 sqlCommonBuilder.append(" AND ca.status = '" + status + "' ");
             }
-            if (StringUtils.isNotBlank(type)) {
+            if (StringUtils.isNotBlank(typeP2)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" AND m.uid IS " + ("COUPLED".equalsIgnoreCase(type) ? " NOT NULL " : "NULL ") + " ");
+            		sqlCommonBuilder.append(" AND m.uid IS " + ("COUPLED".equalsIgnoreCase(typeP2) ? " NOT NULL " : "NULL ") + " ");
             	} else {
-            		sqlCommonBuilder.append(" AND ca.type = '" + type + "' ");            		
+            		sqlCommonBuilder.append(" AND ca.type = '" + typeP2 + "' ");            		
             	}
             }
+            if (StringUtils.isNotBlank(typeP3)) {
+            	if (searchMeter) {
+            		sqlCommonBuilder.append(" AND m.buildingUnit IS " + ("COUPLED".equalsIgnoreCase(typeP3) ? " NOT NULL " : "NULL ") + " ");
+            	} else {
+            		sqlCommonBuilder.append(" AND ca.buildingUnit IS " + ("COUPLED".equalsIgnoreCase(typeP3) ? " NOT NULL " : "NULL ") + " ");		
+            	}
+            }            
             if (!CollectionUtils.isEmpty(cids)) {
                 sqlCommonBuilder.append(" AND (ca.cid = '" + cids.get(0) + "'");
                 for (int i = 1; i < cids.size(); i++) {
@@ -1047,10 +1058,13 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	for (Object[] obj : list) {
             	CARequestLog ca = (CARequestLog) obj[0];
             	MMSMeter meter = (MMSMeter) obj[1];
-            	if (searchMeter && meter != null && StringUtils.isBlank(ca.getMsn())) {
+            	if (searchMeter && meter != null && StringUtils.isBlank(meter.getUid())) {
             		ca.setUid(null);
             		ca.setSn(null);
             		ca.setCid(null);
+            		ca.setType(DeviceType.NOT_COUPLED);
+            		ca.setTypeP2(DeviceType.NOT_COUPLED);
+            		
             		ca.setMsn(meter.getMsn());
             		ca.setLastestDecoupleUser(meter.getLastestCoupledUser());
             		ca.setLastestDecoupleTime(meter.getLastestDecoupleTime());
@@ -1065,6 +1079,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             		ca.setBuildingUnit(meter.getBuildingUnit());
             		ca.setAddress(meter.getAddress());
             		ca.setHomeAddress(meter.getHomeAddress());
+            		
+            		ca.setTypeP3(meter.getBuildingUnit() != null ? DeviceType.COUPLED : DeviceType.NOT_COUPLED);
             	}
         	}
         }
