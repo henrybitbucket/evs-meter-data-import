@@ -1688,7 +1688,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 									
 									int sendMDTToPi = 2; // default not send
 									try {
-										sendMDTToPi = Integer.parseInt(AppProps.get("SEND_MDT_TO_PI", "2"));
+										if ("true".equalsIgnoreCase(AppProps.get("SEND_MDT_TO_PI", "false"))) {
+											sendMDTToPi = 1;
+										}
 									} catch (Exception e) {
 										//
 									}
