@@ -1753,7 +1753,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 						caLog.setDeviceKeyType(RSAUtil.getKeyType(ful.getAbsolutePath()));
 						
 						if (caLog.getId() == null) {
-							caLog.setSendMDTToPi(2); // default not send
+							int sendMDTToPi = 2; // default not send
+							try {
+								if ("true".equalsIgnoreCase(AppProps.get("SEND_MDT_TO_PI", "false"))) {
+									sendMDTToPi = 1;
+								}
+							} catch (Exception e) {
+								//
+							}
+							if (sendMDTToPi != 1 && sendMDTToPi != 2) {
+								sendMDTToPi = 2;
+							}
+							caLog.setSendMDTToPi(sendMDTToPi); // default not send
 						}
 						
 						caRequestLogRepository.save(caLog);
