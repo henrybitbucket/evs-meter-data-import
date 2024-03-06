@@ -1685,7 +1685,17 @@ public class EVSPAServiceImpl implements EVSPAService {
 								}
 								
 								if (caLog.getId() == null) {
-									caLog.setSendMDTToPi(2); // default not send
+									
+									int sendMDTToPi = 2; // default not send
+									try {
+										sendMDTToPi = Integer.parseInt(AppProps.get("SEND_MDT_TO_PI", "2"));
+									} catch (Exception e) {
+										//
+									}
+									if (sendMDTToPi != 1 && sendMDTToPi != 2) {
+										sendMDTToPi = 2;
+									}
+									caLog.setSendMDTToPi(sendMDTToPi); // default not send
 								}
 								
 								caLog.setUid(uuid);
