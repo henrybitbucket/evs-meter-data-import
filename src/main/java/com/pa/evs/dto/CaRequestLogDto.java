@@ -89,4 +89,8 @@ public class CaRequestLogDto {
     
     @Builder.Default
     private boolean updateMeter = false;
+    
+	private String remarkMCU;
+	
+	private String remarkMeter;
 }

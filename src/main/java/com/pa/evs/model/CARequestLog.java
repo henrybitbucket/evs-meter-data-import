@@ -18,6 +18,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pa.evs.dto.ProjectTagDto;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
@@ -35,6 +36,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "ca_request_log", uniqueConstraints = @UniqueConstraint(columnNames = "uid"))
+@JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
 public class CARequestLog extends BaseEntity {
 
     private String uid;
@@ -212,12 +214,18 @@ public class CARequestLog extends BaseEntity {
 	
 	private String remark;
 	
+	@Column(name = "remark_mcu", length = 500)
+	private String remarkMCU;
+	
+	@Column(name = "remark_meter", length = 500)
+	private String remarkMeter;
+	
 	@Transient
     private Long lastestDecoupleTime;
     
 	@Transient
     private String lastestDecoupleUser;
-    
+
 	public static CARequestLog build(Map<String, Object> data) throws Exception {
 		
 		return builder()

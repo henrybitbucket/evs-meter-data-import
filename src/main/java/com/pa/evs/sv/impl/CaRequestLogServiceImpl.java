@@ -3,6 +3,7 @@ package com.pa.evs.sv.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -111,6 +112,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@Value("${evs.pa.privatekey.path}") private String pkPath;
 	
 	@Value("S{s3.device.settings.bucket.name}") private String deviceSettingsBucketName;
+	
+	static final ObjectMapper mapper = new ObjectMapper();
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
@@ -243,6 +246,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 						mmsMeter.setHomeAddress(ca.getHomeAddress());
 					}
 				}
+				ca.setRemarkMeter(null);
 			}
 			
 			if (!isCoupled && StringUtils.isNotBlank(ca.getMsn())) {
@@ -266,6 +270,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 						ca.setHomeAddress(mmsMeter.getHomeAddress());
 					}
 				}
+				ca.setRemarkMeter(mmsMeter.getRemark());
 			}
 			
 			if (isCoupled && msn.equalsIgnoreCase(ca.getMsn())) {
@@ -286,7 +291,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 						mmsMeter.setHomeAddress(ca.getHomeAddress());
 					}				
 				}
-
+				mmsMeter.setRemark(ca.getRemarkMeter());
 			}
 			
 			mmsMeter.setMsn(msn);
@@ -295,6 +300,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			mmsMeter.setUid(msn.equalsIgnoreCase(ca.getMsn()) ? ca.getUid() : null);
 			
 			mmsMeterRepository.save(mmsMeter);
+			caRequestLogRepository.save(ca);
 		} catch (Exception e) {
 			LOG.error("ERROR in updateMMSMeter: " +  e.getMessage());
 		}
@@ -328,7 +334,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     		// update remark meter device
     		MMSMeter mmsMeter = mmsMeterRepository.findByMsn(dto.getMsn());
     		if (mmsMeter != null) {
-    			mmsMeter.setRemark(dto.getRemark());
+    			mmsMeter.setRemark(dto.getRemarkMeter());
     			mmsMeterRepository.save(mmsMeter);
     		}
     		if (StringUtils.isBlank(dto.getUid())) {
@@ -425,6 +431,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         
         if (dto.getSendMDTToPi() != null) {
         	ca.setSendMDTToPi(dto.getSendMDTToPi());	
+        }
+        
+        if (dto.getRemarkMCU() != null) {
+        	ca.setRemarkMCU(dto.getRemarkMCU());	
+        }
+        
+        if (dto.getRemarkMeter() != null) {
+        	ca.setRemarkMeter(dto.getRemarkMeter());	
         }
         
         List<CARequestLog> list = null;
@@ -838,6 +852,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             String queryFloorLevel = (String) options.get("queryFloorLevel");
             String queryBuildingUnit = (String) options.get("queryBuildingUnit");
             String queryPostalCode = (String) options.get("queryPostalCode");
+            String queryRemarkMCU = (String) options.get("queryRemarkMCU");
+            String queryRemarkMeter = (String) options.get("queryRemarkMeter");
             Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor")) ? Long.parseLong((String) options.get("queryVendor")) : null;
             
             if (BooleanUtils.isTrue(allDate)) {
@@ -985,7 +1001,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             		sqlCommonBuilder.append(" AND ca.buildingUnit.id= '" + queryBuildingUnit + "' ");
             	}
             }
-            
+            if (StringUtils.isNotBlank(queryRemarkMCU)) {
+            	sqlCommonBuilder.append(" AND upper(ca.remarkMCU) like upper('%" + queryRemarkMCU.trim() + "%') ");
+            }
+            if (StringUtils.isNotBlank(queryRemarkMeter)) {
+            	sqlCommonBuilder.append(" AND ca.msn is not null and ca.msn <> '' and upper(ca.remarkMeter) like upper('%" + queryRemarkMeter.trim() + "%') ");
+            }            
             if (StringUtils.isNotBlank(queryPostalCode)) {
                 sqlCommonBuilder.append(" AND ((exists (select 1 from Building bd where bd.id = ca.building.id and upper(bd.address.postalCode) = '" + queryPostalCode.toUpperCase() + "') ");
                 sqlCommonBuilder.append(" or (exists (select 1 FROM Address add1 where add1.id = ca.address.id and upper(add1.postalCode) = '" + queryPostalCode.toUpperCase() + "') ))) ");
@@ -1031,9 +1052,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         
         final List<Object[]> list = query.getResultList();
         List<CARequestLog> rp = new ArrayList<>();
-        for (Object[] obj : list) {
+        for (int i = 0; i < list.size(); i++) {
+        	 
+        	Object[] obj = list.get(i);
+        	
         	CARequestLog ca = (CARequestLog) obj[0];
-//        	List<ProjectTag> pTags = ca.getDeviceProject().isEmpty() ? new ArrayList<>() : ca.getDeviceProject().stream().map(dp -> (ProjectTag) Hibernate.unproxy(dp.getProject())).collect(Collectors.toList());
         	if (ca.getDeviceProject() != null) {
         		for (DeviceProject t : ca.getDeviceProject()) {
         			if (t.getProject() != null) {
@@ -1048,12 +1071,18 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	if (StringUtils.isBlank(ca.getDeviceCsrSignatureAlgorithm())) {
         		AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.getUid());
         	}
-        	rp.add(ca);
+        	
+        	if (searchMeter) {
+        		obj[0] = clone((CARequestLog) obj[0]);
+        		rp.add((CARequestLog) obj[0]);       		
+        	} else {
+        		rp.add(ca);
+        	}
+
         }
         
         pagin.setResults(rp);
         getRLSLog(rp);
-        
         if (searchMeter) {
         	for (Object[] obj : list) {
             	CARequestLog ca = (CARequestLog) obj[0];
@@ -1064,7 +1093,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             		ca.setCid(null);
             		ca.setType(DeviceType.NOT_COUPLED);
             		ca.setTypeP2(DeviceType.NOT_COUPLED);
-            		
+            		ca.setRemarkMeter(meter.getRemark());
             		ca.setMsn(meter.getMsn());
             		ca.setLastestDecoupleUser(meter.getLastestCoupledUser());
             		ca.setLastestDecoupleTime(meter.getLastestDecoupleTime());
@@ -1976,5 +2005,24 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		}
 		
 		return settingList;
+	}
+	
+	private static <T> T clone(T obj) {
+		if (obj == null) {
+			return null;
+		}
+		
+		try {
+			T newObj = (T) obj.getClass().newInstance();
+			for (Field f : obj.getClass().getDeclaredFields()) {
+				f.setAccessible(true);
+				f.set(newObj, f.get(obj));
+			}
+			return newObj;
+		} catch (Exception e) {
+			
+		}
+		
+		return null;
 	}
 }

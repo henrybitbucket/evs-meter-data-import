@@ -17,6 +17,8 @@ import javax.persistence.Transient;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -64,18 +66,23 @@ public class Users extends Base1Entity {
 	@Column(name = "status")
     private String status;
 
+	@JsonIgnore
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserAppCode> appCodes;
 	
+	@JsonIgnore
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserRole> roles;
 	
+	@JsonIgnore
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserPermission> permissions;
 	
+	@JsonIgnore
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserProject> projects;
 	
+	@JsonIgnore
 	@Builder.Default
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "user", cascade = CascadeType.MERGE)
     private List<UserCompany> companies = new ArrayList<>();
