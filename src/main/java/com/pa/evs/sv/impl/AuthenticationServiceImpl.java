@@ -532,8 +532,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		if (isNewUser) {
 			String phoneNumber = en.getPhoneNumber();
-//			String email = en.getEmail();
-			String email = "ttx.pipo.uit@gmail.com";
+			String email = en.getEmail();
+//			String email = "ttx.pipo.uit@gmail.com";
 			if (dto.getSendLoginToPhone() == Boolean.TRUE && StringUtils.isNotBlank(phoneNumber)) {
 				notificationService.sendSMS(AppCodeSelectedHolder.get() + "-Account credentials: " + phoneNumber + " / " + dto.getPassword(), phoneNumber.trim());
 			}
