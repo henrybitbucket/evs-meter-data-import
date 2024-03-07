@@ -33,6 +33,10 @@ public class UserDto {
     
     private Boolean updatePwd;
     
+    private Boolean sendLoginToPhone;
+    
+    private Boolean sendLoginToEmail;
+    
     private Long approved;
     
     @Builder.Default

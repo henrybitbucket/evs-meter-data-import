@@ -29,6 +29,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -66,7 +67,6 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.http.IdleConnectionReaper;
 import com.amazonaws.metrics.AwsSdkMetrics;
@@ -131,8 +131,6 @@ import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
-
-import software.amazon.awssdk.services.sns.model.SnsException;
 
 @Component
 @SuppressWarnings("unchecked")
@@ -235,10 +233,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private static final ExecutorService EX_POOL_SDB = Executors.newFixedThreadPool(500);
 	
 	private AmazonS3Client s3Client = null;
-	
-	software.amazon.awssdk.services.sns.SnsClient snsClient = null;
-	
-	com.amazonaws.services.simpleemail.AmazonSimpleEmailService sesClient = null;
 	
 	@Override
 	public Object uploadDeviceCsr(MultipartFile file, Long vendor) {
@@ -559,11 +553,25 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private void logMDTSent(String msn, Integer mid, File file, Log log, Log publishLog, String defaultFname) {
 		CARequestLog ca = caRequestLogRepository.findByMsn(msn).orElse(null);
 		if (ca.getId() == null || ca.getSendMDTToPi() == null || ca.getSendMDTToPi().intValue() != 1) {
-			LOG.info("logMDTSent: " + msn + " not sent to pi");
+			LOG.info("logMDTSent: " + msn + " not sent to pi SendMDTToPi <> 1");
 			return;
 		}
+		List<String> ieiNodes = ca.getDeviceIEINodes() == null ? new ArrayList<>() : ca.getDeviceIEINodes().stream().map(dvn -> dvn.getIeiId()).collect(Collectors.toList());
+		
+		boolean enableIeiConfig = "true".equalsIgnoreCase(AppProps.get("ENABLE_IEI_CONFIG", "false"));
 		piRepository.findExists()
 		.forEach(pi -> {
+			
+			if (enableIeiConfig && pi.getDistributeFlag() == Boolean.FALSE) {
+				LOG.info("logMDTSent: " + msn + " not sent to pi IeiId = " + pi.getIeiId() + " Distribute = " + pi.getDistributeFlag());
+				return;
+			}
+			
+			if (enableIeiConfig && !ieiNodes.contains(pi.getIeiId())) {
+				LOG.info("logMDTSent: " + msn + " not sent to pi IeiId = " + pi.getIeiId() + " not in ieiNodes device setting " + ieiNodes);
+				return;
+			}
+			
 			PiLog piLog = new PiLog();
 			piLog.setPi(pi);
 			piLog.setLogId(log.getId());
@@ -1906,38 +1914,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 		 * https://904734893309.signin.aws.amazon.com/console
 		 * password henry/P0wer!23
 		 */
-		
-        try {
-    		software.amazon.awssdk.auth.credentials.AwsCredentialsProvider a = new software.amazon.awssdk.auth.credentials.AwsCredentialsProvider() {
-    			@Override
-    			public software.amazon.awssdk.auth.credentials.AwsCredentials resolveCredentials() {
-    				return software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create(accessID, accessKey);
-    			}};
-    		snsClient = software.amazon.awssdk.services.sns.SnsClient.builder().region(software.amazon.awssdk.regions.Region.AP_SOUTHEAST_1)
-    				.credentialsProvider(a).build();
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
-		}
-        
-        try {
-        	com.amazonaws.auth.AWSCredentialsProvider a = new com.amazonaws.auth.AWSCredentialsProvider() {
-
-				@Override
-				public AWSCredentials getCredentials() {
-					return new BasicAWSCredentials(accessID, accessKey);
-				}
-
-				@Override
-				public void refresh() {
-				}
-        	};
-        	sesClient = com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder.standard()
-        			.withCredentials(a)
-        	        .withRegion(com.amazonaws.regions.Regions.AP_SOUTHEAST_1).build();
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
-		}
-        // pubTextSMS(snsClient, "OTP: 123456", "+84909123456");
         
 		AWSCredentials credentials = new BasicAWSCredentials(accessID, accessKey);
 		ClientConfiguration clientconfig = new ClientConfiguration();
@@ -2171,6 +2147,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				if (SecurityUtils.getEmail() != null) {
 					existingPi.setLocation(StringUtils.isNotBlank(pi.getLocation()) ? pi.getLocation() : "");
 					existingPi.setHide(BooleanUtils.isTrue(pi.getHide()));
+					existingPi.setDistributeFlag(pi.getDistributeFlag() == Boolean.TRUE);
 					if (existingPi.getEmail() != null) {
 						existingPi.setEmail(email);
 					}
@@ -2195,6 +2172,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 				pi.setLastPing(System.currentTimeMillis());
 			}
 			pi.setHide(BooleanUtils.isTrue(pi.getHide()));
+			pi.setDistributeFlag(pi.getDistributeFlag() == Boolean.TRUE);
 			piRepository.save(pi);
 		}
 	}
@@ -2444,86 +2422,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 		}
 		return fileResult;
-	}
-	
-	public static void main2(String[] args) {
-
-		args = new String[] {"Test aws sms", "+84933520892"};
-		final String usage = "\n" + "Usage: " + "   <message> <phoneNumber>\n\n" + "Where:\n"
-				+ "   message - The message text to send.\n\n"
-				+ "   phoneNumber - The mobile phone number to which a message is sent (for example, +1XXX5550100). \n\n";
-
-		if (args.length != 2) {
-			System.out.println(usage);
-			System.exit(1);
-		}
-
-		String message = args[0];
-		String phoneNumber = args[1];
-		software.amazon.awssdk.auth.credentials.AwsCredentialsProvider a = new software.amazon.awssdk.auth.credentials.AwsCredentialsProvider() {
-			@Override
-			public software.amazon.awssdk.auth.credentials.AwsCredentials resolveCredentials() {
-				return software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create("AKIA5FJTG4T6ZJXTTU5I", "+D8Z177y+t29cybFj4elx4D6l2dUUZyDWXFXPAw7");
-			}};
-		software.amazon.awssdk.services.sns.SnsClient snsClient = software.amazon.awssdk.services.sns.SnsClient.builder().region(software.amazon.awssdk.regions.Region.AP_SOUTHEAST_1)
-				.credentialsProvider(a).build();
-		EVSPAServiceImpl sv = new EVSPAServiceImpl();
-		sv.snsClient = snsClient;
-		sv.sendSMS(message, phoneNumber);
-		snsClient.close();
-	}
-	
-	public static void main1(String[] args) {
-
-		String message = "<html><body>MMS-1234576</body></html>";
-		String email = "ttx.pipo.uit@gmail.com";
-		com.amazonaws.services.simpleemail.model.SendEmailRequest request = new com.amazonaws.services.simpleemail.model.SendEmailRequest()
-				.withDestination(new com.amazonaws.services.simpleemail.model.Destination().withToAddresses(email))
-				.withMessage(new com.amazonaws.services.simpleemail.model.Message()
-						.withBody(new com.amazonaws.services.simpleemail.model.Body().withHtml(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(message)))
-//		                  .withText(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(TEXTBODY)))
-						.withSubject(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData("MMS")))
-		 .withSource("evs2ops@evs.com.sg")
-		;
-		
-    	com.amazonaws.services.simpleemail.AmazonSimpleEmailService sesClient = com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder.standard()
-    			.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials("AKIA5FJTG4T6ZJXTTU5I", "+D8Z177y+t29cybFj4elx4D6l2dUUZyDWXFXPAw7")))
-    	        .withRegion(com.amazonaws.regions.Regions.AP_SOUTHEAST_1).build();
-		sesClient.sendEmail(request).getSdkResponseMetadata().getRequestId();
-	}
-
-	// https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javav2/example_code/sns/src/main/java/com/example/sns/PublishTextSMS.java
-	@Override
-	public String sendSMS(String message, String phoneNumber) {
-		try {
-			software.amazon.awssdk.services.sns.model.PublishRequest request = software.amazon.awssdk.services.sns.model.PublishRequest.builder().message(message).phoneNumber(phoneNumber).build();
-			software.amazon.awssdk.services.sns.model.PublishResponse result = snsClient.publish(request);
-			LOG.info("SMS -> " + phoneNumber + " -> " + result.messageId() + " Message sent. Status was " + result.sdkHttpResponse().statusCode());
-			return result.messageId();
-		} catch (SnsException e) {
-			LOG.info("SMS -> " + phoneNumber + " -> " + e.awsErrorDetails().errorMessage());
-			LOG.error(e.getMessage(), e);
-			throw e;
-		}
-	}
-	
-	@Override
-	public String sendEmail(String message, String email, String subject) {
-		try {
-			com.amazonaws.services.simpleemail.model.SendEmailRequest request = new com.amazonaws.services.simpleemail.model.SendEmailRequest()
-					.withDestination(new com.amazonaws.services.simpleemail.model.Destination().withToAddresses(email))
-					.withMessage(new com.amazonaws.services.simpleemail.model.Message()
-							.withBody(new com.amazonaws.services.simpleemail.model.Body().withHtml(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(message)))
-//			                  .withText(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(TEXTBODY)))
-							.withSubject(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(subject)))
-			.withSource(AppProps.get("AWS_SES_FROM", "evs2ops@evs.com.sg"))
-			;
-			return sesClient.sendEmail(request).getSdkResponseMetadata().getRequestId();
-
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
-			throw e;
-		}
 	}
 
 	@Override

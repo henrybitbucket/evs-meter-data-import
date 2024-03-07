@@ -56,12 +56,14 @@ import com.pa.evs.model.Block;
 import com.pa.evs.model.Building;
 import com.pa.evs.model.BuildingUnit;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.DeviceIEINode;
 import com.pa.evs.model.DeviceProject;
 import com.pa.evs.model.DeviceRemoveLog;
 import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.Group;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.MMSMeter;
+import com.pa.evs.model.Pi;
 import com.pa.evs.model.ProjectTag;
 import com.pa.evs.model.RelayStatusLog;
 import com.pa.evs.model.ScreenMonitoring;
@@ -73,12 +75,14 @@ import com.pa.evs.repository.BlockRepository;
 import com.pa.evs.repository.BuildingRepository;
 import com.pa.evs.repository.BuildingUnitRepository;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.DeviceIEINodeRepository;
 import com.pa.evs.repository.DeviceProjectRepository;
 import com.pa.evs.repository.DeviceRemoveLogRepository;
 import com.pa.evs.repository.FloorLevelRepository;
 import com.pa.evs.repository.GroupRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.MMSMeterRepository;
+import com.pa.evs.repository.PiRepository;
 import com.pa.evs.repository.ProjectTagRepository;
 import com.pa.evs.repository.RelayStatusLogRepository;
 import com.pa.evs.repository.ScreenMonitoringRepository;
@@ -172,6 +176,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	private DeviceProjectRepository deviceProjectRepository;
 	
 	@Autowired
+	private DeviceIEINodeRepository deviceIEINodeRepository;
+	
+	@Autowired
 	EVSPAService evsPAService;
 	
 	@Autowired
@@ -183,6 +190,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     private List<String> cacheCids = Collections.EMPTY_LIST;
 
 	@PostConstruct
+	@Transactional
     public void init() {
         LOG.debug("Loading CID into cache");
         cacheCids = caRequestLogRepository.getCids();
@@ -195,7 +203,32 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 //        		System.out.println("Done updateMMSMeter " + i + " / " + list.size());
 //        	}
 //        }).start();
+        
+        
+//      new Thread(() -> {
+//    	  AppProps.getContext().getBean(this.getClass()).updateEIE();
+//      }).start();
     }
+	
+	@Transactional
+	public void updateEIE() {
+    	List<CARequestLog> list = caRequestLogRepository.findAll();
+    	for (int i = 0; i < list.size(); i++) {
+    		CARequestLog ca = list.get(i);
+    		if (ca.getDeviceIEINodes() == null || ca.getDeviceIEINodes().isEmpty()) {
+	    		AppProps.getContext().getBean(PiRepository.class).findAll()
+	    		.forEach(pi -> {
+	    			if (pi.getHide() != Boolean.TRUE && StringUtils.isNotBlank(pi.getIeiId())) {
+	    				DeviceIEINode deviceIEINode = new DeviceIEINode();
+	    				deviceIEINode.setDevice(ca);
+	    				deviceIEINode.setIeiId(pi.getIeiId());
+	    				deviceIEINodeRepository.save(deviceIEINode);
+	    			}
+	    		});
+    		}
+    		System.out.println("Done update Pi IEI node " + i + " / " + list.size());
+    	}
+	}
 
 	@Override
 	public Optional<CARequestLog> findByUid(String uid) {
@@ -625,6 +658,23 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     		}
         } else {
             ca.setProjectTags(null);
+        }
+        
+        if (dto.getIeiNodes() != null && !dto.getIeiNodes().isEmpty()) {
+        	deviceIEINodeRepository.deleteNotInIEINodes(id, dto.getIeiNodes());
+    		List<String> existsIEINodes = deviceIEINodeRepository.findIEINodesByDeviceId(id);
+    		List<Pi> pis = deviceIEINodeRepository.findPiByIEIIn(dto.getIeiNodes());
+    		for (Pi pi : pis) {
+    			if (!existsIEINodes.contains(pi.getIeiId())) {
+    				DeviceIEINode deviceIEINode = new DeviceIEINode();
+    				deviceIEINode.setDevice(ca);
+    				deviceIEINode.setIeiId(pi.getIeiId());
+    				deviceIEINodeRepository.save(deviceIEINode);
+    			}
+    		}
+        } else {
+        	deviceIEINodeRepository.deleteByDeviceId(id);
+            ca.setDeviceIEINodes(null);
         }
         
         if (isCoupledAddress) {
@@ -1494,6 +1544,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	public void removeDevice(String uId, String reason) {
 		CARequestLog caRequestLog = caRequestLogRepository.findByUid(uId).orElse(null);
 		if (caRequestLog != null && caRequestLog.getType() == DeviceType.NOT_COUPLED) {//8931070521315025237F
+			deviceIEINodeRepository.findByDeviceId(caRequestLog.getId())
+			.forEach(deviceIEINodeRepository::delete);
+			deviceIEINodeRepository.flush();
 			caRequestLogRepository.delete(caRequestLog);
 			
 			try {

@@ -2,8 +2,10 @@ package com.pa.evs.model;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -157,6 +159,10 @@ public class CARequestLog extends BaseEntity {
 	
 	@OneToMany(fetch=FetchType.LAZY, mappedBy = "device", cascade = CascadeType.MERGE)
     private List<DeviceProject> deviceProject;
+
+	@OneToMany(fetch=FetchType.LAZY, mappedBy = "device", cascade = CascadeType.MERGE)
+	@Builder.Default
+    private Set<DeviceIEINode> deviceIEINodes = new HashSet<>();
 	
 	@Transient
 	@Builder.Default

@@ -27,6 +27,10 @@ public class Pi extends BaseEntity {
     
     private Boolean hide;
     
+    @Column(name = "distribute_flag", columnDefinition = "boolean not null default true")
+    @Builder.Default
+    private Boolean distributeFlag = true;
+    
     private String email;
     
 	@Column(name = "iei_id", unique = true)

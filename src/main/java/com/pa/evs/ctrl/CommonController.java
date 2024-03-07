@@ -579,6 +579,7 @@ public class CommonController {
     		@RequestParam(required = false) String ieiId,
     		@RequestParam(required = false) String location,
     		@RequestParam(required = false) Boolean isEdit,
+    		@RequestParam(required = false) Boolean distributeFlag,
     		@RequestParam(required = false) Long logId
     		) throws Exception {
         try {
@@ -593,6 +594,7 @@ public class CommonController {
             	pi.setHide(BooleanUtils.toBoolean(hide));
             	pi.setUuid(uuid);
             	pi.setIeiId(ieiId);
+            	pi.setDistributeFlag(distributeFlag == Boolean.TRUE);
             	pi.setLocation(location);
             	evsPAService.ping(pi, isEdit, true);
             } else if ("ftpRes".equalsIgnoreCase(type)) {

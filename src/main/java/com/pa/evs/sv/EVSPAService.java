@@ -53,10 +53,6 @@ public interface EVSPAService {
 
 	void updateMissingFileName();
 
-	String sendSMS(String message, String phoneNumber);
-
-	String sendEmail(String message, String email, String subject);
-
 	boolean upload(String fileName, InputStream in, String contentType, String bucketName);
 
 	boolean deleteFileInS3(String fileName, String bucketName);

