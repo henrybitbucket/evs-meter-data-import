@@ -293,15 +293,23 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 					List<CARequestLog> list = caRequestLogRepository.findByBuildingAndFloorLevelAndBuildingUnit(mmsMeter.getBuilding().getId(), mmsMeter.getFloorLevel().getId(), mmsMeter.getBuildingUnit().getId());
 					
 					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != ca.getId().longValue()) {
-						message = "Because the meter address is already linked to another MCU, the MCU address will not resume from the Meter address."; 
-					} else {
-						ca.setBuildingUnit(mmsMeter.getBuildingUnit());
-						ca.setFloorLevel(mmsMeter.getBuildingUnit().getFloorLevel());
-						ca.setBlock(mmsMeter.getBuildingUnit().getFloorLevel().getBlock());
-						ca.setBuilding(mmsMeter.getBuildingUnit().getFloorLevel().getBuilding());
-						ca.setAddress(mmsMeter.getAddress());
-						ca.setHomeAddress(mmsMeter.getHomeAddress());
+
+						CARequestLog otherMCU = list.stream().filter(c -> c.getId().longValue() != ca.getId().longValue()).findFirst().orElse(new CARequestLog());
+						message = "Because the meter address (" + Utils.formatHomeAddress(otherMCU) + ") is already linked to another MCU (SN=" + otherMCU.getSn() + "), The MCU address is copied from the meter address, and the MCU address (SN=" + otherMCU.getSn() + ") is removed.";
+						otherMCU.setAddress(null);
+						otherMCU.setBuilding(null);
+						otherMCU.setBlock(null);
+						otherMCU.setFloorLevel(null);
+						otherMCU.setBuildingUnit(null);
+						caRequestLogRepository.save(otherMCU);
+						caRequestLogRepository.flush();
 					}
+					ca.setBuildingUnit(mmsMeter.getBuildingUnit());
+					ca.setFloorLevel(mmsMeter.getBuildingUnit().getFloorLevel());
+					ca.setBlock(mmsMeter.getBuildingUnit().getFloorLevel().getBlock());
+					ca.setBuilding(mmsMeter.getBuildingUnit().getFloorLevel().getBuilding());
+					ca.setAddress(mmsMeter.getAddress());
+					ca.setHomeAddress(Utils.formatHomeAddress(ca));
 				}
 				ca.setRemarkMeter(mmsMeter.getRemark());
 			}
