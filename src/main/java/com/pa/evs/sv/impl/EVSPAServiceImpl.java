@@ -2085,7 +2085,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}*/
 	}
 	
-	public static void main(String[] args) throws Exception {
+	public static void main1(String[] args) throws Exception {
 		String evsPAMQTTAddress = "ssl://3.1.87.138:8883";
 		String mqttClientId = System.currentTimeMillis() + "";
 		
@@ -2093,42 +2093,39 @@ public class EVSPAServiceImpl implements EVSPAService {
 		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/ntu/202206000056", "Read Lock Status for 202206000520(3), Status: Lock_Status: read failed, Coil: None", 2, false);
 	}
 	
-	public static void main3(String[] args) throws Exception {
-		String evsPAMQTTAddress = "tcp://18.142.166.146:1883";
+	public static void main(String[] args) throws Exception {
+		String evsPAMQTTAddress = "ssl://3.1.87.138:8883";
 		String mqttClientId = System.currentTimeMillis() + "";
 		
-		String topic = "dev/evs/pa/data";
-
-		int[] counts = new int[] {0};
-		ExecutorService ex = Executors.newFixedThreadPool(1);
-		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "dev/evs/pa/JMETER001", 2, o -> {
-			final MqttMessage mqttMessage = (MqttMessage) o;
-			LOG.info("dev/evs/pa/JMETER001 -> " + new String(mqttMessage.getPayload()));
-			ex.execute(() -> {
-				counts[0] = counts[0] + 1;
-				System.out.println("count->" + counts[0]);
-			});
-			return null;
-		});
 		
-		String json = "{\"header\":{\"mid\":15246,\"uid\":\"JMETER001\",\"gid\":\"JMETER001\",\"msn\":\"20230906000001\",\"sig\":\"\"},\"payload\":{\"id\":\"JMETER001\",\"type\":\"MDT\",\"data\":[{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"235.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T16:40:13\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"235.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T16:55:14\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T17:10:15\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T17:25:16\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T17:40:17\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T17:55:18\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T18:10:18\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T18:25:19\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T18:40:20\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T18:55:21\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T19:10:21\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T19:25:23\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T19:40:24\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T19:55:24\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T20:10:26\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"238.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T20:25:27\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T20:40:27\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T20:55:28\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T21:10:29\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"236.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T21:25:30\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T21:40:31\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"238.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T21:55:32\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T22:10:33\"},{\"uid\":\"JMETER001\",\"msn\":\"20230906000001\",\"kwh\":\"8.584\",\"kw\":\"0.0\",\"i\":\"0.0\",\"v\":\"237.0\",\"pf\":\"1.0000\",\"dt\":\"2023-09-07T22:25:33\"}]}}";
+		String json = "{\r\n"
+				+ "  \"header\": {\r\n"
+				+ "    \"mid\": 35126,\r\n"
+				+ "    \"uid\": \"BIERWXAABMAB2AEBAA\",\r\n"
+				+ "    \"msn\": \"2022060000551\",\r\n"
+				+ "    \"sig\": \"MGYCMQDNU5hVg4UlX6qzK33/2wbqLEcxNqsuNTuW2bBOR+T64q+d2f6WpQbsTbZkbSoKZnkCMQCKZUfZAxuI67BL4ivmnd/t6+9vcP9hDELoCXw0OWbqZXBcsFOX6ebEqzCfBHifJVE=\"\r\n"
+				+ "  },\r\n"
+				+ "  \"payload\": {\r\n"
+				+ "    \"id\": \"BIERWXAABMAB2AEBAA\",\r\n"
+				+ "    \"type\": \"MDT\",\r\n"
+				+ "    \"data\": [\r\n"
+				+ "      {\r\n"
+				+ "        \"uid\": \"BIERWXAABMAB2AEBAA\",\r\n"
+				+ "        \"msn\": \"2022060000551\",\r\n"
+				+ "        \"kwh\": \"33.161\",\r\n"
+				+ "        \"kw\": \"8.3\",\r\n"
+				+ "        \"i\": \"0.1\",\r\n"
+				+ "        \"v\": \"247.2\",\r\n"
+				+ "        \"pf\": \"1.0000\",\r\n"
+				+ "        \"dt\": \"2024-03-10T20:27:04.000\"\r\n"
+				+ "      }\r\n"
+				+ "    ]\r\n"
+				+ "  }\r\n"
+				+ "}";
+		IMqttAsyncClient client = Mqtt.getInstance(evsPAMQTTAddress, "test.mdt." + mqttClientId);
 		Map<String, Object> payload = new ObjectMapper().readValue(json, Map.class);
-		
-		System.out.println("start connect");
-		// connect
-		ExecutorService exPub = Executors.newFixedThreadPool(10000);
-		List<Callable<String>> tasks = new ArrayList<>();
-		for (int i = 1; i <= 10000; i++) {
-			int idx = i;
-			tasks.add(() -> {
-				String prefix = "java." + idx;
-				IMqttAsyncClient client = Mqtt.getInstance(evsPAMQTTAddress, prefix);
-				System.out.println(prefix + " -> " + client.getClientId() + " -> " + client.isConnected());				
-				Mqtt.publish(client, topic, payload, 2, false);
-				return null;
-			});
-		}
-		exPub.invokeAll(tasks);
+		Mqtt.publish(client, "evs/pa/data", payload, 2, false);
+
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -2343,7 +2340,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} else {
 			data = piLogRepository.findByMsnAndMidAndPiId(msn, mid, piId);
 		}
-		data.forEach(d -> rp.add(PiLogDto.builder().type(d.getType()).ftpResStatus(d.getFtpResStatus()).msn(d.getMsn()).mid(d.getMid()).piUuid(d.getPi().getUuid()).build()));
+		data.forEach(d -> rp.add(PiLogDto.builder().type(d.getType()).ftpResStatus(d.getFtpResStatus()).msn(d.getMsn()).mid(d.getMid()).ieiId(d.getPi().getIeiId()).piUuid(d.getPi().getUuid()).build()));
 		return rp;
 	}
 	

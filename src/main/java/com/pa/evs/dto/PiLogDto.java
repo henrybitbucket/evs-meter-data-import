@@ -22,4 +22,6 @@ public class PiLogDto {
 	private String ftpResStatus;
 	
 	private String piUuid;
+	
+	private String ieiId;
 }
