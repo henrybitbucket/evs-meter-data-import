@@ -558,7 +558,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		List<String> ieiNodes = ca.getDeviceIEINodes() == null ? new ArrayList<>() : ca.getDeviceIEINodes().stream().map(dvn -> dvn.getIeiId()).collect(Collectors.toList());
 		
-		boolean enableIeiConfig = "true".equalsIgnoreCase(AppProps.get("ENABLE_IEI_CONFIG", "false"));
+		boolean enableIeiConfig = "2022060000551".equalsIgnoreCase(msn) || "true".equalsIgnoreCase(AppProps.get("ENABLE_IEI_CONFIG", "false"));
 		piRepository.findExists()
 		.forEach(pi -> {
 			
