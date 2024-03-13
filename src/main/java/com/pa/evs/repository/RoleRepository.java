@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import com.pa.evs.model.AppCode;
 import com.pa.evs.model.Role;
 
 public interface RoleRepository extends JpaRepository<Role, Long> {
@@ -16,5 +17,7 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
 	
 	@Query("Select ur.role FROM UserRole ur where ur.user.userId = ?1")
 	List<Role> findRoleByUserUserId(Long id);
+	
+	List<Role> findByAppCode(AppCode appCode);
 }
  

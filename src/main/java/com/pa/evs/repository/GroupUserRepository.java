@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import com.pa.evs.model.AppCode;
 import com.pa.evs.model.GroupUser;
 
 public interface GroupUserRepository extends JpaRepository<GroupUser, Long> {
@@ -22,5 +23,7 @@ public interface GroupUserRepository extends JpaRepository<GroupUser, Long> {
 	Optional<GroupUser> findByName(String name);
 	
 	List<GroupUser> findByAppCodeName(String name);
+
+	List<GroupUser> findByAppCode(AppCode appCode);
 }
  

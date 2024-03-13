@@ -1,0 +1,112 @@
+[
+	{
+		"id": "user-management",
+		"className": "fa fa-users",
+		"name": "User Management",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": [
+			{
+				"id": "user-list",
+				"className": "fa fa-user",
+				"name": "User List",
+				"path": "/user-list",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "roles",
+				"className": "fa fa-universal-access",
+				"name": "Roles",
+				"path": "/roles",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "groups",
+				"className": "fa fa-users",
+				"name": "Group",
+				"path": "/group",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			}
+		]
+	},
+	{
+		"id": "dms-locks",
+		"className": "fa fa-indent",
+		"name": "DMS Locks",
+		"path": "/dms-locks",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": []
+	},
+	{
+		"id": "view-management",
+		"className": "fa fa-sitemap",
+		"name": "View Management",
+		"path": "/view-management",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": []
+	},
+	{
+		"id": "dms-work-orders",
+		"className": "fa fa-indent",
+		"name": "Work Orders",
+		"path": "/dms-work-orders",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": []
+	},
+	{
+		"id": "address-management",
+		"className": "fa fa-building-o",
+		"name": "Address Management",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": [
+			{
+				"id": "building",
+				"className": "fa fa-building-o",
+				"name": "Building Address",
+				"path": "/building",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "units",
+				"className": "fa fa-building-o",
+				"name": "Address Search and Export",
+				"path": "/units",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "dms-site-management",
+				"className": "fa fa-building-o",
+				"name": "Site Management",
+				"path": "/dms-site-management",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			}
+		]
+	}
+]
