@@ -1,0 +1,442 @@
+[
+	{
+		"id": "dashboard",
+		"className": "fa fa-dashboard",
+		"name": "Dashboard",
+		"path": "/",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": []
+	},
+	{
+		"id": "device-management",
+		"className": "fa fa-th-large",
+		"name": "Device Management",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": [
+			{
+				"id": "devices",
+				"className": "fa fa-tablet",
+				"name": "Devices (MCU and Coupled Meter)",
+				"path": "/devices",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "devices-meter",
+				"className": "fa fa-tablet",
+				"name": "Devices (Meter)",
+				"path": "/devices-meter",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "device-group",
+				"className": "fa fa-plug",
+				"name": "Device Group",
+				"path": "/device-group",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "upload",
+				"className": "fa fa-plug",
+				"name": "Device Upload",
+				"path": "/upload",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "data-settings",
+				"className": "fa fa-ticket",
+				"name": "Data settings",
+				"path": "/data-settings",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "exports",
+				"className": "fa fa-download",
+				"name": "Export active eSIM ID",
+				"path": "/exports",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "upgrade-firmware",
+				"className": "fa fa-indent",
+				"name": "Firmware OTA",
+				"path": "/upgrade-firmware",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "vendors",
+				"className": "fa fa-indent",
+				"name": "Vendors",
+				"path": "/vendors",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "firm-ware-manage",
+				"className": "fa fa-list-alt",
+				"name": "Firmware Manage",
+				"path": "/firm-ware",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "firm-ware",
+				"className": "fa fa-list-alt",
+				"name": "Firmware",
+				"path": "/firm-ware",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "meter-clients",
+				"className": "fa fa-align-justify",
+				"name": "Meter Clients",
+				"path": "/meter-clients",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "batch-process-logs",
+				"className": "fa fa-file-text-o",
+				"name": "Batch process log",
+				"path": "/batch-process-logs",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "task-schedule",
+				"className": "fa fa-clock-o",
+				"name": "Task Schedule",
+				"path": "/task-schedule",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "p2-step",
+				"className": "fa fa-universal-access",
+				"name": "Provision Step 2(P2)",
+				"path": "/p2-step",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "device-logs",
+				"className": "fa fa-wpforms",
+				"name": "Device Operation Logs",
+				"path": "/device-logs",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "relay-status-command-logs",
+				"className": "fa fa-wpforms",
+				"name": "Relay Status Logs",
+				"path": "/relay-status-command-logs",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			}
+		]
+	},
+	{
+		"id": "user-management",
+		"className": "fa fa-users",
+		"name": "User Management",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": [
+			{
+				"id": "user-list",
+				"className": "fa fa-user",
+				"name": "User List",
+				"path": "/user-list",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "roles",
+				"className": "fa fa-universal-access",
+				"name": "Roles",
+				"path": "/roles",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "group",
+				"className": "fa fa-users",
+				"name": "Group",
+				"path": "/group",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "my-group",
+				"className": "fa fa-users",
+				"name": "My Group",
+				"path": "/my-group",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			}
+		]
+	},
+	{
+		"id": "address-management",
+		"className": "fa fa-building-o",
+		"name": "Address Management",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": [
+			{
+				"id": "building",
+				"className": "fa fa-building-o",
+				"name": "Building Address",
+				"path": "/building",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "units",
+				"className": "fa fa-building-o",
+				"name": "Address Search and Export",
+				"path": "/units",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "address-logs",
+				"className": "fa fa-building-o",
+				"name": "Address Logs",
+				"path": "/address-logs",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			}
+		]
+	},
+	{
+		"id": "report-management",
+		"className": "fa fa-pencil-square",
+		"name": "Report",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": [
+			{
+				"id": "report",
+				"className": "fa fa-pencil-square",
+				"name": "Reports",
+				"path": "/report",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "report-repository",
+				"className": "fa fa-pencil-square",
+				"name": "Report Repository",
+				"path": "/report-repository",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "meter-commissioning-report",
+				"className": "fa fa-pencil-square",
+				"name": "Meter Commissioning Report",
+				"path": "/meter-commissioning-report",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "p1-online-check",
+				"className": "fa fa-pencil-square",
+				"name": "P1 Provisioning MCU online Check",
+				"path": "/p1-online-check",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "p1-detail-report",
+				"className": "fa fa-pencil-square",
+				"name": "P1 Provisioning MCU QA Detail Report",
+				"path": "/p1-detail-report",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "p1-summary-report",
+				"className": "fa fa-pencil-square",
+				"name": "P1 Provisioning MCU QA Summary Report",
+				"path": "/p1-summary-report",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "p2-report",
+				"className": "fa fa-pencil-square",
+				"name": "Meter Provisioning Step 2 (P2) Report Manage",
+				"path": "/p2-provisioning-report",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			}
+		]
+	},
+	{
+		"id": "audit",
+		"className": "fa fa-history",
+		"name": "Audit",
+		"path": "/audit",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": []
+	},
+	{
+		"id": "setting",
+		"className": "fa fa-cog",
+		"name": "Setting",
+		"path": "/setting",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": []
+	},
+	{
+		"id": "project-tag",
+		"className": "fa fa-tags",
+		"name": "Project Tag",
+		"path": "/project-tag",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": []
+	},
+	{
+		"id": "company",
+		"className": "fa fa-briefcase",
+		"name": "Company",
+		"path": "/company",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": []
+	},
+	{
+		"id": "view-management",
+		"className": "fa fa-sitemap",
+		"name": "View Management",
+		"path": "/view-management",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": []
+	},
+	{
+		"id": "p2-provisioning",
+		"className": "fa fa-th-large",
+		"name": "P2 Provisioning",
+		"permissions": [],
+		"roles": [],
+		"groups": [],
+		"children": [
+			{
+				"id": "p2-provisioning-step",
+				"className": "fa fa-tablet",
+				"name": "P2 Provisioning Job Sheet",
+				"path": "/p2-step",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "p2-provisioning-report",
+				"className": "fa fa-tablet",
+				"name": "P2 Provisioning Job Sheet Report",
+				"path": "/p2-provisioning-report",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			},
+			{
+				"id": "p2-ack-report",
+				"className": "fa fa-tablet",
+				"name": "P2 Provisioning Job Sheet Report Ack",
+				"path": "/p2-ack-report",
+				"permissions": [],
+				"roles": [],
+				"groups": [],
+				"children": []
+			}
+		]
+	}
+]

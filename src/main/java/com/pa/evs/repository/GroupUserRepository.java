@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import com.pa.evs.model.AppCode;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.RoleGroup;
@@ -26,7 +27,9 @@ public interface GroupUserRepository extends JpaRepository<GroupUser, Long> {
 	Optional<GroupUser> findByName(String name);
 	
 	List<GroupUser> findByAppCodeName(String name);
-	
+
+	List<GroupUser> findByAppCode(AppCode appCode);
+
 	@Query("Select ug.user FROM UserGroup ug where ug.user.email in (?1) and ug.groupUser.name = ?2 and ug.groupUser.appCode.name = ?3")
 	List<Users> findUserByEmailAndGroupName(Collection<String> emails, String groupName, String appCodeName);
 
