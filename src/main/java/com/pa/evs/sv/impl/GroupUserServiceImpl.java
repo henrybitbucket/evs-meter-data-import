@@ -2,8 +2,11 @@ package com.pa.evs.sv.impl;
 
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -17,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
-import com.pa.evs.dto.RoleDto;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.Role;
@@ -122,30 +124,39 @@ public class GroupUserServiceImpl implements GroupUserService {
 	@Transactional
 	@Override
 	public void updateGroupUser(GroupUserDto dto) throws Exception {
-	
-	  Optional<GroupUser> opt = groupUserRepository.findById(dto.getId());
-      if (!opt.isPresent()) {
-          throw new Exception(String.format("No groupUser with id %d found!", dto.getId()));
-      }
-      GroupUser group = opt.get();
-      // group.setName(dto.getName());
-      group.setDescription(dto.getDescription());
-      groupUserRepository.save(group);
-      if (dto.getRoles() != null) {
-      	for (RoleDto roleDto : dto.getRoles()) {
-      		Optional<Role> role = roleRepository.findById(roleDto.getId());
-      		if(role.isPresent() && role.get().getAppCode().getName().equals(group.getAppCode().getName())) {
-      			RoleGroup roleGroup = new RoleGroup();
-          		roleGroup.setGroupUser(opt.get());
-          		roleGroup.setRole(role.get());
-          		try {
-          			roleGroupRepository.save(roleGroup);
-          		} catch (Exception e) {
-          			logger.error(e.getMessage(), e);
-          		}
-      		}
-      	}
-      }
+
+		Optional<GroupUser> opt = groupUserRepository.findById(dto.getId());
+		if (!opt.isPresent()) {
+			throw new Exception(String.format("No groupUser with id %d found!", dto.getId()));
+		}
+		GroupUser group = opt.get();
+		// group.setName(dto.getName());
+		group.setDescription(dto.getDescription());
+		groupUserRepository.save(group);
+		if (dto.getRoles() != null) {
+
+			List<Long> roleIds = dto.getRoles().stream().map(r -> r.getId()).collect(Collectors.toList());
+			Map<Long, RoleGroup> mapExistsRole = new LinkedHashMap<>();
+			groupUserRepository.findRolesInGroup(group.getId()).forEach(s -> mapExistsRole.put(s.getRole().getId(), s));
+
+			Map<Long, Role> mapUpdateRole = new LinkedHashMap<>();
+			groupUserRepository.findRolesIn(roleIds).forEach(s -> mapUpdateRole.put(s.getId(), s));
+
+			for (Long existRoleId : mapExistsRole.keySet()) {
+				if (!mapUpdateRole.containsKey(existRoleId)) {
+					roleGroupRepository.delete(mapExistsRole.get(existRoleId));
+				}
+			}
+
+			roleGroupRepository.flush();
+
+			for (Long newRoleId : mapUpdateRole.keySet()) {
+				if (!mapExistsRole.containsKey(newRoleId)) {
+					roleGroupRepository
+							.save(RoleGroup.builder().groupUser(group).role(mapUpdateRole.get(newRoleId)).build());
+				}
+			}
+		}
 	}
 
 	@Transactional
