@@ -20,8 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.PermissionDto;
+import com.pa.evs.dto.RoleDto;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.GroupUser;
+import com.pa.evs.model.Permission;
 import com.pa.evs.model.Role;
 import com.pa.evs.model.RoleGroup;
 import com.pa.evs.repository.AppCodeRepository;
@@ -94,12 +97,24 @@ public class GroupUserServiceImpl implements GroupUserService {
         query.setMaxResults(pagin.getLimit());
 
         List<GroupUser> list = query.getResultList();
-
+        Map<Long, List<RoleDto>> mapGroupRole = new LinkedHashMap<>();
+        roleGroupRepository.findByGroupUserNameIn(list.stream().map(r -> r.getName()).collect(Collectors.toList()))
+        .forEach(rp -> {
+        	List<RoleDto> roles = mapGroupRole.computeIfAbsent(rp.getGroupUser().getId(), k -> new ArrayList<>());
+        	Role role = rp.getRole();
+        	roles.add(RoleDto.builder()
+                    .id(role.getId())
+                    .name(role.getName())
+                    .desc(role.getDesc())
+                    .build());
+        });
+        
         list.forEach(li -> {
         	GroupUserDto dto = GroupUserDto.builder()
                     .id(li.getId())
                     .name(li.getName())
                     .description(li.getDescription())
+                    .roles(mapGroupRole.get(li.getId()))
                     .build();
             pagin.getResults().add(dto);
         });
