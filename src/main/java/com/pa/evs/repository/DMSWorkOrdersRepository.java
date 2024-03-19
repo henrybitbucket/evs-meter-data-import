@@ -17,6 +17,5 @@ public interface DMSWorkOrdersRepository extends JpaRepository<DMSWorkOrders, Lo
 	List<DMSWorkOrders> findBySiteLabel(String siteLabel);
 	List<DMSWorkOrders> findBySiteId(Long siteId);
 	Optional<DMSWorkOrders> findByName(String name);
-	Optional<DMSWorkOrders> findByGroupIdAndSiteId(Long groupId, Long siteId);
 	
 }

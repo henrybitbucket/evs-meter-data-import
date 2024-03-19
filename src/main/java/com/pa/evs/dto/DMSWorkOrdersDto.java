@@ -20,9 +20,11 @@ public class DMSWorkOrdersDto {
 	
 	private String name;
 	
-	private GroupUserDto group;
+	//private GroupUserDto group;
 
-	private DMSSiteDto site;
+    private DMSSiteDto site;
+	
+	private String applicationEmail;
 	
 	@Column(name = "status")
 	private String status;

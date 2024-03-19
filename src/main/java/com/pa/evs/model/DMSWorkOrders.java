@@ -22,22 +22,23 @@ import lombok.Setter;
 @Builder
 @Entity
 @Table(
-		name = "dms_work_orders",
-		indexes = {
-				@Index(name = "idx_group_user_id_site_id_dms_work_orders", columnList="group_user_id,site_id", unique = false)
-		}
+		name = "dms_work_orders"
 )
 public class DMSWorkOrders extends BaseEntity {
 
 	private String name;
 	
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "group_user_id")
-	private GroupUser group;
+//	@ManyToOne(fetch = FetchType.LAZY)
+//	@JoinColumn(name = "group_user_id")
+//	private GroupUser group;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "site_id")
+	@JoinColumn(name = "site_id", nullable = true)
 	private DMSSite site;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "appication_user_id", nullable = true)
+	private DMSApplicationUser appUser;
 	
 	@Column(name = "status")
 	private String status;

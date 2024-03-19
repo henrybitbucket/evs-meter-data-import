@@ -2,7 +2,6 @@ package com.pa.evs.sv.impl;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -14,11 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
-import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
-import com.pa.evs.model.GroupUser;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
@@ -29,7 +26,6 @@ import com.pa.evs.repository.DMSWorkOrdersRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.sv.WorkOrdersService;
 
-@SuppressWarnings("rawtypes")
 @Service
 public class WorkOrdersServiceImpl implements WorkOrdersService {
 
@@ -98,8 +94,9 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 					.timePeriodTimeInDayHourEnd(dto.getTimePeriodTimeInDayHourEnd())
 					.timePeriodTimeInDayMinuteStart(dto.getTimePeriodTimeInDayMinuteStart())
 					.timePeriodTimeInDayMinuteEnd(dto.getTimePeriodTimeInDayMinuteEnd())
-					.group(groupUserRepository.findById(dto.getGroup().getId()).orElseThrow(() -> new RuntimeException("Group is reuired!")))
+					//.group(groupUserRepository.findById(dto.getGroup().getId()).orElseThrow(() -> new RuntimeException("Group is reuired!")))
 					.site(dmsSiteRepository.findById(dto.getSite().getId()).orElseThrow(() -> new RuntimeException("Site is reuired!")))
+//                    .appicationEmail(dto.getApplicationEmail())
 					.build()
 					);
 		}
@@ -118,7 +115,7 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 		StringBuilder sqlBuilder = new StringBuilder(" select fl ");
 		StringBuilder cmmBuilder = new StringBuilder(" FROM DMSWorkOrders fl where 1=1");
 		
-		cmmBuilder.append(" AND fl.group.appCode.name = 'DMS' ");
+//		cmmBuilder.append(" AND fl.group.appCode.name = 'DMS' ");
 		if (pagin.getOptions().get("name") != null) {
 			cmmBuilder.append(" AND upper(fl.name) like upper('%" + pagin.getOptions().get("name") + "%')");
 		}
@@ -169,14 +166,15 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 			dto.setTimePeriodTimeInDayHourEnd(f.getTimePeriodTimeInDayHourEnd() == null ? 0 : f.getTimePeriodTimeInDayHourEnd());
 			dto.setTimePeriodTimeInDayMinuteStart(f.getTimePeriodTimeInDayMinuteStart() == null ? 0 : f.getTimePeriodTimeInDayMinuteStart());
 			dto.setTimePeriodTimeInDayMinuteEnd(f.getTimePeriodTimeInDayMinuteEnd() == null ? 0 : f.getTimePeriodTimeInDayMinuteEnd());
-			
+
+			/*
 			GroupUser gr = f.getGroup();
 			GroupUserDto grDto = new GroupUserDto();
 			grDto.setId(gr.getId());
 			grDto.setName(gr.getName());
 			grDto.setDescription(gr.getDescription());
 			dto.setGroup(grDto);
-			
+			*/
 			DMSSite dmsSite = f.getSite();
 			DMSSiteDto dmsSiteDto = new DMSSiteDto();
 			dmsSiteDto.setId(dmsSite.getId());
@@ -184,7 +182,9 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 			dmsSiteDto.setDescription(dmsSite.getDescription());
 			dmsSiteDto.setRemark(dmsSite.getRemark());
 			dto.setSite(dmsSiteDto);
-			
+
+//			dto.setApplicationEmail(f.getAppicationEmail());
+
 			dtos.add(dto);
 		});
 		pagin.setResults(dtos);
@@ -224,7 +224,7 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 		entity.setTimePeriodTimeInDayHourEnd(dto.getTimePeriodTimeInDayHourEnd());
 		entity.setTimePeriodTimeInDayMinuteStart(dto.getTimePeriodTimeInDayMinuteStart());
 		entity.setTimePeriodTimeInDayMinuteEnd(dto.getTimePeriodTimeInDayMinuteEnd());
-		entity.setGroup(groupUserRepository.findById(dto.getGroup().getId()).orElseThrow(() -> new RuntimeException("Group is reuired!")));
+		// entity.setGroup(groupUserRepository.findById(dto.getGroup().getId()).orElseThrow(() -> new RuntimeException("Group is reuired!")));
 		entity.setSite(dmsSiteRepository.findById(dto.getSite().getId()).orElseThrow(() -> new RuntimeException("Site is reuired!")));
 		dmsWorkOrdersRepository.save(entity);
 	}

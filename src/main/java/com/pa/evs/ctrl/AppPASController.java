@@ -37,7 +37,7 @@ import springfox.documentation.annotations.ApiIgnore;
 
 @DependsOn(value = "settingsController")
 @RestController
-@ApiIgnore
+//@ApiIgnore
 @SuppressWarnings("rawtypes")
 public class AppPASController {
 	static final Logger LOGGER = LoggerFactory.getLogger(AppPASController.class);

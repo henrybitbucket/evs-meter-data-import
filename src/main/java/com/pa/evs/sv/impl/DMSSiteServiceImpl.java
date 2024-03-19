@@ -1,6 +1,5 @@
 package com.pa.evs.sv.impl;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -138,7 +137,10 @@ public class DMSSiteServiceImpl implements DMSSiteService {
         if (StringUtils.isNotBlank(queryBuildingUnit)) {
         	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.buildingUnit.id= '" + queryBuildingUnit + "') ");
         }
-		
+        
+		if (pagin.getOptions().get("projectId") != null) {
+			cmmBuilder.append(" AND exists (select 1 from DMSProjectSite ps where ps.site.id = fl.id and ps.project.id = " + pagin.getOptions().get("projectId") + ") ");
+		}
 		
 		sqlBuilder.append(cmmBuilder);
 		sqlBuilder.append(" ORDER BY fl.modifyDate DESC ");
@@ -285,13 +287,13 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 			DMSWorkOrdersDto workOrdersDto = new DMSWorkOrdersDto();
 			workOrdersDto.setId(wod.getId());
 			workOrdersDto.setName(wod.getName());
-			
-			GroupUser f = wod.getGroup();
-			GroupUserDto dto = new GroupUserDto();
-			dto.setId(f.getId());
-			dto.setName(f.getName());
-			dto.setDescription(f.getDescription());
-			workOrdersDto.setGroup(dto);
+//			workOrdersDto.setApplicationEmail(wod.getAppicationEmail());
+//			GroupUser f = wod.getGroup();
+//			GroupUserDto dto = new GroupUserDto();
+//			dto.setId(f.getId());
+//			dto.setName(f.getName());
+//			dto.setDescription(f.getDescription());
+//			workOrdersDto.setGroup(dto);
 			
 			dtos.add(workOrdersDto);
 		});

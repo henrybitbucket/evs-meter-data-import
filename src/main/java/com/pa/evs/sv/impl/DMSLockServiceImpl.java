@@ -407,13 +407,13 @@ public class DMSLockServiceImpl implements DMSLockService {
 	
 		DMSLocationLock dmsLocationLock = dmsLocationLockRepository.findByLockId(dmsLockId).orElseThrow(() -> new RuntimeException("Lock not found or not link location!"));
 		
-		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
-				.setParameter("email", email)
-				.getResultList();
-		
-		if (groupIdOfUsers.isEmpty()) {
-			throw new RuntimeException("user not in any group");
-		}
+//		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
+//				.setParameter("email", email)
+//				.getResultList();
+//		
+//		if (groupIdOfUsers.isEmpty()) {
+//			throw new RuntimeException("user not in any group");
+//		}
 		
 		List<DMSSite> sitesOfUser = em.createQuery("SELECT locationSite.site FROM DMSLocationSite locationSite where locationSite.locationKey = '" + dmsLocationLock.getLocationKey() + "' ")
 		.getResultList();
@@ -422,12 +422,12 @@ public class DMSLockServiceImpl implements DMSLockService {
 			throw new RuntimeException("user not in any site");
 		}
 		
-		List<DMSWorkOrders> dmsWorkOrders = em.createQuery("SELECT dmsWorkOrders FROM DMSWorkOrders dmsWorkOrders where dmsWorkOrders.site.id in (:siteIdOfUsers) ")
+		List<DMSWorkOrders> dmsWorkOrders = em.createQuery("SELECT dmsWorkOrders FROM DMSWorkOrders dmsWorkOrders where dmsWorkOrders.site.id in (:siteIdOfUsers) and dmsWorkOrders.appUser.user.email = '" + email + "'")
 		.setParameter("siteIdOfUsers", sitesOfUser.stream().map(s -> s.getId()).collect(Collectors.toSet()))
 		.getResultList();
 		
 		for (DMSWorkOrders workOrders : dmsWorkOrders) {
-			if (groupIdOfUsers.contains(workOrders.getGroup().getId()) && isMatch(dmsLocationLock.getLock(), workOrders)) {
+			if (isMatch(dmsLocationLock.getLock(), workOrders)) {
 				return dmsLocationLock.getLock().getSecretKey();
 			}
 		}
@@ -457,16 +457,18 @@ public class DMSLockServiceImpl implements DMSLockService {
 	public Object getAssignedLocks(String email, Boolean lockOnly) {
 		
 		DMSLocationSiteLockDto rs = DMSLocationSiteLockDto.builder().build();
-		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
-				.setParameter("email", email)
-				.getResultList();
+//		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
+//				.setParameter("email", email)
+//				.getResultList();
+//		
+//		if (groupIdOfUsers.isEmpty()) {
+//			return rs;
+//		}
 		
-		if (groupIdOfUsers.isEmpty()) {
-			return rs;
-		}
-		
-		List<DMSSite> sitesOfUser = em.createQuery(" SELECT wod.site FROM DMSWorkOrders wod where wod.group.id in (:groupIds) order by wod.site.id desc " )
-		.setParameter("groupIds", groupIdOfUsers)
+		//List<DMSSite> sitesOfUser = em.createQuery(" SELECT wod.site FROM DMSWorkOrders wod where wod.group.id in (:groupIds) order by wod.site.id desc " )
+		List<DMSSite> sitesOfUser = em.createQuery(" SELECT wod.site FROM DMSWorkOrders wod where wod.appUser.user.email = :appicationEmail order by wod.site.id desc " )
+		//.setParameter("groupIds", groupIdOfUsers)
+		.setParameter("appicationEmail", email)
 		.getResultList();
 		
 		if (sitesOfUser.isEmpty()) {

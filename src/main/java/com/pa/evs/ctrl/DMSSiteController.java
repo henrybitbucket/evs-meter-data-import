@@ -55,10 +55,10 @@ public class DMSSiteController {
 		return pagin;
 	}
 	
-	@PostMapping("/api/work-order/{siteId}/{groupId}")
-	public ResponseDto createWorkOthers(@RequestBody DMSWorkOrdersDto dto, @PathVariable Long siteId, @PathVariable Long groupId) {
+	@PostMapping("/api/work-order/{siteId}")
+	public ResponseDto createWorkOthers(@RequestBody DMSWorkOrdersDto dto, @PathVariable Long siteId) {
 		try {
-			dto.setGroup(GroupUserDto.builder().id(groupId).build());
+			//dto.setGroup(GroupUserDto.builder().id(groupId).build());
 			dto.setSite(DMSSiteDto.builder().id(siteId).build());
 			workOrdersService.save(dto);
 			return ResponseDto.builder().success(true).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
