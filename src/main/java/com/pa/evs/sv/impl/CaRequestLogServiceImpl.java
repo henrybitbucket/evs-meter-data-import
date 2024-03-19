@@ -295,7 +295,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != ca.getId().longValue()) {
 
 						CARequestLog otherMCU = list.stream().filter(c -> c.getId().longValue() != ca.getId().longValue()).findFirst().orElse(new CARequestLog());
-						message = "Because the meter address (" + Utils.formatHomeAddress(otherMCU) + ") is already linked to another MCU (SN=" + otherMCU.getSn() + "), The MCU address is copied from the meter address, and the MCU address (SN=" + otherMCU.getSn() + ") is removed.";
+						// message = "The address of Meter and MCU are linked to a unified address: " + Utils.formatHomeAddress(otherMCU) + ") is already linked to another MCU (SN=" + otherMCU.getSn() + "), The MCU address is copied from the meter address, and the MCU address (SN=" + otherMCU.getSn() + ") is removed.";
 						otherMCU.setAddress(null);
 						otherMCU.setBuilding(null);
 						otherMCU.setBlock(null);
@@ -310,6 +310,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 					ca.setBuilding(mmsMeter.getBuildingUnit().getFloorLevel().getBuilding());
 					ca.setAddress(mmsMeter.getAddress());
 					ca.setHomeAddress(Utils.formatHomeAddress(ca));
+					message = "The address of Meter and MCU are linked to a unified address: " + Utils.formatHomeAddress(ca);
 				}
 				ca.setRemarkMeter(mmsMeter.getRemark());
 			}
@@ -383,6 +384,15 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     			updateMMSMeterAddressOnly(dto);
     			return;
     		}
+			if (StringUtils.isNotBlank(dto.getUid()) && StringUtils.isBlank(dto.getMsn())) { // decouple msn;
+				CARequestLog ca = caRequestLogRepository.findByUid(dto.getUid()).orElse(null);
+				String msn = ca.getMsn();
+				ca.setMsn(null);
+				if (ca != null) {
+					updateMMSMeter(ca, msn);
+				}
+				return;
+			}
     		if (StringUtils.isNotBlank(dto.getMsn())) {
 	    		Optional<CARequestLog> opt = caRequestLogRepository.findByMsn(dto.getMsn().trim());
 	    		if (opt.isPresent()) {

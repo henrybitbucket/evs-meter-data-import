@@ -23,7 +23,6 @@ import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.DMSProjectDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
-import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.ApiException;
@@ -34,8 +33,6 @@ import com.pa.evs.model.DMSProjectPicUser;
 import com.pa.evs.model.DMSProjectSite;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
-import com.pa.evs.model.GroupUser;
-import com.pa.evs.model.UserGroup;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
@@ -468,9 +465,9 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Users us ");
 		
 		Map<String, Object> options = pagin.getOptions();
-        String queryUserName = options.get("queryUserName") != null ?  (String) options.get("queryUserName") : null;
-        String queryFirstName = options.get("queryFirstName") != null ?  (String) options.get("queryFirstName") : null;
-        String queryLastName = options.get("queryLastName") != null ?  (String) options.get("queryLastName") : null;
+        String queryUserName = (String) options.get("queryUserName");
+        String queryFirstName = (String) options.get("queryFirstName");
+        String queryLastName = (String) options.get("queryLastName");
 
 		StringBuilder sqlCommonBuilder = new StringBuilder();
 		sqlCommonBuilder.append(" WHERE 1=1 ");
@@ -485,8 +482,6 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			sqlCommonBuilder.append(" AND lower(lastName) like '%" + queryLastName.toLowerCase() + "%' ");
 		}
 		
-		
-		sqlCommonBuilder.append(" AND (exists (select 1 from UserAppCode uac where uac.appCode.name = '" + AppCodeSelectedHolder.get() + "' and uac.user.userId = us.userId)) ");
 		sqlCommonBuilder.append(" AND (exists (select 1 from UserGroup ug where ug.groupUser.name = 'DMS_G_PIC' and ug.user.userId = us.userId)) ");
 		
 		if (pagin.getOptions().get("projectId") != null) {
