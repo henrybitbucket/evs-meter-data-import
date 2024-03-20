@@ -186,6 +186,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	private FileService fileService;
+	
+	@Autowired
+	private PiRepository piRepository;
 
     private List<String> cacheCids = Collections.EMPTY_LIST;
 
@@ -860,7 +863,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     @Transactional(readOnly = true)
     public PaginDto<CARequestLog> search(PaginDto<CARequestLog> pagin) {
     	
-    	
+
     	boolean searchMeter = "true".equalsIgnoreCase(pagin.getOptions().get("searchMeter") + "");
     	
         StringBuilder sqlBuilder = new StringBuilder("SELECT ca, 1 as m FROM CARequestLog ca ");
@@ -1085,7 +1088,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	if (!tags.contains("ALL")) {
         		sqlCommonBuilder.append(" AND (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds)) ");
             }
-        	
+
         }
         
         if (Boolean.parseBoolean(pagin.getOptions().get("cidIsNotNull") + "")) {
@@ -2076,6 +2079,32 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		}
 		
 		return settingList;
+	}
+	
+	@Override
+	@Transactional
+	public void updateDevicesNode(List<Long> deviceIds, String ieiNode, Boolean isDistributed) {
+		
+		Optional<Pi> piOpt = piRepository.findByIeiId(ieiNode);
+		if (!piOpt.isPresent()) {
+			throw new RuntimeException("IEI Node doesn't exists!");
+		}
+		Pi pi = piOpt.get();
+		
+		List<CARequestLog> listDevice = caRequestLogRepository.findByIdIn(deviceIds);
+		
+		listDevice.forEach(device -> {
+			Long id = device.getId();
+	        if (BooleanUtils.isTrue(isDistributed)) {
+	        	DeviceIEINode deviceIEINode = new DeviceIEINode();
+				deviceIEINode.setDevice(device);
+				deviceIEINode.setIeiId(pi.getIeiId());
+				deviceIEINodeRepository.save(deviceIEINode);
+	        } else {
+	        	deviceIEINodeRepository.deleteByDeviceId(id);
+	        	device.setDeviceIEINodes(null);
+	        }
+		});
 	}
 	
 	private static <T> T clone(T obj) {

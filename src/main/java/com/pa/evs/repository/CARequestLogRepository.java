@@ -106,4 +106,6 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	@Modifying
 	@Query(value = "update {h-schema}ca_request_log set vendor_id = ?1 where vendor_id is null", nativeQuery = true)
 	void updateVendor(Long vendorId);
+
+	List<CARequestLog> findByIdIn(List<Long> deviceIds);
 }
