@@ -1,6 +1,5 @@
 package com.pa.evs.model;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -19,20 +18,18 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "dms_application_user")
-public class DMSApplicationUser extends BaseEntity {
+@Table(name = "dms_application_site")
+public class DMSApplicationSite extends BaseEntity {
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "app_id", referencedColumnName = "id")
+	@JoinColumn(name = "app_id")
 	private DMSApplication app;
 	
-	@Column(name = "phone_number")
-	private String phoneNumber;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "site_id")
+	private DMSSite site;
 	
-	@Column(name = "name")
-	private String name;
-	
-	@Column(name = "is_guest", columnDefinition = "boolean not null default false")
-	@Builder.Default
-	private Boolean isGuest = false;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "work_order_id")
+	private DMSWorkOrders workOrder;
 }

@@ -21,11 +21,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.BuildingDto;
+import com.pa.evs.dto.CreateDMSAppUserDto;
+import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
+import com.pa.evs.dto.DMSApplicationSaveReqDto;
+import com.pa.evs.dto.DMSApplicationSiteItemReqDto;
+import com.pa.evs.dto.DMSApplicationUserGuestReqDto;
 import com.pa.evs.dto.DMSProjectDto;
+import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.ApiException;
+import com.pa.evs.model.DMSApplication;
+import com.pa.evs.model.DMSApplicationSite;
+import com.pa.evs.model.DMSApplicationUser;
 import com.pa.evs.model.DMSBuilding;
 import com.pa.evs.model.DMSLocationSite;
 import com.pa.evs.model.DMSProject;
@@ -34,6 +43,9 @@ import com.pa.evs.model.DMSProjectSite;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
 import com.pa.evs.model.Users;
+import com.pa.evs.repository.DMSApplicationRepository;
+import com.pa.evs.repository.DMSApplicationSiteRepository;
+import com.pa.evs.repository.DMSApplicationUserRepository;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
@@ -42,10 +54,16 @@ import com.pa.evs.repository.DMSLocationSiteRepository;
 import com.pa.evs.repository.DMSProjectPicUserRepository;
 import com.pa.evs.repository.DMSProjectRepository;
 import com.pa.evs.repository.DMSProjectSiteRepository;
+import com.pa.evs.repository.DMSSiteRepository;
 import com.pa.evs.repository.DMSWorkOrdersRepository;
 import com.pa.evs.repository.GroupUserRepository;
+import com.pa.evs.repository.UserRepository;
+import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.DMSProjectService;
+import com.pa.evs.sv.NotificationService;
+import com.pa.evs.sv.WorkOrdersService;
 import com.pa.evs.utils.AppCodeSelectedHolder;
+import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.Utils;
 
@@ -86,9 +104,33 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 	@Autowired
 	DMSProjectSiteRepository dmsProjectSiteRepository;
 	
+	@Autowired
+	DMSSiteRepository dmsSiteRepository;
+	
+	@Autowired
+	DMSApplicationRepository dmsApplicationRepository;
+	
+	@Autowired
+	DMSApplicationSiteRepository dmsApplicationSiteRepository;
+	
+	@Autowired
+	DMSApplicationUserRepository dmsApplicationUserRepository;
+	
+	@Autowired
+	WorkOrdersService workOrdersService;
+	
+	@Autowired
+	UserRepository userRepository;
+	
+	@Autowired
+	AuthenticationService authenticationService;
+	
+	@Autowired
+	NotificationService notificationService;
+	
 	@Transactional
 	@Override
-	public void save(DMSProjectDto dto) {
+	public synchronized void save(DMSProjectDto dto) {
 		
 		if (StringUtils.isBlank(dto.getName())) {
 			throw new RuntimeException("Name is required!");
@@ -99,7 +141,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			if (dmsProjectRepository.findByName(dto.getName().trim()).isPresent()) {
 				throw new RuntimeException("name exitst!");
 			}
-			SimpleDateFormat sf = new SimpleDateFormat("yyMMdd-hhmmss");
+			SimpleDateFormat sf = new SimpleDateFormat("yyMMdd-hhmmssSSS");
 			Random random = new Random();
 			// "ptwp-240315-35678"
 			DMSProject entity = dmsProjectRepository.save(
@@ -582,6 +624,166 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 	DMSProjectPicUser findSubPicUsersByProjectId(Long projectId, String email) {
 		List<DMSProjectPicUser> rp = em.createQuery("FROM DMSProjectPicUser pic where pic.project.id = " + projectId + " and pic.isSubPic = true and pic.picUser.email = '" + email + "'").getResultList();
 		return rp.isEmpty() ? null : rp.get(0);
+	}
+	
+	@SuppressWarnings("unchecked")
+	DMSProjectPicUser findPicUserOrSubPicUsersByProjectId(Long projectId, String email) {
+		List<DMSProjectPicUser> rp = em.createQuery("FROM DMSProjectPicUser pic where pic.project.id = " + projectId + " and pic.picUser.email = '" + email + "'").getResultList();
+		return rp.isEmpty() ? null : rp.get(0);
+	}
+
+	@Override
+	@Transactional
+	public void approveApplication(Long applicationId) {
+		DMSApplication application = dmsApplicationRepository.findById(applicationId).orElseThrow(() -> new RuntimeException("application not found!"));
+		if (!SecurityUtils.hasAnyRole("DMS_R_APPROVE_APPLICATION") || findPicUserOrSubPicUsersByProjectId(application.getProject().getId(), SecurityUtils.getEmail()) == null) {
+			throw new RuntimeException("Access denied!");
+		}
+		
+		if (!"NEW".equals(application.getStatus())) {
+			throw new RuntimeException("Application status invalid!");
+		}
+		application.setApprovalBy(SecurityUtils.getEmail());
+		application.setStatus("APPROVAL");
+		dmsApplicationRepository.save(application);
+	}
+	
+	@Override
+	@Transactional
+	public void rejectApplication(Long applicationId) {
+		DMSApplication application = dmsApplicationRepository.findById(applicationId).orElseThrow(() -> new RuntimeException("application not found!"));
+		if (!SecurityUtils.hasAnyRole("DMS_R_REJECT_APPLICATION") || findPicUserOrSubPicUsersByProjectId(application.getProject().getId(), SecurityUtils.getEmail()) == null) {
+			throw new RuntimeException("Access denied!");
+		}
+		
+		if (!"NEW".equals(application.getStatus())) {
+			throw new RuntimeException("Application status invalid!");
+		}
+		application.setRejectBy(SecurityUtils.getEmail());
+		application.setStatus("REJECT");
+		dmsApplicationRepository.save(application);
+	}
+	
+	@Override
+	@Transactional
+	public void deleteApplication(Long applicationId) {
+		DMSApplication application = dmsApplicationRepository.findById(applicationId).orElseThrow(() -> new RuntimeException("application not found!"));
+		if (application.getCreatedBy().equals(SecurityUtils.getPhoneNumber())) {
+			throw new RuntimeException("Access denied!");
+		}
+		if (!"NEW".equals(application.getStatus())) {
+			throw new RuntimeException("Application status invalid!");
+		}
+		application.setStatus("DELETED");
+		dmsApplicationRepository.save(application);
+	}
+	
+	@Override
+	@Transactional
+	public Object submitApplication(Long projectId, DMSApplicationGuestSaveReqDto dto) {
+		if (dto.isCreateNewUser() && userRepository.findByPhoneNumber(dto.getSubmittedBy()) == null) {
+			authenticationService.saveDMSAppUser(CreateDMSAppUserDto.builder()
+					.email(dto.getEmail())
+					.firstName(dto.getFirstName())
+					.lastName(dto.getLastName())
+					.phoneNumber(dto.getSubmittedBy())
+					.password(dto.getPassword())
+					.loginOtpRequire(false)
+					.build());
+		}
+		return submitApplication(projectId, (DMSApplicationSaveReqDto) dto);
+	}
+	
+	@Transactional
+	@Override
+	public Object submitApplication(Long projectId, DMSApplicationSaveReqDto dto) {
+		
+		DMSProject project = dmsProjectRepository.findById(projectId).orElseThrow(() 
+				-> new RuntimeException("project not found!"));
+		
+		if (StringUtils.isBlank(dto.getSubmittedBy()) || !dto.getSubmittedBy().trim().matches("^\\+[1-9][0-9]{7,}$")) {
+			throw new RuntimeException(" SubmittedBy invalid!");
+		}
+		DMSApplication application = dmsApplicationRepository.save(DMSApplication.builder()
+				.name("app-" + new SimpleDateFormat("yyyyMMdd'-'HHmmss").format(new Date()) + "-" + "p-" + project.getDisplayName())
+				.createdBy(dto.getSubmittedBy())
+				.project(project)
+				.status("NEW")
+				.build());
+		application.setName(application.getName() + "-" + application.getId());
+		if (SecurityUtils.getPhoneNumber() == null || !SecurityUtils.getPhoneNumber().equalsIgnoreCase(dto.getSubmittedBy())) {
+			application.setIsGuest(true);
+		}
+		
+		dmsApplicationRepository.save(application);
+		for (DMSApplicationSiteItemReqDto item : dto.getSites()) {
+			DMSSite site = dmsSiteRepository.findById(item.getSiteId()).orElseThrow(() 
+					-> new RuntimeException("site not found!"));
+			
+			DMSWorkOrders workOrder = workOrdersService.save(DMSWorkOrdersDto.builder()
+					.name("wod-p-" + project.getDisplayName() + "-a-" + application.getId() + "-s-" + site.getLabel())
+					.site(DMSSiteDto.builder().id(item.getSiteId()).build())
+					.applicationId(application.getId())
+					.timePeriodDatesIsAlways(item.isTimePeriodDatesIsAlways())
+					.timePeriodDatesStart(item.getTimePeriodDatesStart())
+					.timePeriodDatesEnd(item.getTimePeriodDatesEnd())
+					.timePeriodDayInWeeksIsAlways(item.isTimePeriodDayInWeeksIsAlways())
+					.timePeriodDayInWeeksIsMon(item.isTimePeriodDayInWeeksIsMon())
+					.timePeriodDayInWeeksIsTue(item.isTimePeriodDayInWeeksIsTue())
+					.timePeriodDayInWeeksIsWed(item.isTimePeriodDayInWeeksIsWed())
+					.timePeriodDayInWeeksIsThu(item.isTimePeriodDayInWeeksIsThu())
+					.timePeriodDayInWeeksIsFri(item.isTimePeriodDayInWeeksIsFri())
+					.timePeriodDayInWeeksIsSat(item.isTimePeriodDayInWeeksIsSat())
+					.timePeriodDayInWeeksIsSun(item.isTimePeriodDayInWeeksIsSun())
+					.timePeriodTimeInDayIsAlways(item.isTimePeriodTimeInDayIsAlways())
+					.timePeriodTimeInDayHourStart(item.getTimePeriodTimeInDayHourStart())
+					.timePeriodTimeInDayHourEnd(item.getTimePeriodTimeInDayHourEnd())
+					.timePeriodTimeInDayMinuteStart(item.getTimePeriodTimeInDayMinuteStart())
+					.timePeriodTimeInDayMinuteEnd(item.getTimePeriodTimeInDayMinuteEnd())
+					.build());	
+			
+			dmsApplicationSiteRepository.save(DMSApplicationSite.builder()
+					.app(application)
+					.site(site)
+					.workOrder(workOrder)
+					.build());
+			
+		}
+		
+		Map<String, Users> mapPhoneUsers = new LinkedHashMap<>();
+		userRepository.findByPhoneNumberIn(dto.getUserPhones())
+		.forEach(us -> mapPhoneUsers.put(us.getPhoneNumber(), us));
+		
+		for (String phone: dto.getUserPhones()) {
+			if (StringUtils.isBlank(phone) || !phone.trim().matches("^\\+[1-9][0-9]{7,}$")) {
+				throw new RuntimeException("Phone invalid(" + phone + ")! (ex: +65909123456)");
+			}
+			
+			Users us = mapPhoneUsers.get(phone);
+			if (us == null) {
+				throw new RuntimeException("User with phone " + phone + " not found!");
+			}
+			dmsApplicationUserRepository.save(DMSApplicationUser.builder()
+					.app(application)
+					.phoneNumber(phone.trim())
+					.name(us.getFirstName() + " " + us.getLastName())
+					.isGuest(false)
+					.build());
+		}
+		
+		for (DMSApplicationUserGuestReqDto guest: dto.getGuests()) {
+			if (StringUtils.isBlank(guest.getPhone()) || !guest.getPhone().trim().matches("^\\+[1-9][0-9]{7,}$")) {
+				throw new RuntimeException("Guest phone invalid(" + guest.getPhone().trim() + ")! (ex: +65909123456)");
+			}
+			dmsApplicationUserRepository.save(DMSApplicationUser.builder()
+					.app(application)
+					.phoneNumber(guest.getPhone().trim())
+					.name(guest.getName())
+					.isGuest(true)
+					.build());
+		}
+
+		return application.getName();
 	}
 	
 }

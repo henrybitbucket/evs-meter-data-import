@@ -41,6 +41,7 @@ import com.pa.evs.constant.Message;
 import com.pa.evs.constant.ValueConstant;
 import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.CompanyDto;
+import com.pa.evs.dto.CreateDMSAppUserDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
@@ -2208,5 +2209,65 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			pagin.getResults().add(dto);
 		});
 		pagin.setTotalRows(Long.valueOf(pagin.getResults().size()));
+	}
+
+	@Transactional
+	@Override
+	public void saveDMSAppUser(CreateDMSAppUserDto dto) {
+		if (dto.getEmail() == null || !dto.getEmail().trim().matches("^[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]+@[a-zA-Z0-9.-]+$")) {
+			throw new RuntimeException("Invalid email!");
+		}
+		
+		if (dto.getPhoneNumber() == null || !dto.getPhoneNumber().trim().matches("^\\+\\d{1,3}\\d{8,}$")) {
+			throw new RuntimeException("Invalid phone! (ex: +6500001111)");
+		}
+		
+		dto.setEmail(dto.getEmail().trim());
+		
+		UserDto userDto = new UserDto();
+    	userDto.setEmail(dto.getEmail());
+    	userDto.setFullName(dto.getFullName());
+    	userDto.setFirstName(dto.getFirstName());
+    	userDto.setLastName(dto.getLastName());
+    	userDto.setAvatar(dto.getAvatar());
+    	userDto.setIdentification(dto.getIdentification());
+    	userDto.setPhoneNumber(dto.getPhoneNumber());
+    	userDto.setStatus(dto.getStatus());
+    	userDto.setPassword(dto.getPassword());
+    	userDto.setLoginOtpRequire(dto.getLoginOtpRequire());
+    	save(userDto);
+    	
+    	PlatformUserLogin pf = platformUserLoginRepository.findByEmailAndName(dto.getEmail(), "OTHER");
+		if (pf == null) {
+			PlatformUserLogin newPf = new PlatformUserLogin();
+			newPf.setActive(false);
+			newPf.setEmail(dto.getEmail());
+			newPf.setName("OTHER");
+			newPf.setStartTime(0l);
+			newPf.setEndTime(4102444800000l);
+			platformUserLoginRepository.save(newPf);
+		} else {
+			pf.setActive(false);
+			pf.setStartTime(0l);
+			pf.setEndTime(4102444800000l);
+    		platformUserLoginRepository.save(pf);	
+		}
+		
+		pf = platformUserLoginRepository.findByEmailAndName(dto.getEmail(), "MOBILE");
+		if (pf == null) {
+			PlatformUserLogin newPf = new PlatformUserLogin();
+			newPf.setActive(true);
+			newPf.setEmail(dto.getEmail());
+			newPf.setName("MOBILE");
+			newPf.setStartTime(0l);
+			newPf.setEndTime(4102444800000l);
+			platformUserLoginRepository.save(newPf);
+		} else {
+			pf.setActive(true);
+			pf.setStartTime(0l);
+			pf.setEndTime(4102444800000l);
+    		platformUserLoginRepository.save(pf);	
+		}
+		dto.setId(userDto.getId());
 	}
 }

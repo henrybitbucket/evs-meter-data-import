@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.CompanyDto;
-import com.pa.evs.dto.CreateUserDto;
+import com.pa.evs.dto.CreateDMSAppUserDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.PaginDto;
@@ -354,58 +354,14 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.CREATE_NEW_USER})
-    public Object createNewUser(@RequestBody CreateUserDto dto, HttpServletRequest request) {
+    public Object createNewUser(@RequestBody CreateDMSAppUserDto dto, HttpServletRequest request) {
         try {
         	if (StringUtils.isBlank(request.getHeader("A_C"))) {
         		AppCodeSelectedHolder.set("DMS");
         	} else {
         		AppCodeSelectedHolder.set(request.getHeader("A_C"));
         	}
-        	UserDto userDto = new UserDto();
-        	userDto.setEmail(dto.getEmail());
-        	userDto.setFullName(dto.getFullName());
-        	userDto.setFirstName(dto.getFirstName());
-        	userDto.setLastName(dto.getLastName());
-        	userDto.setAvatar(dto.getAvatar());
-        	userDto.setIdentification(dto.getIdentification());
-        	userDto.setPhoneNumber(dto.getPhoneNumber());
-        	userDto.setStatus(dto.getStatus());
-        	userDto.setPassword(dto.getPassword());
-        	userDto.setLoginOtpRequire(dto.getLoginOtpRequire());
-        	authenticationService.save(userDto);
-        	
-        	PlatformUserLogin pf = platformUserLoginRepository.findByEmailAndName(dto.getEmail(), "OTHER");
-    		if (pf == null) {
-    			PlatformUserLogin newPf = new PlatformUserLogin();
-    			newPf.setActive(false);
-    			newPf.setEmail(dto.getEmail());
-    			newPf.setName("OTHER");
-    			newPf.setStartTime(0l);
-    			newPf.setEndTime(4102444800000l);
-    			platformUserLoginRepository.save(newPf);
-    		} else {
-    			pf.setActive(false);
-    			pf.setStartTime(0l);
-    			pf.setEndTime(4102444800000l);
-        		platformUserLoginRepository.save(pf);	
-    		}
-    		
-    		pf = platformUserLoginRepository.findByEmailAndName(dto.getEmail(), "MOBILE");
-    		if (pf == null) {
-    			PlatformUserLogin newPf = new PlatformUserLogin();
-    			newPf.setActive(true);
-    			newPf.setEmail(dto.getEmail());
-    			newPf.setName("MOBILE");
-    			newPf.setStartTime(0l);
-    			newPf.setEndTime(4102444800000l);
-    			platformUserLoginRepository.save(newPf);
-    		} else {
-    			pf.setActive(true);
-    			pf.setStartTime(0l);
-    			pf.setEndTime(4102444800000l);
-        		platformUserLoginRepository.save(pf);	
-    		}
-    		dto.setId(userDto.getId());
+        	authenticationService.saveDMSAppUser(dto);
     		
         	return ResponseDto.<Object>builder().success(true).response(dto).build();
 		} catch (Exception e) {

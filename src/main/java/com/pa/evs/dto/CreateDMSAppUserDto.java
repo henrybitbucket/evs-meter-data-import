@@ -18,7 +18,7 @@ import lombok.Setter;
 @Setter
 @Builder
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class CreateUserDto {
+public class CreateDMSAppUserDto {
 
 	@Schema(hidden = true)
 	private Long id;
@@ -45,7 +45,7 @@ public class CreateUserDto {
     @Schema(description = "Require to use OTP to login ", example = "false", required = true)
     private Boolean loginOtpRequire;
     
-    public static CreateUserDto build(Users user) {
+    public static CreateDMSAppUserDto build(Users user) {
     	return builder()
     			.avatar(user.getAvatar())
     			.email(user.getEmail())

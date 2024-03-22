@@ -17,23 +17,25 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
+import com.pa.evs.dto.DMSApplicationSaveReqDto;
 import com.pa.evs.dto.DMSLocationLockDto;
 import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.DMSLockService;
+import com.pa.evs.sv.DMSProjectService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.TimeZoneHolder;
-
-import springfox.documentation.annotations.ApiIgnore;
 
 @DependsOn(value = "settingsController")
 @RestController
@@ -48,6 +50,9 @@ public class AppPASController {
 
 	@Autowired
 	DMSLockService dmsLockService;
+	
+	@Autowired
+	DMSProjectService dmsProjectService;
 
 	@PostMapping("/api/pas_locks")
 	public ResponseEntity<Object> search(HttpServletResponse response, @RequestBody PaginDto<DMSLockDto> pagin) {
@@ -152,5 +157,115 @@ public class AppPASController {
 		}
 	}
 	
+/**	
+	{
+	  "guests": [
+	    {
+	      "name": "HR",
+	      "phone": "+84909123456"
+	    }
+	  ],
+	  "projectId": 4,
+	  "sites": [
+	    {
+	      "siteId": 13,
+	      "timePeriodDatesEnd": 0,
+	      "timePeriodDatesIsAlways": true,
+	      "timePeriodDatesStart": 0,
+	      "timePeriodDayInWeeksIsAlways": true,
+	      "timePeriodDayInWeeksIsFri": true,
+	      "timePeriodDayInWeeksIsMon": true,
+	      "timePeriodDayInWeeksIsSat": true,
+	      "timePeriodDayInWeeksIsSun": true,
+	      "timePeriodDayInWeeksIsThu": true,
+	      "timePeriodDayInWeeksIsTue": true,
+	      "timePeriodDayInWeeksIsWed": true,
+	      "timePeriodTimeInDayHourEnd": 0,
+	      "timePeriodTimeInDayHourStart": 0,
+	      "timePeriodTimeInDayIsAlways": true,
+	      "timePeriodTimeInDayMinuteEnd": 0,
+	      "timePeriodTimeInDayMinuteStart": 0
+	    }
+	  ],
+	  "userPhones": [
+	    "+84909123456"
+	  ]
+	}	
+*/
+	@PostMapping("/api/dms/project/{projectId}/application")
+	public ResponseDto submitApplication(HttpServletRequest httpServletRequest, @PathVariable Long projectId, @RequestBody DMSApplicationSaveReqDto dto) throws Exception {
+
+		try {
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				// throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			dto.setSubmittedBy(SecurityUtils.getPhoneNumber());
+			return ResponseDto.<Object>builder().response(dmsProjectService.submitApplication(projectId, dto)).success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
 	
+	@PostMapping("/api/dms/project/{projectId}/application-guest")
+	public ResponseDto submitApplicationGuest(HttpServletRequest httpServletRequest, 
+			@PathVariable Long projectId,
+			@RequestBody DMSApplicationGuestSaveReqDto dto,
+			@RequestParam String guestPhone
+			) throws Exception {
+
+		try {
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				// throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			if (StringUtils.isBlank(guestPhone) || !guestPhone.trim().matches("^\\+[1-9][0-9]{7,}$")) {
+				throw new RuntimeException("Phone invalid(" + guestPhone + ")! (ex: +65909123456)");
+			}
+			dto.setSubmittedBy(guestPhone);
+			return ResponseDto.<Object>builder().response(dmsProjectService.submitApplication(projectId, dto)).success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
+	@PutMapping("/api/dms/application/{applicationId}/approve")
+	public ResponseDto approveApplication(HttpServletRequest httpServletRequest, @PathVariable Long applicationId) throws Exception {
+
+		try {
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				 throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			dmsProjectService.approveApplication(applicationId);
+			return ResponseDto.<Object>builder().success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
+	@PutMapping("/api/dms/application/{applicationId}/reject")
+	public ResponseDto rejectApplication(HttpServletRequest httpServletRequest, @PathVariable Long applicationId) throws Exception {
+
+		try {
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				 throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			dmsProjectService.rejectApplication(applicationId);
+			return ResponseDto.<Object>builder().success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
+	@DeleteMapping("/api/dms/application/{applicationId}/delete")
+	public ResponseDto deleteApplication(HttpServletRequest httpServletRequest, @PathVariable Long applicationId) throws Exception {
+
+		try {
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				 throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			dmsProjectService.deleteApplication(applicationId);
+			return ResponseDto.<Object>builder().success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
 }

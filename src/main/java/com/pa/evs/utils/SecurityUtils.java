@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -29,6 +28,25 @@ public final class SecurityUtils {
 			
 			if (obj instanceof JwtUser) {
 				return ((JwtUser)obj).getEmail();
+			}
+		} catch (Exception e) {
+			//
+		}
+		return null;
+	}
+	
+	public static String getPhoneNumber() {
+		
+		try {
+			Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+			Object obj = auth.getPrincipal();
+			
+			if (obj instanceof String) {
+				return null;
+			}
+			
+			if (obj instanceof JwtUser) {
+				return ((JwtUser)obj).getPhoneNumber();
 			}
 		} catch (Exception e) {
 			//

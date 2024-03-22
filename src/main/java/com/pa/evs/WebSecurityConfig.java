@@ -125,6 +125,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers(HttpMethod.POST, "/api/dms-assigned-locks2**").permitAll()
 	            .antMatchers(HttpMethod.POST, "/api/lock/*/code2**").permitAll()
 	            .antMatchers(HttpMethod.POST, "/api/lock/*/save-log").permitAll()
+	            .antMatchers(HttpMethod.POST, "/api/dms/project/*/application-guest").permitAll()
+	            
 				.anyRequest().authenticated();
 
 		httpSecurity.addFilterBefore(authenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);

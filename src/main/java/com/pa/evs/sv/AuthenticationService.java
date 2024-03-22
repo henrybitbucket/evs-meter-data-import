@@ -7,6 +7,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.CompanyDto;
+import com.pa.evs.dto.CreateDMSAppUserDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
@@ -29,6 +30,7 @@ public interface AuthenticationService {
     Object getUserById(Long userId);
     Object preLogin(String username);
 	void save(UserDto dto);
+	void saveDMSAppUser(CreateDMSAppUserDto dto);
 	void saveRole (UserDto dto);
 	void saveGroup (UserDto dto);
 	void savePermission (UserDto dto);

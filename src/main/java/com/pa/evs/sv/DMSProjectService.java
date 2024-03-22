@@ -2,6 +2,8 @@ package com.pa.evs.sv;
 
 import java.util.List;
 
+import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
+import com.pa.evs.dto.DMSApplicationSaveReqDto;
 import com.pa.evs.dto.DMSProjectDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.exception.ApiException;
@@ -30,4 +32,14 @@ public interface DMSProjectService {
 	void linkSite(Long projectId, List<Long> siteIds);
 
 	void linkSubPicUsers(List<String> emails, Long projectId);
+
+	Object submitApplication(Long projectId, DMSApplicationSaveReqDto dto);
+
+	Object submitApplication(Long projectId, DMSApplicationGuestSaveReqDto dto);
+
+	void approveApplication(Long applicationId);
+
+	void rejectApplication(Long applicationId);
+
+	void deleteApplication(Long applicationId);
 }

@@ -2,6 +2,8 @@ package com.pa.evs.dto;
 
 import javax.persistence.Column;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,6 +25,9 @@ public class DMSWorkOrdersDto {
 	//private GroupUserDto group;
 
     private DMSSiteDto site;
+    
+    @JsonProperty
+    private Long applicationId;
 	
 	private String applicationEmail;
 	

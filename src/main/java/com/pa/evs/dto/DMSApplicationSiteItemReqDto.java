@@ -1,11 +1,4 @@
-package com.pa.evs.model;
-
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.FetchType;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
+package com.pa.evs.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,35 +6,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 @Builder
-@Entity
-@Table(
-		name = "dms_work_orders"
-)
-public class DMSWorkOrders extends BaseEntity {
+public class DMSApplicationSiteItemReqDto {
 
-	private String name;
-	
-//	@ManyToOne(fetch = FetchType.LAZY)
-//	@JoinColumn(name = "group_user_id")
-//	private GroupUser group;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "site_id", nullable = true)
-	private DMSSite site;
-	
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "appication_id", nullable = true)
-	private DMSApplication app;
-	
-	@Column(name = "status")
-	private String status;
-
+	private Long siteId;
 	// timePeriod dates in year
 	@Builder.Default
 	private boolean timePeriodDatesIsAlways = false;
@@ -71,12 +43,8 @@ public class DMSWorkOrders extends BaseEntity {
 	// timePeriod time in day
 	@Builder.Default
 	private boolean timePeriodTimeInDayIsAlways = false;
-	@Builder.Default
-	private Integer timePeriodTimeInDayHourStart = 0;
-	@Builder.Default
-	private Integer timePeriodTimeInDayHourEnd = 0;
-	@Builder.Default
-	private Integer timePeriodTimeInDayMinuteStart = 0;
-	@Builder.Default
-	private Integer timePeriodTimeInDayMinuteEnd = 0;
+	private Integer timePeriodTimeInDayHourStart;
+	private Integer timePeriodTimeInDayHourEnd;
+	private Integer timePeriodTimeInDayMinuteStart;
+	private Integer timePeriodTimeInDayMinuteEnd;
 }

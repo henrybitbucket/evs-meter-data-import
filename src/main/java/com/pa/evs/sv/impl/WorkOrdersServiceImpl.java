@@ -16,6 +16,7 @@ import com.pa.evs.dto.DMSWorkOrdersDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
+import com.pa.evs.repository.DMSApplicationRepository;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
@@ -56,15 +57,18 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 	@Autowired
 	GroupUserRepository groupUserRepository;
 	
+	@Autowired
+	DMSApplicationRepository dmsApplicationRepository;
+	
 	@Transactional
 	@Override
-	public void save(DMSWorkOrdersDto dto) {
+	public DMSWorkOrders save(DMSWorkOrdersDto dto) {
 		
 		if (StringUtils.isBlank(dto.getName())) {
 			throw new RuntimeException("Name is required!");
 		}
 		if (dto.getId() != null) {
-			update(dto);
+			return update(dto);
 		} else {
 			if (dmsWorkOrdersRepository.findByName(dto.getName().trim()).isPresent()) {
 				throw new RuntimeException("Name exitst!");
@@ -73,7 +77,7 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 //			if (opt.isPresent()) {
 //				throw new RuntimeException("Work order with group and site exist!");
 //			}
-			dmsWorkOrdersRepository.save(
+			return dmsWorkOrdersRepository.save(
 					DMSWorkOrders.builder()
 					.name(dto.getName())
 					.status("WAITING_APPROVAL")
@@ -97,6 +101,7 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 					//.group(groupUserRepository.findById(dto.getGroup().getId()).orElseThrow(() -> new RuntimeException("Group is reuired!")))
 					.site(dmsSiteRepository.findById(dto.getSite().getId()).orElseThrow(() -> new RuntimeException("Site is reuired!")))
 //                    .appicationEmail(dto.getApplicationEmail())
+					.app(dmsApplicationRepository.findById(dto.getApplicationId()).orElse(null))
 					.build()
 					);
 		}
@@ -193,7 +198,7 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 	
 	@Transactional
 	@Override
-	public void update(DMSWorkOrdersDto dto) {
+	public DMSWorkOrders update(DMSWorkOrdersDto dto) {
 		DMSWorkOrders entity = dmsWorkOrdersRepository.findById(dto.getId()).orElseThrow(() 
 				-> new RuntimeException("work order not found!"));
 		
@@ -226,7 +231,7 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 		entity.setTimePeriodTimeInDayMinuteEnd(dto.getTimePeriodTimeInDayMinuteEnd());
 		// entity.setGroup(groupUserRepository.findById(dto.getGroup().getId()).orElseThrow(() -> new RuntimeException("Group is reuired!")));
 		entity.setSite(dmsSiteRepository.findById(dto.getSite().getId()).orElseThrow(() -> new RuntimeException("Site is reuired!")));
-		dmsWorkOrdersRepository.save(entity);
+		return dmsWorkOrdersRepository.save(entity);
 	}
 	
 	@Transactional
