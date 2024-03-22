@@ -268,4 +268,18 @@ public class AppPASController {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
 	}
+	
+	@DeleteMapping("/api/dms/application/{applicationId}/site/{siteId}")
+	public ResponseDto deleteSiteOfApplication(HttpServletRequest httpServletRequest, @PathVariable Long applicationId, @PathVariable Long siteId) throws Exception {
+
+		try {
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				 throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			dmsProjectService.deleteSiteOfApplication(applicationId, siteId);
+			return ResponseDto.<Object>builder().success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
 }

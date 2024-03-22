@@ -42,4 +42,6 @@ public interface DMSProjectService {
 	void rejectApplication(Long applicationId);
 
 	void deleteApplication(Long applicationId);
+
+	void deleteSiteOfApplication(Long applicationId, Long siteId);
 }

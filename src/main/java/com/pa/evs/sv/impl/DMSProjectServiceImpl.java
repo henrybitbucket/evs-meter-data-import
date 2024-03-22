@@ -694,6 +694,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		return submitApplication(projectId, (DMSApplicationSaveReqDto) dto);
 	}
 	
+	// https://powerautomationsg.atlassian.net/browse/LOCKS-21
 	@Transactional
 	@Override
 	public Object submitApplication(Long projectId, DMSApplicationSaveReqDto dto) {
@@ -716,6 +717,29 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		}
 		
 		dmsApplicationRepository.save(application);
+		
+		// 1.d set time period he wants to access sites
+		workOrdersService.save(DMSWorkOrdersDto.builder()
+				.name("wod-p-" + project.getDisplayName() + "-a-" + application.getId() + "-s-all")
+				.applicationId(application.getId())
+				.timePeriodDatesIsAlways(dto.isTimePeriodDatesIsAlways())
+				.timePeriodDatesStart(dto.getTimePeriodDatesStart())
+				.timePeriodDatesEnd(dto.getTimePeriodDatesEnd())
+				.timePeriodDayInWeeksIsAlways(dto.isTimePeriodDayInWeeksIsAlways())
+				.timePeriodDayInWeeksIsMon(dto.isTimePeriodDayInWeeksIsMon())
+				.timePeriodDayInWeeksIsTue(dto.isTimePeriodDayInWeeksIsTue())
+				.timePeriodDayInWeeksIsWed(dto.isTimePeriodDayInWeeksIsWed())
+				.timePeriodDayInWeeksIsThu(dto.isTimePeriodDayInWeeksIsThu())
+				.timePeriodDayInWeeksIsFri(dto.isTimePeriodDayInWeeksIsFri())
+				.timePeriodDayInWeeksIsSat(dto.isTimePeriodDayInWeeksIsSat())
+				.timePeriodDayInWeeksIsSun(dto.isTimePeriodDayInWeeksIsSun())
+				.timePeriodTimeInDayIsAlways(dto.isTimePeriodTimeInDayIsAlways())
+				.timePeriodTimeInDayHourStart(dto.getTimePeriodTimeInDayHourStart())
+				.timePeriodTimeInDayHourEnd(dto.getTimePeriodTimeInDayHourEnd())
+				.timePeriodTimeInDayMinuteStart(dto.getTimePeriodTimeInDayMinuteStart())
+				.timePeriodTimeInDayMinuteEnd(dto.getTimePeriodTimeInDayMinuteEnd())
+				.build());
+		
 		for (DMSApplicationSiteItemReqDto item : dto.getSites()) {
 			DMSSite site = dmsSiteRepository.findById(item.getSiteId()).orElseThrow(() 
 					-> new RuntimeException("site not found!"));
@@ -784,6 +808,23 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		}
 
 		return application.getName();
+	}
+
+	@Transactional
+	@Override
+	public void deleteSiteOfApplication(Long applicationId, Long siteId) {
+		DMSApplication application = dmsApplicationRepository.findById(applicationId).orElseThrow(() -> new RuntimeException("application not found!"));
+		if (!SecurityUtils.hasAnyRole("DMS_R_APPROVE_APPLICATION") || findPicUserOrSubPicUsersByProjectId(application.getProject().getId(), SecurityUtils.getEmail()) == null) {
+			throw new RuntimeException("Access denied!");
+		}
+		
+		if (!"NEW".equals(application.getStatus())) {
+			throw new RuntimeException("Application status invalid!");
+		}
+		
+		DMSApplicationSite applicationSite = dmsApplicationSiteRepository.findByAppIdAndSiteId(applicationId, siteId).orElseThrow(() -> new RuntimeException("application and site not found!"));
+		dmsWorkOrdersRepository.delete(applicationSite.getWorkOrder());
+		dmsApplicationSiteRepository.delete(applicationSite);
 	}
 	
 }
