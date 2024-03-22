@@ -301,6 +301,18 @@ public class CaRequestLogController {
         }
     }
     
+	@PostMapping("/api/devices-node")
+	public ResponseEntity<Object> updateDevicesNode(HttpServletRequest httpServletRequest, HttpServletResponse response,
+			@RequestParam List<Long> deviceIds, @RequestParam String ieiNode, @RequestParam Boolean isDistributed) throws Exception {
+
+		try {
+			caRequestLogService.updateDevicesNode(deviceIds, ieiNode, isDistributed);
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+		} catch (Exception e) {
+			return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+		}
+	}
+    
     @PostConstruct
     public void init() {
     	SchedulerHelper.scheduleJob("0/10 * * * * ? *", () -> {

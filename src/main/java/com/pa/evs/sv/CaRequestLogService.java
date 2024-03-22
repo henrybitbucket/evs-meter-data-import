@@ -79,4 +79,6 @@ public interface CaRequestLogService {
 	String updateMMSMeter(CARequestLog ca, String msn);
 
 	List<DeviceSettingDto> uploadDeviceSettings(MultipartFile file, Boolean isProcess) throws IOException;
+
+	void updateDevicesNode(List<Long> deviceIds, String ieiNode, Boolean isDistributed);
 }
