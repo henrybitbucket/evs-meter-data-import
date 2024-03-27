@@ -66,4 +66,7 @@ public class UserDto {
     
     private Boolean loginOtpRequire;
     
+    @Builder.Default
+    private Boolean firstLoginOtpRequire = false;
+    
 }

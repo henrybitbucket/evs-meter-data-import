@@ -99,7 +99,7 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 					.timePeriodTimeInDayMinuteStart(dto.getTimePeriodTimeInDayMinuteStart())
 					.timePeriodTimeInDayMinuteEnd(dto.getTimePeriodTimeInDayMinuteEnd())
 					//.group(groupUserRepository.findById(dto.getGroup().getId()).orElseThrow(() -> new RuntimeException("Group is reuired!")))
-					.site(dmsSiteRepository.findById(dto.getSite().getId()).orElse(null)) // all site
+					.site(dto.getSite() == null ? null : dmsSiteRepository.findById(dto.getSite().getId()).orElse(null)) // all site
 //                    .appicationEmail(dto.getApplicationEmail())
 					.app(dmsApplicationRepository.findById(dto.getApplicationId()).orElse(null))
 					.build()

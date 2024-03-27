@@ -1,8 +1,11 @@
 package com.pa.evs.dto;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pa.evs.model.Users;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -44,6 +47,13 @@ public class CreateDMSAppUserDto {
     
     @Schema(description = "Require to use OTP to login ", example = "false", required = true)
     private Boolean loginOtpRequire;
+    
+    @Schema(hidden = true)
+    private Boolean firstLoginOtpRequire;
+    
+    @Schema(hidden = true)
+    @JsonIgnore
+    private List<String> permissions = new ArrayList<>();
     
     public static CreateDMSAppUserDto build(Users user) {
     	return builder()

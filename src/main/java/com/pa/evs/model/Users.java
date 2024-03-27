@@ -110,6 +110,10 @@ public class Users extends Base1Entity {
     @Column(name = "login_otp_require", columnDefinition = "boolean default false not null")
     private Boolean loginOtpRequire = false;
     
+    @Builder.Default
+    @Column(name = "first_login_otp_require", columnDefinition = "boolean default false not null")
+    private Boolean firstLoginOtpRequire = false;    
+    
     private String identification;
 
     @Transient

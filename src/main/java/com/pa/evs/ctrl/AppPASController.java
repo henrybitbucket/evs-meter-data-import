@@ -34,6 +34,7 @@ import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.DMSLockService;
 import com.pa.evs.sv.DMSProjectService;
 import com.pa.evs.utils.ApiUtils;
+import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.TimeZoneHolder;
 
@@ -214,6 +215,7 @@ public class AppPASController {
 			) throws Exception {
 
 		try {
+			AppCodeSelectedHolder.set("DMS");
 			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
 				// throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
 			}
@@ -223,6 +225,7 @@ public class AppPASController {
 			dto.setSubmittedBy(guestPhone);
 			return ResponseDto.<Object>builder().response(dmsProjectService.submitApplication(projectId, dto)).success(true).build();
 		} catch (Exception ex) {
+			ex.printStackTrace();
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
 	}

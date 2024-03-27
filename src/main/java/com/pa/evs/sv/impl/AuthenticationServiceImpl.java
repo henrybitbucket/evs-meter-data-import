@@ -254,7 +254,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			user.setLastChangePwd(System.currentTimeMillis());
 		}
 		
-		if (BooleanUtils.isTrue(user.getLoginOtpRequire())) {
+		if (BooleanUtils.isTrue(user.getLoginOtpRequire()) || BooleanUtils.isTrue(user.getFirstLoginOtpRequire())) {
 			List<OTP> otps = em.createQuery("FROM OTP where email = '" + email + "' AND otp = '" + loginRequestDTO.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
 			if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
 				throw new RuntimeException("otp invalid!");
@@ -370,6 +370,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			return;
 		}
 		user.setLastLogin(new Date());
+		user.setFirstLoginOtpRequire(false);
 		userRepository.save(user);
 	}
 
@@ -417,6 +418,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			en.setUsername(dto.getUsername());
 			en.setEmail(dto.getEmail());
 			en.setChangePwdRequire(true);
+			en.setFirstLoginOtpRequire(BooleanUtils.isTrue(dto.getFirstLoginOtpRequire()));
 			isNewUser = true;
 		}
 
@@ -1872,7 +1874,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         
         Map<String, Object> userDetails = new HashMap<>();
         userDetails.put(username, username);
-        userDetails.put("loginOtpRequire", user.getLoginOtpRequire());
+        userDetails.put("loginOtpRequire", (BooleanUtils.isTrue(user.getLoginOtpRequire()) || BooleanUtils.isTrue(user.getFirstLoginOtpRequire())));
         
 		return userDetails;
 	}
@@ -2235,6 +2237,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     	userDto.setStatus(dto.getStatus());
     	userDto.setPassword(dto.getPassword());
     	userDto.setLoginOtpRequire(dto.getLoginOtpRequire());
+    	userDto.setFirstLoginOtpRequire(dto.getFirstLoginOtpRequire());
     	save(userDto);
     	
     	PlatformUserLogin pf = platformUserLoginRepository.findByEmailAndName(dto.getEmail(), "OTHER");
@@ -2243,7 +2246,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			newPf.setActive(false);
 			newPf.setEmail(dto.getEmail());
 			newPf.setName("OTHER");
-			newPf.setStartTime(0l);
+			newPf.setStartTime(System.currentTimeMillis());
 			newPf.setEndTime(4102444800000l);
 			platformUserLoginRepository.save(newPf);
 		} else {
@@ -2259,7 +2262,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			newPf.setActive(true);
 			newPf.setEmail(dto.getEmail());
 			newPf.setName("MOBILE");
-			newPf.setStartTime(0l);
+			newPf.setStartTime(System.currentTimeMillis());
 			newPf.setEndTime(4102444800000l);
 			platformUserLoginRepository.save(newPf);
 		} else {
@@ -2268,6 +2271,19 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			pf.setEndTime(4102444800000l);
     		platformUserLoginRepository.save(pf);	
 		}
+		if (dto.getPermissions() != null && !dto.getPermissions().isEmpty()) {
+			Users user = userRepository.findByEmail(dto.getEmail());
+			permissionRepository.findByAppCodeNameAndNameIn(AppCodeSelectedHolder.get(), dto.getPermissions())
+			.forEach(p -> {
+				UserPermission up = new UserPermission();
+				up.setUser(user);
+				up.setPermission(p);
+				userPermissionRepository.save(up);
+			});
+			
+		}
+		
+		
 		dto.setId(userDto.getId());
 	}
 }

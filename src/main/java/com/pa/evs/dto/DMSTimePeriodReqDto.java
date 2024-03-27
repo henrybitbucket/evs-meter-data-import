@@ -1,42 +1,17 @@
 package com.pa.evs.dto;
 
-import javax.persistence.Column;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 @Builder
-public class DMSWorkOrdersDto {
-
-	private Long id;
-	
-	private String name;
-	
-	//private GroupUserDto group;
-
-    private DMSSiteDto site;
-    
-    private Long siteId;
-    
-    private String siteLabel;
-    
-    @JsonProperty
-    private Long applicationId;
-	
-	private String applicationEmail;
-	
-	@Column(name = "status")
-	private String status;
+public class DMSTimePeriodReqDto {
 
 	// timePeriod dates in year
 	@Builder.Default
@@ -71,7 +46,4 @@ public class DMSWorkOrdersDto {
 	private Integer timePeriodTimeInDayHourEnd;
 	private Integer timePeriodTimeInDayMinuteStart;
 	private Integer timePeriodTimeInDayMinuteEnd;
-	
-	
-	
 }

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pa.evs.constant.RestPath;
+import com.pa.evs.dto.DMSApplicationDto;
 import com.pa.evs.dto.DMSLocationSiteDto;
 import com.pa.evs.dto.DMSProjectDto;
 import com.pa.evs.dto.PaginDto;
@@ -53,6 +53,19 @@ public class DMSProjectController {
 	@PostMapping("/api/dms/projects")
 	public PaginDto<DMSProjectDto> search(@RequestBody PaginDto<DMSProjectDto> pagin) {
 		dmsProjectService.search(pagin);
+		return pagin;
+	}
+	
+	@PostMapping("/api/dms/applications")
+	public PaginDto<DMSApplicationDto> searchApplications(@RequestBody PaginDto<DMSApplicationDto> pagin) {
+		dmsProjectService.searchApplications(pagin);
+		return pagin;
+	}
+	
+	@PostMapping("/api/dms/applications/{applicationId}/users")
+	public PaginDto<Object> searchApplicationUsers(@RequestBody PaginDto<Object> pagin, @PathVariable Long applicationId) {
+		pagin.getOptions().put("applicationId", applicationId);
+		dmsProjectService.searchApplicationUsers(pagin);
 		return pagin;
 	}
 	

@@ -6,6 +6,7 @@ import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,4 +36,13 @@ public class DMSApplicationUser extends BaseEntity {
 	@Column(name = "is_guest", columnDefinition = "boolean not null default false")
 	@Builder.Default
 	private Boolean isGuest = false;
+	
+	@Transient
+	private Long applicationId;
+	
+	@Transient
+	private Long userId;
+	
+	@Transient
+	private String email;
 }

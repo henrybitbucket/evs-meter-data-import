@@ -1,6 +1,8 @@
 package com.pa.evs.dto;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,5 +32,8 @@ public class DMSProjectDto {
     private Date modifyDate;
     
     private String picUser;
+    
+    @Builder.Default
+    private List<String> subPicUsers = new ArrayList<>();
 	
 }

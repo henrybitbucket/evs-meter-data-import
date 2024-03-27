@@ -21,7 +21,7 @@ public interface DMSProjectService {
 
 	void searchPicUsers(PaginDto pagin);
 
-	void searchLocations(PaginDto pagin);
+	void searchApplications(PaginDto pagin);
 
 	void linkPicUser(String email, Long projectId);
 
@@ -44,4 +44,6 @@ public interface DMSProjectService {
 	void deleteApplication(Long applicationId);
 
 	void deleteSiteOfApplication(Long applicationId, Long siteId);
+
+	void searchApplicationUsers(PaginDto pagin);
 }

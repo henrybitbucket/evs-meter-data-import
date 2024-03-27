@@ -22,6 +22,7 @@ import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.exception.ApiException;
+import com.pa.evs.model.DMSApplicationSite;
 import com.pa.evs.model.DMSBlock;
 import com.pa.evs.model.DMSBuilding;
 import com.pa.evs.model.DMSBuildingUnit;
@@ -140,6 +141,10 @@ public class DMSSiteServiceImpl implements DMSSiteService {
         
 		if (pagin.getOptions().get("projectId") != null) {
 			cmmBuilder.append(" AND exists (select 1 from DMSProjectSite ps where ps.site.id = fl.id and ps.project.id = " + pagin.getOptions().get("projectId") + ") ");
+		}
+		
+		if (pagin.getOptions().get("applicationId") != null) {
+			cmmBuilder.append(" AND exists (select 1 from DMSApplicationSite ps where ps.site.id = fl.id and ps.app.id = " + pagin.getOptions().get("applicationId") + ") ");
 		}
 		
 		sqlBuilder.append(cmmBuilder);
