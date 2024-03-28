@@ -45,6 +45,10 @@ public class CreateDMSAppUserDto {
     @Schema(required = true)
     private String password;
     
+    @JsonIgnore
+    @Schema(hidden = true)
+    private String hPwd;
+    
     @Schema(description = "Require to use OTP to login ", example = "false", required = true)
     private Boolean loginOtpRequire;
     
@@ -53,6 +57,7 @@ public class CreateDMSAppUserDto {
     
     @Schema(hidden = true)
     @JsonIgnore
+    @Builder.Default
     private List<String> permissions = new ArrayList<>();
     
     public static CreateDMSAppUserDto build(Users user) {

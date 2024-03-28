@@ -463,7 +463,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			en.setLastChangePwd(System.currentTimeMillis());
 
 		} else if (dto.getId() == null && StringUtils.isBlank(dto.getPassword())) {
-			en.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+			en.setPassword(StringUtils.isNotBlank(dto.getHPwd()) ? dto.getHPwd() : passwordEncoder.encode(UUID.randomUUID().toString()));
 			en.setLastChangePwd(System.currentTimeMillis());
 		}
 
@@ -932,6 +932,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		if (StringUtils.isNotBlank(queryLastName)) {
 			sqlCommonBuilder.append(" AND lower(lastName) like '%" + queryLastName.toLowerCase() + "%' ");
+		}
+		
+		if ("true".equalsIgnoreCase(options.get("hasPhone") + "")) {
+			sqlCommonBuilder.append(" AND us.phoneNumber is not null ");
 		}
 		
 		sqlCommonBuilder.append(" AND (exists (select 1 from UserAppCode uac where uac.appCode.name = '" + AppCodeSelectedHolder.get() + "' and uac.user.userId = us.userId)) ");
@@ -2238,6 +2242,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     	userDto.setPassword(dto.getPassword());
     	userDto.setLoginOtpRequire(dto.getLoginOtpRequire());
     	userDto.setFirstLoginOtpRequire(dto.getFirstLoginOtpRequire());
+    	userDto.setHPwd(dto.getHPwd());
     	save(userDto);
     	
     	PlatformUserLogin pf = platformUserLoginRepository.findByEmailAndName(dto.getEmail(), "OTHER");

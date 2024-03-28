@@ -5,8 +5,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,6 +32,10 @@ public class UserDto {
     private String phoneNumber;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String password;
+    
+    @Schema(hidden = true)
+    @JsonIgnore
+    private String hPwd;
     
     private Boolean updatePwd;
     

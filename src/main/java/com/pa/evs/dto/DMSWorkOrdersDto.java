@@ -71,7 +71,4 @@ public class DMSWorkOrdersDto {
 	private Integer timePeriodTimeInDayHourEnd;
 	private Integer timePeriodTimeInDayMinuteStart;
 	private Integer timePeriodTimeInDayMinuteEnd;
-	
-	
-	
 }

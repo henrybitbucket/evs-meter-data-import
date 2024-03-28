@@ -43,6 +43,16 @@ public class DMSApplicationUser extends BaseEntity {
 	@Transient
 	private Long userId;
 	
-	@Transient
 	private String email;
+	
+	@Column(name = "h_password")
+	private String password;
+	
+	@Column(name = "is_request_create_new", columnDefinition = "boolean not null default false")
+	@Builder.Default
+	private Boolean isRequestCreateNew = false;
+	
+	@Column(name = "is_create_new_success", columnDefinition = "boolean not null default false")
+	@Builder.Default
+	private Boolean isRequestCreateSuccess = false;
 }

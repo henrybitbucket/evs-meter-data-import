@@ -14,6 +14,5 @@ import lombok.Setter;
 public class DMSApplicationSiteItemReqDto {
 
 	private Long id;
-	@Builder.Default
-	private DMSTimePeriodReqDto timePeriod = new DMSTimePeriodReqDto();
+	private DMSTimePeriodReqDto timePeriod;
 }

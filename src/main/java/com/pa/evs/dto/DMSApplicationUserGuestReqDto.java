@@ -14,4 +14,7 @@ import lombok.Setter;
 public class DMSApplicationUserGuestReqDto {
 	private String name;
 	private String phone;
+	private String email;
+	private String password;
+	private Boolean createNewUser;
 }
