@@ -117,7 +117,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers("/api/firm-ware/get/**").permitAll()
 	            .antMatchers("/api/file/*/*").permitAll()
 	            .antMatchers("/api/otp", "/api/user/resetPassword").permitAll()
-	            .antMatchers("/api/user/preLogin").permitAll()
+	            .antMatchers("/api/user/credential-type").permitAll()
 	            .antMatchers("/api/submit-meter-commission").permitAll()
 	            .antMatchers("/api/last-submitted-meter-commission**").permitAll()
 	            .antMatchers("/api/add-device-test/**").permitAll()

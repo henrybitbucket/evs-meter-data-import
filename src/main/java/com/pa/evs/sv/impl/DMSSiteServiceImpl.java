@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
@@ -18,11 +17,9 @@ import com.pa.evs.dto.BuildingDto;
 import com.pa.evs.dto.DMSLocationSiteDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
-import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.exception.ApiException;
-import com.pa.evs.model.DMSApplicationSite;
 import com.pa.evs.model.DMSBlock;
 import com.pa.evs.model.DMSBuilding;
 import com.pa.evs.model.DMSBuildingUnit;
@@ -30,7 +27,6 @@ import com.pa.evs.model.DMSFloorLevel;
 import com.pa.evs.model.DMSLocationSite;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
-import com.pa.evs.model.GroupUser;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
@@ -213,45 +209,6 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 		.forEach(dmsLocationSiteRepository::delete);
 		dmsLocationSiteRepository.flush();
 		dmsSiteRepository.delete(entity);
-	}
-	
-	@PostConstruct
-	public void init() {
-//		if (!dmsSiteRepository.findByLabel("HENRY Site Test").isPresent()) {
-//			save(DMSSiteDto.builder()
-//					.label("HENRY Site Test")
-//					.radius("1234")
-//					.description("HENRY Site Test")
-//					.lng(new BigDecimal("103.98890742478571"))
-//					.lat(new BigDecimal("1.362897698151024"))
-//					.remark("HENRY Site Test")
-//					.build()
-//					);
-//			dmsSiteRepository.flush();
-//		}
-//		
-//		if (dmsWorkOrdersRepository.findBySiteLabel("HENRY Site Test").isEmpty()) {
-//			dmsWorkOrdersRepository.save(
-//					DMSWorkOrders.builder()
-//					.name("HENRY Site Test")
-//					.group(groupUserRepository.findByAppCodeName("DMS").get(0))
-//					.site(dmsSiteRepository.findByLabel("HENRY Site Test").get())
-//					.build()
-//			);
-//		}
-		
-//		if (!dmsLocationSiteRepository.findBySiteLabel("HENRY Site Test").isPresent()) {
-//			dmsLocationSiteRepository.save(
-//					DMSLocationSite.builder()
-//					.building(buildingRepository.findById(1l).get())
-//					.block(blockRepository.findById(1l).get())
-//					.floorLevel(floorLevelRepository.findById(1l).get())
-//					.buildingUnit(buildingUnitRepository.findById(1l).get())
-//					.site(dmsSiteRepository.findByLabel("HENRY Site Test").get())
-//					.build()
-//			);
-//		}		
-		
 	}
 
 	@SuppressWarnings("unchecked")

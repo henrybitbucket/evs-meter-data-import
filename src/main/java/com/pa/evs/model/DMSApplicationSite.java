@@ -34,6 +34,10 @@ public class DMSApplicationSite extends BaseEntity {
 	@JoinColumn(name = "work_order_id")
 	private DMSWorkOrders workOrder;
 	
+	@Column(name = "overrideTimePeriod", columnDefinition = "boolean not null default false")
+	@Builder.Default
+	private boolean overrideTimePeriod = false;
+	
 	// timePeriod
 	// timePeriod dates in year
 	@Builder.Default

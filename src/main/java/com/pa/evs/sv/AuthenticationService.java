@@ -28,7 +28,7 @@ public interface AuthenticationService {
     ResponseDto<JwtUser>getUser(HttpServletRequest request);
     Object getUsernameById(Long userId);
     Object getUserById(Long userId);
-    Object preLogin(String username);
+    Object getCredentialType(String username);
 	void save(UserDto dto);
 	void saveDMSAppUser(CreateDMSAppUserDto dto);
 	void saveRole (UserDto dto);
@@ -68,4 +68,6 @@ public interface AuthenticationService {
 	void logout(String token);
 	void getCompanyOfUser(PaginDto<CompanyDto> pagin);
 	void saveCompany(UserDto dto);
+	void assignAppCodeForEmail(String appCode, String email);
+	void assignAppCodeForPhone(String appCode, String phone);
 }

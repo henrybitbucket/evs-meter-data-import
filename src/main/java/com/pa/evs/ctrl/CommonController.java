@@ -58,10 +58,12 @@ import com.pa.evs.dto.P2ReportAckDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.SFileDto;
+import com.pa.evs.dto.SettingDto;
 import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 import com.pa.evs.model.CARequestLog;
+import com.pa.evs.model.Company;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.RelayStatusLog;
@@ -70,6 +72,7 @@ import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.RelayStatusLogRepository;
 import com.pa.evs.sv.AddressLogService;
 import com.pa.evs.sv.AddressService;
+import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.DMSAddressService;
 import com.pa.evs.sv.EVSPAService;
@@ -80,6 +83,7 @@ import com.pa.evs.sv.LogService;
 import com.pa.evs.sv.MeterCommissioningReportService;
 import com.pa.evs.sv.P1OnlineStatusService;
 import com.pa.evs.sv.P1ReportService;
+import com.pa.evs.sv.SettingService;
 import com.pa.evs.sv.VendorService;
 import com.pa.evs.sv.impl.EVSPAServiceImpl;
 import com.pa.evs.utils.AppCodeSelectedHolder;
@@ -120,6 +124,10 @@ public class CommonController {
 	@Autowired DMSAddressService dmsAddressService;
 	
 	@Autowired AddressLogService addressLogService;
+	
+	@Autowired AuthenticationService authenticationService;
+	
+	@Autowired SettingService settingService;
 
     @Value("${evs.pa.mqtt.timeout:30}")
 	private long otaTimeout;
@@ -1179,32 +1187,57 @@ public class CommonController {
 
 	@PostConstruct
 	public void init() {
-		
-		if (StringUtils.isBlank(caFolder)) {
-			caFolder = "/home/temp_ca";
-		}
-		try {
+		new Thread(() -> {
+			if (StringUtils.isBlank(caFolder)) {
+				caFolder = "/home/temp_ca";
+			}
+			try {
+				
+				File f = new File(caFolder);
+				if (f.exists()) {
+					f.delete();
+				}
+				f.mkdir();
+				f = new File(caFolder + '/' + "aw-install.sh");
+				if (!f.exists() && f.createNewFile()) {
+					IOUtils.copy(Thread.currentThread().getContextClassLoader().getResourceAsStream("aw-install.sh"), new FileOutputStream(f));
+				}
+			} catch (IOException e) {/**/}
 			
-			File f = new File(caFolder);
-			if (f.exists()) {
-				f.delete();
+			if (!CMD.isWindow()) {
+				// CMD.exec("cd " + caFolder + " && sh aw-install.sh", null);
+		        try {
+		        	LOG.info("Test get S3 {}", evsPAService.getS3URL(null, "pa-meter-2.bin"));
+				} catch (Exception e) {
+					LOG.error(e.getMessage(), e);
+				}
 			}
-			f.mkdir();
-			f = new File(caFolder + '/' + "aw-install.sh");
-			if (!f.exists() && f.createNewFile()) {
-				IOUtils.copy(Thread.currentThread().getContextClassLoader().getResourceAsStream("aw-install.sh"), new FileOutputStream(f));
-			}
-		} catch (IOException e) {/**/}
-		
-		if (!CMD.isWindow()) {
-			// CMD.exec("cd " + caFolder + " && sh aw-install.sh", null);
-	        try {
-	        	LOG.info("Test get S3 {}", evsPAService.getS3URL(null, "pa-meter-2.bin"));
+			
+			try {
+				SettingDto st = settingService.findByKey(SettingService.TIME_CHECK_PI_ONLINE);
+				if (st == null || st.getValue() == null || !st.getValue().matches("^[0-9]+$")) {
+					settingService.save(SettingDto.builder().key(SettingService.TIME_CHECK_PI_ONLINE).value("30").build());
+				}
+				
+				SettingDto st1 = settingService.findByKey(SettingService.TIME_LOGIN_EXPIRED);
+				if (st1 == null || st1.getValue() == null || !st1.getValue().matches("^[0-9]+$")) {
+					settingService.save(SettingDto.builder().key(SettingService.TIME_LOGIN_EXPIRED).value("3600").build());
+				}
+				
+				SettingDto st2 = settingService.findByKey(SettingService.EXPORT_ADDRESS_HEADER);
+				if (st2 == null) {
+					settingService.save(SettingDto.builder().key(SettingService.EXPORT_ADDRESS_HEADER).value("Building,Block,Level,Unit,Postcode,Street Address,State.City,Coupled Meter No.,Coupled MCU SN,UpdatedTime,Remark").build());
+				} else {
+					AppProps.set(SettingService.EXPORT_ADDRESS_HEADER, st2.getValue());
+				}
+				settingService.findAll();
 			} catch (Exception e) {
-				LOG.error(e.getMessage(), e);
+				//
 			}
-		}
-		
-		SchedulerHelper.scheduleJob("0 1/10 * * * ? *",  evsPAService::updateMissingFileName, "UPDATE_PI_LOG_FILE_NAME");
+			
+			SchedulerHelper.scheduleJob("0 1/10 * * * ? *",  evsPAService::updateMissingFileName, "UPDATE_PI_LOG_FILE_NAME");
+			
+			authenticationService.initDataAuths();
+		}).start();
 	}
 }

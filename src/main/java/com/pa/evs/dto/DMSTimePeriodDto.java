@@ -11,8 +11,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class DMSTimePeriodReqDto {
+public class DMSTimePeriodDto {
 
+	@Builder.Default
+	private boolean override = false;
+	
+    private Long siteId;
+    
+    private String siteLabel;
+	
 	// timePeriod dates in year
 	@Builder.Default
 	private boolean timePeriodDatesIsAlways = false;

@@ -54,13 +54,16 @@ public class FirmwareServiceImpl implements FirmwareService {
     
     @PostConstruct
     public void init() {
-    	List<Firmware> firmware = firmwareRepository.findTopByVendorOrderByIdDesc();
-        if (cache == null) {
-        	cache = new LinkedHashMap<>();
-        	firmware.forEach(fw -> {
-            	cache.put(fw.getVendor().getId(), fw);
-            });
-        }
+
+    	new Thread(() -> {
+        	List<Firmware> firmware = firmwareRepository.findTopByVendorOrderByIdDesc();
+            if (cache == null) {
+            	cache = new LinkedHashMap<>();
+            	firmware.forEach(fw -> {
+                	cache.put(fw.getVendor().getId(), fw);
+                });
+            }
+    	}).start();
     }
 
     @Override

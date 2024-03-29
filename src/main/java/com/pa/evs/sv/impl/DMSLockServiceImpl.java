@@ -207,6 +207,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 	}
 	
 	@Override
+	@Transactional
 	public Object syncLock(Long vendorId) {
 		
 		// Vendors : ISRAALI_LOCK, CHINA_LOCK_PADLOCK
@@ -320,16 +321,20 @@ public class DMSLockServiceImpl implements DMSLockService {
 	
 	@PostConstruct
 	public void init() {
-		try {
-			loginPAS();
-		} finally {
-			SchedulerHelper.scheduleJob("0 0/3 * * * ? *", () -> {
-				loginPAS();
-			}, "APP_PAS_LOGIN");
-		}
 		
-		// sync on init
-		syncLock(null);
+        new Thread(() -> {
+    		try {
+    			loginPAS();
+    		} finally {
+    			SchedulerHelper.scheduleJob("0 0/3 * * * ? *", () -> {
+    				loginPAS();
+    			}, "APP_PAS_LOGIN");
+    		}
+    		
+    		// sync on init
+    		AppProps.getContext().getBean(this.getClass()).syncLock(null);
+        }).start();
+
 	}
 	
 	void loginPAS() {

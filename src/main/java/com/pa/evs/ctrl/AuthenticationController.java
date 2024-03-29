@@ -40,6 +40,7 @@ import com.pa.evs.dto.ResetPasswordDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
+import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.PlatformUserLogin;
 import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.security.user.JwtUser;
@@ -330,14 +331,19 @@ public class AuthenticationController {
         }
     }
     
-    @PostMapping(value = {"/api/user/preLogin"})
+    @PostMapping(value = {"/api/user/credential-type"})
     @ApiIgnore
-    public ResponseEntity<?> preLogin(HttpServletRequest httpServletRequest, @RequestParam(name = "username") String username, @RequestBody(required = false) Map<String, Object> payload) {
+    public ResponseEntity<?> getCredentialType(HttpServletRequest httpServletRequest, @RequestParam(name = "username") String username, @RequestBody(required = false) Map<String, Object> payload) {
     	try {
     		if (payload != null && payload.get("username") != null) {
     			username = (String) payload.get("username");
     		}
-        	return ResponseEntity.ok(ResponseDto.<Object>builder().success(true).response(authenticationService.preLogin(username)).build());
+    		Object cre = authenticationService.getCredentialType(username);
+    		if (cre == null) {
+    			throw new ApiException("User not found!");	
+    		}
+    		
+        	return ResponseEntity.ok(ResponseDto.<Object>builder().success(true).response(cre).build());
         } catch (Exception e) {
             return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
         }
@@ -369,10 +375,5 @@ public class AuthenticationController {
 		} finally {
 			AppCodeSelectedHolder.remove();
 		}
-    }
-    
-    @PostConstruct
-    public void init() {
-    	authenticationService.initDataAuths();
     }
 }

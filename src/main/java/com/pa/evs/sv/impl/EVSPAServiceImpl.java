@@ -1820,7 +1820,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 			
 		}, "removePiLlog");
 		
-		caRequestLogService.updateCacheUidMsnDevice(null, null);
 		SchedulerHelper.scheduleJob("0 0/2 * * * ? *", () -> {
 			//REFRESH_CACHE_UID_MSN
 			try {
@@ -1832,61 +1831,66 @@ public class EVSPAServiceImpl implements EVSPAService {
 			
 		}, "REFRESH_CACHE_UID_MSN");
 		
-		try {
-			initS3();
-		} catch (Exception e) {/**/}
 
-		try {
-			vendorRepository.findAll()
-			.forEach(vendor -> {
-				if (vendor.getMaxMidValue() == null) {
-					vendor.setMaxMidValue(!"Default".equalsIgnoreCase(vendor.getName()) ? 65535l : 4294967295l);
-					vendorRepository.save(vendor);
-				}
-				try {
-					sequenceService.createMIDSeq(vendor.getId());
-					Number lastValue = sequenceService.nextvalMID(vendor.getId());
-					if (lastValue.longValue() < 10000l) {
-						sequenceService.nextvalMID(10000l, vendor.getId());
-					}
-				} catch (Exception e) {
-					
-					e.printStackTrace();
-				}
-					
-			});
-        } catch (Exception e) {
-            //
-        }
 		
-		
-		try {
-            caRequestLogService.getCids(true);
-        } catch (Exception e) {
-            //
-        }
-		
-		Optional<ScreenMonitoring> optSystem = screenMonitoringRepository.findByKey(ScreenMonitorKey.SYSTEM_START);
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		
-		try {
-		    checkAndSaveScreenMonitoring(optSystem, sdf.format(new Date()), ScreenMonitorStatus.OK, ScreenMonitorKey.SYSTEM_START);
-		} catch (Exception e) {
-		    checkAndSaveScreenMonitoring(optSystem, sdf.format(new Date()), ScreenMonitorStatus.NOT_OK, ScreenMonitorKey.SYSTEM_START);
-		}
-		
-		Optional<CARequestLog> optCaServer = caRequestLogRepository.findByUid("server.csr");
-		Optional<ScreenMonitoring> optServer = screenMonitoringRepository.findByKey(ScreenMonitorKey.SERVER_CERTIFICATE);
-		try {
-		    Long expiredDate = optCaServer.get().getEndDate();
-		    if (expiredDate > System.currentTimeMillis()) {
-		        checkAndSaveScreenMonitoring(optServer, sdf.format(new Date(expiredDate)), ScreenMonitorStatus.OK, ScreenMonitorKey.SERVER_CERTIFICATE);
-		    } else {
-		        checkAndSaveScreenMonitoring(optServer, sdf.format(new Date(expiredDate)), ScreenMonitorStatus.EXPIRED, ScreenMonitorKey.SERVER_CERTIFICATE);
-		    }
-        } catch (Exception e) {
-            checkAndSaveScreenMonitoring(optServer, "N/A", ScreenMonitorStatus.NOT_OK, ScreenMonitorKey.SERVER_CERTIFICATE);
-        }
+        new Thread(() -> {
+        	caRequestLogService.updateCacheUidMsnDevice(null, null);
+    		try {
+    			initS3();
+    		} catch (Exception e) {/**/}
+
+    		try {
+    			vendorRepository.findAll()
+    			.forEach(vendor -> {
+    				if (vendor.getMaxMidValue() == null) {
+    					vendor.setMaxMidValue(!"Default".equalsIgnoreCase(vendor.getName()) ? 65535l : 4294967295l);
+    					vendorRepository.save(vendor);
+    				}
+    				try {
+    					sequenceService.createMIDSeq(vendor.getId());
+    					Number lastValue = sequenceService.nextvalMID(vendor.getId());
+    					if (lastValue.longValue() < 10000l) {
+    						sequenceService.nextvalMID(10000l, vendor.getId());
+    					}
+    				} catch (Exception e) {
+    					
+    					e.printStackTrace();
+    				}
+    					
+    			});
+            } catch (Exception e) {
+                //
+            }
+    		
+    		
+    		try {
+                caRequestLogService.getCids(true);
+            } catch (Exception e) {
+                //
+            }
+    		
+    		Optional<ScreenMonitoring> optSystem = screenMonitoringRepository.findByKey(ScreenMonitorKey.SYSTEM_START);
+    		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    		
+    		try {
+    		    checkAndSaveScreenMonitoring(optSystem, sdf.format(new Date()), ScreenMonitorStatus.OK, ScreenMonitorKey.SYSTEM_START);
+    		} catch (Exception e) {
+    		    checkAndSaveScreenMonitoring(optSystem, sdf.format(new Date()), ScreenMonitorStatus.NOT_OK, ScreenMonitorKey.SYSTEM_START);
+    		}
+    		
+    		Optional<CARequestLog> optCaServer = caRequestLogRepository.findByUid("server.csr");
+    		Optional<ScreenMonitoring> optServer = screenMonitoringRepository.findByKey(ScreenMonitorKey.SERVER_CERTIFICATE);
+    		try {
+    		    Long expiredDate = optCaServer.get().getEndDate();
+    		    if (expiredDate > System.currentTimeMillis()) {
+    		        checkAndSaveScreenMonitoring(optServer, sdf.format(new Date(expiredDate)), ScreenMonitorStatus.OK, ScreenMonitorKey.SERVER_CERTIFICATE);
+    		    } else {
+    		        checkAndSaveScreenMonitoring(optServer, sdf.format(new Date(expiredDate)), ScreenMonitorStatus.EXPIRED, ScreenMonitorKey.SERVER_CERTIFICATE);
+    		    }
+            } catch (Exception e) {
+                checkAndSaveScreenMonitoring(optServer, "N/A", ScreenMonitorStatus.NOT_OK, ScreenMonitorKey.SERVER_CERTIFICATE);
+            }
+        }).start();
 	}
 	
 	private void checkAndSaveScreenMonitoring (Optional<ScreenMonitoring> smOpt, String value, ScreenMonitorStatus status, ScreenMonitorKey key) {

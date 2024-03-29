@@ -38,5 +38,5 @@ public class DMSApplicationSaveReqDto {
 	
 	// time period all sites
 	@Builder.Default
-	private DMSTimePeriodReqDto timePeriod = new DMSTimePeriodReqDto();
+	private DMSTimePeriodDto timePeriod = new DMSTimePeriodDto();
 }

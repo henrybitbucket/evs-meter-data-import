@@ -10,6 +10,7 @@ import com.pa.evs.repository.ReportTaskRepository;
 import com.pa.evs.repository.UserRepository;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.ReportService;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.SecurityUtils;
 
 import org.quartz.JobDetail;
@@ -66,8 +67,10 @@ public class WebSchedule {
     @PostConstruct
     public void init() {
         schedulerFactory = new StdSchedulerFactory();
-        restart();
-        restartReportSchedule();
+        new Thread(() -> {
+        	AppProps.getContext().getBean(this.getClass()).restart();
+        	AppProps.getContext().getBean(this.getClass()).restartReportSchedule();
+        }).start();
     }
 
     public void restart() {

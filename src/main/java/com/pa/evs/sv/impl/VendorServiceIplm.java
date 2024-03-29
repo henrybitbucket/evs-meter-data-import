@@ -31,6 +31,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.VendorDto;
+import com.pa.evs.model.ProjectTag;
 import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.FirmwareRepository;
@@ -66,24 +67,26 @@ public class VendorServiceIplm implements VendorService {
 	@PostConstruct
 	@Transactional
 	public void init() {
-		try {
-			Vendor vendor = vendorRepository.findByName("Default");
-			if (vendor == null) {
-				vendor = new Vendor();
-				vendor.setName("Default");
-				vendor = vendorRepository.save(vendor);
-			}
-			caRequestLogRepository.updateVendor(vendor.getId());
-			firmwareRepository.updateVendor(vendor.getId());
+		new Thread(() -> {
+			try {
+				Vendor vendor = vendorRepository.findByName("Default");
+				if (vendor == null) {
+					vendor = new Vendor();
+					vendor.setName("Default");
+					vendor = vendorRepository.save(vendor);
+				}
+				caRequestLogRepository.updateVendor(vendor.getId());
+				firmwareRepository.updateVendor(vendor.getId());
 
-			// build all file cer and key of vendor
-			List<Vendor> verdors = vendorRepository.findAll();
-			for (Vendor ven : verdors) {
-				AppProps.getContext().getBean(this.getClass()).buildPathFileOfVendor(ven, null, null);
+				// build all file cer and key of vendor
+				List<Vendor> verdors = vendorRepository.findAll();
+				for (Vendor ven : verdors) {
+					AppProps.getContext().getBean(this.getClass()).buildPathFileOfVendor(ven, null, null);
+				}
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
 			}
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
-		}
+		}).start();
 	}
 
 	@Override

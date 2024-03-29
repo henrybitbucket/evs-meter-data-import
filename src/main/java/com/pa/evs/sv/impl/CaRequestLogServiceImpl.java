@@ -195,9 +195,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@PostConstruct
 	@Transactional
     public void init() {
-        LOG.debug("Loading CID into cache");
-        cacheCids = caRequestLogRepository.getCids();
-        
+
+        new Thread(() -> {
+            LOG.debug("Loading CID into cache");
+            cacheCids = caRequestLogRepository.getCids();
+        }).start();
 //        new Thread(() -> {
 //        	List<CARequestLog> list = caRequestLogRepository.findAll();
 //        	for (int i = 0; i < list.size(); i++) {

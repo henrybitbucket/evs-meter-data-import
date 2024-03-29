@@ -144,35 +144,36 @@ public class CompanyServiceImpl implements CompanyService {
 	@PostConstruct
 	@Transactional
 	public void init() {
-		if (!companyRepository.findByNameAndAppCodeName("ALL", "DMS").isPresent()) {
-			Company cpn = new Company();
-			cpn.setName("ALL");
-			cpn.setDescription("ALL");
-			cpn.setAppCode(appCodeRepository.findByName("DMS"));
-			companyRepository.save(cpn);
-		}
-		if (!companyRepository.findByNameAndAppCodeName("NA", "DMS").isPresent()) {
-			Company cpn = new Company();
-			cpn.setName("NA");
-			cpn.setDescription("NA");
-			cpn.setAppCode(appCodeRepository.findByName("DMS"));
-			companyRepository.save(cpn);
-		}
-		if (!companyRepository.findByNameAndAppCodeName("ALL", "MMS").isPresent()) {
-			Company cpn = new Company();
-			cpn.setName("ALL");
-			cpn.setDescription("ALL");
-			cpn.setAppCode(appCodeRepository.findByName("MMS"));
-			companyRepository.save(cpn);
-		}
-		if (!companyRepository.findByNameAndAppCodeName("NA", "MMS").isPresent()) {
-			Company cpn = new Company();
-			cpn.setName("NA");
-			cpn.setDescription("NA");
-			cpn.setAppCode(appCodeRepository.findByName("MMS"));
-			companyRepository.save(cpn);
-		}
-	}
-	
 
+		new Thread(() -> {
+			if (!companyRepository.findByNameAndAppCodeName("ALL", "DMS").isPresent()) {
+				Company cpn = new Company();
+				cpn.setName("ALL");
+				cpn.setDescription("ALL");
+				cpn.setAppCode(appCodeRepository.findByName("DMS"));
+				companyRepository.save(cpn);
+			}
+			if (!companyRepository.findByNameAndAppCodeName("NA", "DMS").isPresent()) {
+				Company cpn = new Company();
+				cpn.setName("NA");
+				cpn.setDescription("NA");
+				cpn.setAppCode(appCodeRepository.findByName("DMS"));
+				companyRepository.save(cpn);
+			}
+			if (!companyRepository.findByNameAndAppCodeName("ALL", "MMS").isPresent()) {
+				Company cpn = new Company();
+				cpn.setName("ALL");
+				cpn.setDescription("ALL");
+				cpn.setAppCode(appCodeRepository.findByName("MMS"));
+				companyRepository.save(cpn);
+			}
+			if (!companyRepository.findByNameAndAppCodeName("NA", "MMS").isPresent()) {
+				Company cpn = new Company();
+				cpn.setName("NA");
+				cpn.setDescription("NA");
+				cpn.setAppCode(appCodeRepository.findByName("MMS"));
+				companyRepository.save(cpn);
+			}
+		}).start();
+	}
 }

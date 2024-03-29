@@ -1,6 +1,7 @@
 package com.pa.evs.dto;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import lombok.AllArgsConstructor;
@@ -36,4 +37,10 @@ public class DMSApplicationDto {
 	@Builder.Default
 	private Boolean isGuest = false;
     
+	private DMSTimePeriodDto timePeriod;
+	
+	@Builder.Default
+	private List<Object> users = new ArrayList<>();
+	
+	private Date createDate;
 }

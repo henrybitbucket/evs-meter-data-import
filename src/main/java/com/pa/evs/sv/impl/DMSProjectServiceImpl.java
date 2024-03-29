@@ -4,25 +4,27 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +37,7 @@ import com.pa.evs.dto.DMSApplicationSiteItemReqDto;
 import com.pa.evs.dto.DMSApplicationUserGuestReqDto;
 import com.pa.evs.dto.DMSProjectDto;
 import com.pa.evs.dto.DMSSiteDto;
+import com.pa.evs.dto.DMSTimePeriodDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.UserDto;
@@ -349,7 +352,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		}
 		
 		StringBuilder sqlBuilder = new StringBuilder(" select fl ");
-		StringBuilder cmmBuilder = new StringBuilder(" FROM DMSApplication fl where 1=1 ");
+		StringBuilder cmmBuilder = new StringBuilder(" FROM DMSApplication fl where 1=1 and fl.status <> 'DELETED'");
 		
 		if (pagin.getOptions().get("queryName") != null) {
 			cmmBuilder.append(" AND upper(fl.name) like upper('%" + pagin.getOptions().get("queryName") + "%') ");
@@ -400,41 +403,72 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			dto.getProject().setId(it.getProject().getId());
 			dto.getProject().setName(it.getProject().getName());
 			dto.getProject().setDisplayName(it.getProject().getDisplayName());
+			dto.setCreateDate(it.getCreateDate());
+			
+			dto.setTimePeriod(DMSTimePeriodDto.builder()
+					.override(true)
+					.timePeriodDatesIsAlways(it.isTimePeriodDatesIsAlways())
+					.timePeriodDatesStart(it.getTimePeriodDatesStart())
+					.timePeriodDatesEnd(it.getTimePeriodDatesEnd())
+					.timePeriodDayInWeeksIsAlways(it.isTimePeriodDayInWeeksIsAlways())
+					.timePeriodDayInWeeksIsMon(it.isTimePeriodDayInWeeksIsMon())
+					.timePeriodDayInWeeksIsTue(it.isTimePeriodDayInWeeksIsTue())
+					.timePeriodDayInWeeksIsWed(it.isTimePeriodDayInWeeksIsWed())
+					.timePeriodDayInWeeksIsThu(it.isTimePeriodDayInWeeksIsThu())
+					.timePeriodDayInWeeksIsFri(it.isTimePeriodDayInWeeksIsFri())
+					.timePeriodDayInWeeksIsSat(it.isTimePeriodDayInWeeksIsSat())
+					.timePeriodDayInWeeksIsSun(it.isTimePeriodDayInWeeksIsSun())
+					.timePeriodTimeInDayIsAlways(it.isTimePeriodTimeInDayIsAlways())
+					.timePeriodTimeInDayHourStart(it.getTimePeriodTimeInDayHourStart())
+					.timePeriodTimeInDayHourEnd(it.getTimePeriodTimeInDayHourEnd())
+					.timePeriodTimeInDayMinuteStart(it.getTimePeriodTimeInDayMinuteStart())
+					.timePeriodTimeInDayMinuteEnd(it.getTimePeriodTimeInDayMinuteEnd())
+					.build());
+			
 			dtos.add(dto);
 		});
 		
 		
 		if (dtos.size() == 1 && pagin.getOptions().get("applicationId") != null) {
 			List<DMSApplicationSite> applicationSites = em.createQuery("FROM DMSApplicationSite where app.id = " + pagin.getOptions().get("applicationId")).getResultList();
+			
 			for (DMSApplicationSite appSite : applicationSites) {
 				DMSSite site = appSite.getSite();
-				DMSWorkOrders workOrder = appSite.getWorkOrder();
-				if (workOrder == null) {
-					workOrder = new DMSWorkOrders();
-				}
 				if (site != null) {
-					dtos.get(0).getSites().add(DMSWorkOrdersDto.builder()
+					dtos.get(0).getSites().add(DMSTimePeriodDto.builder()
+							.override(appSite.isOverrideTimePeriod())
 							.siteId(site.getId())
 							.siteLabel(site.getLabel())
-							.timePeriodDatesIsAlways(workOrder.isTimePeriodDatesIsAlways())
-							.timePeriodDatesStart(workOrder.getTimePeriodDatesStart())
-							.timePeriodDatesEnd(workOrder.getTimePeriodDatesEnd())
-							.timePeriodDayInWeeksIsAlways(workOrder.isTimePeriodDayInWeeksIsAlways())
-							.timePeriodDayInWeeksIsMon(workOrder.isTimePeriodDayInWeeksIsMon())
-							.timePeriodDayInWeeksIsTue(workOrder.isTimePeriodDayInWeeksIsTue())
-							.timePeriodDayInWeeksIsWed(workOrder.isTimePeriodDayInWeeksIsWed())
-							.timePeriodDayInWeeksIsThu(workOrder.isTimePeriodDayInWeeksIsThu())
-							.timePeriodDayInWeeksIsFri(workOrder.isTimePeriodDayInWeeksIsFri())
-							.timePeriodDayInWeeksIsSat(workOrder.isTimePeriodDayInWeeksIsSat())
-							.timePeriodDayInWeeksIsSun(workOrder.isTimePeriodDayInWeeksIsSun())
-							.timePeriodTimeInDayIsAlways(workOrder.isTimePeriodTimeInDayIsAlways())
-							.timePeriodTimeInDayHourStart(workOrder.getTimePeriodTimeInDayHourStart())
-							.timePeriodTimeInDayHourEnd(workOrder.getTimePeriodTimeInDayHourEnd())
-							.timePeriodTimeInDayMinuteStart(workOrder.getTimePeriodTimeInDayMinuteStart())
-							.timePeriodTimeInDayMinuteEnd(workOrder.getTimePeriodTimeInDayMinuteEnd())
+							.timePeriodDatesIsAlways(appSite.isTimePeriodDatesIsAlways())
+							.timePeriodDatesStart(appSite.getTimePeriodDatesStart())
+							.timePeriodDatesEnd(appSite.getTimePeriodDatesEnd())
+							.timePeriodDayInWeeksIsAlways(appSite.isTimePeriodDayInWeeksIsAlways())
+							.timePeriodDayInWeeksIsMon(appSite.isTimePeriodDayInWeeksIsMon())
+							.timePeriodDayInWeeksIsTue(appSite.isTimePeriodDayInWeeksIsTue())
+							.timePeriodDayInWeeksIsWed(appSite.isTimePeriodDayInWeeksIsWed())
+							.timePeriodDayInWeeksIsThu(appSite.isTimePeriodDayInWeeksIsThu())
+							.timePeriodDayInWeeksIsFri(appSite.isTimePeriodDayInWeeksIsFri())
+							.timePeriodDayInWeeksIsSat(appSite.isTimePeriodDayInWeeksIsSat())
+							.timePeriodDayInWeeksIsSun(appSite.isTimePeriodDayInWeeksIsSun())
+							.timePeriodTimeInDayIsAlways(appSite.isTimePeriodTimeInDayIsAlways())
+							.timePeriodTimeInDayHourStart(appSite.getTimePeriodTimeInDayHourStart())
+							.timePeriodTimeInDayHourEnd(appSite.getTimePeriodTimeInDayHourEnd())
+							.timePeriodTimeInDayMinuteStart(appSite.getTimePeriodTimeInDayMinuteStart())
+							.timePeriodTimeInDayMinuteEnd(appSite.getTimePeriodTimeInDayMinuteEnd())
 							.build());
 				}
 			}
+			
+			List<DMSApplicationUser> applicationUsers = em.createQuery("FROM DMSApplicationUser where app.id = " + pagin.getOptions().get("applicationId")).getResultList();
+			applicationUsers.forEach(au -> {
+				dtos.get(0).getUsers().add(SimpleMap.init("type", au.getIsGuest() == Boolean.TRUE ? "guest" : "dms_user")
+						.more("phoneNumber", au.getPhoneNumber())
+						.more("email", au.getEmail())
+						.more("name", au.getName())
+						.more("isRequestCreateNew", au.getIsRequestCreateNew())
+						.more("isRequestCreateSuccess", au.getIsRequestCreateSuccess())
+						);
+			});
 		}
 		
 		pagin.setResults(dtos);
@@ -759,43 +793,86 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		int count = 1;
 		List<DMSApplicationSite> appSites = dmsApplicationSiteRepository.findByAppId(applicationId);
 		for (DMSApplicationSite appSite : appSites) {
-			DMSWorkOrders workOrder = workOrdersService.save(DMSWorkOrdersDto.builder()
-					.name("wod-p-" + project.getDisplayName() + "-a-" + application.getId() + "." + (count++) + "-s-" + appSite.getSite().getLabel())
-					.site(DMSSiteDto.builder().id(appSite.getSite().getId()).build())
-					.applicationId(application.getId())
-					.timePeriodDatesIsAlways(appSite.isTimePeriodDatesIsAlways())
-					.timePeriodDatesStart(appSite.getTimePeriodDatesStart())
-					.timePeriodDatesEnd(appSite.getTimePeriodDatesEnd())
-					.timePeriodDayInWeeksIsAlways(appSite.isTimePeriodDayInWeeksIsAlways())
-					.timePeriodDayInWeeksIsMon(appSite.isTimePeriodDayInWeeksIsMon())
-					.timePeriodDayInWeeksIsTue(appSite.isTimePeriodDayInWeeksIsTue())
-					.timePeriodDayInWeeksIsWed(appSite.isTimePeriodDayInWeeksIsWed())
-					.timePeriodDayInWeeksIsThu(appSite.isTimePeriodDayInWeeksIsThu())
-					.timePeriodDayInWeeksIsFri(appSite.isTimePeriodDayInWeeksIsFri())
-					.timePeriodDayInWeeksIsSat(appSite.isTimePeriodDayInWeeksIsSat())
-					.timePeriodDayInWeeksIsSun(appSite.isTimePeriodDayInWeeksIsSun())
-					.timePeriodTimeInDayIsAlways(appSite.isTimePeriodTimeInDayIsAlways())
-					.timePeriodTimeInDayHourStart(appSite.getTimePeriodTimeInDayHourStart())
-					.timePeriodTimeInDayHourEnd(appSite.getTimePeriodTimeInDayHourEnd())
-					.timePeriodTimeInDayMinuteStart(appSite.getTimePeriodTimeInDayMinuteStart())
-					.timePeriodTimeInDayMinuteEnd(appSite.getTimePeriodTimeInDayMinuteEnd())				
-					.build());
+			DMSWorkOrders workOrder;
+			if (appSite.isOverrideTimePeriod()) {
+				// get time period from app-site;
+				workOrder = workOrdersService.save(DMSWorkOrdersDto.builder()
+						.name("wod-p-" + project.getDisplayName() + "-a-" + application.getId() + "." + (count++) + "-s-" + appSite.getSite().getLabel())
+						.site(DMSSiteDto.builder().id(appSite.getSite().getId()).build())
+						.applicationId(application.getId())
+						.timePeriodDatesIsAlways(appSite.isTimePeriodDatesIsAlways())
+						.timePeriodDatesStart(appSite.getTimePeriodDatesStart())
+						.timePeriodDatesEnd(appSite.getTimePeriodDatesEnd())
+						.timePeriodDayInWeeksIsAlways(appSite.isTimePeriodDayInWeeksIsAlways())
+						.timePeriodDayInWeeksIsMon(appSite.isTimePeriodDayInWeeksIsMon())
+						.timePeriodDayInWeeksIsTue(appSite.isTimePeriodDayInWeeksIsTue())
+						.timePeriodDayInWeeksIsWed(appSite.isTimePeriodDayInWeeksIsWed())
+						.timePeriodDayInWeeksIsThu(appSite.isTimePeriodDayInWeeksIsThu())
+						.timePeriodDayInWeeksIsFri(appSite.isTimePeriodDayInWeeksIsFri())
+						.timePeriodDayInWeeksIsSat(appSite.isTimePeriodDayInWeeksIsSat())
+						.timePeriodDayInWeeksIsSun(appSite.isTimePeriodDayInWeeksIsSun())
+						.timePeriodTimeInDayIsAlways(appSite.isTimePeriodTimeInDayIsAlways())
+						.timePeriodTimeInDayHourStart(appSite.getTimePeriodTimeInDayHourStart())
+						.timePeriodTimeInDayHourEnd(appSite.getTimePeriodTimeInDayHourEnd())
+						.timePeriodTimeInDayMinuteStart(appSite.getTimePeriodTimeInDayMinuteStart())
+						.timePeriodTimeInDayMinuteEnd(appSite.getTimePeriodTimeInDayMinuteEnd())				
+						.build());
+			} else {
+				// get time period from app;
+				workOrder = workOrdersService.save(DMSWorkOrdersDto.builder()
+						.name("wod-p-" + project.getDisplayName() + "-a-" + application.getId() + "." + (count++) + "-s-" + appSite.getSite().getLabel())
+						.site(DMSSiteDto.builder().id(appSite.getSite().getId()).build())
+						.applicationId(application.getId())
+						.timePeriodDatesIsAlways(application.isTimePeriodDatesIsAlways())
+						.timePeriodDatesStart(application.getTimePeriodDatesStart())
+						.timePeriodDatesEnd(application.getTimePeriodDatesEnd())
+						.timePeriodDayInWeeksIsAlways(application.isTimePeriodDayInWeeksIsAlways())
+						.timePeriodDayInWeeksIsMon(application.isTimePeriodDayInWeeksIsMon())
+						.timePeriodDayInWeeksIsTue(application.isTimePeriodDayInWeeksIsTue())
+						.timePeriodDayInWeeksIsWed(application.isTimePeriodDayInWeeksIsWed())
+						.timePeriodDayInWeeksIsThu(application.isTimePeriodDayInWeeksIsThu())
+						.timePeriodDayInWeeksIsFri(application.isTimePeriodDayInWeeksIsFri())
+						.timePeriodDayInWeeksIsSat(application.isTimePeriodDayInWeeksIsSat())
+						.timePeriodDayInWeeksIsSun(application.isTimePeriodDayInWeeksIsSun())
+						.timePeriodTimeInDayIsAlways(application.isTimePeriodTimeInDayIsAlways())
+						.timePeriodTimeInDayHourStart(application.getTimePeriodTimeInDayHourStart())
+						.timePeriodTimeInDayHourEnd(application.getTimePeriodTimeInDayHourEnd())
+						.timePeriodTimeInDayMinuteStart(application.getTimePeriodTimeInDayMinuteStart())
+						.timePeriodTimeInDayMinuteEnd(application.getTimePeriodTimeInDayMinuteEnd())				
+						.build());				
+			}
+
 			appSite.setWorkOrder(workOrder);
 			dmsApplicationSiteRepository.save(appSite);
 		}
-		
 		dmsApplicationRepository.save(application);
+		createAppGuestUser(application.getId());
+	}
+	
+	@Transactional
+	public void createAppGuestUser(Long applicationId) {
 		
+		DMSApplication application = dmsApplicationRepository.findById(applicationId).orElseThrow(() -> new RuntimeException("application not found!"));
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		String appCode = AppCodeSelectedHolder.get();
 		// check create new user
 		List<Long> applicationUserIds = application.getUsers().stream().map(u -> u.getId()).collect(Collectors.toList());
 		new Thread(() -> {
-			for (Long appUserId : applicationUserIds) {
-				try {
-					AppProps.getContext().getBean(this.getClass()).createUserGuestApplication(appUserId);
-				} catch (Exception e) {
-					e.printStackTrace();
+			try {
+				SecurityContextHolder.getContext().setAuthentication(authentication);
+				AppCodeSelectedHolder.set(appCode);
+				for (Long appUserId : applicationUserIds) {
+					try {
+						AppProps.getContext().getBean(this.getClass()).createUserGuestApplication(appUserId);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 				}
+			} finally {
+				SecurityContextHolder.clearContext();
+				AppCodeSelectedHolder.remove();
 			}
+
 		}).start();
 	}
 	
@@ -819,7 +896,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 	@Transactional
 	public void deleteApplication(Long applicationId) {
 		DMSApplication application = dmsApplicationRepository.findById(applicationId).orElseThrow(() -> new RuntimeException("application not found!"));
-		if (application.getCreatedBy().equals(SecurityUtils.getPhoneNumber())) {
+		if (!application.getCreatedBy().equals(SecurityUtils.getPhoneNumber())) {
 			throw new RuntimeException("Access denied!");
 		}
 		if (!"NEW".equals(application.getStatus())) {
@@ -852,21 +929,48 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		return submitApplication(projectId, (DMSApplicationSaveReqDto) dto);
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void createUserGuestApplication(Long applicationUserId) {
 		DMSApplicationUser appUser = dmsApplicationUserRepository.findById(applicationUserId).orElse(null);
 		if (appUser != null && appUser.getIsRequestCreateNew() == Boolean.TRUE) {
 			String arr[] = appUser.getName().split(" +");
-			authenticationService.saveDMSAppUser(CreateDMSAppUserDto.builder()
-					.email(appUser.getEmail())
-					.firstName(arr[0])
-					.lastName(arr.length == 1 ? arr[0] : appUser.getName().substring(arr[0].length()).trim())
-					.phoneNumber(appUser.getPhoneNumber())
-					.password(appUser.getPassword())
-					.loginOtpRequire(false)
-					.firstLoginOtpRequire(true)
-					.permissions(Arrays.asList("DMS_PAGE_APPLICATION_PERM"))
-					.build());
+			Map<String, Object> obj = (Map<String, Object>) authenticationService.getCredentialType(appUser.getEmail());
+			
+			if (obj != null) {
+				List<String> appCodes = (List<String>) obj.get("app");
+				if (!appCodes.contains(AppCodeSelectedHolder.get())) {
+					authenticationService.assignAppCodeForEmail(AppCodeSelectedHolder.get(), appUser.getEmail());
+				}
+				appUser.setIsRequestCreateSuccess(true);
+				dmsApplicationUserRepository.save(appUser);
+			} else {
+				obj = (Map<String, Object>) authenticationService.getCredentialType(appUser.getPhoneNumber());
+				if (obj != null) {
+					List<String> appCodes = (List<String>) obj.get("app");
+					if (!appCodes.contains(AppCodeSelectedHolder.get())) {
+						authenticationService.assignAppCodeForPhone(AppCodeSelectedHolder.get(), appUser.getPhoneNumber());
+					}
+					appUser.setIsRequestCreateSuccess(true);
+					dmsApplicationUserRepository.save(appUser);
+				}				
+			}
+
+			if (obj == null) {
+				authenticationService.saveDMSAppUser(CreateDMSAppUserDto.builder()
+						.email(appUser.getEmail())
+						.firstName(arr[0])
+						.lastName(arr.length == 1 ? arr[0] : appUser.getName().substring(arr[0].length()).trim())
+						.phoneNumber(appUser.getPhoneNumber())
+						.password(appUser.getPassword())
+						.loginOtpRequire(false)
+						.firstLoginOtpRequire(true)
+						.permissions(Arrays.asList("DMS_PAGE_APPLICATION_PERM"))
+						.build());	
+				appUser.setIsRequestCreateSuccess(true);
+				dmsApplicationUserRepository.save(appUser);
+			}
+
 		}
 	}
 	
@@ -929,62 +1033,19 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		
 		dmsApplicationRepository.save(application);
 		
-		/*
-		// 1.d set time period he wants to access sites
-		workOrdersService.save(DMSWorkOrdersDto.builder()
-				.name("wod-p-" + project.getDisplayName() + "-a-" + application.getId() + "-s-all")
-				.applicationId(application.getId())
-				.timePeriodDatesIsAlways(dto.getTimePeriod().isTimePeriodDatesIsAlways())
-				.timePeriodDatesStart(dto.getTimePeriod().getTimePeriodDatesStart())
-				.timePeriodDatesEnd(dto.getTimePeriod().getTimePeriodDatesEnd())
-				.timePeriodDayInWeeksIsAlways(dto.getTimePeriod().isTimePeriodDayInWeeksIsAlways())
-				.timePeriodDayInWeeksIsMon(dto.getTimePeriod().isTimePeriodDayInWeeksIsMon())
-				.timePeriodDayInWeeksIsTue(dto.getTimePeriod().isTimePeriodDayInWeeksIsTue())
-				.timePeriodDayInWeeksIsWed(dto.getTimePeriod().isTimePeriodDayInWeeksIsWed())
-				.timePeriodDayInWeeksIsThu(dto.getTimePeriod().isTimePeriodDayInWeeksIsThu())
-				.timePeriodDayInWeeksIsFri(dto.getTimePeriod().isTimePeriodDayInWeeksIsFri())
-				.timePeriodDayInWeeksIsSat(dto.getTimePeriod().isTimePeriodDayInWeeksIsSat())
-				.timePeriodDayInWeeksIsSun(dto.getTimePeriod().isTimePeriodDayInWeeksIsSun())
-				.timePeriodTimeInDayIsAlways(dto.getTimePeriod().isTimePeriodTimeInDayIsAlways())
-				.timePeriodTimeInDayHourStart(dto.getTimePeriod().getTimePeriodTimeInDayHourStart())
-				.timePeriodTimeInDayHourEnd(dto.getTimePeriod().getTimePeriodTimeInDayHourEnd())
-				.timePeriodTimeInDayMinuteStart(dto.getTimePeriod().getTimePeriodTimeInDayMinuteStart())
-				.timePeriodTimeInDayMinuteEnd(dto.getTimePeriod().getTimePeriodTimeInDayMinuteEnd())
-				.build());
-		*/
 		for (DMSApplicationSiteItemReqDto item : dto.getSites()) {
 			DMSSite site = dmsSiteRepository.findById(item.getId()).orElseThrow(() 
 					-> new RuntimeException("site not found!"));
-			
-			/* will create on approval
-			DMSWorkOrders workOrder = workOrdersService.save(DMSWorkOrdersDto.builder()
-					.name("wod-p-" + project.getDisplayName() + "-a-" + application.getId() + "-s-" + site.getLabel())
-					.site(DMSSiteDto.builder().id(item.getId()).build())
-					.applicationId(application.getId())
-					.timePeriodDatesIsAlways(item.getTimePeriod().isTimePeriodDatesIsAlways())
-					.timePeriodDatesStart(item.getTimePeriod().getTimePeriodDatesStart())
-					.timePeriodDatesEnd(item.getTimePeriod().getTimePeriodDatesEnd())
-					.timePeriodDayInWeeksIsAlways(item.getTimePeriod().isTimePeriodDayInWeeksIsAlways())
-					.timePeriodDayInWeeksIsMon(item.getTimePeriod().isTimePeriodDayInWeeksIsMon())
-					.timePeriodDayInWeeksIsTue(item.getTimePeriod().isTimePeriodDayInWeeksIsTue())
-					.timePeriodDayInWeeksIsWed(item.getTimePeriod().isTimePeriodDayInWeeksIsWed())
-					.timePeriodDayInWeeksIsThu(item.getTimePeriod().isTimePeriodDayInWeeksIsThu())
-					.timePeriodDayInWeeksIsFri(item.getTimePeriod().isTimePeriodDayInWeeksIsFri())
-					.timePeriodDayInWeeksIsSat(item.getTimePeriod().isTimePeriodDayInWeeksIsSat())
-					.timePeriodDayInWeeksIsSun(item.getTimePeriod().isTimePeriodDayInWeeksIsSun())
-					.timePeriodTimeInDayIsAlways(item.getTimePeriod().isTimePeriodTimeInDayIsAlways())
-					.timePeriodTimeInDayHourStart(item.getTimePeriod().getTimePeriodTimeInDayHourStart())
-					.timePeriodTimeInDayHourEnd(item.getTimePeriod().getTimePeriodTimeInDayHourEnd())
-					.timePeriodTimeInDayMinuteStart(item.getTimePeriod().getTimePeriodTimeInDayMinuteStart())
-					.timePeriodTimeInDayMinuteEnd(item.getTimePeriod().getTimePeriodTimeInDayMinuteEnd())				
-					.build());	
-			*/
+			boolean override = false;
 			if (item.getTimePeriod() == null) {
 				item.setTimePeriod(dto.getTimePeriod());
+			} else {
+				override = item.getTimePeriod().isOverride();
 			}
 			dmsApplicationSiteRepository.save(DMSApplicationSite.builder()
 					.app(application)
 					.site(site)
+					.overrideTimePeriod(override)
 					//.workOrder(workOrder)
 					.timePeriodDatesIsAlways(item.getTimePeriod().isTimePeriodDatesIsAlways())
 					.timePeriodDatesStart(item.getTimePeriod().getTimePeriodDatesStart())
@@ -1039,6 +1100,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			}
 			dmsApplicationUserRepository.save(DMSApplicationUser.builder()
 					.app(application)
+					.email(us.getEmail())
 					.phoneNumber(phone.trim())
 					.name(us.getFirstName() + " " + us.getLastName())
 					.isGuest(false)
@@ -1079,6 +1141,203 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 
 		return application.getName();
 	}
+	
+	@Override
+	@Transactional
+	public Object updateApplication(Long applicationId, DMSApplicationSaveReqDto dto) {
+		
+		DMSApplication application = dmsApplicationRepository.findById(applicationId).orElseThrow(() -> new RuntimeException("Application notfound!"));
+		
+		if (dto.getTimePeriod() == null) {
+			throw new RuntimeException("Application time period is require!");
+		}
+		application.setUpdatedBy(SecurityUtils.getEmail());
+		
+		application.setTimePeriodDatesIsAlways(dto.getTimePeriod().isTimePeriodDatesIsAlways());
+		application.setTimePeriodDatesStart(dto.getTimePeriod().getTimePeriodDatesStart());
+		application.setTimePeriodDatesEnd(dto.getTimePeriod().getTimePeriodDatesEnd());
+		application.setTimePeriodDayInWeeksIsAlways(dto.getTimePeriod().isTimePeriodDayInWeeksIsAlways());
+		application.setTimePeriodDayInWeeksIsMon(dto.getTimePeriod().isTimePeriodDayInWeeksIsMon());
+		application.setTimePeriodDayInWeeksIsTue(dto.getTimePeriod().isTimePeriodDayInWeeksIsTue());
+		application.setTimePeriodDayInWeeksIsWed(dto.getTimePeriod().isTimePeriodDayInWeeksIsWed());
+		application.setTimePeriodDayInWeeksIsThu(dto.getTimePeriod().isTimePeriodDayInWeeksIsThu());
+		application.setTimePeriodDayInWeeksIsFri(dto.getTimePeriod().isTimePeriodDayInWeeksIsFri());
+		application.setTimePeriodDayInWeeksIsSat(dto.getTimePeriod().isTimePeriodDayInWeeksIsSat());
+		application.setTimePeriodDayInWeeksIsSun(dto.getTimePeriod().isTimePeriodDayInWeeksIsSun());
+		application.setTimePeriodTimeInDayIsAlways(dto.getTimePeriod().isTimePeriodTimeInDayIsAlways());
+		application.setTimePeriodTimeInDayHourStart(dto.getTimePeriod().getTimePeriodTimeInDayHourStart());
+		application.setTimePeriodTimeInDayHourEnd(dto.getTimePeriod().getTimePeriodTimeInDayHourEnd());
+		application.setTimePeriodTimeInDayMinuteStart(dto.getTimePeriod().getTimePeriodTimeInDayMinuteStart());
+		application.setTimePeriodTimeInDayMinuteEnd(dto.getTimePeriod().getTimePeriodTimeInDayMinuteEnd());
+		
+		dmsApplicationRepository.save(application);
+		
+		Map<Long, DMSApplicationSite> mapSiteIdAppSite = new LinkedHashMap<>(); 
+		dmsApplicationSiteRepository.findByAppId(application.getId())
+		.forEach(as -> mapSiteIdAppSite.put(as.getSite().getId(), as));
+		
+		Set<Long> updatingSiteIds = new HashSet<>();
+		for (DMSApplicationSiteItemReqDto item : dto.getSites()) {
+			DMSSite site = dmsSiteRepository.findById(item.getId()).orElseThrow(() 
+					-> new RuntimeException("site not found!"));
+			updatingSiteIds.add(site.getId());
+			
+			DMSApplicationSite appSite = mapSiteIdAppSite.get(site.getId()) == null ? new DMSApplicationSite() : mapSiteIdAppSite.get(site.getId());
+			
+			appSite.setApp(application);
+			appSite.setSite(site);
+			
+			boolean override = false;
+			if (item.getTimePeriod() == null) {
+				item.setTimePeriod(dto.getTimePeriod());
+			} else {
+				override = item.getTimePeriod().isOverride();
+			}
+
+			appSite.setTimePeriodDatesIsAlways(item.getTimePeriod().isTimePeriodDatesIsAlways());
+			appSite.setTimePeriodDatesStart(item.getTimePeriod().getTimePeriodDatesStart());
+			appSite.setTimePeriodDatesEnd(item.getTimePeriod().getTimePeriodDatesEnd());
+			appSite.setTimePeriodDayInWeeksIsAlways(item.getTimePeriod().isTimePeriodDayInWeeksIsAlways());
+			appSite.setTimePeriodDayInWeeksIsMon(item.getTimePeriod().isTimePeriodDayInWeeksIsMon());
+			appSite.setTimePeriodDayInWeeksIsTue(item.getTimePeriod().isTimePeriodDayInWeeksIsTue());
+			appSite.setTimePeriodDayInWeeksIsWed(item.getTimePeriod().isTimePeriodDayInWeeksIsWed());
+			appSite.setTimePeriodDayInWeeksIsThu(item.getTimePeriod().isTimePeriodDayInWeeksIsThu());
+			appSite.setTimePeriodDayInWeeksIsFri(item.getTimePeriod().isTimePeriodDayInWeeksIsFri());
+			appSite.setTimePeriodDayInWeeksIsSat(item.getTimePeriod().isTimePeriodDayInWeeksIsSat());
+			appSite.setTimePeriodDayInWeeksIsSun(item.getTimePeriod().isTimePeriodDayInWeeksIsSun());
+			appSite.setTimePeriodTimeInDayIsAlways(item.getTimePeriod().isTimePeriodTimeInDayIsAlways());
+			appSite.setTimePeriodTimeInDayHourStart(item.getTimePeriod().getTimePeriodTimeInDayHourStart());
+			appSite.setTimePeriodTimeInDayHourEnd(item.getTimePeriod().getTimePeriodTimeInDayHourEnd());
+			appSite.setTimePeriodTimeInDayMinuteStart(item.getTimePeriod().getTimePeriodTimeInDayMinuteStart());
+			appSite.setTimePeriodTimeInDayMinuteEnd(item.getTimePeriod().getTimePeriodTimeInDayMinuteEnd());
+			
+			if (appSite.getId() == null) {
+				// for highlight
+				appSite.setOnSubmitTimePeriodDatesIsAlways(item.getTimePeriod().isTimePeriodDatesIsAlways());
+				appSite.setOnSubmitTimePeriodDatesStart(item.getTimePeriod().getTimePeriodDatesStart());
+				appSite.setOnSubmitTimePeriodDatesEnd(item.getTimePeriod().getTimePeriodDatesEnd());
+				appSite.setOnSubmitTimePeriodDayInWeeksIsAlways(item.getTimePeriod().isTimePeriodDayInWeeksIsAlways());
+				appSite.setOnSubmitTimePeriodDayInWeeksIsMon(item.getTimePeriod().isTimePeriodDayInWeeksIsMon());
+				appSite.setOnSubmitTimePeriodDayInWeeksIsTue(item.getTimePeriod().isTimePeriodDayInWeeksIsTue());
+				appSite.setOnSubmitTimePeriodDayInWeeksIsWed(item.getTimePeriod().isTimePeriodDayInWeeksIsWed());
+				appSite.setOnSubmitTimePeriodDayInWeeksIsThu(item.getTimePeriod().isTimePeriodDayInWeeksIsThu());
+				appSite.setOnSubmitTimePeriodDayInWeeksIsFri(item.getTimePeriod().isTimePeriodDayInWeeksIsFri());
+				appSite.setOnSubmitTimePeriodDayInWeeksIsSat(item.getTimePeriod().isTimePeriodDayInWeeksIsSat());
+				appSite.setOnSubmitTimePeriodDayInWeeksIsSun(item.getTimePeriod().isTimePeriodDayInWeeksIsSun());
+				appSite.setOnSubmitTimePeriodTimeInDayIsAlways(item.getTimePeriod().isTimePeriodTimeInDayIsAlways());
+				appSite.setOnSubmitTimePeriodTimeInDayHourStart(item.getTimePeriod().getTimePeriodTimeInDayHourStart());
+				appSite.setOnSubmitTimePeriodTimeInDayHourEnd(item.getTimePeriod().getTimePeriodTimeInDayHourEnd());
+				appSite.setOnSubmitTimePeriodTimeInDayMinuteStart(item.getTimePeriod().getTimePeriodTimeInDayMinuteStart());
+				appSite.setOnSubmitTimePeriodTimeInDayMinuteEnd(item.getTimePeriod().getTimePeriodTimeInDayMinuteEnd());
+			}
+			
+			appSite.setOverrideTimePeriod(appSite.isOverrideTimePeriod() || override);
+			dmsApplicationSiteRepository.save(appSite);
+		}
+		
+		// remove appSite
+		for (Entry<Long, DMSApplicationSite> en : mapSiteIdAppSite.entrySet()) {
+			if (!updatingSiteIds.contains(en.getKey())) {
+				dmsApplicationSiteRepository.delete(en.getValue());
+			}
+		}
+		
+		Map<String, Users> mapPhoneUsers = new LinkedHashMap<>();
+		userRepository.findByPhoneNumberIn(dto.getUserPhones())
+		.forEach(us -> mapPhoneUsers.put(us.getPhoneNumber(), us));
+		
+		Map<String, DMSApplicationUser> mapAppUserPhoneAppUser = new LinkedHashMap<>(); 
+		dmsApplicationUserRepository.findByAppId(application.getId())
+		.stream()
+		.filter(as -> as.getIsGuest() != Boolean.TRUE)
+		.forEach(as -> mapAppUserPhoneAppUser.put(as.getPhoneNumber(), as));
+		
+		Set<String> updatingPhoneUsers = new HashSet<>();
+		for (String phone: dto.getUserPhones()) {
+			if (StringUtils.isBlank(phone) || !phone.trim().matches("^\\+[1-9][0-9]{7,}$")) {
+				throw new RuntimeException("Phone invalid(" + phone + ")! (ex: +65909123456)");
+			}
+			
+			Users us = mapPhoneUsers.get(phone);
+			if (us == null) {
+				throw new RuntimeException("User with phone " + phone + " not found!");
+			}
+			
+			updatingPhoneUsers.add(phone.trim());
+			
+			DMSApplicationUser appUser = mapAppUserPhoneAppUser.get(phone.trim()) == null ? new DMSApplicationUser() : mapAppUserPhoneAppUser.get(phone.trim());
+			appUser.setApp(application);
+			appUser.setEmail(us.getEmail());
+			appUser.setPhoneNumber(phone.trim());
+			appUser.setName(us.getFirstName() + " " + us.getLastName());
+			appUser.setIsGuest(false);
+			
+			dmsApplicationUserRepository.save(appUser);
+		}
+		
+		// remove appUser
+		for (Entry<String, DMSApplicationUser> en : mapAppUserPhoneAppUser.entrySet()) {
+			if (!updatingPhoneUsers.contains(en.getKey())) {
+				dmsApplicationUserRepository.delete(en.getValue());
+			}
+		}
+		
+		Map<String, Users> mapPhoneGuestUsers = new LinkedHashMap<>();
+		userRepository.findByPhoneNumberIn(dto.getGuests().stream().map(g -> g.getPhone() == null ? null : g.getPhone().trim()).collect(Collectors.toList()))
+		.forEach(us -> mapPhoneGuestUsers.put(us.getPhoneNumber(), us));
+		
+		Map<String, Users> mapEmailGuestUsers = new LinkedHashMap<>();
+		userRepository.findByEmailIn(dto.getGuests().stream().filter(g -> g.getEmail() != null).map(g -> g.getEmail() == null ? null : g.getEmail().toLowerCase().trim()).collect(Collectors.toList()))
+		.forEach(us -> mapEmailGuestUsers.put(us.getEmail(), us));
+		
+		
+		Map<String, DMSApplicationUser> mapAppUserPhoneAppGuest = new LinkedHashMap<>(); 
+		dmsApplicationUserRepository.findByAppId(application.getId())
+		.stream()
+		.filter(as -> as.getIsGuest() == Boolean.TRUE)
+		.forEach(as -> mapAppUserPhoneAppGuest.put(as.getPhoneNumber(), as));
+		
+		Set<String> updatingPhoneGuests = new HashSet<>();
+		for (DMSApplicationUserGuestReqDto guest: dto.getGuests()) {
+			if (StringUtils.isBlank(guest.getPhone()) || !guest.getPhone().trim().matches("^\\+[1-9][0-9]{7,}$")) {
+				throw new RuntimeException("Guest phone invalid(" + guest.getPhone().trim() + ")! (ex: +65909123456)");
+			}
+			if (guest.getCreateNewUser() == Boolean.TRUE && StringUtils.isBlank(guest.getEmail())) {
+				throw new RuntimeException("Guest email invalid(" + guest.getPhone().trim() + ")!");
+			}			
+			if (mapPhoneGuestUsers.get(guest.getPhone().toLowerCase().trim()) != null) {
+				throw new RuntimeException("User with guest phone already exists(" + guest.getPhone().trim() + ")");
+			}
+			if (guest.getCreateNewUser() == Boolean.TRUE && mapEmailGuestUsers.get(guest.getEmail().toLowerCase().trim()) != null) {
+				throw new RuntimeException("User with guest email already exists(" + guest.getEmail().trim() + ")");
+			}
+			
+			updatingPhoneGuests.add(guest.getPhone().trim());
+			DMSApplicationUser appGuest = mapAppUserPhoneAppGuest.get(guest.getPhone().trim()) == null ? new DMSApplicationUser() : mapAppUserPhoneAppGuest.get(guest.getPhone().trim());
+			appGuest.setApp(application);
+			appGuest.setPhoneNumber(guest.getPhone().trim());
+			appGuest.setName(guest.getName());
+			appGuest.setEmail(guest.getCreateNewUser() == Boolean.TRUE ? guest.getEmail().toLowerCase() : null);
+			if (guest.getCreateNewUser() != Boolean.TRUE) {
+				appGuest.setPassword(null);
+			} else if (StringUtils.isNotBlank(guest.getPassword())) {
+				appGuest.setPassword(passwordEncoder.encode(guest.getPassword()));
+			}
+			appGuest.setIsRequestCreateNew(guest.getCreateNewUser() == Boolean.TRUE);
+			appGuest.setIsGuest(true);
+			
+			dmsApplicationUserRepository.save(appGuest);
+		}
+		
+		// remove appGuest
+		for (Entry<String, DMSApplicationUser> en : mapAppUserPhoneAppGuest.entrySet()) {
+			if (!updatingPhoneGuests.contains(en.getKey())) {
+				dmsApplicationUserRepository.delete(en.getValue());
+			}
+		}
+
+		return application.getName();
+	}	
 
 	@Transactional
 	@Override
@@ -1097,11 +1356,12 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		dmsApplicationSiteRepository.delete(applicationSite);
 	}
 	
-	// @PostConstruct
+//	@PostConstruct
 	public void init() {
 	    UserDetails userDetails = AppProps.getContext().getBean(UserDetailsService.class).loadUserByUsername("henry");
 	    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authentication);
-		AppProps.getContext().getBean(this.getClass()).approveApplication(32l);
+        AppCodeSelectedHolder.set("DMS");
+		AppProps.getContext().getBean(this.getClass()).approveApplication(34l);
 	}
 }

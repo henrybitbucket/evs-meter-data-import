@@ -106,9 +106,4 @@ public class BuildingController {
             return ResponseDto.builder().success(false).message(ex.getMessage()).build();
         }	
 	}
-	
-//	@PostConstruct
-//    public void init() {
-//    	new Thread(() -> buildingService.updateBuildingFullText()).start();
-//    }
 }

@@ -207,6 +207,20 @@ public class AppPASController {
 		}
 	}
 	
+	@PutMapping("/api/dms/project/{projectId}/application/{applicationId}")
+	public ResponseDto updateApplication(HttpServletRequest httpServletRequest, @PathVariable Long projectId, @PathVariable Long applicationId, @RequestBody DMSApplicationSaveReqDto dto) throws Exception {
+
+		try {
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				// throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			dto.setSubmittedBy(SecurityUtils.getPhoneNumber());
+			return ResponseDto.<Object>builder().response(dmsProjectService.updateApplication(applicationId, dto)).success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
 	@PostMapping("/api/dms/project/{projectId}/application-guest")
 	public ResponseDto submitApplicationGuest(HttpServletRequest httpServletRequest, 
 			@PathVariable Long projectId,

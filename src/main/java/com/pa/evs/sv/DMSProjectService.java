@@ -46,4 +46,6 @@ public interface DMSProjectService {
 	void deleteSiteOfApplication(Long applicationId, Long siteId);
 
 	void searchApplicationUsers(PaginDto pagin);
+
+	Object updateApplication(Long projectId, DMSApplicationSaveReqDto dto);
 }

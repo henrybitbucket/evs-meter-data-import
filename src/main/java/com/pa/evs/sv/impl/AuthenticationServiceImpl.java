@@ -395,9 +395,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	public void save(UserDto dto) {
 
 		Users en = null;
+		if (dto.getEmail() != null) {
+			dto.setEmail(dto.getEmail().toLowerCase());
+		}
 
 		if (StringUtils.isBlank(dto.getUsername())) {
 			dto.setUsername(dto.getEmail());
+		}
+		
+		if (dto.getUsername() != null) {
+			dto.setUsername(dto.getUsername().toLowerCase());
 		}
 		
 		boolean isNewUser = true;
@@ -1860,8 +1867,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		userRepository.save(user);
 	}
 	
+	@Transactional(readOnly = true)
 	@Override
-	public Object preLogin(String username) {
+	public Object getCredentialType(String username) {
 		Users user = userRepository.findByEmail(username);
 
         if (user == null) {
@@ -1873,14 +1881,56 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
         
         if (user == null) {
-        	throw new ApiException(MSG_USER_NOT_FOUND);
+        	return null;
         }
         
         Map<String, Object> userDetails = new HashMap<>();
-        userDetails.put(username, username);
+        userDetails.put("username", username);
         userDetails.put("loginOtpRequire", (BooleanUtils.isTrue(user.getLoginOtpRequire()) || BooleanUtils.isTrue(user.getFirstLoginOtpRequire())));
-        
+        userDetails.put("app", user == null ? new ArrayList<>() : user.getAppCodes().stream().map(a -> a.getAppCode().getName()).collect(Collectors.toList()));
 		return userDetails;
+	}
+	
+	@Override
+	@Transactional
+	public void assignAppCodeForEmail(String appCode, String email) {
+		Users user = userRepository.findByEmail(email);
+		if (user == null) {
+			throw new RuntimeException(MSG_USER_NOT_FOUND);
+		}
+		
+		AppCode code = appCodeRepository.findByName(appCode);
+		if (code == null) {
+			throw new RuntimeException("App code not found!");
+		}
+
+        if (userAppCodeRepository.findByAppCodeNameAndUserEmail(appCode, user.getEmail()) == null) {
+        	UserAppCode userAppCode = new UserAppCode();
+        	userAppCode.setAppCode(code);
+        	userAppCode.setUser(user);
+        	userAppCodeRepository.save(userAppCode);
+        }
+	}
+	
+	@Override
+	@Transactional
+	public void assignAppCodeForPhone(String appCode, String phone) {
+		Users user = userRepository.findByPhoneNumber(phone);
+		if (user == null) {
+			throw new RuntimeException(MSG_USER_NOT_FOUND);
+		}
+		
+		AppCode code = appCodeRepository.findByName(appCode);
+		if (code == null) {
+			throw new RuntimeException("App code not found!");
+		}
+
+        if (userAppCodeRepository.findByAppCodeNameAndUserEmail(appCode, user.getEmail()) == null) {
+        	UserAppCode userAppCode = new UserAppCode();
+        	userAppCode.setAppCode(code);
+        	userAppCode.setUser(user);
+        	userAppCodeRepository.save(userAppCode);
+        }
 	}
 	
 	@Transactional

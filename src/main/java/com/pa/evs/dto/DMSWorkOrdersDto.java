@@ -26,6 +26,8 @@ public class DMSWorkOrdersDto {
 
     private DMSSiteDto site;
     
+    private DMSApplicationDto app;
+    
     private Long siteId;
     
     private String siteLabel;

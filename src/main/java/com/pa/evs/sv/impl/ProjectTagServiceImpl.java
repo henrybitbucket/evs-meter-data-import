@@ -128,18 +128,20 @@ public class ProjectTagServiceImpl implements ProjectTagService {
 	@PostConstruct
 	@Transactional
 	public void init() {
-		if (!projectTagRepository.findByName("ALL").isPresent()) {
-			ProjectTag tag = new ProjectTag();
-			tag.setName("ALL");
-			tag.setDescription("ALL");
-			projectTagRepository.save(tag);
-		}
-		if (!projectTagRepository.findByName("NA").isPresent()) {
-			ProjectTag tag = new ProjectTag();
-			tag.setName("NA");
-			tag.setDescription("NA");
-			projectTagRepository.save(tag);
-		}
+		new Thread(() -> {
+			if (!projectTagRepository.findByName("ALL").isPresent()) {
+				ProjectTag tag = new ProjectTag();
+				tag.setName("ALL");
+				tag.setDescription("ALL");
+				projectTagRepository.save(tag);
+			}
+			if (!projectTagRepository.findByName("NA").isPresent()) {
+				ProjectTag tag = new ProjectTag();
+				tag.setName("NA");
+				tag.setDescription("NA");
+				projectTagRepository.save(tag);
+			}
+		}).start();
 	}
 	
 

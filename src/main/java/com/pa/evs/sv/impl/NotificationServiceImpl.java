@@ -88,33 +88,36 @@ public class NotificationServiceImpl implements NotificationService {
 
 	@PostConstruct
 	public void init() {
-        try {
-    		software.amazon.awssdk.auth.credentials.AwsCredentialsProvider a = new software.amazon.awssdk.auth.credentials.AwsCredentialsProvider() {
-    			@Override
-    			public software.amazon.awssdk.auth.credentials.AwsCredentials resolveCredentials() {
-    				return software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create(accessID, accessKey);
-    			}};
-    		snsClient = software.amazon.awssdk.services.sns.SnsClient.builder().region(software.amazon.awssdk.regions.Region.AP_SOUTHEAST_1)
-    				.credentialsProvider(a).build();
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
-		}
-        try {
-        	com.amazonaws.auth.AWSCredentialsProvider a = new com.amazonaws.auth.AWSCredentialsProvider() {
-				@Override
-				public AWSCredentials getCredentials() {
-					return new BasicAWSCredentials(accessID, accessKey);
-				}
-				@Override
-				public void refresh() {
-				}
-        	};
-        	sesClient = com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder.standard()
-        			.withCredentials(a)
-        	        .withRegion(com.amazonaws.regions.Regions.AP_SOUTHEAST_1).build();
-		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
-		}
+
+		new Thread(() -> {
+	        try {
+	    		software.amazon.awssdk.auth.credentials.AwsCredentialsProvider a = new software.amazon.awssdk.auth.credentials.AwsCredentialsProvider() {
+	    			@Override
+	    			public software.amazon.awssdk.auth.credentials.AwsCredentials resolveCredentials() {
+	    				return software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create(accessID, accessKey);
+	    			}};
+	    		snsClient = software.amazon.awssdk.services.sns.SnsClient.builder().region(software.amazon.awssdk.regions.Region.AP_SOUTHEAST_1)
+	    				.credentialsProvider(a).build();
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
+			}
+	        try {
+	        	com.amazonaws.auth.AWSCredentialsProvider a = new com.amazonaws.auth.AWSCredentialsProvider() {
+					@Override
+					public AWSCredentials getCredentials() {
+						return new BasicAWSCredentials(accessID, accessKey);
+					}
+					@Override
+					public void refresh() {
+					}
+	        	};
+	        	sesClient = com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClientBuilder.standard()
+	        			.withCredentials(a)
+	        	        .withRegion(com.amazonaws.regions.Regions.AP_SOUTHEAST_1).build();
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
+			}
+		}).start();
 	}
 	
 	@Transactional(propagation = Propagation.REQUIRES_NEW)

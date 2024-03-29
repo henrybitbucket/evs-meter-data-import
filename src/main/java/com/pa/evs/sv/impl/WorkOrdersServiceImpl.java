@@ -11,9 +11,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pa.evs.dto.DMSApplicationDto;
+import com.pa.evs.dto.DMSProjectDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.model.DMSApplication;
+import com.pa.evs.model.DMSApplicationSite;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
 import com.pa.evs.repository.DMSApplicationRepository;
@@ -118,23 +122,19 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 		}
 		
 		StringBuilder sqlBuilder = new StringBuilder(" select fl ");
-		StringBuilder cmmBuilder = new StringBuilder(" FROM DMSWorkOrders fl where 1=1");
+		StringBuilder cmmBuilder = new StringBuilder(" FROM DMSApplicationSite fl where fl.workOrder is not null and app.status = 'APPROVAL' ");
 		
 //		cmmBuilder.append(" AND fl.group.appCode.name = 'DMS' ");
 		if (pagin.getOptions().get("name") != null) {
-			cmmBuilder.append(" AND upper(fl.name) like upper('%" + pagin.getOptions().get("name") + "%')");
+			cmmBuilder.append(" AND upper(fl.workOrder.name) like upper('%" + pagin.getOptions().get("name") + "%')");
 		}
 		
 		if (pagin.getOptions().get("siteId") != null) {
 			cmmBuilder.append(" AND fl.site.id = " + pagin.getOptions().get("siteId") + " ");
 		}
 		
-		if (pagin.getOptions().get("groupId") != null) {
-			cmmBuilder.append(" AND fl.group.id = " + pagin.getOptions().get("groupId") + " ");
-		}
-		
 		sqlBuilder.append(cmmBuilder);
-		sqlBuilder.append(" ORDER BY fl.modifyDate DESC ");
+		sqlBuilder.append(" ORDER BY fl.workOrder.modifyDate DESC ");
 		
 		Query q = em.createQuery(sqlBuilder.toString());
 		q.setFirstResult(pagin.getOffset());
@@ -146,10 +146,11 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 		Query qCount = em.createQuery(sqlCountBuilder.toString());
 		
 		@SuppressWarnings("unchecked")
-		List<DMSWorkOrders> list = q.getResultList();
+		List<DMSApplicationSite> list = q.getResultList();
 		
 		List<DMSWorkOrdersDto> dtos = new ArrayList<>();
-		list.forEach(f -> {
+		list.forEach(as -> {
+			DMSWorkOrders f = as.getWorkOrder();
 			DMSWorkOrdersDto dto = new DMSWorkOrdersDto();
 			dto.setId(f.getId());
 			dto.setName(f.getName());
@@ -172,15 +173,7 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 			dto.setTimePeriodTimeInDayMinuteStart(f.getTimePeriodTimeInDayMinuteStart() == null ? 0 : f.getTimePeriodTimeInDayMinuteStart());
 			dto.setTimePeriodTimeInDayMinuteEnd(f.getTimePeriodTimeInDayMinuteEnd() == null ? 0 : f.getTimePeriodTimeInDayMinuteEnd());
 
-			/*
-			GroupUser gr = f.getGroup();
-			GroupUserDto grDto = new GroupUserDto();
-			grDto.setId(gr.getId());
-			grDto.setName(gr.getName());
-			grDto.setDescription(gr.getDescription());
-			dto.setGroup(grDto);
-			*/
-			DMSSite dmsSite = f.getSite();
+			DMSSite dmsSite = as.getSite();
 			DMSSiteDto dmsSiteDto = new DMSSiteDto();
 			dmsSiteDto.setId(dmsSite.getId());
 			dmsSiteDto.setLabel(dmsSite.getLabel());
@@ -188,8 +181,22 @@ public class WorkOrdersServiceImpl implements WorkOrdersService {
 			dmsSiteDto.setRemark(dmsSite.getRemark());
 			dto.setSite(dmsSiteDto);
 
-//			dto.setApplicationEmail(f.getAppicationEmail());
-
+			DMSApplication app = as.getApp();
+			DMSApplicationDto appDto = new DMSApplicationDto();
+			
+			appDto.setId(app.getId());
+			appDto.setName(app.getName());
+			appDto.setApprovalBy(app.getApprovalBy());
+			appDto.setCreatedBy(app.getCreatedBy());
+			appDto.setRejectBy(app.getRejectBy());
+			appDto.setStatus(app.getStatus());
+			appDto.setIsGuest(app.getIsGuest());
+			appDto.setProject(new DMSProjectDto());
+			appDto.getProject().setId(app.getProject().getId());
+			appDto.getProject().setName(app.getProject().getName());
+			appDto.getProject().setDisplayName(app.getProject().getDisplayName());
+			
+			dto.setApp(appDto);
 			dtos.add(dto);
 		});
 		pagin.setResults(dtos);
