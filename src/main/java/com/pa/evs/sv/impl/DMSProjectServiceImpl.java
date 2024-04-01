@@ -1156,7 +1156,16 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		
 		DMSApplication application = dmsApplicationRepository.findById(applicationId).orElseThrow(() -> new RuntimeException("Application notfound!"));
 		
+		if (!SecurityUtils.hasAnyRole("DMS_R_APPROVE_APPLICATION") || findPicUserOrSubPicUsersByProjectId(application.getProject().getId(), SecurityUtils.getEmail()) == null) {
+			throw new RuntimeException("Access denied!");
+		}
+		
+		if (!"NEW".equals(application.getStatus())) {
+			throw new RuntimeException("Application status invalid!");
+		}
+		
 		if (dto.getTimePeriod() == null) {
+			
 			throw new RuntimeException("Application time period is require!");
 
 		}
