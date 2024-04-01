@@ -104,9 +104,9 @@ public class AppPASController {
 	public ResponseDto getAssignedLocks(HttpServletRequest httpServletRequest, @RequestParam(required = false) Boolean lockOnly) throws Exception {
 
 		try {
-			String email = SecurityUtils.getEmail();
+			String phone = SecurityUtils.getPhoneNumber();
 			// email = "hr.dms1.2@gmail.com";
-			return ResponseDto.<Object>builder().response(dmsLockService.getAssignedLocks(email, lockOnly)).success(true).build();
+			return ResponseDto.<Object>builder().response(dmsLockService.getAssignedLocks(phone, lockOnly)).success(true).build();
 		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
@@ -133,8 +133,8 @@ public class AppPASController {
 			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
 				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
 			}
-			String email = SecurityUtils.getEmail();
-			return ResponseDto.<Object>builder().response(dmsLockService.getSecretCode(email, lockId)).success(true).build();
+			String phone = SecurityUtils.getPhoneNumber();
+			return ResponseDto.<Object>builder().response(dmsLockService.getSecretCode(phone, lockId)).success(true).build();
 		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
@@ -159,39 +159,75 @@ public class AppPASController {
 	}
 	
 /**	
-	{
-	  "guests": [
-	    {
-	      "name": "HR",
-	      "phone": "+84909123456"
-	    }
-	  ],
-	  "projectId": 4,
-	  "sites": [
-	    {
-	      "siteId": 13,
-	      "timePeriodDatesEnd": 0,
-	      "timePeriodDatesIsAlways": true,
-	      "timePeriodDatesStart": 0,
-	      "timePeriodDayInWeeksIsAlways": true,
-	      "timePeriodDayInWeeksIsFri": true,
-	      "timePeriodDayInWeeksIsMon": true,
-	      "timePeriodDayInWeeksIsSat": true,
-	      "timePeriodDayInWeeksIsSun": true,
-	      "timePeriodDayInWeeksIsThu": true,
-	      "timePeriodDayInWeeksIsTue": true,
-	      "timePeriodDayInWeeksIsWed": true,
-	      "timePeriodTimeInDayHourEnd": 0,
-	      "timePeriodTimeInDayHourStart": 0,
-	      "timePeriodTimeInDayIsAlways": true,
-	      "timePeriodTimeInDayMinuteEnd": 0,
-	      "timePeriodTimeInDayMinuteStart": 0
-	    }
-	  ],
-	  "userPhones": [
-	    "+84909123456"
-	  ]
-	}	
+{
+  "timePeriod": {
+    "timePeriodDatesIsAlways": true,
+    "timePeriodDatesStart": 1711993034779,
+    "timePeriodDatesEnd": 1711993034779,
+    "timePeriodDayInWeeksIsAlways": false,
+    "timePeriodDayInWeeksIsMon": true,
+    "timePeriodDayInWeeksIsTue": true,
+    "timePeriodDayInWeeksIsWed": true,
+    "timePeriodDayInWeeksIsThu": true,
+    "timePeriodDayInWeeksIsFri": true,
+    "timePeriodDayInWeeksIsSat": true,
+    "timePeriodDayInWeeksIsSun": true,
+    "timePeriodTimeInDayIsAlways": true,
+    "timePeriodTimeInDayHourStart": 0,
+    "timePeriodTimeInDayMinuteStart": 0,
+    "timePeriodTimeInDayHourEnd": 23,
+    "timePeriodTimeInDayMinuteEnd": 59
+  },
+  "sites": [
+    {
+      "id": "9",
+      "timePeriod": null
+    },
+    {
+      "id": "10",
+      "timePeriod": {
+        "override": true,
+        "timePeriodDatesIsAlways": false,
+        "timePeriodDatesStart": 1711993034779,
+        "timePeriodDatesEnd": 1711993034779,
+        "timePeriodDayInWeeksIsAlways": false,
+        "timePeriodDayInWeeksIsMon": false,
+        "timePeriodDayInWeeksIsTue": true,
+        "timePeriodDayInWeeksIsWed": false,
+        "timePeriodDayInWeeksIsThu": true,
+        "timePeriodDayInWeeksIsFri": false,
+        "timePeriodDayInWeeksIsSat": true,
+        "timePeriodDayInWeeksIsSun": true,
+        "timePeriodTimeInDayIsAlways": false,
+        "timePeriodTimeInDayHourStart": 0,
+        "timePeriodTimeInDayMinuteStart": 0,
+        "timePeriodTimeInDayHourEnd": 23,
+        "timePeriodTimeInDayMinuteEnd": 59
+      }
+    }
+  ],
+  "userPhones": [
+    "+65012345678",
+    "+6597717985",
+    "+6500001114"
+  ],
+  "guests": [
+    {
+      "name": "BA",
+      "phone": "+653323232323",
+      "email": null,
+      "password": null,
+      "createNewUser": false
+    },
+    {
+      "name": "asasas",
+      "phone": "+652332323",
+      "email": "hr.test.sendaccount12233@gmail.com",
+      "password": "12345678@Xx",
+      "createNewUser": true
+    }
+  ]
+}
 */
 	@PostMapping("/api/dms/project/{projectId}/application")
 	public ResponseDto submitApplication(HttpServletRequest httpServletRequest, @PathVariable Long projectId, @RequestBody DMSApplicationSaveReqDto dto) throws Exception {
@@ -266,6 +302,20 @@ public class AppPASController {
 				 throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
 			}
 			dmsProjectService.rejectApplication(applicationId);
+			return ResponseDto.<Object>builder().success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
+	@PutMapping("/api/dms/application/{applicationId}/terminate")
+	public ResponseDto terminateApplication(HttpServletRequest httpServletRequest, @PathVariable Long applicationId) throws Exception {
+
+		try {
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				 throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			dmsProjectService.terminateApplication(applicationId);
 			return ResponseDto.<Object>builder().success(true).build();
 		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();

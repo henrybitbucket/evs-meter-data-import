@@ -48,4 +48,6 @@ public interface DMSProjectService {
 	void searchApplicationUsers(PaginDto pagin);
 
 	Object updateApplication(Long projectId, DMSApplicationSaveReqDto dto);
+
+	void terminateApplication(Long applicationId);
 }

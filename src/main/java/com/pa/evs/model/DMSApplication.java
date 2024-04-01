@@ -50,12 +50,18 @@ public class DMSApplication extends BaseEntity {
 	@Column(name = "reject_by", nullable = true)
 	private String rejectBy;// user email
 	
+	@Column(name = "terminated_by", nullable = true)
+	private String terminatedBy;// user email
+	
 	@Column(name = "status")
 	private String status;// NEW, APPROVAL, REJECT, DELETED
 
 	@Column(name = "is_guest", columnDefinition = "boolean not null default false")
 	@Builder.Default
 	private Boolean isGuest = false;
+	
+	@Column(name = "time_terminate", nullable = true)
+	private Long timeTerminate;
 	
 	// timePeriod
 	// timePeriod dates in year
@@ -107,49 +113,5 @@ public class DMSApplication extends BaseEntity {
 	private Integer timePeriodTimeInDayHourEnd;
 	private Integer timePeriodTimeInDayMinuteStart;
 	private Integer timePeriodTimeInDayMinuteEnd;
-	
-	//timePeriod temp on user submit
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodDatesIsAlways", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodDatesIsAlways = false;
-	private Long onSubmitTimePeriodDatesStart;
-	private Long onSubmitTimePeriodDatesEnd;
-	// end onSubmitTimePeriod dates in year
-	
-	// onSubmitTimePeriod days in week
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodDayInWeeksIsAlways", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodDayInWeeksIsAlways = false;
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodDayInWeeksIsMon", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodDayInWeeksIsMon = false;
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodDayInWeeksIsTue", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodDayInWeeksIsTue = false;
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodDayInWeeksIsWed", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodDayInWeeksIsWed = false;
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodDayInWeeksIsThu", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodDayInWeeksIsThu = false;
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodDayInWeeksIsFri", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodDayInWeeksIsFri = false;
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodDayInWeeksIsSat", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodDayInWeeksIsSat = false;
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodDayInWeeksIsSun", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodDayInWeeksIsSun = false;
-	// end timePeriod days in week
-	
-	// timePeriod time in day
-	@Builder.Default
-	@Column(name = "onSubmitTimePeriodTimeInDayIsAlways", columnDefinition = "boolean not null default false")
-	private boolean onSubmitTimePeriodTimeInDayIsAlways = false;
-	private Integer onSubmitTimePeriodTimeInDayHourStart;
-	private Integer onSubmitTimePeriodTimeInDayHourEnd;
-	private Integer onSubmitTimePeriodTimeInDayMinuteStart;
-	private Integer onSubmitTimePeriodTimeInDayMinuteEnd;
     
 }

@@ -32,6 +32,8 @@ public class DMSApplicationDto {
 	
 	private String rejectBy;// user email
 	
+	private String terminatedBy;
+	
 	private String status;// NEW, APPROVAL, REJECT, DELETED
 
 	@Builder.Default
@@ -43,4 +45,9 @@ public class DMSApplicationDto {
 	private List<Object> users = new ArrayList<>();
 	
 	private Date createDate;
+	
+	@SuppressWarnings("rawtypes")
+	private List allHis;
+	
+	private Long timeTerminate;
 }

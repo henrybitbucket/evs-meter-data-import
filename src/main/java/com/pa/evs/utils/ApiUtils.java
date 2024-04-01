@@ -559,4 +559,30 @@ public final class ApiUtils {
 			throw e;
 		}
 	}
+	
+	public static String toStringJson(Object obj) {
+		
+		try {
+			return new ObjectMapper().writeValueAsString(obj);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	public static <T> T json2Object(String src, Class<T> type) {
+		try {
+			return new ObjectMapper().readValue(src, type);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	public static <T> T json2Object(String src, Class<T> type, T defaultValue) {
+		try {
+			return new ObjectMapper().readValue(src, type);
+		} catch (Exception e) {
+			
+		}
+		return defaultValue;
+	}
 }

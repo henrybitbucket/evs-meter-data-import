@@ -20,7 +20,14 @@ import lombok.Setter;
 @Builder
 public class DMSApplicationSaveReqDto {
 
+	@Schema(hidden = true)
 	private Long projectId;
+	
+	@Schema(hidden = true)
+	private Long updatedDate;// for show history
+	
+	@Schema(hidden = true)
+	private String updatedBy;// phone // for show history
 	
 	@Schema(hidden = true)
 	@JsonIgnore
@@ -39,4 +46,6 @@ public class DMSApplicationSaveReqDto {
 	// time period all sites
 	@Builder.Default
 	private DMSTimePeriodDto timePeriod = new DMSTimePeriodDto();
+	
+	private Long timeTerminate;
 }

@@ -49,7 +49,6 @@ import com.pa.evs.model.DMSLock;
 import com.pa.evs.model.DMSLockVendor;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
-import com.pa.evs.model.Users;
 import com.pa.evs.repository.DMSBlockRepository;
 import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
@@ -393,42 +392,38 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Transactional(readOnly = true)
 	public Object getSecretCode2(String userMobile, Long dmsLockId) {
 		
-		Users user = userRepository.findByPhoneNumber(userMobile);
-		
-		if (StringUtils.isBlank(userMobile)) {
-			throw new RuntimeException("userMobile is required!"); 
-		}
-		
-		if (user == null) {
-			throw new RuntimeException("account not found!"); 
-		}
-		
-		return getSecretCode(user.getEmail(), dmsLockId);
+		return getSecretCode(userMobile, dmsLockId);
 	}
 	
 	@Override
 	@Transactional(readOnly = true)
-	public Object getSecretCode(String email, Long dmsLockId) {
+	public Object getSecretCode(String userMobile, Long dmsLockId) {
 	
 		DMSLocationLock dmsLocationLock = dmsLocationLockRepository.findByLockId(dmsLockId).orElseThrow(() -> new RuntimeException("Lock not found or not link location!"));
 		
-//		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
-//				.setParameter("email", email)
-//				.getResultList();
-//		
-//		if (groupIdOfUsers.isEmpty()) {
-//			throw new RuntimeException("user not in any group");
-//		}
+		List<Long> appOfUser = em.createQuery(" SELECT app.id FROM DMSApplicationUser appUser where appUser.app.status = 'APPROVAL' and appUser.phoneNumber = :userPhone " )
+				.setParameter("userPhone", userMobile)
+				.getResultList();
+		if (appOfUser.isEmpty()) {
+			throw new RuntimeException("user not in any app");
+		}
 		
-		List<DMSSite> sitesOfUser = em.createQuery("SELECT locationSite.site FROM DMSLocationSite locationSite where locationSite.locationKey = '" + dmsLocationLock.getLocationKey() + "' ")
+		// find site of lock
+		List<Long> siteIds = em.createQuery("SELECT locationSite.site.id FROM DMSLocationSite locationSite where locationSite.locationKey = '" + dmsLocationLock.getLocationKey() + "' ")
 		.getResultList();
 		
-		if (sitesOfUser.isEmpty()) {
+		if (siteIds.isEmpty()) {
 			throw new RuntimeException("user not in any site");
 		}
 		
-		List<DMSWorkOrders> dmsWorkOrders = em.createQuery("SELECT dmsWorkOrders FROM DMSWorkOrders dmsWorkOrders where dmsWorkOrders.site.id in (:siteIdOfUsers) and dmsWorkOrders.appUser.user.email = '" + email + "'")
-		.setParameter("siteIdOfUsers", sitesOfUser.stream().map(s -> s.getId()).collect(Collectors.toSet()))
+		// get ApplicationSite by site in application of user and in site of lock => list appSite => list wod
+		List<DMSWorkOrders> dmsWorkOrders = em.createQuery(new StringBuilder(" SELECT appSite.workOrder FROM DMSApplicationSite appSite where appSite.app.id in (:appId)  " )
+				.append(" AND appSite.app.status = 'APPROVAL' ")
+				.append(" AND appSite.site.id in :siteIds ")
+				.append(" order by appSite.site.id desc ").toString())
+				
+		.setParameter("siteIds", siteIds)
+		.setParameter("appId", appOfUser)
 		.getResultList();
 		
 		for (DMSWorkOrders workOrders : dmsWorkOrders) {
@@ -444,22 +439,12 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Override
 	public Object getAssignedLocks2(String userMobile, Boolean lockOnly) {
 		
-		Users user = userRepository.findByPhoneNumber(userMobile);
-		
-		if (StringUtils.isBlank(userMobile)) {
-			throw new RuntimeException("userMobile is required!"); 
-		}
-		
-		if (user == null) {
-			throw new RuntimeException("account not found!"); 
-		}
-		
-		return getAssignedLocks(user.getEmail(), lockOnly);
+		return getAssignedLocks(userMobile, lockOnly);
 	}
 	
 	@Transactional(readOnly = true)
 	@Override
-	public Object getAssignedLocks(String email, Boolean lockOnly) {
+	public Object getAssignedLocks(String userMobile, Boolean lockOnly) {
 		
 		DMSLocationSiteLockDto rs = DMSLocationSiteLockDto.builder().build();
 //		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
@@ -471,9 +456,17 @@ public class DMSLockServiceImpl implements DMSLockService {
 //		}
 		
 		//List<DMSSite> sitesOfUser = em.createQuery(" SELECT wod.site FROM DMSWorkOrders wod where wod.group.id in (:groupIds) order by wod.site.id desc " )
-		List<DMSSite> sitesOfUser = em.createQuery(" SELECT wod.site FROM DMSWorkOrders wod where wod.appUser.user.email = :appicationEmail order by wod.site.id desc " )
+		
+		List<Long> appOfUser = em.createQuery(" SELECT app.id FROM DMSApplicationUser appUser where appUser.app.status = 'APPROVAL' and appUser.phoneNumber = :userPhone " )
+				.setParameter("userPhone", userMobile)
+				.getResultList();
+		if (appOfUser.isEmpty()) {
+			return rs;
+		}
+		
+		List<DMSSite> sitesOfUser = em.createQuery(" SELECT appSite.site FROM DMSApplicationSite appSite where appSite.app.id in (:appId) order by appSite.site.id desc " )
 		//.setParameter("groupIds", groupIdOfUsers)
-		.setParameter("appicationEmail", email)
+		.setParameter("appId", appOfUser)
 		.getResultList();
 		
 		if (sitesOfUser.isEmpty()) {

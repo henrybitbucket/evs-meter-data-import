@@ -15,7 +15,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-public class DMSApplicationGuestSaveReqDto extends DMSApplicationSaveReqDto{
+public class DMSApplicationGuestSaveReqDto extends DMSApplicationSaveReqDto {
 
 	private Long projectId;
 	
@@ -32,14 +32,14 @@ public class DMSApplicationGuestSaveReqDto extends DMSApplicationSaveReqDto{
 	@Builder.Default
 	private List<DMSApplicationUserGuestReqDto> guests = new ArrayList<>();
 	
-	// for create new user
-	private boolean createNewUser;
-	
-	private String email;
-	
-	private String firstName;
-	
-	private String lastName;
-	
-	private String password;
+//	// for create new user
+//	private boolean createNewUser;
+//	
+//	private String email;
+//	
+//	private String firstName;
+//	
+//	private String lastName;
+//	
+//	private String password;
 }

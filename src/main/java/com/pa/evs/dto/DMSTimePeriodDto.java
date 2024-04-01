@@ -1,5 +1,6 @@
 package com.pa.evs.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,8 +17,10 @@ public class DMSTimePeriodDto {
 	@Builder.Default
 	private boolean override = false;
 	
+	@Schema(hidden = true)
     private Long siteId;
     
+	@Schema(hidden = true)
     private String siteLabel;
 	
 	// timePeriod dates in year
