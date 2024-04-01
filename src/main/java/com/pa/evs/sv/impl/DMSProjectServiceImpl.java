@@ -411,6 +411,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			dto.getProject().setName(it.getProject().getName());
 			dto.getProject().setDisplayName(it.getProject().getDisplayName());
 			dto.setCreateDate(it.getCreateDate());
+			dto.setTimeTerminate(it.getTimeTerminate());
 			dto.setTerminatedBy("TERMINATED".equalsIgnoreCase(it.getStatus()) ? (StringUtils.isBlank(it.getTerminatedBy()) ? "SYSTEM" : it.getTerminatedBy()) : null);
 			
 			dto.setTimePeriod(DMSTimePeriodDto.builder()
