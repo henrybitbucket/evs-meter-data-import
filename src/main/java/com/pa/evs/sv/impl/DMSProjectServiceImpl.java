@@ -378,7 +378,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		if (!SecurityUtils.hasAnyRole("DMS_R_APPROVE_APPLICATION", "DMS_R_REJECT_APPLICATION")) {
 			cmmBuilder.append(" AND fl.createdBy = '" + SecurityUtils.getPhoneNumber() + "' ");
 		} else {
-			cmmBuilder.append(" AND exists (select 1 from DMSProjectPicUser pic where pic.project.id = fl.project.id and pic.picUser.email = '" + SecurityUtils.getEmail() + "') ");	
+			cmmBuilder.append(" AND (fl.createdBy = '" + SecurityUtils.getPhoneNumber() + "' OR  exists (select 1 from DMSProjectPicUser pic where pic.project.id = fl.project.id and pic.picUser.email = '" + SecurityUtils.getEmail() + "')) ");	
 		}
 		
 		sqlBuilder.append(cmmBuilder);
