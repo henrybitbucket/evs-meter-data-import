@@ -862,7 +862,6 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 				Users applicant = userRepository.findByPhoneNumber(application.getCreatedBy());
 				if (applicant != null) {
 					String email = applicant.getEmail();
-					email = "ttx.pipo.uit@gmail.com";
 					notificationService.sendEmail("Your DMS application has been approved.", email, "DMS application");
 				}
 			} catch (Exception e) {
