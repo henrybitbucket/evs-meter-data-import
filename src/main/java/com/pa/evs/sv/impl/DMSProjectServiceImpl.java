@@ -1300,11 +1300,20 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		}
 		
 		Map<String, Users> mapPhoneGuestUsers = new LinkedHashMap<>();
-		userRepository.findByPhoneNumberIn(dto.getGuests().stream().map(g -> g.getPhone() == null ? null : g.getPhone().trim()).collect(Collectors.toList()))
+		userRepository.findByPhoneNumberIn(dto.getGuests()
+				.stream()
+				.map(g -> g.getPhone() == null ? null : g.getPhone().trim())
+				.collect(Collectors.toList())
+		)
 		.forEach(us -> mapPhoneGuestUsers.put(us.getPhoneNumber(), us));
 		
 		Map<String, Users> mapEmailGuestUsers = new LinkedHashMap<>();
-		userRepository.findByEmailIn(dto.getGuests().stream().filter(g -> g.getEmail() != null).map(g -> g.getEmail() == null ? null : g.getEmail().toLowerCase().trim()).collect(Collectors.toList()))
+		userRepository.findByEmailIn(dto.getGuests()
+				.stream()
+				.filter(g -> g.getEmail() != null)
+				.map(g -> g.getEmail() == null ? null : g.getEmail().toLowerCase().trim())
+				.collect(Collectors.toList())
+		)
 		.forEach(us -> mapEmailGuestUsers.put(us.getEmail(), us));
 		
 		
