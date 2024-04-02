@@ -33,6 +33,9 @@ public class DMSApplication extends BaseEntity {
 	@JoinColumn(name = "project_id")
 	private DMSProject project;
 	
+	@Column(name = "project_name")
+	private String projectName;
+	
 	@OneToMany(fetch = FetchType.LAZY, mappedBy = "app")
 	@Builder.Default
 	private List<DMSApplicationSite> sites = new ArrayList<>();

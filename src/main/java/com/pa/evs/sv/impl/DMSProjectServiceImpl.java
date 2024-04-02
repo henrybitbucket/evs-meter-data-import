@@ -224,7 +224,6 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		
 		Query qCount = em.createQuery(sqlCountBuilder.toString());
 		
-		@SuppressWarnings("unchecked")
 		List<Object[]> list = q.getResultList();
 		
 		List<DMSProjectDto> dtos = new ArrayList<>();
@@ -297,6 +296,16 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		findSubPicUsersByProjectId(entity.getId())
 		.forEach(dmsProjectPicUserRepository::delete);
 		dmsProjectPicUserRepository.flush();
+		
+		dmsApplicationRepository.findByProjectId(id)
+		.forEach(a -> {
+			a.setProjectName(entity.getName() + " - " + entity.getDisplayName());
+			a.setProject(null);
+			a.setStatus("DELETED");
+			dmsApplicationRepository.save(a);
+		});
+		dmsApplicationRepository.flush();
+		
 		dmsProjectRepository.delete(entity);
 	}
 
@@ -644,7 +653,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 							.build()
 					);
 				}					
-				}
+			}
 		}
 	}
 
