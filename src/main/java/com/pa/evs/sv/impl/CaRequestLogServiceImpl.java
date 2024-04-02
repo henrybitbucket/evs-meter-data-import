@@ -1091,6 +1091,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         		sqlCommonBuilder.append(" AND (exists (select 1 from DeviceProject dp where dp.device.id = ca.id and dp.project.id in :tagIds)) ");
             }
 
+        	if (options.get("deviceId") != null) {
+        		sqlCommonBuilder.append(" AND ca.id = " + options.get("deviceId"));
+        	}
         }
         
         if (Boolean.parseBoolean(pagin.getOptions().get("cidIsNotNull") + "")) {
@@ -2085,7 +2088,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Override
 	@Transactional
-	public void updateDevicesNode(List<Long> deviceIds, String ieiNode, Boolean isDistributed) {
+	public void updateDevicesNode(List<Long> deviceIds, String ieiNode, Boolean isDistributed, PaginDto<CARequestLog> filter) {
 		
 		Optional<Pi> piOpt = piRepository.findByIeiId(ieiNode);
 		if (!piOpt.isPresent()) {
@@ -2093,18 +2096,34 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		}
 		Pi pi = piOpt.get();
 		
-		List<CARequestLog> listDevice = caRequestLogRepository.findByIdIn(deviceIds);
+		filter.setOffset(0);
+		filter.setLimit(Integer.MAX_VALUE);
+		search(filter);
+		List<CARequestLog> listDevice = filter.getResults();
+		
+		if (listDevice.isEmpty()) {
+			return;
+		}
+		Map<Long, CARequestLog> mapDevice = new LinkedHashMap<>();
+		listDevice.forEach(d -> mapDevice.put(d.getId(), d));
+		
+		Map<Long, DeviceIEINode> mapDeviceIdNode = new LinkedHashMap<>();
+		deviceIEINodeRepository.findByIeiIdAndDeviceIdIn(ieiNode, mapDevice.keySet())
+		.forEach(n -> mapDeviceIdNode.put(n.getDevice().getId(), n));
 		
 		listDevice.forEach(device -> {
 			Long id = device.getId();
 	        if (BooleanUtils.isTrue(isDistributed)) {
-	        	DeviceIEINode deviceIEINode = new DeviceIEINode();
-				deviceIEINode.setDevice(device);
-				deviceIEINode.setIeiId(pi.getIeiId());
-				deviceIEINodeRepository.save(deviceIEINode);
+	        	if (mapDeviceIdNode.get(id) == null) {
+		        	DeviceIEINode deviceIEINode = new DeviceIEINode();
+					deviceIEINode.setDevice(device);
+					deviceIEINode.setIeiId(pi.getIeiId());
+					deviceIEINodeRepository.save(deviceIEINode);
+	        	}
 	        } else {
-	        	deviceIEINodeRepository.deleteByDeviceId(id);
-	        	device.setDeviceIEINodes(null);
+	        	if (mapDeviceIdNode.get(id) != null) {
+	        		deviceIEINodeRepository.delete(mapDeviceIdNode.get(id));
+	        	}
 	        }
 		});
 	}

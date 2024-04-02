@@ -27,4 +27,6 @@ public interface DeviceIEINodeRepository extends JpaRepository<DeviceIEINode, Lo
 
 	List<DeviceIEINode> findByDeviceId(Long deviceId);
 	
+	List<DeviceIEINode> findByIeiIdAndDeviceIdIn(String ieiId, Collection<Long> deviceIds);
+	
 }
