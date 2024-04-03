@@ -303,10 +303,14 @@ public class CaRequestLogController {
     
 	@PostMapping("/api/devices-node")
 	public ResponseEntity<Object> updateDevicesNode(HttpServletRequest httpServletRequest, HttpServletResponse response,
-			@RequestParam List<Long> deviceIds, @RequestParam String ieiNode, @RequestParam Boolean isDistributed, @SuppressWarnings("rawtypes") @RequestBody PaginDto filter) throws Exception {
+			@RequestParam List<Long> deviceIds, 
+			@RequestParam String ieiNode, 
+			@RequestParam Boolean isDistributed, 
+			@RequestParam(required = false) Integer sendMDTToPi,
+			@SuppressWarnings("rawtypes") @RequestBody PaginDto filter) throws Exception {
 
 		try {
-			caRequestLogService.updateDevicesNode(deviceIds, ieiNode, isDistributed, filter);
+			caRequestLogService.updateDevicesNode(deviceIds, ieiNode, isDistributed, sendMDTToPi, filter);
 			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
 		} catch (Exception e) {
 			return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());

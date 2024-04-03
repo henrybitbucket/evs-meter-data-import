@@ -80,5 +80,6 @@ public interface CaRequestLogService {
 
 	List<DeviceSettingDto> uploadDeviceSettings(MultipartFile file, Boolean isProcess) throws IOException;
 
-	void updateDevicesNode(List<Long> deviceIds, String ieiNode, Boolean isDistributed, PaginDto<CARequestLog> filter);
+	void updateDevicesNode(List<Long> deviceIds, String ieiNode, Boolean isDistributed, Integer sendMDTToPi,
+			PaginDto<CARequestLog> filter);
 }

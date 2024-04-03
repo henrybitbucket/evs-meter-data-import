@@ -1149,10 +1149,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	}
         	
         	if (searchMeter) {
-        		obj[0] = clone((CARequestLog) obj[0]);
-        		rp.add((CARequestLog) obj[0]);       		
+	        	obj[0] = clone((CARequestLog) obj[0]);
+	    		rp.add((CARequestLog) obj[0]); 
         	} else {
-        		rp.add(ca);
+        		rp.add(ca); 
         	}
 
         }
@@ -2088,7 +2088,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Override
 	@Transactional
-	public void updateDevicesNode(List<Long> deviceIds, String ieiNode, Boolean isDistributed, PaginDto<CARequestLog> filter) {
+	public void updateDevicesNode(List<Long> deviceIds, String ieiNode, Boolean isDistributed, Integer sendMDTToPi, PaginDto<CARequestLog> filter) {
 		
 		Optional<Pi> piOpt = piRepository.findByIeiId(ieiNode);
 		if (!piOpt.isPresent()) {
@@ -2098,7 +2098,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		
 		filter.setOffset(0);
 		filter.setLimit(Integer.MAX_VALUE);
-		search(filter);
+		AppProps.getContext().getBean(this.getClass()).search(filter);
 		List<CARequestLog> listDevice = filter.getResults();
 		
 		if (listDevice.isEmpty()) {
@@ -2111,6 +2111,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		deviceIEINodeRepository.findByIeiIdAndDeviceIdIn(ieiNode, mapDevice.keySet())
 		.forEach(n -> mapDeviceIdNode.put(n.getDevice().getId(), n));
 		
+		if (sendMDTToPi != null && (sendMDTToPi == 1 || sendMDTToPi == 2) && listDevice.size() == 1) {
+			CARequestLog ca = caRequestLogRepository.findById(listDevice.get(0).getId()).orElse(new CARequestLog());
+			ca.setSendMDTToPi(sendMDTToPi);
+			caRequestLogRepository.save(ca);
+		}
 		listDevice.forEach(device -> {
 			Long id = device.getId();
 	        if (BooleanUtils.isTrue(isDistributed)) {
