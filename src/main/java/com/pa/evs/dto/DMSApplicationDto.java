@@ -50,4 +50,7 @@ public class DMSApplicationDto {
 	private List allHis;
 	
 	private Long timeTerminate;
+	
+	@Builder.Default
+	private Boolean currentUserIsPICUser = false;
 }

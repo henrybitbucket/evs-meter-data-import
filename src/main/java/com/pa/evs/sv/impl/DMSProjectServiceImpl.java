@@ -451,7 +451,9 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			
 			List<DMSApplicationHistory> applicationHis = em.createQuery("FROM DMSApplicationHistory where app.id = " + pagin.getOptions().get("applicationId") + " order by id desc ").getResultList();
 			dtos.get(0).setAllHis(applicationHis);
-			dtos.get(0).setAllHis(applicationHis);
+			
+			boolean isPIC = SecurityUtils.hasAnyRole("DMS_R_APPROVE_APPLICATION") && findPicUserOrSubPicUsersByProjectId(dtos.get(0).getProject().getId(), SecurityUtils.getEmail()) != null;
+			dtos.get(0).setCurrentUserIsPICUser(isPIC);
 			
 			List<DMSApplicationSite> applicationSites = em.createQuery("FROM DMSApplicationSite where app.id = " + pagin.getOptions().get("applicationId")).getResultList();
 			
