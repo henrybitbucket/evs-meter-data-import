@@ -925,7 +925,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     }
     
     // search MCU
-    @Override
+    @SuppressWarnings("rawtypes")
+	@Override
     @Transactional(readOnly = true)
     public PaginDto<CARequestLog> search(PaginDto<CARequestLog> pagin) {
     	
@@ -991,6 +992,21 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             String queryPostalCode = (String) options.get("queryPostalCode");
             String queryRemarkMCU = (String) options.get("queryRemarkMCU");
             String queryRemarkMeter = (String) options.get("queryRemarkMeter");
+            
+            String queryTagTypes = (String) options.get("queryTagTypes");
+            if (StringUtils.isBlank(queryTagTypes)) {
+            	queryTagTypes = "ALL";
+            }
+            List<Long> queryTags = new ArrayList<>();
+            if (options.get("queryTags") instanceof List) {
+            	((List) options.get("queryTags")).forEach(tag -> {
+            		if (tag instanceof Map && ((Map) tag).get("value") instanceof Number) {
+            			Number tagId = (Number) ((Map) tag).get("value");
+            			queryTags.add(tagId.longValue());
+            		}
+            	});
+            }
+            
             Long queryVendor = StringUtils.isNotBlank((String) options.get("queryVendor")) ? Long.parseLong((String) options.get("queryVendor")) : null;
             
             if (BooleanUtils.isTrue(allDate)) {
@@ -1157,6 +1173,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 
         	if (options.get("deviceId") != null) {
         		sqlCommonBuilder.append(" AND ca.id = " + options.get("deviceId"));
+        	}
+        	
+        	if (!queryTags.isEmpty()) {
+        		sqlCommonBuilder.append(" AND (exists (select 1 from DeviceProject dp where dp.device.id = ca.id " + ("ALL".equalsIgnoreCase(queryTagTypes) ? " and dp.type <> 'NA' " : " and dp.type = '" + queryTagTypes + "' ")  + " and dp.project.id in (" + queryTags.toString().replace("[", "").replace("]", "") + "))) ");
         	}
         }
         
