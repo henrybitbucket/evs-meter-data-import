@@ -169,6 +169,18 @@ public class CARequestLog extends BaseEntity {
 	private List<ProjectTagDto> projectTags = new ArrayList<>();
 	
 	@Transient
+	@Builder.Default
+	private List<ProjectTagDto> mcuProjectTags = new ArrayList<>();
+	
+	@Transient
+	@Builder.Default
+	private List<ProjectTagDto> meterProjectTags = new ArrayList<>();
+	
+	@Transient
+	@Builder.Default
+	private List<ProjectTagDto> addressProjectTags = new ArrayList<>();
+	
+	@Transient
 	private String profile;
 	
 	private String oldMsn;

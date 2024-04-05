@@ -665,22 +665,86 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         
         Long id = ca.getId();
         
+        /// OLD
         if (dto.getProjectTags() != null && !dto.getProjectTags().isEmpty()) {
-        	Set<Long> projectNames = new HashSet<>();
-    		dto.getProjectTags().forEach(projectNames::add);
-    		deviceProjectRepository.deleteNotInProjects(id, projectNames.isEmpty() ? new HashSet<>() : projectNames);
-    		List<String> existsProjectNames = deviceProjectRepository.findProjectNameByDeviceId(id);
-    		List<ProjectTag> projects = deviceProjectRepository.findProjectByProjectTagNameIn(projectNames);
+        	Set<Long> projectIds = new HashSet<>();
+    		dto.getProjectTags().forEach(projectIds::add);
+    		deviceProjectRepository.deleteNotInProjects(id, projectIds.isEmpty() ? new HashSet<>() : projectIds, "NA");
+    		List<String> existsProjectNames = deviceProjectRepository.findProjectNameByDeviceId(id, "NA");
+    		List<ProjectTag> projects = deviceProjectRepository.findProjectByProjectTagIdIn(projectIds);
     		for (ProjectTag project : projects) {
     			if (!existsProjectNames.contains(project.getName())) {
     				DeviceProject deviceProject = new DeviceProject();
     				deviceProject.setDevice(ca);
     				deviceProject.setProject(project);
+    				deviceProject.setType("NA");
     				deviceProjectRepository.save(deviceProject);
     			}
     		}
         } else {
             ca.setProjectTags(null);
+        }
+        
+        if (!dto.isUpdateMeter()) {
+        	// MCU Tag
+            if (dto.getMcuProjectTags() != null && !dto.getMcuProjectTags().isEmpty()) {
+            	Set<Long> projectIds = new HashSet<>();
+        		dto.getMcuProjectTags().forEach(projectIds::add);
+        		deviceProjectRepository.deleteNotInProjects(id, projectIds.isEmpty() ? new HashSet<>() : projectIds, "MCU");
+        		List<String> existsProjectNames = deviceProjectRepository.findProjectNameByDeviceId(id, "MCU");
+        		List<ProjectTag> projects = deviceProjectRepository.findProjectByProjectTagIdIn(projectIds);
+        		for (ProjectTag project : projects) {
+        			if (!existsProjectNames.contains(project.getName())) {
+        				DeviceProject deviceProject = new DeviceProject();
+        				deviceProject.setDevice(ca);
+        				deviceProject.setProject(project);
+        				deviceProject.setType("MCU");
+        				deviceProjectRepository.save(deviceProject);
+        			}
+        		}
+            } else {
+                ca.setMcuProjectTags(null);
+            }
+            
+            // Meter Tag
+            if (dto.getMeterProjectTags() != null && !dto.getMeterProjectTags().isEmpty()) {
+            	Set<Long> projectIds = new HashSet<>();
+        		dto.getMeterProjectTags().forEach(projectIds::add);
+        		deviceProjectRepository.deleteNotInProjects(id, projectIds.isEmpty() ? new HashSet<>() : projectIds, "METER");
+        		List<String> existsProjectNames = deviceProjectRepository.findProjectNameByDeviceId(id, "METER");
+        		List<ProjectTag> projects = deviceProjectRepository.findProjectByProjectTagIdIn(projectIds);
+        		for (ProjectTag project : projects) {
+        			if (!existsProjectNames.contains(project.getName())) {
+        				DeviceProject deviceProject = new DeviceProject();
+        				deviceProject.setDevice(ca);
+        				deviceProject.setProject(project);
+        				deviceProject.setType("METER");
+        				deviceProjectRepository.save(deviceProject);
+        			}
+        		}
+            } else {
+                ca.setMeterProjectTags(null);
+            }  
+            
+            // Meter Tag
+            if (dto.getAddressProjectTags() != null && !dto.getAddressProjectTags().isEmpty()) {
+            	Set<Long> projectIds = new HashSet<>();
+        		dto.getAddressProjectTags().forEach(projectIds::add);
+        		deviceProjectRepository.deleteNotInProjects(id, projectIds.isEmpty() ? new HashSet<>() : projectIds, "ADDRESS");
+        		List<String> existsProjectNames = deviceProjectRepository.findProjectNameByDeviceId(id, "ADDRESS");
+        		List<ProjectTag> projects = deviceProjectRepository.findProjectByProjectTagIdIn(projectIds);
+        		for (ProjectTag project : projects) {
+        			if (!existsProjectNames.contains(project.getName())) {
+        				DeviceProject deviceProject = new DeviceProject();
+        				deviceProject.setDevice(ca);
+        				deviceProject.setProject(project);
+        				deviceProject.setType("ADDRESS");
+        				deviceProjectRepository.save(deviceProject);
+        			}
+        		}
+            } else {
+                ca.setMeterProjectTags(null);
+            } 
         }
         
         if (dto.getIeiNodes() != null && !dto.getIeiNodes().isEmpty()) {
@@ -1133,10 +1197,19 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	Object[] obj = list.get(i);
         	
         	CARequestLog ca = (CARequestLog) obj[0];
-        	if (ca.getDeviceProject() != null) {
+        	if (list.size() == 1 && ca.getDeviceProject() != null) {
         		for (DeviceProject t : ca.getDeviceProject()) {
-        			if (t.getProject() != null) {
+        			if (t.getProject() != null && "NA".equalsIgnoreCase(t.getType())) {
 	        			ca.getProjectTags().add(ProjectTagDto.build(t.getProject()));
+        			}
+        			if (t.getProject() != null && "MCU".equalsIgnoreCase(t.getType())) {
+	        			ca.getMcuProjectTags().add(ProjectTagDto.build(t.getProject()));
+        			}  
+        			if (t.getProject() != null && "METER".equalsIgnoreCase(t.getType())) {
+	        			ca.getMeterProjectTags().add(ProjectTagDto.build(t.getProject()));
+        			}
+        			if (t.getProject() != null && "ADDRESS".equalsIgnoreCase(t.getType())) {
+	        			ca.getAddressProjectTags().add(ProjectTagDto.build(t.getProject()));
         			}
         		}
         	}

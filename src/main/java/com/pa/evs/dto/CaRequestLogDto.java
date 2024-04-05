@@ -75,6 +75,15 @@ public class CaRequestLogDto {
     private List<Long> projectTags = new ArrayList<>();
     
     @Builder.Default
+    private List<Long> mcuProjectTags = new ArrayList<>();
+    
+    @Builder.Default
+    private List<Long> meterProjectTags = new ArrayList<>();
+    
+    @Builder.Default
+    private List<Long> addressProjectTags = new ArrayList<>();
+    
+    @Builder.Default
     private List<String> ieiNodes = new ArrayList<>();
     
     @Builder.Default

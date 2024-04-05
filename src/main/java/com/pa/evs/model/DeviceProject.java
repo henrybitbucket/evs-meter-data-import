@@ -1,5 +1,6 @@
 package com.pa.evs.model;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -19,7 +20,7 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "device_project", uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "device_id"}) )
+@Table(name = "device_project", uniqueConstraints = @UniqueConstraint(columnNames = {"project_id", "device_id", "type"}) )
 public class DeviceProject extends BaseEntity{
 	
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -29,4 +30,7 @@ public class DeviceProject extends BaseEntity{
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "device_id")
 	private CARequestLog device;
+	
+	@Column(name = "type", columnDefinition = "varchar not null default 'NA'")
+	private String type;// MCU, METER, ADDRESS, NA
 }
