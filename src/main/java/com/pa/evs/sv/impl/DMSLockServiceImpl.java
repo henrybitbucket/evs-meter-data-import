@@ -252,7 +252,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 			Map<String, Object> dataMap = (Map<String, Object>) data;
 			if (dataMap.containsKey("data")) {
                 Map<String, Object> dataObject = (Map<String, Object>) dataMap.get("data");
-                if (dataObject.containsKey("arealocks")) {
+                if (dataObject != null && dataObject.containsKey("arealocks")) {
                     List<Map<String, Object>> arealocks = (List<Map<String, Object>>) dataObject.get("arealocks");
                     for (Map<String, Object> lock : arealocks) {
                         String lockName = lock.get("lockname") != null ? (String) lock.get("lockname") : null;

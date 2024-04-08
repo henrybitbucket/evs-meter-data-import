@@ -820,8 +820,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new RuntimeException("User not found!");
 		}
 		
+		
 		em.createQuery("UPDATE CARequestLog c set installer = null where c.installer.userId = " + userId)
 				.executeUpdate();
+		em.createQuery("UPDATE MeterCommissioningReport c set installer = null where c.installer.userId = " + userId)
+		.executeUpdate();
+		em.createQuery("UPDATE P2ReportAck c set installer = null where c.installer.userId = " + userId)
+		.executeUpdate();
 		em.createQuery("UPDATE Log c set user = null where c.user.userId = " + userId).executeUpdate();
 		em.createQuery("UPDATE LogBatch c set user = null where c.user.userId = " + userId).executeUpdate();
 		em.createQuery("UPDATE GroupTask c set user = null where c.user.userId = " + userId).executeUpdate();
@@ -829,9 +834,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		em.createQuery("DELETE FROM UserPermission c where c.user.userId = " + userId).executeUpdate();
 		em.createQuery("DELETE FROM UserRole c where c.user.userId = " + userId).executeUpdate();
 		em.createQuery("DELETE FROM UserAppCode c where c.user.userId = " + userId).executeUpdate();
+		em.createQuery("DELETE FROM UserProject c where c.user.userId = " + userId).executeUpdate();
+		em.createQuery("DELETE FROM UserCompany c where c.user.userId = " + userId).executeUpdate();
+		em.createQuery("DELETE FROM DMSProjectPicUser c where c.picUser.userId = " + userId).executeUpdate();
+		
+		em.createQuery("UPDATE DeviceFilters c set user = null where c.user.userId = " + userId).executeUpdate();
+		
 		em.flush();
 		
-		userRepository.delete(user.get());
+		userRepository.deleteById(userId);
 		
 	}
 
