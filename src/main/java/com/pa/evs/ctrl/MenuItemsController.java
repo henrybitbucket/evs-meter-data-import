@@ -16,7 +16,10 @@ import com.pa.evs.dto.MenuItemsDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.sv.MenuItemsService;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 @RestController
+@ApiIgnore
 public class MenuItemsController {
 	
 	@Autowired

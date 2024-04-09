@@ -13,8 +13,11 @@ import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.DeviceFiltersService;
 
+import springfox.documentation.annotations.ApiIgnore;
+
 @RestController
 @SuppressWarnings("rawtypes")
+@ApiIgnore
 public class DeviceFiltersController {
 	
 	@Autowired

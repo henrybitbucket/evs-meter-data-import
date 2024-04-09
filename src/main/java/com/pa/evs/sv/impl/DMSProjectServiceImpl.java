@@ -306,6 +306,10 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		});
 		dmsApplicationRepository.flush();
 		
+		dmsProjectSiteRepository.findByProjectId(id)
+		.forEach(dmsProjectSiteRepository::delete);
+		dmsProjectSiteRepository.flush();
+		
 		dmsProjectRepository.delete(entity);
 	}
 
