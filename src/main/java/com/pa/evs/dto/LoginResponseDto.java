@@ -2,6 +2,8 @@ package com.pa.evs.dto;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.*;
 
 @Getter
@@ -21,4 +23,7 @@ public class LoginResponseDto {
     private String firstName;
     private String lastName;
     private List<String> appCodes;
+    
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String lockToken;
 }

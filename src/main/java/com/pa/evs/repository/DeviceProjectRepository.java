@@ -22,5 +22,7 @@ public interface DeviceProjectRepository extends JpaRepository<DeviceProject, Lo
 	@Modifying
 	@Query("DELETE DeviceProject WHERE id in (SELECT id from DeviceProject WHERE device.id = ?1 and project.id not in (?2)) and type = ?3")
 	void deleteNotInProjects(Long id, Set<Long> projectIds, String type);
+
+	List<DeviceProject> findByDeviceId(Long deviceId);
 	
 }

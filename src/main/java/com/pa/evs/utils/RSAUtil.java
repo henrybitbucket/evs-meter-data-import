@@ -432,26 +432,30 @@ public class RSAUtil {
 		return null;
 	}
 
-	public static String initSignedRequest(String privateKeyPath, String payload, String signatureAlgorithm) throws IOException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+	public static String initSignedRequest(String privateKeyPath, String payload, String signatureAlgorithm) {
 		
-		LOG.debug("original initSignedRequest, privateKeyPath: {}, payload: {}, signatureAlgorithm: {}", privateKeyPath, payload, signatureAlgorithm);
-		
-//		if (!"true".equalsIgnoreCase(AppProps.get("USE_VENDOR_KEY", "false"))) {
-//			signatureAlgorithm = "SHA256withECDSA";
-//			privateKeyPath = AppProps.get("evs.pa.privatekey.path"); 
-//		}
-		
-		LOG.debug("initSignedRequest, privateKeyPath: {}, payload: {}, signatureAlgorithm: {}", privateKeyPath, payload, signatureAlgorithm);
-		
-		Base64.Encoder encoder = Base64.getEncoder();
-		PEMReader pemReader = new PEMReader(new FileReader(privateKeyPath));
-		Security.addProvider(new BouncyCastleProvider());
-//		pemReader.readObject();
-		KeyPair keyPair = (KeyPair) pemReader.readObject();
-		Signature signature = Signature.getInstance(signatureAlgorithm);
-		signature.initSign(keyPair.getPrivate());
-		signature.update(payload.getBytes());
-		return encoder.encodeToString(signature.sign());
+		try {
+			LOG.debug("original initSignedRequest, privateKeyPath: {}, payload: {}, signatureAlgorithm: {}", privateKeyPath, payload, signatureAlgorithm);
+			
+			if (!"true".equalsIgnoreCase(AppProps.get("USE_VENDOR_KEY", "false"))) {
+				signatureAlgorithm = "SHA256withECDSA";
+				privateKeyPath = AppProps.get("evs.pa.privatekey.path"); 
+			}
+			
+			LOG.debug("initSignedRequest, privateKeyPath: {}, payload: {}, signatureAlgorithm: {}", privateKeyPath, payload, signatureAlgorithm);
+			
+			Base64.Encoder encoder = Base64.getEncoder();
+			PEMReader pemReader = new PEMReader(new FileReader(privateKeyPath));
+			Security.addProvider(new BouncyCastleProvider());
+			KeyPair keyPair = (KeyPair) pemReader.readObject();
+			Signature signature = Signature.getInstance(signatureAlgorithm);
+			signature.initSign(keyPair.getPrivate());
+			signature.update(payload.getBytes());
+			return encoder.encodeToString(signature.sign());
+		} catch (Exception e) {
+			LOG.error("initSignedRequest fail: ", e);
+		}
+		return "";
 	}
 
 	public static boolean verifySign(String csrPath, String payload, String sig, String signatureAlgorithm) {

@@ -106,6 +106,7 @@ import com.pa.evs.sv.SettingService;
 import com.pa.evs.utils.ApiResponse;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.AppProps;
+import com.pa.evs.utils.ChinaPadLockUtils;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
@@ -279,6 +280,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		final String token = jwtTokenUtil.generateToken(userDetails);
 		this.updateLastLogin(email);
 		this.loadRoleAndPermission();
+		String pwd = loginRequestDTO.getPassword();
+		String dmsLockToken = null;
+		if (userDetails.getAppCodes().contains("DMS") && StringUtils.isNotBlank(userDetails.getPhoneNumber())) {
+			if (pwd.length() < 8) {
+				pwd += "0000";
+			}
+			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer("" + userDetails.getId(), pwd);
+			if (StringUtils.isBlank(dmsLockToken)) {
+				ChinaPadLockUtils.createUserChinaLockServer("" + userDetails.getId(), userDetails.getPhone(), pwd);
+			}
+			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer("" + userDetails.getId(), pwd);
+		}
 		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE,
 				LoginResponseDto.builder().token(token).authorities(
 						userDetails.getAuthorities().stream().map(au -> au.getAuthority()).collect(Collectors.toList()))
@@ -289,8 +302,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 						.firstName(user.getFirstName())
 						.lastName(user.getLastName())
 						.id(userDetails.getId())
+						.lockToken(userDetails.getAppCodes().contains("DMS") ? dmsLockToken : null)
 						.build());
 	}
+	
+
 
 	@Transactional
 	@Override
@@ -543,7 +559,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (isNewUser) {
 			String phoneNumber = en.getPhoneNumber();
 			String email = en.getEmail();
-//			String email = "ttx.pipo.uit@gmail.com";
 			if (dto.getSendLoginToPhone() == Boolean.TRUE && StringUtils.isNotBlank(phoneNumber)) {
 				notificationService.sendSMS(AppCodeSelectedHolder.get() + "-Account credentials: " + phoneNumber + " / " + dto.getPassword(), phoneNumber.trim());
 			}
@@ -552,6 +567,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 		}
 		//
+		
+		if ("DMS".equals(AppCodeSelectedHolder.get()) && StringUtils.isNotBlank(dto.getPassword()) && (isNewUser || dto.getUpdatePwd() == Boolean.TRUE)) {
+			String res = ChinaPadLockUtils.createUserChinaLockServer("" + en.getUserId(), en.getPhoneNumber(), dto.getPassword());
+			if ("false".equalsIgnoreCase(AppProps.get("DMS_IGNORE_CREATE_LOCK_SERVER_USER_ERROR", "false")) && !("1".equals(res) || "2".equals(res))) {
+				throw new RuntimeException("Cannot create user (China padlock.)");
+			}
+		}
 	}
 
 	@Transactional

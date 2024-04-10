@@ -16,7 +16,14 @@ public class AppProps {
 	
 	public static String get(String key) {
 		
-		return (String) properties.get(key);
+		String rs = (String) properties.get(key);
+		if (rs == null) {
+			rs = (String) properties.get(key.toUpperCase()); 
+		}
+		if (rs == null) {
+			rs = (String) properties.get(key.toLowerCase()); 
+		}
+		return rs;
 	}
 	
 	public static String get(String key, String defaultValue) {

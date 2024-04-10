@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
@@ -41,7 +40,6 @@ import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.ApiException;
-import com.pa.evs.model.PlatformUserLogin;
 import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
@@ -71,7 +69,7 @@ public class AuthenticationController {
     ApplicationContext applicationContext;
     
 	@Autowired
-	private PlatformUserLoginRepository platformUserLoginRepository;
+	PlatformUserLoginRepository platformUserLoginRepository;
 
     @PostMapping(value = {RestPath.LOGIN1, RestPath.LOGIN})
     public ResponseDto<? extends Object> createAuthenticationToken(@RequestBody LoginRequestDto loginRequestDTO) {

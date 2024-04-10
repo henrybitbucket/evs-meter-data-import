@@ -1666,6 +1666,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			deviceIEINodeRepository.findByDeviceId(caRequestLog.getId())
 			.forEach(deviceIEINodeRepository::delete);
 			deviceIEINodeRepository.flush();
+			deviceProjectRepository.findByDeviceId(caRequestLog.getId())
+			.forEach(deviceProjectRepository::delete);
+			
+			deviceProjectRepository.flush();
 			caRequestLogRepository.delete(caRequestLog);
 			
 			try {
