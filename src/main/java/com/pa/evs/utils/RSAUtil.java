@@ -265,7 +265,7 @@ public class RSAUtil {
 				);
 	}
 	
-	public static void main(String[] args) throws Exception {
+	public static void main1(String[] args) throws Exception {
 
 //		PrivateKey prkey =  generatePrivate("-----BEGIN PRIVATE KEY-----\n"
 //	            + "MIICdQIBADANBgkqhkiG9w0BAQEFAASCAl8wggJbAgEAAoGBAM7t8Ub1DP+B91NJ\n"
@@ -446,6 +446,7 @@ public class RSAUtil {
 		Base64.Encoder encoder = Base64.getEncoder();
 		PEMReader pemReader = new PEMReader(new FileReader(privateKeyPath));
 		Security.addProvider(new BouncyCastleProvider());
+		pemReader.readObject();
 		KeyPair keyPair = (KeyPair) pemReader.readObject();
 		Signature signature = Signature.getInstance(signatureAlgorithm);
 		signature.initSign(keyPair.getPrivate());
@@ -470,5 +471,10 @@ public class RSAUtil {
 			LOG.error("Verify sign fail: ", e);
 			return false;
 		}
+	}
+	
+	public static void main(String[] args) throws Exception {
+		String pl = "{\"id\":\"89049032000001000000128255791124\",\"cmd\":\"PW1\"}";
+		System.out.println(initSignedRequest("D:\\BUS\\THN\\pa-evs\\src\\main\\resources\\sv-ca\\server.key", pl, "SHA256withECDSA"));;
 	}
 }
