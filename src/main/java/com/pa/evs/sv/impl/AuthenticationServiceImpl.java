@@ -282,7 +282,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		this.loadRoleAndPermission();
 		String pwd = loginRequestDTO.getPassword();
 		String dmsLockToken = null;
-		if (userDetails.getAppCodes().contains("DMS") && StringUtils.isNotBlank(userDetails.getPhoneNumber())) {
+		if (userDetails.getAppCodes().contains("DMS")) {
 			if (pwd.length() < 8) {
 				pwd += "0000";
 			}
