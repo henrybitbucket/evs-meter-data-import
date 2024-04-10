@@ -122,7 +122,7 @@ public final class ChinaPadLockUtils {
 			payload.add("username", userId);
 			payload.add("password", password);
 			// payload.add("nickname", "PA-" + email + " " + random.nextInt(10) + "-" + random.nextInt(10));// update need some modification
-			payload.add("nickname", "PA " + (phone == null ? "" : phone));
+			payload.add("nickname", "PA " + (phone == null ? userId : phone));
 			payload.add("post", "Test");
 			payload.add("role_id", "218");// Role Admin
 			payload.add("department_id", "149");// Office
