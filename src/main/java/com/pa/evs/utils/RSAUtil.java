@@ -436,17 +436,17 @@ public class RSAUtil {
 		
 		LOG.debug("original initSignedRequest, privateKeyPath: {}, payload: {}, signatureAlgorithm: {}", privateKeyPath, payload, signatureAlgorithm);
 		
-		if (!"true".equalsIgnoreCase(AppProps.get("USE_VENDOR_KEY", "false"))) {
-			signatureAlgorithm = "SHA256withECDSA";
-			privateKeyPath = AppProps.get("evs.pa.privatekey.path"); 
-		}
+//		if (!"true".equalsIgnoreCase(AppProps.get("USE_VENDOR_KEY", "false"))) {
+//			signatureAlgorithm = "SHA256withECDSA";
+//			privateKeyPath = AppProps.get("evs.pa.privatekey.path"); 
+//		}
 		
 		LOG.debug("initSignedRequest, privateKeyPath: {}, payload: {}, signatureAlgorithm: {}", privateKeyPath, payload, signatureAlgorithm);
 		
 		Base64.Encoder encoder = Base64.getEncoder();
 		PEMReader pemReader = new PEMReader(new FileReader(privateKeyPath));
 		Security.addProvider(new BouncyCastleProvider());
-		pemReader.readObject();
+//		pemReader.readObject();
 		KeyPair keyPair = (KeyPair) pemReader.readObject();
 		Signature signature = Signature.getInstance(signatureAlgorithm);
 		signature.initSign(keyPair.getPrivate());
@@ -475,6 +475,6 @@ public class RSAUtil {
 	
 	public static void main(String[] args) throws Exception {
 		String pl = "{\"id\":\"89049032000001000000128255791124\",\"cmd\":\"PW1\"}";
-		System.out.println(initSignedRequest("D:\\BUS\\THN\\pa-evs\\src\\main\\resources\\sv-ca\\server.key", pl, "SHA256withECDSA"));;
+		System.out.println(initSignedRequest("D:/home/evs-data/master_key_vendor_1_SHA256withECDSA_1697540135474.key", pl, "SHA256withECDSA"));;
 	}
 }
