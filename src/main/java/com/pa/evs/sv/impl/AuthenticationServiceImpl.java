@@ -458,13 +458,19 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		if (dto.getPhoneNumber() != null && dto.getPhoneNumber().trim().startsWith("+")) {
 			
-			String phone = dto.getPhoneNumber().trim();
-			String callingCode = cCodes.stream().sequential().filter(c -> dto.getPhoneNumber().trim().startsWith("+" + c)).findFirst().orElse(null);
+			String phone = "+" + dto.getPhoneNumber().trim().replaceAll("[^0-9]", "");
+			String callingCode = null;
+			for (String c : cCodes) {
+				if (phone.trim().startsWith("+" + c)) {
+					callingCode = c;
+					break;
+				}
+			}
+			
 			if (StringUtils.isBlank(callingCode)) {
 				throw new RuntimeException("Unknow phone code!");
 			}
 			String lcPhone = phone.substring(callingCode.length() + 1);
-			
 			if (!lcPhone.matches("^(0[1-9][0-9]{1,8})|([1-9][0-9]{1,9})$")) {
 				throw new RuntimeException("Phone invalid (Maximum 10 numeric characters)!");
 			}
