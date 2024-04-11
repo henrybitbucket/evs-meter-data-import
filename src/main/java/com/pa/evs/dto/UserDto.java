@@ -5,6 +5,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import javax.persistence.Column;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -30,6 +32,11 @@ public class UserDto {
     private Date birthDay;
     private String identification;
     private String phoneNumber;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String callingCode;// 84
+    
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String lcPhoneNumber;// 0909123456
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String password;
     

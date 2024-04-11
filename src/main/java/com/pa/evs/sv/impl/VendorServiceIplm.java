@@ -31,7 +31,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.VendorDto;
-import com.pa.evs.model.ProjectTag;
 import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.FirmwareRepository;

@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.servlet.http.HttpServletRequest;
@@ -79,6 +80,7 @@ import com.pa.evs.model.UserRole;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.AppCodeRepository;
 import com.pa.evs.repository.CompanyRepository;
+import com.pa.evs.repository.CountryCodeRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.LoginRepository;
 import com.pa.evs.repository.PermissionRepository;
@@ -207,6 +209,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	@Autowired
 	EntityManager em;
 	
+	@Autowired
+	CountryCodeRepository countryCodeRepository;
+	
 	@Value("${jwt.header}")
 	private String tokenHeader;
 
@@ -217,6 +222,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	static final String USER_PRINCIPAL_NAME = "userPrincipalName";
 
 	static Map<String, List<Permission>> map = new HashMap<String, List<Permission>>();
+	
+	List<String> cCodes = new ArrayList<>();
 
 	@Transactional
 	@Override
@@ -282,15 +289,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		this.loadRoleAndPermission();
 		String pwd = loginRequestDTO.getPassword();
 		String dmsLockToken = null;
-		if (userDetails.getAppCodes().contains("DMS")) {
+		if (userDetails.getAppCodes().contains("DMS") && StringUtils.isNotBlank(user.getPhoneNumber())) {
 			if (pwd.length() < 8) {
 				pwd += "0000";
 			}
-			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer("" + userDetails.getId(), pwd);
+			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer(user.getPhoneNumber().length() <= 12 ? user.getPhoneNumber().substring(1) : user.getLcPhoneNumber(), pwd);
 			if (StringUtils.isBlank(dmsLockToken)) {
-				ChinaPadLockUtils.createUserChinaLockServer("" + userDetails.getId(), userDetails.getPhone(), pwd);
+				ChinaPadLockUtils.createUserChinaLockServer(user.getPhoneNumber().length() <= 12 ? user.getPhoneNumber().substring(1) : user.getLcPhoneNumber(), userDetails.getPhone(), pwd);
 			}
-			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer("" + userDetails.getId(), pwd);
+			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer(user.getPhoneNumber().length() <= 12 ? user.getPhoneNumber().substring(1) : user.getLcPhoneNumber(), pwd);
 		}
 		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE,
 				LoginResponseDto.builder().token(token).authorities(
@@ -449,11 +456,33 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new RuntimeException("Email already exists!");
 		}
 		
-		if (dto.getPhoneNumber() != null) {
-			Users existsUser = userRepository.findByPhoneNumber(dto.getPhoneNumber());
+		if (dto.getPhoneNumber() != null && dto.getPhoneNumber().trim().startsWith("+")) {
+			
+			String phone = dto.getPhoneNumber().trim();
+			String callingCode = cCodes.stream().sequential().filter(c -> dto.getPhoneNumber().trim().startsWith("+" + c)).findFirst().orElse(null);
+			if (StringUtils.isBlank(callingCode)) {
+				throw new RuntimeException("Unknow phone code!");
+			}
+			String lcPhone = phone.substring(callingCode.length() + 1);
+			
+			if (!lcPhone.matches("^(0[1-9][0-9]{1,8})|([1-9][0-9]{1,9})$")) {
+				throw new RuntimeException("Phone invalid (Maximum 10 numeric characters)!");
+			}
+			
+			phone = "+" + callingCode + (lcPhone.startsWith("0") ? lcPhone.substring(1) : lcPhone);
+			
+			Users existsUser = userRepository.findByPhoneNumber(phone);
 			if ((existsUser != null && en.getUserId() != null && existsUser.getUserId().longValue() != en.getUserId().longValue()) || (en.getUserId() == null && existsUser != null)) {
 				throw new RuntimeException("Phone already exists!");
 			}
+			
+			en.setPhoneNumber(phone);
+			en.setLcPhoneNumber(lcPhone);
+			en.setCallingCode(callingCode);
+		} else if (StringUtils.isBlank(dto.getPhoneNumber())) {
+			en.setPhoneNumber(null);
+			en.setCallingCode(null);
+			en.setLcPhoneNumber(null);
 		}
 		
 		if (en.getUserId() != null && dto.getChangePwdRequire() != null) {
@@ -463,7 +492,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		en.setIdentification(dto.getIdentification());
 		en.setFirstName(dto.getFirstName());
 		en.setLastName(dto.getLastName());
-		en.setPhoneNumber(dto.getPhoneNumber());
+		
 		if (SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
 			en.setStatus(dto.getStatus());
 			if (dto.getLoginOtpRequire() != null) {
@@ -568,10 +597,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		//
 		
-		if ("DMS".equals(AppCodeSelectedHolder.get()) && StringUtils.isNotBlank(dto.getPassword()) && (isNewUser || dto.getUpdatePwd() == Boolean.TRUE)) {
-			String res = ChinaPadLockUtils.createUserChinaLockServer("" + en.getUserId(), en.getPhoneNumber(), dto.getPassword());
-			if ("false".equalsIgnoreCase(AppProps.get("DMS_IGNORE_CREATE_LOCK_SERVER_USER_ERROR", "false")) && !("1".equals(res) || "2".equals(res))) {
-				throw new RuntimeException("Cannot create user (China padlock.)");
+		if ("DMS".equals(AppCodeSelectedHolder.get())) {
+			if (StringUtils.isBlank(en.getPhoneNumber())) {
+				throw new RuntimeException("Phone number is required!");
+			}
+			if (StringUtils.isNotBlank(dto.getPassword()) && (isNewUser || dto.getUpdatePwd() == Boolean.TRUE)) {
+				String res = ChinaPadLockUtils.createUserChinaLockServer(en.getPhoneNumber().length() <= 12 ? en.getPhoneNumber().substring(1) : en.getLcPhoneNumber(), en.getPhoneNumber(), dto.getPassword());
+				if ("false".equalsIgnoreCase(AppProps.get("DMS_IGNORE_CREATE_LOCK_SERVER_USER_ERROR", "false")) && !("1".equals(res) || "2".equals(res))) {
+					throw new RuntimeException("Cannot create user (China padlock.)");
+				}
 			}
 		}
 	}
@@ -1015,6 +1049,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					.changePwdRequire(user.getChangePwdRequire())
 					.loginOtpRequire(user.getLoginOtpRequire())
 					.identification(user.getIdentification())
+					.lcPhoneNumber(user.getLcPhoneNumber())
+					.callingCode(user.getCallingCode())
 					.roleDescs(user.getRoles().stream().filter(r -> r.getRole().getAppCode().getName().equals(AppCodeSelectedHolder.get())).map(authority -> {
 						roles.add(authority.getRole().getName());
 						return SimpleMap.init("name", authority.getRole().getName()).more("desc",
@@ -1914,6 +1950,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
         
         if (user == null) {
+        	List<Users> us = userRepository.findByLcPhoneNumber(username);
+        	if (us.size() == 1) {
+        		user = us.get(0);
+        	}
+        }
+        
+        if (user == null) {
         	return null;
         }
         
@@ -2373,5 +2416,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		
 		dto.setId(userDto.getId());
+	}
+	
+	@PostConstruct
+	public void init() {
+		new Thread(() -> {
+			countryCodeRepository.findAll().forEach(c -> {
+				cCodes.add(c.getCallingCode().replaceAll("[^0-9]", ""));
+			});
+			cCodes.sort((o1, o2) -> {
+				return Integer.parseInt(o1) < Integer.parseInt(o2) ? 1 : -1;
+			});
+		}).start();
 	}
 }

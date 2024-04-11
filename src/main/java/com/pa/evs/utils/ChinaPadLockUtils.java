@@ -39,21 +39,21 @@ public final class ChinaPadLockUtils {
 //	  "body": "username=84374206818&password=S84374206818!p",
 //	  "method": "POST"
 //	});
-	public static String loginChinaLockServer(String userId, String password) {
+	public static String loginChinaLockServer(String lcPhone, String password) {
 
 		if ("true".equalsIgnoreCase(AppProps.get("DMS_IGNORE_LOCK_SERVER_USER", "false"))) {
 			return null;
 		}
 		try {
-			if (StringUtils.isBlank(userId)) {
+			if (StringUtils.isBlank(lcPhone)) {
 				return null;
 			}
-			userId = buildSvUsername(userId);
-			userId = userId.replace("+", "");
+//			userId = buildSvUsername(userId);
+//			userId = userId.replace("+", "");
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 			MultiValueMap<String, String> payload = new LinkedMultiValueMap<>();
-			payload.add("username", userId);
+			payload.add("username", lcPhone);
 			payload.add("password", password);
 			HttpEntity<Object> entity = new HttpEntity<>(payload, headers);
 			ResponseEntity<String> res = ApiUtils.getRestTemplate().exchange(
@@ -88,15 +88,15 @@ public final class ChinaPadLockUtils {
 //"body": "id=-1&number=123456789&username=dms.app.guest1&password=12345678%40Xx&nickname=HR&post=Test&role_id=218&department_id=149&area_id=633&status=1&is_admin=1&is_phone=0&start_time=2024-04-01&end_time=2024-04-27&white_list=8314%2C8326%2C8196%2C8200",
 //"method": "POST"
 //});	
-	public static String createUserChinaLockServer(String userId, String phone, String password) {
+	public static String createUserChinaLockServer(String lcPhone, String phone, String password) {
 
 		if ("true".equalsIgnoreCase(AppProps.get("DMS_IGNORE_LOCK_SERVER_USER", "false"))) {
 			return "1";
 		}
-		if (StringUtils.isBlank(userId)) {
+		if (StringUtils.isBlank(lcPhone)) {
 			return null;
 		}
-		userId = buildSvUsername(userId);
+//		userId = buildSvUsername(userId);
 		HttpHeaders headers = new HttpHeaders();
 		MultiValueMap<String, String> payload = new LinkedMultiValueMap<>();
 		try {
@@ -108,7 +108,7 @@ public final class ChinaPadLockUtils {
 			String ck = "PHPSESSID=" + loginChinaLockServer(AppProps.get("PAS_CN_US_MS", "84374206818"),
 					AppProps.get("PAS_CN_PD_MS", "S84374206818!p"));
 
-			deleteUserChinaLockServer(userId, ck);
+			deleteUserChinaLockServer(lcPhone, ck);
 			
 //			Random random = new Random();
 
@@ -118,11 +118,11 @@ public final class ChinaPadLockUtils {
 					AppProps.get("PAS_CN_H_MS", "http://123.56.250.3") + "/index/employee/index.html?v=4.0");
 
 			payload.add("id", "-1");
-			payload.add("number", userId);
-			payload.add("username", userId);
+			payload.add("number", lcPhone);
+			payload.add("username", lcPhone);
 			payload.add("password", password);
 			// payload.add("nickname", "PA-" + email + " " + random.nextInt(10) + "-" + random.nextInt(10));// update need some modification
-			payload.add("nickname", "PA " + (phone == null ? userId : phone));
+			payload.add("nickname", "PA " + (phone == null ? lcPhone : phone));
 			payload.add("post", "Test");
 			payload.add("role_id", "218");// Role Admin
 			payload.add("department_id", "149");// Office
@@ -147,15 +147,15 @@ public final class ChinaPadLockUtils {
 		return null;
 	}
 
-	public static String deleteUserChinaLockServer(String userId, String ck) {
+	public static String deleteUserChinaLockServer(String lcPhone, String ck) {
 
 		if ("true".equalsIgnoreCase(AppProps.get("DMS_IGNORE_LOCK_SERVER_USER", "false"))) {
 			return null;
 		}
-		if (StringUtils.isBlank(userId)) {
+		if (StringUtils.isBlank(lcPhone)) {
 			return null;
 		}
-		userId = buildSvUsername(userId);
+//		userId = buildSvUsername(userId);
 		HttpHeaders headers = new HttpHeaders();
 		MultiValueMap<String, String> payload = new LinkedMultiValueMap<>();
 		try {
@@ -164,7 +164,7 @@ public final class ChinaPadLockUtils {
 					? "PHPSESSID=" + loginChinaLockServer(AppProps.get("PAS_CN_US_MS", "84374206818"),
 							AppProps.get("PAS_CN_PD_MS", "S84374206818!p"))
 					: ck;
-			String id = getChinaLockServerUserIdByUserId(userId, ck);
+			String id = getChinaLockServerUserIdByUserId(lcPhone, ck);
 			if (StringUtils.isBlank(id)) {
 				return "true";
 			}
@@ -185,18 +185,18 @@ public final class ChinaPadLockUtils {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static String getTokenAppChinaLockServer(String userId, String password) {
+	public static String getTokenAppChinaLockServer(String lcPhone, String password) {
 		if ("true".equalsIgnoreCase(AppProps.get("DMS_IGNORE_LOCK_SERVER_USER", "false"))) {
 			return null;
 		}
 		try {
-			if (StringUtils.isBlank(userId)) {
+			if (StringUtils.isBlank(lcPhone)) {
 				return null;
 			}
-			userId = buildSvUsername(userId);
+//			userId = buildSvUsername(userId);
 			HttpHeaders headers = new HttpHeaders();
 			HttpEntity<Object> entity = new HttpEntity<>(headers);
-			String url = AppProps.get("PAS_CN_H_MS", "http://123.56.250.3") + "/app_login?name=" + userId + "&password="
+			String url = AppProps.get("PAS_CN_H_MS", "http://123.56.250.3") + "/app_login?name=" + lcPhone + "&password="
 					+ password + "&phoneid=1";
 			ResponseEntity<String> res = ApiUtils.getRestTemplate().exchange(url, HttpMethod.GET, entity, String.class);
 			LOGGER.info("getTokenAppChinaLockServer rs " + res);
@@ -208,15 +208,15 @@ public final class ChinaPadLockUtils {
 		return null;
 	}
 
-	public static String getChinaLockServerUserIdByUserId(String userId, String ck) {
+	public static String getChinaLockServerUserIdByUserId(String lcPhone, String ck) {
 		if ("true".equalsIgnoreCase(AppProps.get("DMS_IGNORE_LOCK_SERVER_USER", "false"))) {
 			return null;
 		}
 		try {
-			if (StringUtils.isBlank(userId)) {
+			if (StringUtils.isBlank(lcPhone)) {
 				return null;
 			}
-			userId = buildSvUsername(userId);
+//			userId = buildSvUsername(userId);
 			HttpHeaders headers = new HttpHeaders();
 			headers.add("cookie",
 					StringUtils.isBlank(ck)
@@ -225,12 +225,12 @@ public final class ChinaPadLockUtils {
 							: ck);
 			HttpEntity<Object> entity = new HttpEntity<>(headers);
 			String url = AppProps.get("PAS_CN_H_MS", "http://123.56.250.3")
-					+ "/index/employee/index.html?number=&username=" + userId
+					+ "/index/employee/index.html?number=&username=" + lcPhone
 					+ "&nickname=&role_id=&department_id=&area_id=";
 			ResponseEntity<String> res = ApiUtils.getRestTemplate().exchange(url, HttpMethod.GET, entity, String.class);
 			LOGGER.info("getChinaLockServerUserIdByPhone rs " + res.getHeaders());
 			Elements es = Jsoup.parse(res.getBody()).select("table#editable tbody tr button.btnDisplayDetail");
-			if (es.size() == 1 && es.get(0).attr("onclick") != null && es.get(0).attr("onclick").indexOf(userId) > 1) {
+			if (es.size() == 1 && es.get(0).attr("onclick") != null && es.get(0).attr("onclick").indexOf(lcPhone) > 1) {
 				return es.get(0).attr("onclick").replaceAll(".*openInfo\\( *['\"] *([^'\" ]+) *['\"] *,.*", "$1");
 			}
 

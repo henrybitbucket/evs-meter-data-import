@@ -74,6 +74,7 @@ import com.pa.evs.sv.AddressLogService;
 import com.pa.evs.sv.AddressService;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.sv.CountryService;
 import com.pa.evs.sv.DMSAddressService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FileService;
@@ -128,6 +129,8 @@ public class CommonController {
 	@Autowired AuthenticationService authenticationService;
 	
 	@Autowired SettingService settingService;
+	
+	@Autowired CountryService countryService;
 
     @Value("${evs.pa.mqtt.timeout:30}")
 	private long otaTimeout;
@@ -1083,6 +1086,19 @@ public class CommonController {
 			HttpServletResponse response) {
     	try {
     		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(meterCommissioningReportService.getP2Managers()).success(true).build());
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    }
+    
+    @GetMapping("/api/countries")
+	public ResponseEntity<Object> getCountrys(
+			HttpServletResponse response) {
+    	try {
+    		@SuppressWarnings("rawtypes")
+			PaginDto pg = new PaginDto<>();
+    		countryService.search(pg);
+    		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(pg).success(true).build());
     	} catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }

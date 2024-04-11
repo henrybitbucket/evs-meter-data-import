@@ -339,6 +339,10 @@ public class DMSLockServiceImpl implements DMSLockService {
 	void loginPAS() {
 		try {
 			HttpEntity<Object> entity = new HttpEntity<Object>(null);
+			String pasLoginUrl = AppProps.get("APP_PAS_LOGIN");
+			if (StringUtils.isBlank(pasLoginUrl)) {
+				return;
+			}
 			String url = DESUtil.getInstance().decrypt(AppProps.get("APP_PAS_LOGIN"));
 			Map<String, Object> res = MAPPER.readValue(resttemplate.exchange(url, HttpMethod.GET, entity, String.class).getBody(), Map.class);
 			Map<String, Object> data = (Map<String, Object>) res.get("data");

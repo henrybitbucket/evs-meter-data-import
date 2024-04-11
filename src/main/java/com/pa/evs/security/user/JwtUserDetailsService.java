@@ -51,6 +51,13 @@ public class JwtUserDetailsService implements UserDetailsService {
         }
         
         if (user == null) {
+        	List<Users> us = userRepository.findByLcPhoneNumber(email);
+        	if (us.size() == 1) {
+        		user = us.get(0);
+        	}
+        }
+        
+        if (user == null) {
             return null;
         }
         

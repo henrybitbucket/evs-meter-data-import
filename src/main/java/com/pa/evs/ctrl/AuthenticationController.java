@@ -247,7 +247,7 @@ public class AuthenticationController {
     }
     
     @GetMapping(value = {RestPath.WHOAMI, RestPath.WHOAMI1})
-    public ResponseDto<JwtUser> getUser(HttpServletRequest httpServletRequest){
+    public ResponseDto<JwtUser> whoami(HttpServletRequest httpServletRequest){
         return authenticationService.getUser(httpServletRequest);
     }
     

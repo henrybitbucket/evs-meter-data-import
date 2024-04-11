@@ -11,6 +11,7 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -31,7 +32,12 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "users")
+@Table(
+		name = "users",
+		indexes = {
+				@Index(name = "idx_name_calling_code_lc_phone_number_users", columnList="lc_phone_number,calling_code", unique = true)
+		}
+)
 public class Users extends Base1Entity {
 
 	@Id
@@ -58,7 +64,13 @@ public class Users extends Base1Entity {
     private String password;
 	
 	@Column(name = "phone_number", unique = true)
-    private String phoneNumber;
+    private String phoneNumber;// +84909123456
+	
+	@Column(name = "lc_phone_number", length = 10)
+    private String lcPhoneNumber;// 0909123456
+	
+	@Column(name = "calling_code")
+    private String callingCode;// 84
 	
 	@Column(name = "approved")
     private Long approved;
