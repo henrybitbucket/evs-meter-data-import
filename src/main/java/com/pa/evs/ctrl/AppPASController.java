@@ -1,10 +1,20 @@
 package com.pa.evs.ctrl;
 
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
+import com.pa.evs.dto.DMSApplicationSaveReqDto;
+import com.pa.evs.dto.DMSLocationLockDto;
+import com.pa.evs.dto.DMSLockDto;
+import com.pa.evs.dto.LockDto;
+import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.enums.ResponseEnum;
+import com.pa.evs.sv.DMSLockService;
+import com.pa.evs.sv.DMSProjectService;
+import com.pa.evs.utils.ApiUtils;
+import com.pa.evs.utils.AppCodeSelectedHolder;
+import com.pa.evs.utils.SecurityUtils;
+import com.pa.evs.utils.TimeZoneHolder;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,20 +33,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
-import com.pa.evs.dto.DMSApplicationSaveReqDto;
-import com.pa.evs.dto.DMSLocationLockDto;
-import com.pa.evs.dto.DMSLockDto;
-import com.pa.evs.dto.PaginDto;
-import com.pa.evs.dto.ResponseDto;
-import com.pa.evs.enums.ResponseEnum;
-import com.pa.evs.sv.DMSLockService;
-import com.pa.evs.sv.DMSProjectService;
-import com.pa.evs.utils.ApiUtils;
-import com.pa.evs.utils.AppCodeSelectedHolder;
-import com.pa.evs.utils.SecurityUtils;
-import com.pa.evs.utils.TimeZoneHolder;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
 
 @DependsOn(value = "settingsController")
 @RestController
@@ -157,7 +156,23 @@ public class AppPASController {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
 	}
-	
+
+	@PostMapping("/api/lock/code")
+	public ResponseDto getLockSecretCode(@RequestBody LockDto lockDto) {
+		try {
+			if (StringUtils.isNotBlank(lockDto.getTimeZone())) {
+				TimeZoneHolder.set(lockDto.getTimeZone());
+			}
+			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
+				throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
+			}
+			String phone = SecurityUtils.getPhoneNumber();
+			return ResponseDto.<Object>builder().response(dmsLockService.getSecretCode(phone, lockDto)).success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+
 /**	
 {
   "timePeriod": {

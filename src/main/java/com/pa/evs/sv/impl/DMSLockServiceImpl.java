@@ -17,6 +17,7 @@ import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
+import com.pa.evs.dto.LockDto;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -436,6 +437,56 @@ public class DMSLockServiceImpl implements DMSLockService {
 			}
 		}
 		
+		throw new RuntimeException("not match any time period");
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Object getSecretCode(String userMobile, LockDto lockDto) {
+
+		Optional<DMSLock> dmsLock = null;
+		if (StringUtils.isNotBlank(lockDto.getLockNumber())) {
+			dmsLock = dmsLockRepository.findByLockNumber(lockDto.getLockNumber());
+		} else if (StringUtils.isNotBlank(lockDto.getBid())) {
+			dmsLock = dmsLockRepository.findByLockBid(lockDto.getBid());
+		}
+		if (!dmsLock.isPresent() || dmsLock.get() == null) {
+			throw new RuntimeException("Lock not found");
+		}
+
+		DMSLocationLock dmsLocationLock = dmsLocationLockRepository.findByLockId(dmsLock.get().getId()).orElseThrow(() -> new RuntimeException("Lock not found or not link location!"));
+
+		List<Long> appOfUser = em.createQuery(" SELECT app.id FROM DMSApplicationUser appUser where appUser.app.status = 'APPROVAL' and appUser.phoneNumber = :userPhone " )
+				.setParameter("userPhone", userMobile)
+				.getResultList();
+		if (appOfUser.isEmpty()) {
+			throw new RuntimeException("user not in any app");
+		}
+
+		// find site of lock
+		List<Long> siteIds = em.createQuery("SELECT locationSite.site.id FROM DMSLocationSite locationSite where locationSite.locationKey = '" + dmsLocationLock.getLocationKey() + "' ")
+				.getResultList();
+
+		if (siteIds.isEmpty()) {
+			throw new RuntimeException("user not in any site");
+		}
+
+		// get ApplicationSite by site in application of user and in site of lock => list appSite => list wod
+		List<DMSWorkOrders> dmsWorkOrders = em.createQuery(new StringBuilder(" SELECT appSite.workOrder FROM DMSApplicationSite appSite where appSite.app.id in (:appId)  " )
+						.append(" AND appSite.app.status = 'APPROVAL' ")
+						.append(" AND appSite.site.id in :siteIds ")
+						.append(" order by appSite.site.id desc ").toString())
+
+				.setParameter("siteIds", siteIds)
+				.setParameter("appId", appOfUser)
+				.getResultList();
+
+		for (DMSWorkOrders workOrders : dmsWorkOrders) {
+			if (isMatch(dmsLocationLock.getLock(), workOrders)) {
+				return dmsLocationLock.getLock().getSecretKey();
+			}
+		}
+
 		throw new RuntimeException("not match any time period");
 	}
 
