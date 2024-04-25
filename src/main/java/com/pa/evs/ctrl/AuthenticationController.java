@@ -334,7 +334,7 @@ public class AuthenticationController {
     public ResponseEntity<?> getCredentialType(HttpServletRequest httpServletRequest, @RequestParam(name = "username") String username, @RequestBody(required = false) Map<String, Object> payload) {
     	try {
     		if (payload != null && payload.get("username") != null) {
-    			username = (String) payload.get("username");
+    			username = ((String) payload.get("username")).toLowerCase();
     		}
     		Object cre = authenticationService.getCredentialType(username);
     		if (cre == null) {
