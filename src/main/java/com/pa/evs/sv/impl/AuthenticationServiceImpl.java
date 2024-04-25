@@ -1855,6 +1855,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		if (StringUtils.isBlank(email)) {
 			throw new ApiException("email is required");
 		}
+		email = email.toLowerCase();
 		
 		String otpType = (String) dto.get("otpType");
 		String actionType = (String) dto.get("actionType");
