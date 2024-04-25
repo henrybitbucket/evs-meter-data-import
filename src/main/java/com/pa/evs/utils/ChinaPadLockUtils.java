@@ -164,7 +164,7 @@ public final class ChinaPadLockUtils {
 					? "PHPSESSID=" + loginChinaLockServer(AppProps.get("PAS_CN_US_MS", "84374206818"),
 							AppProps.get("PAS_CN_PD_MS", "S84374206818!p"))
 					: ck;
-			String id = getChinaLockServerUserIdByUserId(lcPhone, ck);
+			String id = getChinaLockServerUserIdByUserPhone(lcPhone, ck);
 			if (StringUtils.isBlank(id)) {
 				return "true";
 			}
@@ -208,7 +208,7 @@ public final class ChinaPadLockUtils {
 		return null;
 	}
 
-	public static String getChinaLockServerUserIdByUserId(String lcPhone, String ck) {
+	public static String getChinaLockServerUserIdByUserPhone(String lcPhone, String ck) {
 		if ("true".equalsIgnoreCase(AppProps.get("DMS_IGNORE_LOCK_SERVER_USER", "false"))) {
 			return null;
 		}

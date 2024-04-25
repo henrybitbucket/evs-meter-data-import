@@ -25,8 +25,8 @@ public class LoginRequestDto {
     
     public String getEmail() {
     	if (email == null) {
-    		return account;
+    		return account == null ? null : account.toLowerCase();
     	}
-    	return email;
+    	return email.toLowerCase();
     }
 }
