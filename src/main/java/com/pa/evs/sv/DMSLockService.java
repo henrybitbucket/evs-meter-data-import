@@ -7,6 +7,7 @@ import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.DMSLockVendorDto;
 import com.pa.evs.dto.LockDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.SaveLogReq;
 
 public interface DMSLockService {
 
@@ -29,4 +30,6 @@ public interface DMSLockService {
 	Object getSecretCode(String phone, LockDto lockDto);
 
 	Object getSecretCode2(String userMobile, Long dmsLockId);
+
+	void saveLog(SaveLogReq dto);
 }

@@ -40,6 +40,7 @@ import com.pa.evs.dto.DMSLockVendorDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.FloorLevelDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.SaveLogReq;
 import com.pa.evs.model.DMSBlock;
 import com.pa.evs.model.DMSBuilding;
 import com.pa.evs.model.DMSBuildingUnit;
@@ -47,6 +48,7 @@ import com.pa.evs.model.DMSFloorLevel;
 import com.pa.evs.model.DMSLocationLock;
 import com.pa.evs.model.DMSLocationSite;
 import com.pa.evs.model.DMSLock;
+import com.pa.evs.model.DMSLockEventLog;
 import com.pa.evs.model.DMSLockVendor;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
@@ -55,6 +57,7 @@ import com.pa.evs.repository.DMSBuildingRepository;
 import com.pa.evs.repository.DMSBuildingUnitRepository;
 import com.pa.evs.repository.DMSFloorLevelRepository;
 import com.pa.evs.repository.DMSLocationLockRepository;
+import com.pa.evs.repository.DMSLockEventLogRepository;
 import com.pa.evs.repository.DMSLockRepository;
 import com.pa.evs.repository.DMSLockVendorRepository;
 import com.pa.evs.repository.GroupUserRepository;
@@ -64,6 +67,7 @@ import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.DESUtil;
 import com.pa.evs.utils.SchedulerHelper;
+import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.TimeZoneHolder;
 import com.pa.evs.utils.Utils;
 
@@ -79,6 +83,9 @@ public class DMSLockServiceImpl implements DMSLockService {
 	
 	@Autowired
 	DMSLockRepository dmsLockRepository;
+	
+	@Autowired
+	DMSLockEventLogRepository dmsLockEventLogRepository;
 	
 	@Autowired
 	DMSLockVendorRepository dmsLockVendorRepository;
@@ -692,5 +699,13 @@ public class DMSLockServiceImpl implements DMSLockService {
 		
 		LOGGER.info("lockId = " + lock.getId() + " workOrder " + workOrder.getName() + " is full match at dayOfWeek=" + dayOfWeek + " hh:mm = " + h + ":" + m + " tz: " + TimeZoneHolder.get());
 		return true;
+	}
+
+	@Transactional
+	@Override
+	public void saveLog(SaveLogReq dto) {
+		DMSLockEventLog entity = DMSLockEventLog.from(dto);
+		entity.setCreatedBy(SecurityUtils.getEmail());
+		dmsLockEventLogRepository.save(entity);
 	}
 }
