@@ -704,6 +704,10 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Transactional
 	@Override
 	public void saveLog(SaveLogReq dto) {
+		
+		if (!dmsLockRepository.findByLockNumber(dto.getLockNumber()).isPresent()) {
+			throw new RuntimeException("Lock not found!");
+		}
 		DMSLockEventLog entity = DMSLockEventLog.from(dto);
 		entity.setCreatedBy(SecurityUtils.getEmail());
 		dmsLockEventLogRepository.save(entity);
