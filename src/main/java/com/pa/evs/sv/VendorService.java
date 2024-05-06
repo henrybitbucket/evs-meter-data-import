@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.VendorDto;
+import com.pa.evs.model.Vendor;
 
 @Repository
 public interface VendorService {
@@ -16,5 +17,7 @@ public interface VendorService {
 			MultipartFile csr, MultipartFile prkey) throws Exception;
 	
 	void refreshVendorCertificate(Long vendorId) throws Exception;
+
+	Vendor saveVendor(VendorDto dto);
 
 }

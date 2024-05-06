@@ -43,4 +43,7 @@ public interface RestPath {
 
     String CA_REQUEST_LOG_GET_COUNT_DEVICES = API + "/ca-request-log/count-devices";
     String GET_DASHBOARD = API + "/dashboard";
+    
+    String GET_DMS_MC_USERS = API + "/dms-mc-users";
+    String CREATE_DMS_MC_USERS = API + "/dms-mc-user";
 }
