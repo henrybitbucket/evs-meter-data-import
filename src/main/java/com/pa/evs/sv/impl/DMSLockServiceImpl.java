@@ -22,8 +22,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -80,6 +84,9 @@ public class DMSLockServiceImpl implements DMSLockService {
 	static final ObjectMapper MAPPER = new ObjectMapper();
 	String token;
 	RestTemplate resttemplate = ApiUtils.getRestTemplate();
+
+	@Value("${dms-key.url:https://dms-key.evs.com.sg/}")
+	private String dmsKeyUrl;
 	
 	@Autowired
 	DMSLockRepository dmsLockRepository;
@@ -490,7 +497,82 @@ public class DMSLockServiceImpl implements DMSLockService {
 
 		for (DMSWorkOrders workOrders : dmsWorkOrders) {
 			if (isMatch(dmsLocationLock.getLock(), workOrders)) {
-				return dmsLocationLock.getLock().getSecretKey();
+				//apply sv token
+				String svcToken = "";
+				String secKey = "";
+				try {
+					String url = dmsKeyUrl + "auth/apply_svc_token";
+					HttpHeaders headers = new HttpHeaders();
+					headers.setContentType(MediaType.APPLICATION_JSON);
+					String json = "{\n" +
+							"    \"api_key\": \"3Z6k1t9gII0yc\",\n" +
+							"    \"username\": \"dms.henry\",\n" +
+							"    \"svc_name\": \"dms.keysvc\",\n" +
+							"    \"endpoint\": \"/key/get_device_sec_key\",\n" +
+							"    \"scope\": \"\",\n" +
+							"    \"target\": \"\",\n" +
+							"    \"operation\": \"\"\n" +
+							"}";
+
+					HttpEntity<Object> entity = new HttpEntity<>(json, headers);
+					ResponseEntity<Map> response = ApiUtils.getRestTemplate().exchange(url, HttpMethod.POST, entity, Map.class);
+					if (response != null && response.getBody() != null && response.getBody().get("svc_token") != null) {
+						svcToken = response.getBody().get("svc_token") + "";
+					} else if (response != null && response.getBody() != null && response.getBody().get("error") != null) {
+						throw new RuntimeException(response.getBody().get("error") + "");
+					} else {
+						throw new RuntimeException("Fail to generate svc token");
+					}
+				} catch (Exception e) {
+					throw new RuntimeException("Fail to generate svc token");
+				}
+
+				//get sec_key
+				if (StringUtils.isNotBlank(svcToken)) {
+					try {
+						String url = dmsKeyUrl + "key/get_device_sec_key";
+						HttpHeaders headers = new HttpHeaders();
+						headers.setContentType(MediaType.APPLICATION_JSON);
+						headers.add("Authorization", "Bearer " + svcToken);
+						String json = "{\n" +
+								"    \"svcClaimDto\":{\n" +
+								"        \"api_key\":\"3Z6k1t9gII0yc\",\n" +
+								"        \"username\":\"dms.henry\",\n" +
+								"        \"svc_name\":\"dms.keysvc\",\n" +
+								"        \"endpoint\":\"/key/get_device_sec_key\",\n" +
+								"        \"scope\":\"\",\n" +
+								"        \"target\":\"\",\n" +
+								"        \"operation\":\"\"\n" +
+								"    },\n" +
+								"    \"request\":\n" +
+								"    {\n" +
+								"        \"api_key\":\"3Z6k1t9gII0yc\",\n" +
+								"        \"tracer\":\"" + lockDto.getTracer() + "\",\n" +
+								"        \"vendor_id\":\"10\",\n" ;
+
+						if (StringUtils.isNotBlank(lockDto.getLockNumber())) {
+							json = json + "        \"item_number\":\"" + lockDto.getLockNumber()+ "\"    \n" ;
+						} else if (StringUtils.isNotBlank(lockDto.getBid())) {
+							json = json + "        \"bid\":\"" + lockDto.getBid() + "\"    \n" ;
+						}
+						json = json +
+								"    }\n" +
+								"}";
+
+						HttpEntity<Object> entity = new HttpEntity<>(json, headers);
+						ResponseEntity<Map> response = ApiUtils.getRestTemplate().exchange(url, HttpMethod.POST, entity, Map.class);
+						if (response != null && response.getBody() != null && response.getBody().get("sec_key") != null) {
+							secKey = response.getBody().get("sec_key") + "";
+						} else if (response != null && response.getBody() != null && response.getBody().get("error") != null) {
+							throw new RuntimeException(response.getBody().get("error") + "");
+						} else {
+							throw new RuntimeException("Fail to secret key");
+						}
+					} catch (Exception e) {
+						throw new RuntimeException("Fail to secret key");
+					}
+				}
+				return secKey;
 			}
 		}
 

@@ -17,8 +17,8 @@ import lombok.Setter;
 @Builder
 public class LockDto {
 
-    @Schema(description = "Set specific request timezone, example 'Asia/Bangkok' otherwise server timezone will be set")
     private String timeZone;
+    private String tracer;
 
     private String bid;
     private String lockNumber;
