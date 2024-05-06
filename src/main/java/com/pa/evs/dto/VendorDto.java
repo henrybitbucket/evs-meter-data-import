@@ -1,7 +1,8 @@
 package com.pa.evs.dto;
 
-import javax.persistence.Column;
+import java.util.List;
 
+import com.pa.evs.enums.VendorType;
 import com.pa.evs.model.Vendor;
 
 /**
@@ -15,6 +16,8 @@ public class VendorDto {
 	private String descrption;
 	private String signatureAlgorithm;
 	private String keyType;
+	private VendorType type;
+	private List<DMSAccDto> mcAccs;
 
 	public VendorDto() {
 	}
@@ -63,6 +66,22 @@ public class VendorDto {
 
 	public void setKeyType(String keyType) {
 		this.keyType = keyType;
+	}
+
+	public VendorType getType() {
+		return type;
+	}
+
+	public void setType(VendorType type) {
+		this.type = type;
+	}
+	
+	public List<DMSAccDto> getMcAccs() {
+		return mcAccs;
+	}
+
+	public void setMcAccs(List<DMSAccDto> mcAccs) {
+		this.mcAccs = mcAccs;
 	}
 
 }

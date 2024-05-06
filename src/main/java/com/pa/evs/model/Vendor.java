@@ -8,6 +8,7 @@ import javax.persistence.Lob;
 import javax.persistence.Table;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.pa.evs.enums.VendorType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,9 @@ public class Vendor extends BaseEntity {
 
     @Column(name = "name")
     private String name;
+    
+    @Column(name = "label")
+    private String label;
     
     @Column(name = "description")
     private String description;
@@ -61,5 +65,8 @@ public class Vendor extends BaseEntity {
     
     @Builder.Default
     private Long maxMidValue = 4294967295l;
+    
+    @Column(name = "type")
+    private VendorType type;
     
 }

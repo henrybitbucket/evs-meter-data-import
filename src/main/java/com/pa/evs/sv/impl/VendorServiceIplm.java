@@ -198,4 +198,27 @@ public class VendorServiceIplm implements VendorService {
 		response.put("uid", uuid);
 		return response;
 	}
+	
+	@Override
+	public Vendor saveVendor(VendorDto dto) {
+		if (dto.getId() != null) {
+			Optional<Vendor> vendorOpt = vendorRepository.findById(dto.getId());
+			if (!vendorOpt.isPresent()) {
+				throw new RuntimeException("Vendor not found!");
+			}
+			Vendor vendor = vendorOpt.get();
+			vendor.setName(dto.getName());
+			vendor.setType(dto.getType());
+			vendor.setDescription(dto.getDescrption());
+			vendorRepository.save(vendor);
+			return vendor;
+		} else {
+			Vendor newVendor = new Vendor();
+			newVendor.setName(dto.getName());
+			newVendor.setType(dto.getType());
+			newVendor.setDescription(dto.getDescrption());
+			vendorRepository.save(newVendor);
+			return newVendor;
+		}
+	}
 }

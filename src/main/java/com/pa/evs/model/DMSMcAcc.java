@@ -1,0 +1,41 @@
+package com.pa.evs.model;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@Builder
+@Entity
+@Table(name = "dms_mc_acc")
+public class DMSMcAcc extends BaseEntity {
+	
+	@Column(name = "username")
+	private String username;
+	
+	@Column(name = "password")
+	private String password;
+	
+	@Column(name = "email")
+    private String email;
+	
+	@Column(name = "phone_number")
+	private String phoneNumber;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "project_id")
+	private DMSProject project;
+
+}
