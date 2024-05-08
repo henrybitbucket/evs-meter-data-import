@@ -26,6 +26,9 @@ public class DMSLockEventLog extends BaseEntity {
 	@Column(name = "lock_Number")
     private String lockNumber;
 	
+	@Column(name = "lock_bid")
+    private String bid;
+	
 	@Column(name = "type_code")
     private String typeCode;
 	
@@ -44,6 +47,7 @@ public class DMSLockEventLog extends BaseEntity {
 	public static DMSLockEventLog from(SaveLogReq fr) {
 		return builder()
 				.lockNumber(fr.getLockNumber())
+				.bid(fr.getBid())
 				.typeCode(fr.getTypeCode())
 				.resultCode(fr.getResultCode())
 				.battery(fr.getBattery())

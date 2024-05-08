@@ -63,7 +63,6 @@ import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 import com.pa.evs.model.CARequestLog;
-import com.pa.evs.model.Company;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.RelayStatusLog;
@@ -82,6 +81,7 @@ import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.GroupService;
 import com.pa.evs.sv.LogService;
 import com.pa.evs.sv.MeterCommissioningReportService;
+import com.pa.evs.sv.NotificationService;
 import com.pa.evs.sv.P1OnlineStatusService;
 import com.pa.evs.sv.P1ReportService;
 import com.pa.evs.sv.SettingService;
@@ -131,6 +131,8 @@ public class CommonController {
 	@Autowired SettingService settingService;
 	
 	@Autowired CountryService countryService;
+	
+	@Autowired NotificationService notificationService;
 
     @Value("${evs.pa.mqtt.timeout:30}")
 	private long otaTimeout;
@@ -196,6 +198,16 @@ public class CommonController {
     	
     	String json = "{\"header\":{\"mid\":1001,\"uid\":\"BIERWXAABMAB2AEBAA\",\"gid\":\"BIERWXAAA4AFBABABXX\",\"msn\":\"201906000032\",\"sig\":\"Base64(ECC_SIGN(payload))\"},\"payload\":{\"id\":\"BIERWXAABMAB2AEBAA\",\"type\":\"OBR\",\"data\":\"201906000137\"}}";
     	evsPAService.publish("dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), "TEST");
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/send-sms")//http://localhost:8080/api/send-sms
+    public ResponseEntity<?> sendSMS(
+    		HttpServletRequest httpServletRequest,
+    		@RequestBody Map<String, Object> body
+    		) throws Exception {
+    	
+    	notificationService.sendSMS((String) body.get("body"), (String) body.get("to"));
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     

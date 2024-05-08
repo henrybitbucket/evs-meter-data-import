@@ -787,7 +787,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Override
 	public void saveLog(SaveLogReq dto) {
 		
-		if (!dmsLockRepository.findByLockNumber(dto.getLockNumber()).isPresent()) {
+		if (!dmsLockRepository.findByLockBid(dto.getBid()).isPresent()) {
 			throw new RuntimeException("Lock not found!");
 		}
 		DMSLockEventLog entity = DMSLockEventLog.from(dto);

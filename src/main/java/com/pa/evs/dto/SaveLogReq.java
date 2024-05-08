@@ -17,6 +17,8 @@ public class SaveLogReq {
 	@Schema(description = "Lock number", example = "100010010")
 	private String lockNumber;
 	
+	private String bid;
+	
 	@Schema(description = "Operation type")
 	private String typeCode;
 	
