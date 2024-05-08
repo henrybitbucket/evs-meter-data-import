@@ -18,6 +18,9 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
 import com.pa.evs.dto.LockDto;
+import com.pa.evs.dto.LockEnventLogResDto;
+import com.pa.evs.dto.LockEventLogSearchReq;
+
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -793,5 +796,42 @@ public class DMSLockServiceImpl implements DMSLockService {
 		DMSLockEventLog entity = DMSLockEventLog.from(dto);
 		entity.setCreatedBy(SecurityUtils.getEmail());
 		dmsLockEventLogRepository.save(entity);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public Object getLockEventLogs(LockEventLogSearchReq dto) {
+		
+		StringBuilder sql = new StringBuilder("FROM DMSLockEventLog WHERE 1=1 ");
+		if (StringUtils.isNotBlank(dto.getRequest().getBid())) {
+			sql.append(" AND bid='" + dto.getRequest().getBid() + "'");
+		}
+		
+		if (dto.getRequest().getFrom() != null) {
+			sql.append(" AND createDate >= :from ");
+		}
+
+		if (dto.getRequest().getTo() != null) {
+			sql.append(" AND createDate <= :to ");
+		}
+		
+		sql.append(" ORDER BY modifyDate DESC ");
+		
+		Query q = em.createQuery(sql.toString());
+		
+		if (dto.getRequest().getFrom() != null) {
+			q.setParameter("from", new Date(dto.getRequest().getFrom().toEpochMilli()));
+		}
+		
+		if (dto.getRequest().getTo() != null) {
+			q.setParameter("to", new Date(dto.getRequest().getTo().toEpochMilli()));
+		}
+		
+		return q
+		.setMaxResults(100)
+		.getResultList()
+		.stream()
+		.map(l -> LockEnventLogResDto.from((DMSLockEventLog) l))
+		.collect(Collectors.toList());
 	}
 }

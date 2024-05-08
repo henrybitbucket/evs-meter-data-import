@@ -30,6 +30,7 @@ import com.pa.evs.dto.DMSApplicationSaveReqDto;
 import com.pa.evs.dto.DMSLocationLockDto;
 import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.LockDto;
+import com.pa.evs.dto.LockEventLogSearchReq;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.SaveLogReq;
@@ -274,6 +275,19 @@ public class AppPASController {
 			}
 			dmsLockService.saveLog(dto);
 			return ResponseDto.<Object>builder().success(true).build();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+    }
+    
+    @PostMapping(value = {"/api/app_getlog"})
+    public ResponseDto getLog(
+    		@RequestBody LockEventLogSearchReq dto
+    		) throws IOException {
+    	
+		try {
+			return ResponseDto.<Object>builder().success(true).response(dmsLockService.getLockEventLogs(dto)).build();
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
