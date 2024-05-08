@@ -289,16 +289,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		this.loadRoleAndPermission();
 		String pwd = loginRequestDTO.getPassword();
 		String dmsLockToken = null;
-		if (userDetails.getAppCodes().contains("DMS") && StringUtils.isNotBlank(user.getPhoneNumber())) {
-			if (pwd.length() < 8) {
-				pwd += "0000";
-			}
-			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer(user.getPhoneNumber().length() <= 12 ? user.getPhoneNumber().substring(1) : user.getLcPhoneNumber(), pwd);
-			if (StringUtils.isBlank(dmsLockToken)) {
-				ChinaPadLockUtils.createUserChinaLockServer(user.getPhoneNumber().length() <= 12 ? user.getPhoneNumber().substring(1) : user.getLcPhoneNumber(), userDetails.getPhone(), pwd);
-			}
-			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer(user.getPhoneNumber().length() <= 12 ? user.getPhoneNumber().substring(1) : user.getLcPhoneNumber(), pwd);
-		}
+//		if (userDetails.getAppCodes().contains("DMS") && StringUtils.isNotBlank(user.getPhoneNumber())) {
+//			if (pwd.length() < 8) {
+//				pwd += "0000";
+//			}
+//			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer(user.getPhoneNumber().length() <= 12 ? user.getPhoneNumber().substring(1) : user.getLcPhoneNumber(), pwd);
+//			if (StringUtils.isBlank(dmsLockToken)) {
+//				ChinaPadLockUtils.createUserChinaLockServer(user.getPhoneNumber().length() <= 12 ? user.getPhoneNumber().substring(1) : user.getLcPhoneNumber(), userDetails.getPhone(), pwd);
+//			}
+//			dmsLockToken = ChinaPadLockUtils.getTokenAppChinaLockServer(user.getPhoneNumber().length() <= 12 ? user.getPhoneNumber().substring(1) : user.getLcPhoneNumber(), pwd);
+//		}
 		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE,
 				LoginResponseDto.builder().token(token).authorities(
 						userDetails.getAuthorities().stream().map(au -> au.getAuthority()).collect(Collectors.toList()))
@@ -468,11 +468,17 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			}
 			
 			if (StringUtils.isBlank(callingCode)) {
-				throw new RuntimeException("Unknow phone code!");
+				throw new RuntimeException("Unknown phone code!");
 			}
 			String lcPhone = phone.substring(callingCode.length() + 1);
-			if (!lcPhone.matches("^(0[1-9][0-9]{1,8})|([1-9][0-9]{1,9})$")) {
+			if (!"86".equals(callingCode) && !"91".equals(callingCode) && !lcPhone.matches("^(0[1-9][0-9]{1,8})|([1-9][0-9]{1,9})$")) {
 				throw new RuntimeException("Phone invalid (Maximum 10 numeric characters)!");
+			}
+			if ("86".equals(callingCode) && !lcPhone.matches("^(0[1-9][0-9]{1,9})|([1-9][0-9]{1,10})$")) {
+				throw new RuntimeException("Phone invalid (Maximum 11 numeric characters)!");
+			}
+			if ("91".equals(callingCode) && !lcPhone.matches("^(0[1-9][0-9]{1,10})|([1-9][0-9]{1,11})$")) {
+				throw new RuntimeException("Phone invalid (Maximum 12 numeric characters)!");
 			}
 			
 			phone = "+" + callingCode + (lcPhone.startsWith("0") ? lcPhone.substring(1) : lcPhone);
@@ -607,12 +613,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			if (StringUtils.isBlank(en.getPhoneNumber())) {
 				throw new RuntimeException("Phone number is required!");
 			}
-			if (StringUtils.isNotBlank(dto.getPassword()) && (isNewUser || dto.getUpdatePwd() == Boolean.TRUE)) {
-				String res = ChinaPadLockUtils.createUserChinaLockServer(en.getPhoneNumber().length() <= 12 ? en.getPhoneNumber().substring(1) : en.getLcPhoneNumber(), en.getPhoneNumber(), dto.getPassword());
-				if ("false".equalsIgnoreCase(AppProps.get("DMS_IGNORE_CREATE_LOCK_SERVER_USER_ERROR", "false")) && !("1".equals(res) || "2".equals(res))) {
-					throw new RuntimeException("Cannot create user (China padlock.)");
-				}
-			}
+//			if (StringUtils.isNotBlank(dto.getPassword()) && (isNewUser || dto.getUpdatePwd() == Boolean.TRUE)) {
+//				String res = ChinaPadLockUtils.createUserChinaLockServer(en.getPhoneNumber().length() <= 12 ? en.getPhoneNumber().substring(1) : en.getLcPhoneNumber(), en.getPhoneNumber(), dto.getPassword());
+//				if ("false".equalsIgnoreCase(AppProps.get("DMS_IGNORE_CREATE_LOCK_SERVER_USER_ERROR", "false")) && !("1".equals(res) || "2".equals(res))) {
+//					throw new RuntimeException("Cannot create user (China padlock.)");
+//				}
+//			}
 		}
 	}
 
@@ -1000,6 +1006,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String queryUserName = options.get("queryUserName") != null ?  (String) options.get("queryUserName") : null;
         String queryFirstName = options.get("queryFirstName") != null ?  (String) options.get("queryFirstName") : null;
         String queryLastName = options.get("queryLastName") != null ?  (String) options.get("queryLastName") : null;
+        String queryPhoneNumber = options.get("queryPhoneNumber") != null ?  (String) options.get("queryPhoneNumber") : null;
 
 		StringBuilder sqlCommonBuilder = new StringBuilder();
 		sqlCommonBuilder.append(" WHERE 1=1 ");
@@ -1012,6 +1019,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		if (StringUtils.isNotBlank(queryLastName)) {
 			sqlCommonBuilder.append(" AND lower(lastName) like '%" + queryLastName.toLowerCase() + "%' ");
+		}
+		if (StringUtils.isNotBlank(queryPhoneNumber)) {
+			sqlCommonBuilder.append(" AND (phoneNumber like '%" + queryPhoneNumber + "%' OR lcPhoneNumber like '%" + queryPhoneNumber + "%') ");
 		}
 		
 		if ("true".equalsIgnoreCase(options.get("hasPhone") + "")) {

@@ -164,11 +164,17 @@ public class DMSAccServiceImpl implements DMSAccService {
 			}
 
 			if (StringUtils.isBlank(callingCode)) {
-				throw new RuntimeException("Unknow phone code!");
+				throw new RuntimeException("Unknown phone code!");
 			}
 			String lcPhone = phone.substring(callingCode.length() + 1);
-			if (!lcPhone.matches("^(0[1-9][0-9]{1,8})|([1-9][0-9]{1,9})$")) {
+			if (!"86".equals(callingCode) && !"91".equals(callingCode) && !lcPhone.matches("^(0[1-9][0-9]{1,8})|([1-9][0-9]{1,9})$")) {
 				throw new RuntimeException("Phone invalid (Maximum 10 numeric characters)!");
+			}
+			if ("86".equals(callingCode) && !lcPhone.matches("^(0[1-9][0-9]{1,9})|([1-9][0-9]{1,10})$")) {
+				throw new RuntimeException("Phone invalid (Maximum 11 numeric characters)!");
+			}
+			if ("91".equals(callingCode) && !lcPhone.matches("^(0[1-9][0-9]{1,10})|([1-9][0-9]{1,11})$")) {
+				throw new RuntimeException("Phone invalid (Maximum 12 numeric characters)!");
 			}
 
 			phone = "+" + callingCode + (lcPhone.startsWith("0") ? lcPhone.substring(1) : lcPhone);

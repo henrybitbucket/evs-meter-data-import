@@ -66,7 +66,7 @@ public class Users extends Base1Entity {
 	@Column(name = "phone_number", unique = true)
     private String phoneNumber;// +84909123456
 	
-	@Column(name = "lc_phone_number", length = 10)
+	@Column(name = "lc_phone_number", length = 12)
     private String lcPhoneNumber;// 0909123456
 	
 	@Column(name = "calling_code")
