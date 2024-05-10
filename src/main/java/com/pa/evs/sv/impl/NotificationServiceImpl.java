@@ -130,7 +130,7 @@ public class NotificationServiceImpl implements NotificationService {
 		}
 	}
 	
-	
+	// https://d-966757d1f7.awsapps.com/start/#/?tab=accounts henrytang Thn123@456_Kru 
 	public static void main(String[] args) {
 
 		args = new String[] {"Test aws sms", "+84933520892"};

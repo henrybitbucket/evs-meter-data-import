@@ -22,6 +22,8 @@ public class LockEnventLogResDto {
 
 	private String bid;
 	
+	private String mobile;
+	
 	@Schema(description = "Operation type")
 	private String typeCode;
 	
@@ -46,6 +48,7 @@ public class LockEnventLogResDto {
 				.battery(fr.getBattery())
 				.lng(fr.getLng())
 				.lat(fr.getLat())
+				.mobile(fr.getCreatedBy())
 				.build();
 	}
 }

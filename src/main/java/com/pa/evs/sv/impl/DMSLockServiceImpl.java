@@ -794,7 +794,10 @@ public class DMSLockServiceImpl implements DMSLockService {
 			throw new RuntimeException("Lock not found!");
 		}
 		DMSLockEventLog entity = DMSLockEventLog.from(dto);
-		entity.setCreatedBy(SecurityUtils.getEmail());
+		entity.setCreatedBy(SecurityUtils.getPhoneNumber());
+		if (StringUtils.isBlank(entity.getCreatedBy())) {
+			entity.setCreatedBy(SecurityUtils.getEmail());
+		}
 		dmsLockEventLogRepository.save(entity);
 	}
 	
