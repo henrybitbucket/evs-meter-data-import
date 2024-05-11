@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.transaction.Transactional;
@@ -18,11 +17,11 @@ import org.springframework.stereotype.Service;
 
 import com.pa.evs.dto.DMSAccDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.VendorDMSAccDto;
 import com.pa.evs.dto.VendorDto;
 import com.pa.evs.model.DMSMcAcc;
 import com.pa.evs.model.DMSVendorMCAcc;
 import com.pa.evs.model.Vendor;
-import com.pa.evs.repository.CountryCodeRepository;
 import com.pa.evs.repository.DMSAccRepository;
 import com.pa.evs.repository.DMSVendorMCAccRepository;
 import com.pa.evs.repository.VendorRepository;
@@ -39,9 +38,6 @@ public class DMSAccServiceImpl implements DMSAccService {
 
 	@Autowired
 	private DMSAccRepository dmsAccRepository;
-
-	@Autowired
-	private CountryCodeRepository countryCodeRepository;
 	
 	@Autowired
 	private DMSVendorMCAccRepository dmsVendorMCAccRepository;
@@ -54,8 +50,6 @@ public class DMSAccServiceImpl implements DMSAccService {
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
-
-	private List<String> cCodes = new ArrayList<>();
 
 	@Override
 	public void getDMSMCUsers(PaginDto<DMSAccDto> pagin) {
@@ -79,9 +73,6 @@ public class DMSAccServiceImpl implements DMSAccService {
 		}
 		if (StringUtils.isNotBlank(queryPhoneNumber)) {
 			sqlCommonBuilder.append(" AND phoneNumber like '%" + queryPhoneNumber + "%' ");
-		}
-		if ("true".equalsIgnoreCase(options.get("hasPhone") + "")) {
-			sqlCommonBuilder.append(" AND us.phoneNumber is not null ");
 		}
 
 		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY us.id asc");
@@ -110,11 +101,10 @@ public class DMSAccServiceImpl implements DMSAccService {
 
 		List<DMSMcAcc> users = query.getResultList();
 		users.forEach(user -> {
-			DMSAccDto dto = DMSAccDto.builder().id(user.getId()).username(user.getUsername()).email(user.getEmail())
-					.phoneNumber(user.getPhoneNumber()).build();
+			DMSAccDto dto = DMSAccDto.builder().id(user.getId()).email(user.getEmail())
+					.build();
 			pagin.getResults().add(dto);
 		});
-
 	}
 
 	@Override
@@ -124,12 +114,6 @@ public class DMSAccServiceImpl implements DMSAccService {
 
 		if (user.getEmail() != null) {
 			user.setEmail(user.getEmail().toLowerCase());
-		}
-		if (StringUtils.isBlank(user.getUsername())) {
-			user.setUsername(user.getEmail());
-		}
-		if (user.getUsername() != null) {
-			user.setUsername(user.getUsername());
 		}
 
 		if (user.getId() != null && user.getId().longValue() > 0) {
@@ -145,49 +129,11 @@ public class DMSAccServiceImpl implements DMSAccService {
 			}
 		} else {
 			en = new DMSMcAcc();
-			en.setUsername(user.getUsername());
 			en.setEmail(user.getEmail());
 		}
 
 		if (en.getId() == null && dmsAccRepository.findByEmail(user.getEmail()) != null) {
 			throw new RuntimeException("Email already exists!");
-		}
-
-		if (user.getPhoneNumber() != null && user.getPhoneNumber().trim().startsWith("+")) {
-			String phone = "+" + user.getPhoneNumber().trim().replaceAll("[^0-9]", "");
-			String callingCode = null;
-			for (String c : cCodes) {
-				if (phone.trim().startsWith("+" + c)) {
-					callingCode = c;
-					break;
-				}
-			}
-
-			if (StringUtils.isBlank(callingCode)) {
-				throw new RuntimeException("Unknown phone code!");
-			}
-			String lcPhone = phone.substring(callingCode.length() + 1);
-			if (!"86".equals(callingCode) && !"91".equals(callingCode) && !lcPhone.matches("^(0[1-9][0-9]{1,8})|([1-9][0-9]{1,9})$")) {
-				throw new RuntimeException("Phone invalid (Maximum 10 numeric characters)!");
-			}
-			if ("86".equals(callingCode) && !lcPhone.matches("^(0[1-9][0-9]{1,9})|([1-9][0-9]{1,10})$")) {
-				throw new RuntimeException("Phone invalid (Maximum 11 numeric characters)!");
-			}
-			if ("91".equals(callingCode) && !lcPhone.matches("^(0[1-9][0-9]{1,10})|([1-9][0-9]{1,11})$")) {
-				throw new RuntimeException("Phone invalid (Maximum 12 numeric characters)!");
-			}
-
-			phone = "+" + callingCode + (lcPhone.startsWith("0") ? lcPhone.substring(1) : lcPhone);
-
-			DMSMcAcc existsUser = dmsAccRepository.findByPhoneNumber(phone);
-			if ((existsUser != null && en.getId() != null && existsUser.getId().longValue() != en.getId().longValue())
-					|| (en.getId() == null && existsUser != null)) {
-				throw new RuntimeException("Phone already exists!");
-			}
-
-			en.setPhoneNumber(phone);
-		} else if (StringUtils.isBlank(user.getPhoneNumber())) {
-			en.setPhoneNumber(null);
 		}
 
 		if (StringUtils.isBlank(user.getPassword())) {
@@ -199,22 +145,78 @@ public class DMSAccServiceImpl implements DMSAccService {
 	}
 	
 	@Override
-	public void saveVendorAndUser(VendorDto vendorDto, List<DMSAccDto> dmsAccDtos) {
-		Vendor vendor = vendorService.saveVendor(vendorDto);
-		List<DMSVendorMCAcc> list = dmsVendorMCAccRepository.findByVendor(vendor);
-		
-		List<Long> currentAccs = list.stream().map(li -> li.getMcAcc().getId()).collect(Collectors.toList());
-		List<Long> updatedAccs = dmsAccDtos.stream().map(li -> li.getId()).collect(Collectors.toList());
-		
-//		List<Long> deletedAccs = updatedAccs
-//		
-//		dmsAccDtos.forEach(dto -> {
-//			Optional<DMSMcAcc> mcAcc = dmsAccRepository.findById(dto.getId());
-//			if (mcAcc.isPresent()) {
-//				DMSVendorMCAcc vendorAcc = new DMSVendorMCAcc(vendor, mcAcc.get());
-//				dmsVendorMCAccRepository.save(vendorAcc);
-//			}
-//		});
+	@Transactional
+	public void saveOrUpdateVendorAndUser(VendorDMSAccDto dto) {
+		VendorDto vendorDto = dto.getVendor();
+		List<DMSAccDto> dmsAccDtos = dto.getDmsAccDtos();
+		if (vendorDto.getId() == null) {
+			Vendor vendor = vendorService.saveVendor(vendorDto);
+			List<DMSVendorMCAcc> list = new ArrayList<>();
+			dmsAccDtos.forEach(dmsAccDto -> {
+				DMSVendorMCAcc dmsVendorMCAcc = new DMSVendorMCAcc();
+
+				DMSMcAcc mcAcc = new DMSMcAcc();
+				mcAcc.setEmail(dmsAccDto.getEmail());
+				mcAcc.setPassword(passwordEncoder.encode(dmsAccDto.getPassword()));
+				mcAcc = dmsAccRepository.save(mcAcc);
+				
+				dmsVendorMCAcc.setVendor(vendor);
+				dmsVendorMCAcc.setMcAcc(mcAcc);
+				list.add(dmsVendorMCAcc);
+			});
+			dmsVendorMCAccRepository.saveAll(list);
+		} else {
+			Optional<Vendor> vendorOpt = vendorRepository.findById(vendorDto.getId());
+			if (!vendorOpt.isPresent()) {
+				throw new RuntimeException("Vendor not found!");
+			}
+			Vendor vendor = vendorService.saveVendor(vendorDto);
+			List<DMSVendorMCAcc> list = dmsVendorMCAccRepository.findByVendor(vendor);
+			List<Long> existingList = list.stream().map(li -> li.getMcAcc().getId()).collect(Collectors.toList());
+			List<Long> updatedList = new ArrayList<>();
+
+			dmsAccDtos.forEach(dmsAccDto -> {
+				if (dmsAccDto.getId() != null) {
+					Optional<DMSMcAcc> mcAccOpt = dmsAccRepository.findById(dmsAccDto.getId());
+					if (!mcAccOpt.isPresent()) {
+						throw new RuntimeException("MC user with email: " + dmsAccDto.getEmail() + " not found!");
+					}
+					updatedList.add(mcAccOpt.get().getId());
+				} else {
+					DMSMcAcc mcAcc = new DMSMcAcc();
+					mcAcc.setEmail(dmsAccDto.getEmail());
+					mcAcc.setPassword(passwordEncoder.encode(dmsAccDto.getPassword()));
+					mcAcc = dmsAccRepository.save(mcAcc);
+					updatedList.add(mcAcc.getId());
+				}
+			});
+
+			List<Long> addedList = updatedList.stream().filter(element -> !existingList.contains(element))
+					.collect(Collectors.toList());
+			List<Long> deletedList = existingList.stream().filter(element -> !updatedList.contains(element))
+					.collect(Collectors.toList());
+			List<DMSVendorMCAcc> listUpdatedVendorMCAcc = new ArrayList<>();
+			
+			addedList.forEach(add -> {
+				Optional<DMSMcAcc> mcAccOpt = dmsAccRepository.findById(add);
+				if (!mcAccOpt.isPresent()) {
+					throw new RuntimeException("MC user not found!");
+				}
+				DMSVendorMCAcc dmsVendorMCAcc = new DMSVendorMCAcc();
+				dmsVendorMCAcc.setMcAcc(mcAccOpt.get());
+				dmsVendorMCAcc.setVendor(vendor);
+				listUpdatedVendorMCAcc.add(dmsVendorMCAcc);
+			});
+			
+			if (!deletedList.isEmpty()) {
+				dmsVendorMCAccRepository.deleteByVendorAndMcAccIn(vendor.getId(), deletedList);
+				dmsVendorMCAccRepository.flush();
+			}
+			
+			if (!listUpdatedVendorMCAcc.isEmpty()) {
+				dmsVendorMCAccRepository.saveAll(listUpdatedVendorMCAcc);	
+			}
+		}
 	}
 	
 	@Override
@@ -239,8 +241,6 @@ public class DMSAccServiceImpl implements DMSAccService {
 					.builder()
 					.id(mcAcc.getId())
 					.email(mcAcc.getEmail())
-					.phoneNumber(mcAcc.getPhoneNumber())
-					.username(mcAcc.getUsername())
 					.build();
 			mcAccs.add(dto);
 		});
@@ -248,15 +248,79 @@ public class DMSAccServiceImpl implements DMSAccService {
 		return vendorDto;
 	}
 
-	@PostConstruct
-	public void init() {
-		new Thread(() -> {
-			countryCodeRepository.findAll().forEach(c -> {
-				cCodes.add(c.getCallingCode().replaceAll("[^0-9]", ""));
-			});
-			cCodes.sort((o1, o2) -> {
-				return Integer.parseInt(o1) < Integer.parseInt(o2) ? 1 : -1;
-			});
-		}).start();
+	@Override
+	@Transactional
+	public void deleteVendor(Long vendorId) {
+		Optional<Vendor> vendorOpt = vendorRepository.findById(vendorId);
+		if (!vendorOpt.isPresent()) {
+			throw new RuntimeException("Vendor not found!");
+		}
+		Vendor vendor = vendorOpt.get();
+				
+		dmsVendorMCAccRepository.deleteByVendor(vendor);
+		dmsVendorMCAccRepository.flush();
+		
+		vendorRepository.deleteById(vendorId);
+	}
+	
+	@Override
+	public void getVendorsUsers(PaginDto<VendorDto> pagin) {
+		StringBuilder sqlBuilder = new StringBuilder("FROM Vendor vendor");
+		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Vendor vendor");
+
+		Map<String, Object> options = pagin.getOptions();
+		String queryName = options.get("queryName") != null ? (String) options.get("queryName") : null;
+
+		StringBuilder sqlCommonBuilder = new StringBuilder();
+		sqlCommonBuilder.append(" WHERE 1=1 ");
+
+		if (StringUtils.isNotBlank(queryName)) {
+			sqlCommonBuilder.append(" AND lower(name) like '%" + queryName.toLowerCase() + "%' ");
+		}
+
+		sqlBuilder.append(sqlCommonBuilder).append(" ORDER BY vendor.id asc");
+		sqlCountBuilder.append(sqlCommonBuilder);
+
+		if (pagin.getOffset() == null || pagin.getOffset() < 0) {
+			pagin.setOffset(0);
+		}
+
+		if (pagin.getLimit() == null || pagin.getLimit() <= 0) {
+			pagin.setLimit(100);
+		}
+
+		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+		Long count = ((Number) queryCount.getSingleResult()).longValue();
+		pagin.setTotalRows(count);
+		pagin.setResults(new ArrayList<>());
+		if (count == 0l) {
+			return;
+		}
+
+		Query query = em.createQuery(sqlBuilder.toString());
+		query.setFirstResult(pagin.getOffset());
+		query.setMaxResults(pagin.getLimit());
+
+		List<Vendor> vendors = query.getResultList();
+		vendors.forEach(vendor -> {
+			VendorDto dto = new VendorDto(vendor);
+			dto.setType(vendor.getType());
+			
+			List<DMSVendorMCAcc> list = dmsVendorMCAccRepository.findByVendor(vendor);
+			List<DMSAccDto> mcAccsDto = new ArrayList<>();
+			for (DMSVendorMCAcc li : list) {
+				DMSMcAcc mcAcc = li.getMcAcc();
+				DMSAccDto dmsAccDto = new DMSAccDto()
+						.builder()
+						.id(mcAcc.getId())
+						.email(mcAcc.getEmail())
+						.build();
+				mcAccsDto.add(dmsAccDto);
+			}
+			dto.setMcAccs(mcAccsDto);	
+			
+			pagin.getResults().add(dto);
+		});
 	}
 }

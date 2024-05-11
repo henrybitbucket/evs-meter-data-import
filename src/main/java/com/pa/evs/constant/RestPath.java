@@ -45,5 +45,9 @@ public interface RestPath {
     String GET_DASHBOARD = API + "/dashboard";
     
     String GET_DMS_MC_USERS = API + "/dms-mc-users";
-    String CREATE_DMS_MC_USERS = API + "/dms-mc-user";
+    String SAVE_DMS_MC_USERS = API + "/dms-mc-user";
+    String GET_VENDOR_AND_MC_USERS = API + "/vendor-users";
+    String DELETE_VENDOR_AND_MC_USERS = API + "/vendor-users/{vendorId}";
+    String SAVE_OR_UPDATE_VENDOR_AND_MC_USERS = API + "/vendor-users/save-or-update";
+    String GET_PAGIN_VENDORS = API + "/vendors-users";
 }

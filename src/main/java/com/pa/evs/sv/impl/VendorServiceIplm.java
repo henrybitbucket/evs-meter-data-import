@@ -30,9 +30,13 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.pa.evs.dto.DMSAccDto;
 import com.pa.evs.dto.VendorDto;
+import com.pa.evs.model.DMSMcAcc;
+import com.pa.evs.model.DMSVendorMCAcc;
 import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.CARequestLogRepository;
+import com.pa.evs.repository.DMSVendorMCAccRepository;
 import com.pa.evs.repository.FirmwareRepository;
 import com.pa.evs.repository.VendorRepository;
 import com.pa.evs.sv.VendorService;
@@ -56,6 +60,9 @@ public class VendorServiceIplm implements VendorService {
 
 	@Autowired
 	EntityManager em;
+	
+	@Autowired
+	DMSVendorMCAccRepository dmsVendorMCAccRepository;
 
 	@Value("${portal.pa.ca.request.url}")
 	private String caRequestUrl;
@@ -99,6 +106,21 @@ public class VendorServiceIplm implements VendorService {
 			dto.setDescrption(ven.getDescription());
 			dto.setKeyType(ven.getKeyType());
 			dto.setSignatureAlgorithm(ven.getSignatureAlgorithm());
+			dto.setType(ven.getType());
+			
+			List<DMSVendorMCAcc> list = dmsVendorMCAccRepository.findByVendor(ven);
+			List<DMSAccDto> mcAccsDto = new ArrayList<>();
+			for (DMSVendorMCAcc li : list) {
+				DMSMcAcc mcAcc = li.getMcAcc();
+				DMSAccDto dmsAccDto = new DMSAccDto()
+						.builder()
+						.id(mcAcc.getId())
+						.email(mcAcc.getEmail())
+						.build();
+				mcAccsDto.add(dmsAccDto);
+			}
+			
+			dto.setMcAccs(mcAccsDto);			
 			res.add(dto);
 		}
 		return res;
@@ -213,6 +235,10 @@ public class VendorServiceIplm implements VendorService {
 			vendorRepository.save(vendor);
 			return vendor;
 		} else {
+			Vendor vendorOpt = vendorRepository.findByName(dto.getName());
+			if (vendorOpt != null) {
+				throw new RuntimeException("Vendor name already exists!");
+			}
 			Vendor newVendor = new Vendor();
 			newVendor.setName(dto.getName());
 			newVendor.setType(dto.getType());

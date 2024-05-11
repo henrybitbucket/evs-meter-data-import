@@ -1,9 +1,8 @@
 package com.pa.evs.sv;
 
-import java.util.List;
-
 import com.pa.evs.dto.DMSAccDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.VendorDMSAccDto;
 import com.pa.evs.dto.VendorDto;
 
 public interface DMSAccService {
@@ -12,8 +11,12 @@ public interface DMSAccService {
 
 	void saveDMSMCUser(DMSAccDto user);
 
-	void saveVendorAndUser(VendorDto vendorDto, List<DMSAccDto> dmsAccDtos);
+	void saveOrUpdateVendorAndUser(VendorDMSAccDto dto);
 
 	VendorDto getVendorAndMcAccs(Long vendorId);
+
+	void deleteVendor(Long vendorId);
+
+	void getVendorsUsers(PaginDto<VendorDto> pagin);
 
 }
