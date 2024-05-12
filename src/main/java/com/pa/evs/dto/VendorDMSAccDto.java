@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class VendorDMSAccDto {
 
-	private VendorDto vendor;
+	private DMSLockVendorDto vendor;
 	private List<DMSAccDto> dmsAccDtos;
 
 }

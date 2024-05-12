@@ -11,6 +11,7 @@ import javax.persistence.Entity;
 import javax.persistence.Table;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.pa.evs.enums.VendorType;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -24,5 +25,14 @@ public class DMSLockVendor extends BaseEntity {
 
 	@Column(name = "name")
     private String name;
+	
+	@Column(name = "label", unique = true)
+    private String label;
+	
+	@Column(name = "company_name")
+    private String companyName;
+	
+    @Column(name = "type")
+    private VendorType type;
 
 }

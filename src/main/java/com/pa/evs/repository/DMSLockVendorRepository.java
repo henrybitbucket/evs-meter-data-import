@@ -14,4 +14,6 @@ public interface DMSLockVendorRepository extends JpaRepository<DMSLockVendor, Lo
 
 	Optional<DMSLockVendor> findByName(String string);
 
+	Optional<DMSLockVendor> findByLabel(String label);
+
 }

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.DMSAccDto;
+import com.pa.evs.dto.DMSLockVendorDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.VendorDMSAccDto;
@@ -77,7 +78,7 @@ public class DMSAccController {
 	
 	@PostMapping(value = { RestPath.GET_PAGIN_VENDORS })
 	@ApiIgnore
-	public Object getVendorsUsers(@RequestBody PaginDto<VendorDto> pagin) {
+	public Object getVendorsUsers(@RequestBody PaginDto<DMSLockVendorDto> pagin) {
 		dmsAccService.getVendorsUsers(pagin);
 		return ResponseDto.<Object>builder().success(true).response(pagin).build();
 	}

@@ -23,7 +23,7 @@ public class DMSVendorMCAcc extends BaseEntity {
 	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "vendor_id", referencedColumnName = "id")
-	private Vendor vendor;
+	private DMSLockVendor vendor;
 	
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "mc_acc_id", referencedColumnName = "id")

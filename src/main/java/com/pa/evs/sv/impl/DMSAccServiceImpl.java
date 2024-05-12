@@ -16,17 +16,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.pa.evs.dto.DMSAccDto;
+import com.pa.evs.dto.DMSLockVendorDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.VendorDMSAccDto;
-import com.pa.evs.dto.VendorDto;
+import com.pa.evs.model.DMSLockVendor;
 import com.pa.evs.model.DMSMcAcc;
 import com.pa.evs.model.DMSVendorMCAcc;
-import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.DMSAccRepository;
+import com.pa.evs.repository.DMSLockVendorRepository;
 import com.pa.evs.repository.DMSVendorMCAccRepository;
-import com.pa.evs.repository.VendorRepository;
 import com.pa.evs.sv.DMSAccService;
-import com.pa.evs.sv.VendorService;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.SecurityUtils;
 
@@ -38,15 +37,12 @@ public class DMSAccServiceImpl implements DMSAccService {
 
 	@Autowired
 	private DMSAccRepository dmsAccRepository;
-	
+
 	@Autowired
 	private DMSVendorMCAccRepository dmsVendorMCAccRepository;
-	
+
 	@Autowired
-	private VendorService vendorService;
-	
-	@Autowired
-	private VendorRepository vendorRepository;
+	private DMSLockVendorRepository dmsLockVendorRepository;
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
@@ -101,8 +97,7 @@ public class DMSAccServiceImpl implements DMSAccService {
 
 		List<DMSMcAcc> users = query.getResultList();
 		users.forEach(user -> {
-			DMSAccDto dto = DMSAccDto.builder().id(user.getId()).email(user.getEmail())
-					.build();
+			DMSAccDto dto = DMSAccDto.builder().id(user.getId()).email(user.getEmail()).build();
 			pagin.getResults().add(dto);
 		});
 	}
@@ -143,34 +138,54 @@ public class DMSAccServiceImpl implements DMSAccService {
 
 		dmsAccRepository.save(en);
 	}
-	
+
 	@Override
 	@Transactional
 	public void saveOrUpdateVendorAndUser(VendorDMSAccDto dto) {
-		VendorDto vendorDto = dto.getVendor();
+		DMSLockVendorDto vendorDto = dto.getVendor();
 		List<DMSAccDto> dmsAccDtos = dto.getDmsAccDtos();
 		if (vendorDto.getId() == null) {
-			Vendor vendor = vendorService.saveVendor(vendorDto);
+			if (dmsLockVendorRepository.findByLabel(vendorDto.getLabel()).isPresent()) {
+				throw new RuntimeException("Label already exists!");
+			}
+			
+			DMSLockVendor vendor = new DMSLockVendor();
+			vendor.setName(vendorDto.getName());
+			vendor.setType(vendorDto.getType());
+			vendor.setCompanyName(vendorDto.getCompanyName());
+			vendor.setLabel(vendorDto.getLabel());
+			vendor = dmsLockVendorRepository.save(vendor);
+
 			List<DMSVendorMCAcc> list = new ArrayList<>();
-			dmsAccDtos.forEach(dmsAccDto -> {
+			for (DMSAccDto dmsAccDto : dmsAccDtos) {
 				DMSVendorMCAcc dmsVendorMCAcc = new DMSVendorMCAcc();
 
 				DMSMcAcc mcAcc = new DMSMcAcc();
 				mcAcc.setEmail(dmsAccDto.getEmail());
 				mcAcc.setPassword(passwordEncoder.encode(dmsAccDto.getPassword()));
 				mcAcc = dmsAccRepository.save(mcAcc);
-				
+
 				dmsVendorMCAcc.setVendor(vendor);
 				dmsVendorMCAcc.setMcAcc(mcAcc);
 				list.add(dmsVendorMCAcc);
-			});
+			}
 			dmsVendorMCAccRepository.saveAll(list);
 		} else {
-			Optional<Vendor> vendorOpt = vendorRepository.findById(vendorDto.getId());
+			Optional<DMSLockVendor> vendorOpt = dmsLockVendorRepository.findById(vendorDto.getId());
 			if (!vendorOpt.isPresent()) {
 				throw new RuntimeException("Vendor not found!");
 			}
-			Vendor vendor = vendorService.saveVendor(vendorDto);
+			Optional<DMSLockVendor> vendorCheckLabelOpt = dmsLockVendorRepository.findById(vendorDto.getId());
+			if (vendorCheckLabelOpt.isPresent() && !vendorCheckLabelOpt.get().getId().equals(vendorDto.getId())) {
+				throw new RuntimeException("Label already exists!");
+			}
+			DMSLockVendor vendor = vendorOpt.get();
+			vendor.setName(vendorDto.getName());
+			vendor.setType(vendorDto.getType());
+			vendor.setCompanyName(vendorDto.getCompanyName());
+			vendor.setLabel(vendorDto.getLabel());
+			vendor = dmsLockVendorRepository.save(vendor);
+
 			List<DMSVendorMCAcc> list = dmsVendorMCAccRepository.findByVendor(vendor);
 			List<Long> existingList = list.stream().map(li -> li.getMcAcc().getId()).collect(Collectors.toList());
 			List<Long> updatedList = new ArrayList<>();
@@ -196,8 +211,8 @@ public class DMSAccServiceImpl implements DMSAccService {
 			List<Long> deletedList = existingList.stream().filter(element -> !updatedList.contains(element))
 					.collect(Collectors.toList());
 			List<DMSVendorMCAcc> listUpdatedVendorMCAcc = new ArrayList<>();
-			
-			addedList.forEach(add -> {
+
+			for (Long add : addedList) {
 				Optional<DMSMcAcc> mcAccOpt = dmsAccRepository.findById(add);
 				if (!mcAccOpt.isPresent()) {
 					throw new RuntimeException("MC user not found!");
@@ -206,42 +221,40 @@ public class DMSAccServiceImpl implements DMSAccService {
 				dmsVendorMCAcc.setMcAcc(mcAccOpt.get());
 				dmsVendorMCAcc.setVendor(vendor);
 				listUpdatedVendorMCAcc.add(dmsVendorMCAcc);
-			});
-			
+			}
+			;
+
 			if (!deletedList.isEmpty()) {
 				dmsVendorMCAccRepository.deleteByVendorAndMcAccIn(vendor.getId(), deletedList);
 				dmsVendorMCAccRepository.flush();
 			}
-			
+
 			if (!listUpdatedVendorMCAcc.isEmpty()) {
-				dmsVendorMCAccRepository.saveAll(listUpdatedVendorMCAcc);	
+				dmsVendorMCAccRepository.saveAll(listUpdatedVendorMCAcc);
 			}
 		}
 	}
-	
+
 	@Override
-	public VendorDto getVendorAndMcAccs(Long vendorId) {
-		Optional<Vendor> vendorOpt = vendorRepository.findById(vendorId);
+	public DMSLockVendorDto getVendorAndMcAccs(Long vendorId) {
+		Optional<DMSLockVendor> vendorOpt = dmsLockVendorRepository.findById(vendorId);
 		if (!vendorOpt.isPresent()) {
 			throw new RuntimeException("Vendor not found!");
 		}
-		Vendor vendor = vendorOpt.get();
-		VendorDto vendorDto = new VendorDto();
-		vendorDto.setDescrption(vendor.getDescription());
+		DMSLockVendor vendor = vendorOpt.get();
+		DMSLockVendorDto vendorDto = new DMSLockVendorDto();
 		vendorDto.setId(vendor.getId());
 		vendorDto.setName(vendor.getName());
 		vendorDto.setType(vendor.getType());
-		
+		vendorDto.setCompanyName(vendor.getCompanyName());
+		vendorDto.setLabel(vendor.getLabel());
+
 		List<DMSVendorMCAcc> list = dmsVendorMCAccRepository.findByVendor(vendor);
-		
+
 		List<DMSAccDto> mcAccs = new ArrayList<>();
 		list.forEach(li -> {
 			DMSMcAcc mcAcc = li.getMcAcc();
-			DMSAccDto dto = new DMSAccDto()
-					.builder()
-					.id(mcAcc.getId())
-					.email(mcAcc.getEmail())
-					.build();
+			DMSAccDto dto = new DMSAccDto().builder().id(mcAcc.getId()).email(mcAcc.getEmail()).build();
 			mcAccs.add(dto);
 		});
 		vendorDto.setMcAccs(mcAccs);
@@ -251,22 +264,22 @@ public class DMSAccServiceImpl implements DMSAccService {
 	@Override
 	@Transactional
 	public void deleteVendor(Long vendorId) {
-		Optional<Vendor> vendorOpt = vendorRepository.findById(vendorId);
+		Optional<DMSLockVendor> vendorOpt = dmsLockVendorRepository.findById(vendorId);
 		if (!vendorOpt.isPresent()) {
 			throw new RuntimeException("Vendor not found!");
 		}
-		Vendor vendor = vendorOpt.get();
-				
+		DMSLockVendor vendor = vendorOpt.get();
+
 		dmsVendorMCAccRepository.deleteByVendor(vendor);
 		dmsVendorMCAccRepository.flush();
-		
-		vendorRepository.deleteById(vendorId);
+
+		dmsLockVendorRepository.deleteById(vendorId);
 	}
-	
+
 	@Override
-	public void getVendorsUsers(PaginDto<VendorDto> pagin) {
-		StringBuilder sqlBuilder = new StringBuilder("FROM Vendor vendor");
-		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM Vendor vendor");
+	public void getVendorsUsers(PaginDto<DMSLockVendorDto> pagin) {
+		StringBuilder sqlBuilder = new StringBuilder("FROM DMSLockVendor vendor");
+		StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(*) FROM DMSLockVendor vendor");
 
 		Map<String, Object> options = pagin.getOptions();
 		String queryName = options.get("queryName") != null ? (String) options.get("queryName") : null;
@@ -302,24 +315,19 @@ public class DMSAccServiceImpl implements DMSAccService {
 		query.setFirstResult(pagin.getOffset());
 		query.setMaxResults(pagin.getLimit());
 
-		List<Vendor> vendors = query.getResultList();
+		List<DMSLockVendor> vendors = query.getResultList();
 		vendors.forEach(vendor -> {
-			VendorDto dto = new VendorDto(vendor);
-			dto.setType(vendor.getType());
-			
+			DMSLockVendorDto dto = new DMSLockVendorDto().build(vendor);
+
 			List<DMSVendorMCAcc> list = dmsVendorMCAccRepository.findByVendor(vendor);
 			List<DMSAccDto> mcAccsDto = new ArrayList<>();
 			for (DMSVendorMCAcc li : list) {
 				DMSMcAcc mcAcc = li.getMcAcc();
-				DMSAccDto dmsAccDto = new DMSAccDto()
-						.builder()
-						.id(mcAcc.getId())
-						.email(mcAcc.getEmail())
-						.build();
+				DMSAccDto dmsAccDto = new DMSAccDto().builder().id(mcAcc.getId()).email(mcAcc.getEmail()).build();
 				mcAccsDto.add(dmsAccDto);
 			}
-			dto.setMcAccs(mcAccsDto);	
-			
+			dto.setMcAccs(mcAccsDto);
+
 			pagin.getResults().add(dto);
 		});
 	}

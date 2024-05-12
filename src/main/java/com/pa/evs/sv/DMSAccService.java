@@ -1,9 +1,9 @@
 package com.pa.evs.sv;
 
 import com.pa.evs.dto.DMSAccDto;
+import com.pa.evs.dto.DMSLockVendorDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.VendorDMSAccDto;
-import com.pa.evs.dto.VendorDto;
 
 public interface DMSAccService {
 
@@ -13,10 +13,10 @@ public interface DMSAccService {
 
 	void saveOrUpdateVendorAndUser(VendorDMSAccDto dto);
 
-	VendorDto getVendorAndMcAccs(Long vendorId);
+	DMSLockVendorDto getVendorAndMcAccs(Long vendorId);
 
 	void deleteVendor(Long vendorId);
 
-	void getVendorsUsers(PaginDto<VendorDto> pagin);
+	void getVendorsUsers(PaginDto<DMSLockVendorDto> pagin);
 
 }

@@ -7,19 +7,19 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import com.pa.evs.model.DMSLockVendor;
 import com.pa.evs.model.DMSVendorMCAcc;
-import com.pa.evs.model.Vendor;
 
 @Repository
 public interface DMSVendorMCAccRepository extends JpaRepository<DMSVendorMCAcc, Long> {
 
-	List<DMSVendorMCAcc> findByVendor(Vendor vendor);
+	List<DMSVendorMCAcc> findByVendor(DMSLockVendor vendor);
 
 	@Modifying
 	@Query("DELETE DMSVendorMCAcc WHERE vendor.id = ?1 and mcAcc.id in (?2)")
 	void deleteByVendorAndMcAccIn(Long vendorId, List<Long> deleteList);
 
 	@Modifying
-	void deleteByVendor(Vendor vendor);
+	void deleteByVendor(DMSLockVendor vendor);
 
 }

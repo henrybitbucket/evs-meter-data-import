@@ -331,6 +331,9 @@ public class DMSLockServiceImpl implements DMSLockService {
 			DMSLockVendorDto dto = new DMSLockVendorDto();
 			dto.setId(vendor.getId());
 			dto.setName(vendor.getName());
+			dto.setCompanyName(vendor.getCompanyName());
+			dto.setLabel(vendor.getLabel());
+			dto.setType(vendor.getType());
 			res.add(dto);
 		}
 		return res;

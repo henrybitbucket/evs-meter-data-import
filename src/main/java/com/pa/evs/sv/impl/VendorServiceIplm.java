@@ -106,21 +106,7 @@ public class VendorServiceIplm implements VendorService {
 			dto.setDescrption(ven.getDescription());
 			dto.setKeyType(ven.getKeyType());
 			dto.setSignatureAlgorithm(ven.getSignatureAlgorithm());
-			dto.setType(ven.getType());
 			
-			List<DMSVendorMCAcc> list = dmsVendorMCAccRepository.findByVendor(ven);
-			List<DMSAccDto> mcAccsDto = new ArrayList<>();
-			for (DMSVendorMCAcc li : list) {
-				DMSMcAcc mcAcc = li.getMcAcc();
-				DMSAccDto dmsAccDto = new DMSAccDto()
-						.builder()
-						.id(mcAcc.getId())
-						.email(mcAcc.getEmail())
-						.build();
-				mcAccsDto.add(dmsAccDto);
-			}
-			
-			dto.setMcAccs(mcAccsDto);			
 			res.add(dto);
 		}
 		return res;
@@ -230,7 +216,6 @@ public class VendorServiceIplm implements VendorService {
 			}
 			Vendor vendor = vendorOpt.get();
 			vendor.setName(dto.getName());
-			vendor.setType(dto.getType());
 			vendor.setDescription(dto.getDescrption());
 			vendorRepository.save(vendor);
 			return vendor;
@@ -241,7 +226,6 @@ public class VendorServiceIplm implements VendorService {
 			}
 			Vendor newVendor = new Vendor();
 			newVendor.setName(dto.getName());
-			newVendor.setType(dto.getType());
 			newVendor.setDescription(dto.getDescrption());
 			vendorRepository.save(newVendor);
 			return newVendor;
