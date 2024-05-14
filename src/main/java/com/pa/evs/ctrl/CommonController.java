@@ -207,7 +207,7 @@ public class CommonController {
     		@RequestBody Map<String, Object> body
     		) throws Exception {
     	
-    	notificationService.sendSMS((String) body.get("body"), (String) body.get("to"));
+    	notificationService.sendSMS(body);
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     

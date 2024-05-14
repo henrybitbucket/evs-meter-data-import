@@ -34,4 +34,11 @@ public class NotificationLog extends BaseEntity {
 
 	@Column(name = "track", length = 1000)
 	private String track;
+	
+	@Column(name = "sid")
+	private String sid;// from api
+
+	@Column(name = "created_at")
+	private String createdAt;// from api
+	
 }

@@ -1,5 +1,7 @@
 package com.pa.evs.sv.impl;
 
+import java.util.Map;
+
 import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,6 +64,34 @@ public class NotificationServiceImpl implements NotificationService {
 		}
 	}
 
+	@Override
+	public void sendSMS(Map<String, Object> payload) {
+		String phoneNumber = (String) payload.get("To");
+		String message = (String) payload.get("Body");
+		String sid = (String) payload.get("SID");
+		String createdAt = (String) payload.get("CreatedAt");
+		try {
+			software.amazon.awssdk.services.sns.model.PublishRequest request = software.amazon.awssdk.services.sns.model.PublishRequest.builder().message(message).phoneNumber(phoneNumber).build();
+			software.amazon.awssdk.services.sns.model.PublishResponse result = snsClient.publish(request);
+			LOG.info("SMS -> " + phoneNumber + " -> " + result.messageId() + " Message sent. Status was " + result.sdkHttpResponse().statusCode());
+			String res = result.messageId();
+			AppProps.getContext().getBean(this.getClass()).saveLog(
+					NotificationLog.builder()
+					.type("SMS")
+					.content(message)
+					.to(phoneNumber)
+					.sid(sid)
+					.createdAt(createdAt)
+					.track(res)
+					.build()
+					);
+		} catch (SnsException e) {
+			LOG.info("SMS -> " + phoneNumber + " -> " + e.awsErrorDetails().errorMessage());
+			LOG.error(e.getMessage(), e);
+			throw e;
+		}		
+	}
+	
 	// https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javav2/example_code/sns/src/main/java/com/example/sns/PublishTextSMS.java
 	@Override
 	public String sendSMS(String message, String phoneNumber) {
