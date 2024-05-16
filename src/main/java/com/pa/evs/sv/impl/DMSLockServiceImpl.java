@@ -900,7 +900,6 @@ public class DMSLockServiceImpl implements DMSLockService {
 				rs.getLocks().add(DMSLockDto.builder().lockBid(l.getLockBid()).lockNumber(l.getLockNumber()).allowedPeriod(l.getAllowedPeriod()).build());
 			}
 		});
-		rs.setSites(null);
-		return rs;
+		return rs.getLocks();
 	}
 }
