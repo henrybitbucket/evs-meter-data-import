@@ -1,7 +1,12 @@
 package com.pa.evs.dto;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pa.evs.model.DMSLock;
 
 import lombok.AllArgsConstructor;
@@ -24,12 +29,14 @@ public class DMSLockDto {
 	
     private String originalId;
 	
+	@JsonProperty("bid")
     private String lockBid;
 	
     private String lockEsn;
 	
     private String lockName;
 	
+    @JsonProperty("lock_number")
     private String lockNumber;
 	
     @JsonIgnore
@@ -47,13 +54,17 @@ public class DMSLockDto {
     
     private BuildingUnitDto buildingUnit;
     
+    @JsonIgnore
     private Long linkLockLocationId;
     
-	@JsonIgnore
 	private Long siteId;
 	
     private String siteLabel;
-
+    
+    @JsonProperty(value = "allowed_period")
+    @Builder.Default
+    private List<Map<String, Object>> allowedPeriod = new ArrayList<>();// site-id, list work-order, all application site
+    
 	public static DMSLockDto build(DMSLock li) {
 		
 		return DMSLockDto

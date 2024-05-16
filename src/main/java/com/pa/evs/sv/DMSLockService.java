@@ -1,12 +1,15 @@
 package com.pa.evs.sv;
 
+import java.time.Instant;
 import java.util.List;
 
 import com.pa.evs.dto.DMSLocationLockDto;
 import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.DMSLockVendorDto;
+import com.pa.evs.dto.LockAddressReq;
 import com.pa.evs.dto.LockDto;
 import com.pa.evs.dto.LockEventLogSearchReq;
+import com.pa.evs.dto.LockWorkOrderReq;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.SaveLogReq;
 
@@ -22,7 +25,7 @@ public interface DMSLockService {
 
 	void unLinkLocation(Long linkLockLocationId);
 
-	Object getAssignedLocks(String email, Boolean lockOnly);
+	Object getAssignedLocks(String email, Boolean lockOnly, Instant periodFrom, Instant periodTo);
 	
 	Object getAssignedLocks2(String mobileNumber, Boolean lockOnly);
 
@@ -35,4 +38,8 @@ public interface DMSLockService {
 	void saveLog(SaveLogReq dto);
 
 	Object getLockEventLogs(LockEventLogSearchReq dto);
+
+	Object getLockAddress(LockAddressReq dto);
+
+	Object getLockWorkOrders(LockWorkOrderReq dto);
 }

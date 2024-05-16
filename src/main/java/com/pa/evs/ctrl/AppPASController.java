@@ -29,8 +29,10 @@ import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
 import com.pa.evs.dto.DMSApplicationSaveReqDto;
 import com.pa.evs.dto.DMSLocationLockDto;
 import com.pa.evs.dto.DMSLockDto;
+import com.pa.evs.dto.LockAddressReq;
 import com.pa.evs.dto.LockDto;
 import com.pa.evs.dto.LockEventLogSearchReq;
+import com.pa.evs.dto.LockWorkOrderReq;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.SaveLogReq;
@@ -110,7 +112,7 @@ public class AppPASController {
 		try {
 			String phone = SecurityUtils.getPhoneNumber();
 			// email = "hr.dms1.2@gmail.com";
-			return ResponseDto.<Object>builder().response(dmsLockService.getAssignedLocks(phone, lockOnly)).success(true).build();
+			return ResponseDto.<Object>builder().response(dmsLockService.getAssignedLocks(phone, lockOnly, null, null)).success(true).build();
 		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
@@ -290,6 +292,31 @@ public class AppPASController {
 			return ResponseDto.<Object>builder().success(true).response(dmsLockService.getLockEventLogs(dto)).build();
 		} catch (Exception ex) {
 			ex.printStackTrace();
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+    }
+    
+    @PostMapping(value = {"/api/lock/addresses"})
+    public ResponseDto getLockAddress(
+    		@RequestBody LockAddressReq dto
+    		) throws IOException {
+    	
+		try {
+			return ResponseDto.<Object>builder().success(true).response(dmsLockService.getLockAddress(dto)).build();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+    }
+    
+    @PostMapping(value = {"/api/lock/work_orders"})
+    public ResponseDto getLockWorkOrders(
+    		@RequestBody LockWorkOrderReq dto
+    		) throws IOException {
+    	
+		try {
+			return ResponseDto.<Object>builder().success(true).response(dmsLockService.getLockWorkOrders(dto)).build();
+		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
     }

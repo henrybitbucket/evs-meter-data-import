@@ -1,9 +1,11 @@
 package com.pa.evs.sv.impl;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -20,6 +22,7 @@ import javax.persistence.Query;
 import com.pa.evs.dto.LockDto;
 import com.pa.evs.dto.LockEnventLogResDto;
 import com.pa.evs.dto.LockEventLogSearchReq;
+import com.pa.evs.dto.LockWorkOrderReq;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -46,8 +49,10 @@ import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.DMSLockVendorDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.FloorLevelDto;
+import com.pa.evs.dto.LockAddressReq;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.SaveLogReq;
+import com.pa.evs.model.DMSApplicationSite;
 import com.pa.evs.model.DMSBlock;
 import com.pa.evs.model.DMSBuilding;
 import com.pa.evs.model.DMSBuildingUnit;
@@ -470,7 +475,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 		} else if (StringUtils.isNotBlank(lockDto.getBid())) {
 			dmsLock = dmsLockRepository.findByLockBid(lockDto.getBid());
 		}
-		if (!dmsLock.isPresent() || dmsLock.get() == null) {
+		if (dmsLock ==null || !dmsLock.isPresent()) {
 			throw new RuntimeException("Lock not found");
 		}
 
@@ -589,12 +594,12 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Override
 	public Object getAssignedLocks2(String userMobile, Boolean lockOnly) {
 		
-		return getAssignedLocks(userMobile, lockOnly);
+		return getAssignedLocks(userMobile, lockOnly, null, null);
 	}
 	
 	@Transactional(readOnly = true)
 	@Override
-	public Object getAssignedLocks(String userMobile, Boolean lockOnly) {
+	public Object getAssignedLocks(String userMobile, Boolean lockOnly, Instant periodFrom, Instant periodTo) {
 		
 		DMSLocationSiteLockDto rs = DMSLocationSiteLockDto.builder().build();
 //		List<Long> groupIdOfUsers = em.createQuery(" SELECT groupUser.id FROM UserGroup where user.email = :email and groupUser.appCode.name = 'DMS' " )
@@ -614,7 +619,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 			return rs;
 		}
 		
-		List<DMSSite> sitesOfUser = em.createQuery(" SELECT appSite.site FROM DMSApplicationSite appSite where appSite.app.id in (:appId) order by appSite.site.id desc " )
+		List<DMSApplicationSite> sitesOfUser = em.createQuery(" SELECT appSite FROM DMSApplicationSite appSite where appSite.app.id in (:appId) order by appSite.site.id desc " )
 		//.setParameter("groupIds", groupIdOfUsers)
 		.setParameter("appId", appOfUser)
 		.getResultList();
@@ -624,13 +629,20 @@ public class DMSLockServiceImpl implements DMSLockService {
 		}
 		
 		List<Object[]> locationLockSites = em.createQuery("SELECT locationLock, locationSite FROM DMSLocationLock locationLock join DMSLocationSite locationSite on locationLock.locationKey = locationSite.locationKey where locationSite.site.id in (:siteIdOfUsers) " )
-		.setParameter("siteIdOfUsers", sitesOfUser.stream().map(s -> s.getId()).collect(Collectors.toSet()))
+		.setParameter("siteIdOfUsers", sitesOfUser.stream().map(s -> s.getSite().getId()).collect(Collectors.toSet()))
 		.getResultList();
 		
 		Map<Long, DMSSiteDto> siteMap = new LinkedHashMap<>();
 		
-		for (DMSSite site : sitesOfUser) {
+		Map<Long, List<DMSWorkOrders>> siteWorkOrderMap = new LinkedHashMap<>();
+		
+		for (DMSApplicationSite as : sitesOfUser) {
+			DMSSite site = as.getSite();
+			
 			DMSSiteDto siteDto = siteMap.computeIfAbsent(site.getId(), k -> DMSSiteDto.builder().build());
+			List<DMSWorkOrders> siteWorkOrders = siteWorkOrderMap.computeIfAbsent(site.getId(), k -> new ArrayList<>());
+			siteWorkOrders.add(as.getWorkOrder());// work order in all application of site
+			
 			siteDto.setId(site.getId());
 			siteDto.setLabel(site.getLabel());
 			siteDto.setDescription(site.getDescription());
@@ -695,6 +707,19 @@ public class DMSLockServiceImpl implements DMSLockService {
 				lockDto.setBuildingUnit(BuildingUnitDto.builder().id(locationLock.getBuildingUnit().getId())
 						.name(locationLock.getBuildingUnit().getName()).build());
 			}
+			
+			siteWorkOrderMap.computeIfAbsent(siteId, k -> new ArrayList<>())
+			.forEach(w -> {
+				Instant from = Instant.ofEpochMilli(w.isTimePeriodDatesIsAlways() ? 0l : w.getTimePeriodDatesStart());
+				Instant to = Instant.ofEpochMilli(w.isTimePeriodDatesIsAlways() ? (4102444800000l) : w.getTimePeriodDatesEnd());
+				if ((periodFrom == null || periodFrom.toEpochMilli() >= from.toEpochMilli()) && (periodTo == null || periodTo.toEpochMilli() <= to.toEpochMilli())) {
+					Map<String, Object > timePeriod = new LinkedHashMap<>(); 
+					timePeriod.put("from_timestamp", from);
+					timePeriod.put("to_timestamp", to);
+					lockDto.getAllowedPeriod().add(timePeriod);					
+				}
+			});
+			
 		}
 		
 		Set<String> checkLockKey = new LinkedHashSet<>();
@@ -839,5 +864,43 @@ public class DMSLockServiceImpl implements DMSLockService {
 		.stream()
 		.map(l -> LockEnventLogResDto.from((DMSLockEventLog) l))
 		.collect(Collectors.toList());
+	}
+
+	@Override
+	public Object getLockAddress(LockAddressReq dto) {
+		Optional<DMSLock> dmsLock = null;
+		if (StringUtils.isNotBlank(dto.getLockNumber())) {
+			dmsLock = dmsLockRepository.findByLockNumber(dto.getLockNumber());
+		} else if (StringUtils.isNotBlank(dto.getBid())) {
+			dmsLock = dmsLockRepository.findByLockBid(dto.getBid());
+		}
+		if (dmsLock == null || !dmsLock.isPresent()) {
+			throw new RuntimeException("Lock not found");
+		}
+		
+		DMSLocationLock dmsLocationLock = dmsLocationLockRepository.findByLockId(dmsLock.get().getId()).orElseThrow(() -> new RuntimeException("Address not found!"));
+		Map<String, Object> rs = new LinkedHashMap<>();
+		Map<String, Object> address = new LinkedHashMap<>();
+		rs.put("address", address);
+		address.put("building", dmsLocationLock.getBuilding().getName());
+		address.put("block", dmsLocationLock.getBlock().getName());
+		address.put("level", dmsLocationLock.getFloorLevel().getName());
+		address.put("unit", dmsLocationLock.getBuildingUnit().getName());
+		return rs;
+	}
+
+	@Override
+	public Object getLockWorkOrders(LockWorkOrderReq dto) {
+		DMSLocationSiteLockDto lock = (DMSLocationSiteLockDto) getAssignedLocks(SecurityUtils.getPhoneNumber(), true, dto.getFrom(), dto.getTo());
+		
+		DMSLocationSiteLockDto rs = new DMSLocationSiteLockDto();
+		lock.getLocks()
+		.forEach(l -> {
+			if (l.getAllowedPeriod() != null && !l.getAllowedPeriod().isEmpty()) {
+				rs.getLocks().add(DMSLockDto.builder().lockBid(l.getLockBid()).lockNumber(l.getLockNumber()).allowedPeriod(l.getAllowedPeriod()).build());
+			}
+		});
+		rs.setSites(null);
+		return rs;
 	}
 }
