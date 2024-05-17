@@ -6,6 +6,7 @@ import java.util.List;
 import com.pa.evs.dto.DMSLocationLockDto;
 import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.DMSLockVendorDto;
+import com.pa.evs.dto.EcodeReq;
 import com.pa.evs.dto.LockAddressReq;
 import com.pa.evs.dto.LockDto;
 import com.pa.evs.dto.LockEventLogSearchReq;
@@ -42,4 +43,6 @@ public interface DMSLockService {
 	Object getLockAddress(LockAddressReq dto);
 
 	Object getLockWorkOrders(LockWorkOrderReq dto);
+
+	Object getEcode(EcodeReq req);
 }

@@ -29,6 +29,7 @@ import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
 import com.pa.evs.dto.DMSApplicationSaveReqDto;
 import com.pa.evs.dto.DMSLocationLockDto;
 import com.pa.evs.dto.DMSLockDto;
+import com.pa.evs.dto.EcodeReq;
 import com.pa.evs.dto.LockAddressReq;
 import com.pa.evs.dto.LockDto;
 import com.pa.evs.dto.LockEventLogSearchReq;
@@ -141,6 +142,18 @@ public class AppPASController {
 			}
 			String phone = SecurityUtils.getPhoneNumber();
 			return ResponseDto.<Object>builder().response(dmsLockService.getSecretCode(phone, lockId)).success(true).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
+	}
+	
+	@PostMapping("/api/get_ecode")
+	public ResponseDto getEcode(HttpServletRequest httpServletRequest,
+			@RequestBody EcodeReq req
+			) throws Exception {
+
+		try {
+			return ResponseDto.<Object>builder().response(dmsLockService.getEcode(req)).success(true).build();
 		} catch (Exception ex) {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}

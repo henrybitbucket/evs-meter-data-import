@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -18,11 +17,6 @@ import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
-
-import com.pa.evs.dto.LockDto;
-import com.pa.evs.dto.LockEnventLogResDto;
-import com.pa.evs.dto.LockEventLogSearchReq;
-import com.pa.evs.dto.LockWorkOrderReq;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -48,8 +42,13 @@ import com.pa.evs.dto.DMSLocationSiteLockDto;
 import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.DMSLockVendorDto;
 import com.pa.evs.dto.DMSSiteDto;
+import com.pa.evs.dto.EcodeReq;
 import com.pa.evs.dto.FloorLevelDto;
 import com.pa.evs.dto.LockAddressReq;
+import com.pa.evs.dto.LockDto;
+import com.pa.evs.dto.LockEnventLogResDto;
+import com.pa.evs.dto.LockEventLogSearchReq;
+import com.pa.evs.dto.LockWorkOrderReq;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.SaveLogReq;
 import com.pa.evs.model.DMSApplicationSite;
@@ -84,7 +83,7 @@ import com.pa.evs.utils.TimeZoneHolder;
 import com.pa.evs.utils.Utils;
 
 @Service
-@SuppressWarnings("unchecked")
+@SuppressWarnings({ "unchecked", "rawtypes" })
 public class DMSLockServiceImpl implements DMSLockService {
 
 	static final Logger LOGGER = LoggerFactory.getLogger(DMSLockServiceImpl.class);
@@ -588,6 +587,80 @@ public class DMSLockServiceImpl implements DMSLockService {
 		}
 
 		throw new RuntimeException("not match any time period");
+	}
+	
+	@Override
+	public Object getEcode(EcodeReq req) {
+		
+		if (StringUtils.isBlank(req.getDotc())) {
+			throw new RuntimeException("Dotc is required!");
+		}
+		
+		String svcToken = "";
+		String secKey = "";
+		try {
+			String url = dmsKeyUrl + "auth/apply_svc_token";
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			String json = "{\n" +
+					"    \"api_key\": \"3Z6k1t9gII0yc\",\n" +
+					"    \"username\": \"dms.henry\",\n" +
+					"    \"svc_name\": \"dms.keysvc\",\n" +
+					"    \"endpoint\": \"/key/get_e_code\",\n" +
+					"    \"scope\": \"\",\n" +
+					"    \"target\": \"\",\n" +
+					"    \"operation\": \"\"\n" +
+					"}";
+
+			HttpEntity<Object> entity = new HttpEntity<>(json, headers);
+			ResponseEntity<Map> response = ApiUtils.getRestTemplate().exchange(url, HttpMethod.POST, entity, Map.class);
+			if (response != null && response.getBody() != null && response.getBody().get("svc_token") != null) {
+				svcToken = response.getBody().get("svc_token") + "";
+			} else if (response != null && response.getBody() != null && response.getBody().get("error") != null) {
+				throw new RuntimeException(response.getBody().get("error") + "");
+			} else {
+				throw new RuntimeException("Fail to generate svc token");
+			}
+		} catch (Exception e) {
+			throw new RuntimeException("Fail to generate svc token");
+		}
+		
+		if (StringUtils.isNotBlank(svcToken)) {
+			try {
+				String url = dmsKeyUrl + "key/get_e_code";
+				HttpHeaders headers = new HttpHeaders();
+				headers.setContentType(MediaType.APPLICATION_JSON);
+				headers.add("Authorization", "Bearer " + svcToken);
+				String json = "{\n" +
+						"    \"svcClaimDto\":{\n" +
+						"        \"api_key\":\"3Z6k1t9gII0yc\",\n" +
+						"        \"username\":\"dms.henry\",\n" +
+						"        \"svc_name\":\"dms.keysvc\",\n" +
+						"        \"endpoint\":\"/key/get_e_code\",\n" +
+						"        \"scope\":\"\",\n" +
+						"        \"target\":\"\",\n" +
+						"        \"operation\":\"\"\n" +
+						"    },\n" +
+						"    \"request\":\n" +
+						"    {\n" +
+						"        \"dotc\":\"" + req.getDotc() + "\"" +
+						"    }\n" +
+						"}";
+
+				HttpEntity<Object> entity = new HttpEntity<>(json, headers);
+				ResponseEntity<Map> response = ApiUtils.getRestTemplate().exchange(url, HttpMethod.POST, entity, Map.class);
+				if (response != null && response.getBody() != null && response.getBody().get("e_code") != null) {
+					secKey = response.getBody().get("e_code") + "";
+				} else if (response != null && response.getBody() != null && response.getBody().get("error") != null) {
+					throw new RuntimeException(response.getBody().get("error") + "");
+				} else {
+					throw new RuntimeException("Fail to e_code");
+				}
+			} catch (Exception e) {
+				throw new RuntimeException("Fail to e_code");
+			}
+		}
+		return secKey;
 	}
 
 	@Transactional(readOnly = true)
