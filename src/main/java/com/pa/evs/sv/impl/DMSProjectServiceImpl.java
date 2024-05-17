@@ -1019,6 +1019,12 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		if (StringUtils.isBlank(dto.getSubmittedBy()) || !dto.getSubmittedBy().trim().matches("^\\+[1-9][0-9]{7,}$")) {
 			throw new RuntimeException(" SubmittedBy invalid!");
 		}
+		for (DMSApplicationSiteItemReqDto item : dto.getSites()) {
+			Optional<DMSProjectSite> projectSiteOpt = dmsProjectSiteRepository.findByProjectIdAndSiteId(projectId, item.getId());
+			if (!projectSiteOpt.isPresent()) {
+				throw new RuntimeException("Site with id: " + item.getId() + " is not assigned to project: " + projectId);
+			}
+		}
 		
 		dto.setUpdatedDate(System.currentTimeMillis());
 		dto.setUpdatedBy(SecurityUtils.getPhoneNumber());
@@ -1139,6 +1145,13 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			}
 			if (guest.getCreateNewUser() == Boolean.TRUE && mapEmailGuestUsers.get(guest.getEmail().toLowerCase().trim()) != null) {
 				throw new RuntimeException("User with guest email already exists(" + guest.getEmail().trim() + ")");
+			}
+			if (guest.getCreateNewUser() == Boolean.TRUE && guest.getPassword() == null) {
+				throw new RuntimeException("Password required!");
+			}
+			
+			if (guest.getCreateNewUser() == Boolean.TRUE && guest.getPassword() != null &&guest.getPassword().length() < 8 || !guest.getPassword().matches(".*[a-z].*") || !guest.getPassword().matches(".*[A-Z].*") || !guest.getPassword().matches(".*[0-9].*") || !guest.getPassword().matches(".*[!@#\\$%^&*\\(\\)\\|\\[\\]].*")) {
+				throw new RuntimeException(AppProps.get("MSG_PWD_ERROR_FORMAT", "password invalid(password must contain lowercase, uppercase, numeric, special characters and at least 8 characters, ex: aA1!@#$%^&*()[])!"));
 			}
 			dmsApplicationUserRepository.save(DMSApplicationUser.builder()
 					.app(application)

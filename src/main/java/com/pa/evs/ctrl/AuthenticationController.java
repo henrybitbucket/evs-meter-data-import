@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,7 @@ import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.CompanyDto;
 import com.pa.evs.dto.CreateDMSAppUserDto;
+import com.pa.evs.dto.DMSApplicationUserDto;
 import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.PaginDto;
@@ -45,6 +48,7 @@ import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.SecurityUtils;
+import com.pa.evs.utils.SimpleMap;
 
 import springfox.documentation.annotations.ApiIgnore;
 
@@ -94,7 +98,29 @@ public class AuthenticationController {
     @PostMapping(value = {RestPath.USERS})
     @ApiIgnore
     public Object getUsers(@RequestBody PaginDto<UserDto> pagin) {
+    	Map<String, Object> options = pagin.getOptions();
+    	Boolean isCreateApplication = options.get("isCreateApplication") != null ?  (Boolean) options.get("isCreateApplication") : null;
+    	
         authenticationService.getUsers(pagin);
+        if (BooleanUtils.isTrue(isCreateApplication)) {
+        	PaginDto<DMSApplicationUserDto> paginApplUser = new PaginDto<>();
+        	paginApplUser.setLimit(pagin.getLimit());
+        	paginApplUser.setOffset(pagin.getOffset());
+        	paginApplUser.setTotalRows(pagin.getTotalRows());
+        	
+        	pagin.getResults().forEach(user -> {
+        		DMSApplicationUserDto dto = DMSApplicationUserDto
+        				.builder()
+        				.id(user.getId())
+        				.username(user.getUsername())
+        				.email(user.getEmail())
+        				.firstName(user.getFirstName())
+        				.lastName(user.getLastName())
+    					.phoneNumber(user.getPhoneNumber()).build();
+        		paginApplUser.getResults().add(dto);
+        	});
+        	return paginApplUser;
+        }
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
