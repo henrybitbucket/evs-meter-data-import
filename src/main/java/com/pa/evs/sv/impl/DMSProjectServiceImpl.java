@@ -1150,7 +1150,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 				throw new RuntimeException("Password required!");
 			}
 			
-			if (guest.getCreateNewUser() == Boolean.TRUE && guest.getPassword() != null &&guest.getPassword().length() < 8 || !guest.getPassword().matches(".*[a-z].*") || !guest.getPassword().matches(".*[A-Z].*") || !guest.getPassword().matches(".*[0-9].*") || !guest.getPassword().matches(".*[!@#\\$%^&*\\(\\)\\|\\[\\]].*")) {
+			if (guest.getCreateNewUser() == Boolean.TRUE && guest.getPassword() != null && (guest.getPassword().length() < 8 || !guest.getPassword().matches(".*[a-z].*") || !guest.getPassword().matches(".*[A-Z].*") || !guest.getPassword().matches(".*[0-9].*") || !guest.getPassword().matches(".*[!@#\\$%^&*\\(\\)\\|\\[\\]].*"))) {
 				throw new RuntimeException(AppProps.get("MSG_PWD_ERROR_FORMAT", "password invalid(password must contain lowercase, uppercase, numeric, special characters and at least 8 characters, ex: aA1!@#$%^&*()[])!"));
 			}
 			dmsApplicationUserRepository.save(DMSApplicationUser.builder()
