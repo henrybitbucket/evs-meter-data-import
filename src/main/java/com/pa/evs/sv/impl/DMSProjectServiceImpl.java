@@ -1029,6 +1029,14 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		dto.setUpdatedDate(System.currentTimeMillis());
 		dto.setUpdatedBy(SecurityUtils.getPhoneNumber());
 		
+		if (StringUtils.isNotBlank(SecurityUtils.getPhoneNumber())) {
+			String phone = SecurityUtils.getPhoneNumber();
+			boolean hasLoggedIn = dto.getUserPhones().stream().anyMatch(s -> phone.equalsIgnoreCase(s));
+			if (!hasLoggedIn) {
+				dto.getUserPhones().add(phone);
+			}
+		}
+		
 		DMSApplication application = dmsApplicationRepository.save(DMSApplication.builder()
 				.name("app-" + new SimpleDateFormat("yyyyMMdd'-'HHmmss").format(new Date()) + "-" + "p-" + project.getDisplayName())
 				.createdBy(dto.getSubmittedBy())
