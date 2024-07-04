@@ -82,4 +82,6 @@ public interface CaRequestLogService {
 
 	void updateDevicesNode(List<Long> deviceIds, String ieiNode, Boolean isDistributed, Integer sendMDTToPi,
 			PaginDto<CARequestLog> filter);
+
+	File downloadCsvMeter(List<CARequestLog> listInput, Long activateDate) throws IOException;
 }

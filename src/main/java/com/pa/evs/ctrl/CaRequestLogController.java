@@ -110,10 +110,13 @@ public class CaRequestLogController {
     @PostMapping("/api/meters")
     public ResponseEntity<?> getMeters(HttpServletResponse response, @RequestBody PaginDto<CARequestLog> pagin) throws IOException {
         
+    	if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
+    		pagin.setLimit(Integer.MAX_VALUE);
+    	}
         PaginDto<CARequestLog> result = caRequestLogService.searchMMSMeter(pagin);
         if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
         	result.getResults().forEach(o -> o.setProfile((String)pagin.getOptions().get("profile")));
-            File file = caRequestLogService.downloadCsv(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
+            File file = caRequestLogService.downloadCsvMeter(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
             String fileName = file.getName();
             
             try (FileInputStream fis = new FileInputStream(file)) {

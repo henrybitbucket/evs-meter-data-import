@@ -982,6 +982,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Boolean coupledDate = BooleanUtils.toBoolean((String) options.get("queryCoupledDate"));
             Boolean activationDate = BooleanUtils.toBoolean((String) options.get("queryActivationDate"));
             Boolean deactivationDate = BooleanUtils.toBoolean((String) options.get("queryDeactivationDate"));
+            Boolean lastSubscribeDatetime = BooleanUtils.toBoolean((String) options.get("queryLastSubscribeDatetime"));
+            
             Boolean onboardingDate = BooleanUtils.toBoolean((String) options.get("onboardingDate"));
             Boolean allDate = BooleanUtils.toBoolean((String) options.get("queryAllDate"));
             
@@ -1061,6 +1063,16 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                         sqlCommonBuilder.append(" AND ca.deactivationDate <= " + toDate + ") ");
                     }
                 }
+                if (BooleanUtils.isTrue(lastSubscribeDatetime)) {
+                    if (fromDate != null && toDate == null) {
+                        sqlCommonBuilder.append(" AND ca.lastSubscribeDatetime >= " + fromDate + " ");
+                    } else if (fromDate == null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ca.lastSubscribeDatetime <= " + toDate + " ");
+                    } else if (fromDate != null && toDate != null) {
+                        sqlCommonBuilder.append(" AND ( ca.lastSubscribeDatetime >= " + fromDate);
+                        sqlCommonBuilder.append(" AND ca.lastSubscribeDatetime <= " + toDate + ") ");
+                    }
+                }                
                 if (BooleanUtils.isTrue(onboardingDate)) {
                     if (fromDate != null && toDate == null) {
                         sqlCommonBuilder.append(" AND ca.lastOBRDate >= " + fromDate + " ");
@@ -1365,6 +1377,15 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         String tag = sdf.format(new Date());
         String fileName = "ca_request_log-" + tag + ".csv";
         return CsvUtils.writeCaRequestLogCsv(listInput, fileName, activateDate);
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public File downloadCsvMeter(List<CARequestLog> listInput, Long activateDate) throws IOException {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmmss");
+        String tag = sdf.format(new Date());
+        String fileName = "meter-" + tag + ".csv";
+        return CsvUtils.writeMeterCsv(listInput, fileName, activateDate);
     }
     
     @Override

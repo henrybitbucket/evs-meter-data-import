@@ -53,6 +53,13 @@ public class CsvUtils {
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
     }
     
+    public static File writeMeterCsv(List<CARequestLog> listInput, String fileName, Long activateDate) throws IOException{
+        listInput = listInput.stream().filter(input -> !input.getUid().equals("server.csr")).collect(Collectors.toList());
+        List<String> headers = Arrays.asList(
+                "MCU SN", "MCU UUID", "ESIM ID", "MSN", "VENDOR", "LAST SEEN", "Building", "Block", "Level", "Unit");
+        return toCsv(headers, listInput, (idx, it, l) -> CsvUtils.toCSVRecord(idx, it), buildPathFile(fileName), activateDate);
+    }
+    
     // ID (Key),Building,Block,Level,Unit,Postcode,,Street Address,State.City,Coupled,UpdatedTime,Remark
     public static File writeAddressCsv(List<BuildingDto> listInput, String exportType, String fileName) throws IOException{
         List<String> headers = Arrays.asList(
@@ -203,6 +210,26 @@ public class CsvUtils {
         record.add(
                 activateDate != null ? sdf.format(new Date(activateDate))
                 : caRequestLog.getActivationDate() != null ? sdf.format(new Date(caRequestLog.getActivationDate())) : "");
+        
+        return postProcessCsv(record);
+    }
+    
+    //  "MCU SN", "MCU UUID", "ESIM ID", "MSN", "VENDOR", "LAST SEEN", "Building", "Block", "Level", "Unit"
+    private static List<String> toCSVRecord(int idx, CARequestLog meter) {
+        List<String> record = new ArrayList<>();
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        sdf.setTimeZone(TimeZoneHolder.get());
+        record.add(StringUtils.isNotBlank(meter.getSn()) ? meter.getSn() : "");
+        record.add(StringUtils.isNotBlank(meter.getUid()) ? meter.getUid() : "");
+        record.add(StringUtils.isNotBlank(meter.getCid()) ? meter.getCid() : "");
+        record.add(StringUtils.isNotBlank(meter.getMsn()) ? meter.getMsn() : "");
+        record.add(meter.getVendor() != null ? meter.getVendor().getName() : "");
+        record.add(meter.getLastSubscribeDatetime() != null ? sdf.format(new Date(meter.getLastSubscribeDatetime())) : "");
+        record.add(meter.getBuilding() != null ? meter.getBuilding().getName() : "");
+        record.add(meter.getBlock() != null ? meter.getBlock().getName() : "");
+        record.add(meter.getFloorLevel() != null ? meter.getFloorLevel().getName() : "");
+        record.add(meter.getBuildingUnit() != null ? meter.getBuildingUnit().getName() : "");
         
         return postProcessCsv(record);
     }
