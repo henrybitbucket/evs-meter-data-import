@@ -49,6 +49,12 @@ public class LockEventLogSearchReq {
 		
 		@JsonProperty("to_timestamp")
 		Instant to;
+		
+		@JsonProperty(value = "mobile")
+		private String mobile;
+
+		@JsonProperty(value = "offline_mode")
+		private Boolean offlineMode;
 	}
 	
 }

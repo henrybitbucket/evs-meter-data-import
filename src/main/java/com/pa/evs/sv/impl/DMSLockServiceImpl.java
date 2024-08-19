@@ -917,7 +917,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 		
 		StringBuilder sql = new StringBuilder("FROM DMSLockEventLog WHERE 1=1 ");
 		if (StringUtils.isNotBlank(dto.getRequest().getBid())) {
-			sql.append(" AND bid='" + dto.getRequest().getBid() + "'");
+			sql.append(" AND bid='" + dto.getRequest().getBid() + "' ");
 		}
 		
 		if (dto.getRequest().getFrom() != null) {
@@ -926,6 +926,14 @@ public class DMSLockServiceImpl implements DMSLockService {
 
 		if (dto.getRequest().getTo() != null) {
 			sql.append(" AND createDate <= :to ");
+		}
+		
+		if (StringUtils.isNotBlank(dto.getRequest().getMobile())) {
+			sql.append(" AND lower(mobile) like '%" + dto.getRequest().getMobile().trim().toLowerCase() + "%' ");
+		}
+
+		if (dto.getRequest().getOfflineMode() != null) {
+			sql.append(" AND offlineMode = " + dto.getRequest().getOfflineMode() + " ");
 		}
 		
 		sql.append(" ORDER BY modifyDate DESC ");
