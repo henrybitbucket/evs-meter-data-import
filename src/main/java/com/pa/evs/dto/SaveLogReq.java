@@ -44,7 +44,8 @@ public class SaveLogReq {
 	Instant timestamp;
 
 	@Schema(description = "Offline Node", defaultValue = "false")
-	@JsonProperty(value = "offline-mode")
+	@JsonProperty(value = "offline_mode")
+	@Builder.Default
 	private boolean offlineMode = false;
 	
 //

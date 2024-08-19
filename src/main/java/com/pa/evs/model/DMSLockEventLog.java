@@ -48,7 +48,7 @@ public class DMSLockEventLog extends BaseEntity {
 	private String mobile;
 
 	@Column(name = "offline_mode")
-	private boolean offlineMode;
+	private Boolean offlineMode;
 
 	public static DMSLockEventLog from(SaveLogReq fr) {
 		return builder()

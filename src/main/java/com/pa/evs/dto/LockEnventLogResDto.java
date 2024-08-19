@@ -39,6 +39,8 @@ public class LockEnventLogResDto {
 	@Schema(description = "lat")
 	private String lat;
 	
+	private Boolean offlineMode;
+	
 	public static LockEnventLogResDto from(DMSLockEventLog fr) {
 		return builder()
 				.time(Instant.ofEpochMilli(fr.getCreateDate().getTime()))
@@ -49,6 +51,7 @@ public class LockEnventLogResDto {
 				.lng(fr.getLng())
 				.lat(fr.getLat())
 				.mobile(fr.getCreatedBy())
+				.offlineMode(fr.getOfflineMode())
 				.build();
 	}
 }
