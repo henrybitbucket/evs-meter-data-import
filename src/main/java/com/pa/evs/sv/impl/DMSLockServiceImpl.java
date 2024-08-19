@@ -890,14 +890,23 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Transactional
 	@Override
 	public void saveLog(SaveLogReq dto) {
-		
 		if (!dmsLockRepository.findByLockBid(dto.getBid()).isPresent()) {
 			throw new RuntimeException("Lock not found!");
 		}
+		if (dto.isOfflineMode() && dto.getTimestamp() == null) {
+			throw new RuntimeException("Timestamp is required when offline mode!");
+		}
 		DMSLockEventLog entity = DMSLockEventLog.from(dto);
-		entity.setCreatedBy(SecurityUtils.getPhoneNumber());
-		if (StringUtils.isBlank(entity.getCreatedBy())) {
-			entity.setCreatedBy(SecurityUtils.getEmail());
+		if (StringUtils.isNotBlank(dto.getMobile())) {
+			entity.setCreatedBy(dto.getMobile());
+		} else {
+			entity.setCreatedBy(SecurityUtils.getPhoneNumber());
+			if (StringUtils.isBlank(entity.getCreatedBy())) {
+				entity.setCreatedBy(SecurityUtils.getEmail());
+			}
+		}
+		if (dto.isOfflineMode()) {
+			entity.setCreateDate(new Date(dto.getTimestamp().toEpochMilli()));
 		}
 		dmsLockEventLogRepository.save(entity);
 	}

@@ -43,7 +43,13 @@ public class DMSLockEventLog extends BaseEntity {
 	
 	@Column(name = "lat")
     private String lat;
-	
+
+	@Column(name = "mobile")
+	private String mobile;
+
+	@Column(name = "offline_mode")
+	private boolean offlineMode;
+
 	public static DMSLockEventLog from(SaveLogReq fr) {
 		return builder()
 				.lockNumber(fr.getLockNumber())
@@ -53,6 +59,8 @@ public class DMSLockEventLog extends BaseEntity {
 				.battery(fr.getBattery())
 				.lng(fr.getLng())
 				.lat(fr.getLat())
+				.mobile(fr.getMobile())
+				.offlineMode(fr.isOfflineMode())
 				.build();
 	}
 }

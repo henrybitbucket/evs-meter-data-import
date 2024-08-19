@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
@@ -33,6 +35,17 @@ public class SaveLogReq {
 	
 	@Schema(description = "lat (optional)")
 	private String lat;
+
+	@Schema(description = "Mobile", example = "+6500001111")
+	@JsonProperty(value = "mobile")
+	private String mobile;
+
+	@JsonProperty("timestamp")
+	Instant timestamp;
+
+	@Schema(description = "Offline Node", defaultValue = "false")
+	@JsonProperty(value = "offline-mode")
+	private boolean offlineMode = false;
 	
 //
 //	@Schema(description = "Lock type, 0-passive lock, 1-Bluetooth lock", example = "0", required = true)
@@ -62,7 +75,4 @@ public class SaveLogReq {
 //	@Schema(description = "The key number for passive unlocking. It can be empty for Bluetooth unlocking.", example = "", required = true)
 //	private String keyNumber;
 //	
-//    @Schema(description = "User mobile", example = "+6500001111", required = true)
-//    @JsonProperty(value = "user_mobile")
-//    private String userMobile;
 }
