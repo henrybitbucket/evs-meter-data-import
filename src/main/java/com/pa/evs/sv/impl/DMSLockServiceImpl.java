@@ -905,10 +905,12 @@ public class DMSLockServiceImpl implements DMSLockService {
 				entity.setCreatedBy(SecurityUtils.getEmail());
 			}
 		}
-		if (dto.isOfflineMode()) {
-			entity.setCreateDate(new Date(dto.getTimestamp().toEpochMilli()));
-		}
 		dmsLockEventLogRepository.save(entity);
+		if (dto.isOfflineMode()) {
+			dmsLockEventLogRepository.flush();
+			entity.setCreateDate(new Date(dto.getTimestamp().toEpochMilli()));
+			dmsLockEventLogRepository.save(entity);
+		}
 	}
 	
 	@Override
