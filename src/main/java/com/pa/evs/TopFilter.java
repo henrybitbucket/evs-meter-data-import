@@ -41,6 +41,7 @@ public class TopFilter implements Filter {
 		response.setHeader("Access-Control-Allow-Headers", "*");
 		response.setHeader("-vs-", Version.TEXT);
 
+		HttpServletRequestHolder.set(request);
 		try {
 			try {
 				String timeZone = request.getParameter("timeZone");
@@ -64,6 +65,7 @@ public class TopFilter implements Filter {
 			CommonController.CMD_DESC.remove();
 			CommonController.CMD_OPTIONS.remove();
 			AppCodeSelectedHolder.remove();
+			HttpServletRequestHolder.remove();
 		}
 	}
 
@@ -77,4 +79,19 @@ public class TopFilter implements Filter {
 		//
 	}
 
+	public static final class HttpServletRequestHolder {
+		private static final ThreadLocal<HttpServletRequest> REQ = new ThreadLocal<>();
+
+		public static HttpServletRequest get() {
+			return REQ.get();
+		}
+
+		public static void set(HttpServletRequest res) {
+			REQ.set(res);
+		}
+
+		public static void remove() {
+			REQ.remove();
+		}
+	}
 }

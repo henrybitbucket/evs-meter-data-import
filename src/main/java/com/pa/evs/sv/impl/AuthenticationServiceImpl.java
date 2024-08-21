@@ -38,6 +38,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.pa.evs.TopFilter.HttpServletRequestHolder;
 import com.pa.evs.constant.Message;
 import com.pa.evs.constant.ValueConstant;
 import com.pa.evs.dto.ChangePasswordDto;
@@ -879,7 +880,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	@Transactional
 	public void removeUserById(Long userId) {
 		
-		if (!SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+		boolean isCurrent = userId.longValue() == SecurityUtils.getUser().getId().longValue();
+		if (!isCurrent && !SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
 			 throw new RuntimeException("Access denied!");
 		}
 		
@@ -911,6 +913,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		em.flush();
 		
 		userRepository.deleteById(userId);
+		
+		if (isCurrent) {
+			logout(HttpServletRequestHolder.get().getHeader("Authorization"));
+		}
 		
 	}
 
