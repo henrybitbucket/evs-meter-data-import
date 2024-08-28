@@ -873,11 +873,11 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		createAppGuestUser(application.getId());
 		new Thread(() -> {
 			try {
-				notificationService.sendSMS("Your DMS application has been approved.", application.getCreatedBy());
+				notificationService.sendSMS("Your PTW application has been approved.", application.getCreatedBy());
 				Users applicant = userRepository.findByPhoneNumber(application.getCreatedBy());
 				if (applicant != null) {
 					String email = applicant.getEmail();
-					notificationService.sendEmail("Your DMS application has been approved.", email, "DMS application");
+					notificationService.sendEmail("Your PTW application has been approved.", email, "PTW application");
 				}
 			} catch (Exception e) {
 				//
