@@ -973,7 +973,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		String phone = dto.getSubmittedBy();
 		List<OTP> otps = em.createQuery("FROM OTP where actionType = 'ptw_submit' AND phone = '" + phone + "' AND otp = '" + dto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
 		if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
-			//throw new RuntimeException("otp invalid!");
+			throw new RuntimeException("otp invalid!");
 		}
 		authenticationService.invalidOtp(phone, dto.getOtp());
 		Users user = userRepository.findByPhoneNumber(phone);
