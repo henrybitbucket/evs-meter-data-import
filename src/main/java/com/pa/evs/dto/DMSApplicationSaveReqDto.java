@@ -42,10 +42,14 @@ public class DMSApplicationSaveReqDto {
 	@Builder.Default
 	private List<DMSApplicationUserGuestReqDto> guests = new ArrayList<>();
 	
-	
 	// time period all sites
 	@Builder.Default
 	private DMSTimePeriodDto timePeriod = new DMSTimePeriodDto();
 	
 	private Long timeTerminate;
+	
+	@Schema(hidden = true)
+	@Builder.Default
+	@JsonIgnore
+	private boolean isGuestSubmit = false;
 }

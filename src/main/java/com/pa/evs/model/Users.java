@@ -148,6 +148,8 @@ public class Users extends Base1Entity {
     @Builder.Default
     private List<String> allProjects = new ArrayList<>();
     
+    private Date autoDeleteDate;
+    
     public String getLastPwd() {
     	if (StringUtils.isBlank(lastPwd)) {
 			lastPwd = "";

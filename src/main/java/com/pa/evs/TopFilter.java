@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.utils.AppCodeSelectedHolder;
+import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.TimeZoneHolder;
 import com.pa.evs.utils.Version;
 
@@ -66,6 +67,7 @@ public class TopFilter implements Filter {
 			CommonController.CMD_OPTIONS.remove();
 			AppCodeSelectedHolder.remove();
 			HttpServletRequestHolder.remove();
+			SecurityUtils.removeByPassUser();
 		}
 	}
 

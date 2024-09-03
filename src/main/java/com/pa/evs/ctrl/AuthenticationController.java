@@ -346,7 +346,6 @@ public class AuthenticationController {
     
     // {"email": "henry@gmail.com", "otpType": "sms", "actionType": "reset_pwd"}
     @PostMapping(value = {"/api/otp"})
-    @ApiIgnore
     public ResponseEntity<Object> sendOtp(@RequestBody Map<String, Object> dto) throws IOException {
         try {
         	return ResponseEntity.ok(authenticationService.sendOtp(dto));

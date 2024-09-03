@@ -39,5 +39,8 @@ public class DMSSiteDto {
     
     @Builder.Default
     private List<DMSLocationDto> locations = new ArrayList<>();
+    
+    @Builder.Default
+    private Boolean isOpen = false;
 
 }

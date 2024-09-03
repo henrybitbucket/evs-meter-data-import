@@ -13,8 +13,22 @@ import com.pa.evs.security.user.JwtUser;
 
 
 public final class SecurityUtils {
+	
+	private static final ThreadLocal<JwtUser> BY_PASS_USER = new ThreadLocal<>();
 
 	private SecurityUtils() {}
+	
+	public static JwtUser getByPassUser() {
+		return BY_PASS_USER.get();
+	}
+	
+	public static void setByPassUser(JwtUser user) {
+		BY_PASS_USER.set(user);
+	}
+	
+	public static void removeByPassUser() {
+		BY_PASS_USER.remove();
+	}
 	
 	public static String getEmail() {
 		

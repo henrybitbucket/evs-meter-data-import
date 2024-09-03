@@ -70,4 +70,5 @@ public interface AuthenticationService {
 	void saveCompany(UserDto dto);
 	void assignAppCodeForEmail(String appCode, String email);
 	void assignAppCodeForPhone(String appCode, String phone);
+	void invalidOtp(String phoneOrEmail, String otp);
 }

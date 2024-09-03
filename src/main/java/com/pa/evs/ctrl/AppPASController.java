@@ -360,6 +360,7 @@ public class AppPASController {
 			if (!SecurityUtils.hasSelectedAppCode("DMS")) {
 				// throw new AccessDeniedException(HttpStatus.FORBIDDEN.getReasonPhrase());
 			}
+			guestPhone = guestPhone.replace("%2B", "+");
 			if (StringUtils.isBlank(guestPhone) || !guestPhone.trim().matches("^\\+[1-9][0-9]{7,}$")) {
 				throw new RuntimeException("Phone invalid(" + guestPhone + ")! (ex: +65909123456)");
 			}

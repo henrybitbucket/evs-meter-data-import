@@ -128,6 +128,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers("/api/lock/addresses").permitAll()
 	            
 	            .antMatchers("/api/countries").permitAll()
+	            .antMatchers("/api/dms/projects").permitAll()
+	            .antMatchers("/api/dms/sites/*").permitAll()
+	            .antMatchers("/api/sites").permitAll()
 	            
 	            .antMatchers(HttpMethod.POST, "/api/dms-assigned-locks2**").permitAll()
 	            .antMatchers(HttpMethod.POST, "/api/lock/*/code2**").permitAll()

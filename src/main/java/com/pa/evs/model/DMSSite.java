@@ -40,4 +40,7 @@ public class DMSSite extends BaseEntity {
 	@Column(name = "lat", precision = 19, scale = 14)
 	private BigDecimal lat;
 
+	@Builder.Default
+	@Column(name = "isOpen", columnDefinition = "boolean not null default false")
+	private Boolean isOpen = false;
 }

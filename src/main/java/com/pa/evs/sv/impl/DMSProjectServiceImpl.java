@@ -20,9 +20,14 @@ import javax.persistence.Query;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +43,7 @@ import com.pa.evs.dto.DMSProjectDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSTimePeriodDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
+import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.ApiException;
@@ -50,6 +56,7 @@ import com.pa.evs.model.DMSProjectPicUser;
 import com.pa.evs.model.DMSProjectSite;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
+import com.pa.evs.model.OTP;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.DMSApplicationHistoryRepository;
 import com.pa.evs.repository.DMSApplicationRepository;
@@ -68,6 +75,7 @@ import com.pa.evs.repository.DMSWorkOrdersRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.repository.UserRepository;
+import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.DMSProjectService;
 import com.pa.evs.sv.NotificationService;
@@ -961,7 +969,95 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 	@Override
 	@Transactional
 	public Object submitApplication(Long projectId, DMSApplicationGuestSaveReqDto dto) {
-		return submitApplication(projectId, (DMSApplicationSaveReqDto) dto);
+		dto.setGuestSubmit(true);
+		String phone = dto.getSubmittedBy();
+		List<OTP> otps = em.createQuery("FROM OTP where actionType = 'ptw_submit' AND phone = '" + phone + "' AND otp = '" + dto.getOtp() + "' AND endTime > " + System.currentTimeMillis() + "l  ORDER BY id DESC ").getResultList();
+		if (otps.isEmpty() || otps.get(0).getStartTime() > System.currentTimeMillis() || otps.get(0).getEndTime() < System.currentTimeMillis()) {
+			//throw new RuntimeException("otp invalid!");
+		}
+		authenticationService.invalidOtp(phone, dto.getOtp());
+		Users user = userRepository.findByPhoneNumber(phone);
+		
+		String email = user != null ? user.getEmail() : ("guestuser-" + phone + "@" + phone + "-guest-pa.evs.sg");
+		String pwd = phone + "P@assW0rd";
+		
+		Long maxPeriod = null;
+		for (DMSApplicationSiteItemReqDto site : dto.getSites()) {
+			if (site.getTimePeriod().isOverride() && site.getTimePeriod().isTimePeriodDatesIsAlways()) {
+				maxPeriod = null;
+				break;
+			}
+			if (site.getTimePeriod().isOverride() && !site.getTimePeriod().isTimePeriodDatesIsAlways() && (maxPeriod == null || maxPeriod < site.getTimePeriod().getTimePeriodDatesEnd())) {
+				maxPeriod = site.getTimePeriod().getTimePeriodDatesEnd();
+			}
+			if (!site.getTimePeriod().isOverride() && dto.getTimePeriod().isTimePeriodDatesIsAlways()) {
+				maxPeriod = null;
+				break;
+			}
+			if (!site.getTimePeriod().isOverride() && !dto.getTimePeriod().isTimePeriodDatesIsAlways() && (maxPeriod == null || maxPeriod < dto.getTimePeriod().getTimePeriodDatesEnd())) {
+				maxPeriod = dto.getTimePeriod().getTimePeriodDatesEnd();
+			}
+		}
+
+		Object credential = null;
+		JwtUser guest = null;
+		try {
+			if (user == null) {
+				guest = JwtUser.builder()
+		                .id(-1l)
+		                .email(email)
+		                .fullName("User " + phone)
+		                .firstName("User")
+		                .lastName(phone)
+		                .phone(phone)
+		                .avatar(null)
+		                .password(passwordEncoder.encode(pwd))
+		                .appCodes(Arrays.asList("DMS"))
+		                .authorities(Arrays.asList(new SimpleGrantedAuthority("DMS_GUEST")))
+		                .permissions(Arrays.asList("DMS_GUEST"))
+		                .enabled(true)
+		                .changePwdRequire(false)
+		                .phoneNumber(phone)
+		                .lastPasswordResetDate(new Date())
+		                .build();
+				
+			} else {
+				guest = JwtUser.builder()
+		                .id(user.getUserId())
+		                .email(user.getEmail())
+		                .fullName(user.getFullName())
+		                .firstName(user.getFirstName())
+		                .lastName(user.getLastName())
+		                .phone(user.getPhoneNumber())
+		                .avatar(null)
+		                .password(passwordEncoder.encode(pwd))
+		                .appCodes(Arrays.asList("DMS"))
+		                .authorities(Arrays.asList(new SimpleGrantedAuthority("DMS_GUEST")))
+		                .permissions(Arrays.asList("DMS_GUEST"))
+		                .enabled(true)
+		                .changePwdRequire(false)
+		                .phoneNumber(phone)
+		                .lastPasswordResetDate(new Date())
+		                .build();
+			}
+			SecurityUtils.setByPassUser(guest);
+			credential = authenticationService.login(LoginRequestDto.builder().email(email).password(pwd).build());	
+		} finally {
+			SecurityUtils.removeByPassUser();
+		}
+		
+		if (credential != null) {
+			if (user == null) {
+				boolean hasGuestIn = dto.getGuests().stream().anyMatch(s -> s != null && phone.equalsIgnoreCase(s.getPhone()));
+				if (!hasGuestIn) {
+					dto.getGuests().add(DMSApplicationUserGuestReqDto.builder().phone(phone).createNewUser(false).name(guest.getFullName()).build());
+				}
+			} else {
+                SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(guest, null, guest.getAuthorities()));
+			}
+			submitApplication(projectId, (DMSApplicationSaveReqDto) dto);
+		}
+		return credential;
 	}
 	
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -1070,9 +1166,13 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		
 		dmsApplicationRepository.save(application);
 		
+		boolean existsSiteNotOpen = false;
 		for (DMSApplicationSiteItemReqDto item : dto.getSites()) {
 			DMSSite site = dmsSiteRepository.findById(item.getId()).orElseThrow(() 
 					-> new RuntimeException("site not found!"));
+			
+			existsSiteNotOpen = existsSiteNotOpen || site.getIsOpen() != Boolean.TRUE;
+			
 			if (item.getTimePeriod() == null || !item.getTimePeriod().isOverride()) {
 				item.setTimePeriod(ApiUtils.json2Object(ApiUtils.toStringJson(dto.getTimePeriod()), DMSTimePeriodDto.class));
 				item.getTimePeriod().setOverride(false);
@@ -1180,9 +1280,56 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 				.updatedBy(SecurityUtils.getPhoneNumber())
 				.content(ApiUtils.toStringJson(dto))
 				.build());
+		handleAutoApprove(dto.isGuestSubmit(), projectId, application.getId(), existsSiteNotOpen);
 		
-
 		return application.getName();
+	}
+	
+	private void handleAutoApprove(boolean isGuestSubmit, final Long projectId, final Long applicationId, final boolean existsSiteNotOn) {
+		if (!isGuestSubmit) {
+			return;
+		}
+		new Thread(() -> {
+			try {
+				Thread.sleep(1000);
+			} catch (Exception e) {
+				//
+			}
+			AppProps.getContext().getBean(this.getClass()).handleAutoApprove0(projectId, applicationId, existsSiteNotOn);
+		}).start();
+	}
+	
+	@Transactional
+	public void handleAutoApprove0(final Long projectId, final Long applicationId, final boolean existsSiteNotOn) {
+		try {
+			DMSProject project = dmsProjectRepository.findById(projectId).orElseThrow(() -> new RuntimeException("project not found"));
+			DMSApplication application = dmsApplicationRepository.findById(applicationId).orElseThrow(() -> new RuntimeException("application not found"));
+			List<DMSProjectPicUser> picUsers = project.getPicUsers();
+			System.out.println(picUsers);
+			if (picUsers.isEmpty()) {
+				return;
+			}
+			if (!existsSiteNotOn) {
+				DMSProjectPicUser picUser = picUsers.stream().filter(u -> !u.isSubPic()).findFirst().orElse(picUsers.get(0));
+				final String picEmail = picUser.getPicUser().getEmail();
+				UserDetails userDetails = AppProps.getContext().getBean(UserDetailsService.class).loadUserByUsername(picEmail);
+				SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
+				AppProps.getContext().getBean(this.getClass()).approveApplication(applicationId);
+			} else {
+				// has site off -> send notify to PIC
+				for (DMSProjectPicUser picUser : picUsers) {
+					Users u = picUser.getPicUser();
+					String email = u.getEmail();
+					String phone = u.getPhoneNumber();
+					if (StringUtils.isNotBlank(phone)) {
+						notificationService.sendSMS("New PTW application has been created by " + application.getCreatedBy(), phone);
+					}
+					notificationService.sendEmail("New PTW application has been created by " + application.getCreatedBy(), email, "PTW application");
+				}
+			}
+		} finally {
+			SecurityContextHolder.clearContext();
+		}
 	}
 	
 	@Override

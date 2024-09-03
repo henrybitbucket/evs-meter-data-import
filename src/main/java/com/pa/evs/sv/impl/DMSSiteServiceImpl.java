@@ -90,6 +90,7 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 					.lng(dto.getLng())
 					.lat(dto.getLat())
 					.radius(dto.getRadius())
+					.isOpen(dto.getIsOpen())
 					.build()
 					);
 		}
@@ -170,6 +171,7 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 			dto.setRemark(f.getRemark());
 			dto.setCreateDate(f.getCreateDate());
 			dto.setModifyDate(f.getModifyDate());
+			dto.setIsOpen(f.getIsOpen());
 			dtos.add(dto);
 		});
 		pagin.setResults(dtos);
@@ -192,6 +194,7 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 		entity.setLat(dto.getLat());
 		entity.setRadius(dto.getRadius());
 		entity.setRemark(dto.getRemark());
+		entity.setIsOpen(dto.getIsOpen());
 		dmsSiteRepository.save(entity);
 	}
 	

@@ -1,6 +1,7 @@
 package com.pa.evs.dto;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -59,6 +60,10 @@ public class CreateDMSAppUserDto {
     @JsonIgnore
     @Builder.Default
     private List<String> permissions = new ArrayList<>();
+
+    @Schema(hidden = true)
+    @JsonIgnore
+    private Date autoDeleteDate;
     
     public static CreateDMSAppUserDto build(Users user) {
     	return builder()

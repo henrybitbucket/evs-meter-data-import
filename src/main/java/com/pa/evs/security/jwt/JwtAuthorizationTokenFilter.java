@@ -1,6 +1,8 @@
 package com.pa.evs.security.jwt;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Date;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -12,15 +14,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.pa.evs.constant.RestPath;
 import com.pa.evs.security.user.JwtUser;
+import com.pa.evs.utils.AppProps;
+import com.pa.evs.utils.SecurityUtils;
 
 import io.jsonwebtoken.ExpiredJwtException;
 
@@ -84,6 +90,7 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             // It is not compelling necessary to load the use details from the database. You could also store the information
             // in the token and read it from it. It's up to you ;)
+        	checkByPassGuestLogin(username);
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
             // For simple validation it is completely sufficient to just check the token integrity. You don't have to call
             // the database compellingly. Again it's up to you ;)
@@ -105,5 +112,31 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
             }
         }
         chain.doFilter(request, response);
+    }
+    
+    private void checkByPassGuestLogin(String username) {
+    	
+		if (username.matches("^guestuser-([+]{0,1}[0-9]+)@([+]{0,1}[0-9]+)-guest-pa.evs.sg$")) {
+			String phone = username.replaceAll("^guestuser-([+]{0,1}[0-9]+)@([+]{0,1}[0-9]+)-guest-pa.evs.sg$", "$1");
+			String email = username;
+			JwtUser guest = JwtUser.builder()
+	                .id(-1l)
+	                .email(email)
+	                .fullName("User " + phone)
+	                .firstName("User")
+	                .lastName(phone)
+	                .phone(phone)
+	                .avatar(null)
+	                .password(AppProps.getContext().getBean(PasswordEncoder.class).encode(phone + "P@assW0rd"))
+	                .appCodes(Arrays.asList("DMS"))
+	                .authorities(Arrays.asList(new SimpleGrantedAuthority("DMS_GUEST")))
+	                .permissions(Arrays.asList("DMS_GUEST"))
+	                .enabled(true)
+	                .changePwdRequire(false)
+	                .phoneNumber(phone)
+	                .lastPasswordResetDate(new Date())
+	                .build();
+			SecurityUtils.setByPassUser(guest);
+		}
     }
 }

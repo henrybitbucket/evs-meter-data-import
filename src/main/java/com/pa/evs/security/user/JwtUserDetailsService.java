@@ -20,6 +20,7 @@ import com.pa.evs.repository.RoleGroupRepository;
 import com.pa.evs.repository.RolePermissionRepository;
 import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.repository.UserRepository;
+import com.pa.evs.utils.SecurityUtils;
 
 @Service
 public class JwtUserDetailsService implements UserDetailsService {
@@ -40,6 +41,11 @@ public class JwtUserDetailsService implements UserDetailsService {
     @Transactional(readOnly = true)
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    	
+    	if (SecurityUtils.getByPassUser() != null) {
+    		return SecurityUtils.getByPassUser();
+    	}
+    	
         Users user = userRepository.findByEmail(email);
 
         if (user == null) {

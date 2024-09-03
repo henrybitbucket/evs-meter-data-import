@@ -24,10 +24,10 @@ public class OTP extends BaseEntity {
 	private String otp;
 	
 	@Column(name = "otp_type")
-	private String otpType;
+	private String otpType;// MAIL,SMS
 
 	@Column(name = "action_type")
-	private String actionType;
+	private String actionType;// LOGIN, ....
 	
 	@Column(name = "email")
 	private String email;

@@ -17,7 +17,14 @@ import lombok.Setter;
 @Setter
 public class DMSApplicationGuestSaveReqDto extends DMSApplicationSaveReqDto {
 
+//	@Schema(hidden = true)
 	private Long projectId;
+	
+	@Schema(hidden = true)
+	private Long updatedDate;// for show history
+	
+	@Schema(hidden = true)
+	private String updatedBy;// phone // for show history
 	
 	@Schema(hidden = true)
 	@JsonIgnore
@@ -26,20 +33,12 @@ public class DMSApplicationGuestSaveReqDto extends DMSApplicationSaveReqDto {
 	@Builder.Default
 	private List<DMSApplicationSiteItemReqDto> sites = new ArrayList<>();
 	
+	// time period all sites
 	@Builder.Default
-	private List<String> userPhones = new ArrayList<>();
+	private DMSTimePeriodDto timePeriod = new DMSTimePeriodDto();
 	
-	@Builder.Default
-	private List<DMSApplicationUserGuestReqDto> guests = new ArrayList<>();
+	private Long timeTerminate;
 	
-//	// for create new user
-//	private boolean createNewUser;
-//	
-//	private String email;
-//	
-//	private String firstName;
-//	
-//	private String lastName;
-//	
-//	private String password;
+	@Schema(hidden = true)
+	private String otp;
 }
