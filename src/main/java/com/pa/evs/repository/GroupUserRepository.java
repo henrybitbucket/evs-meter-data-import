@@ -24,6 +24,9 @@ public interface GroupUserRepository extends JpaRepository<GroupUser, Long> {
 	@Query("Select ug.groupUser FROM UserGroup ug where ug.user.userId = ?1")
 	List<GroupUser> findGroupByUserUserId(Long id);
 	
+	@Query("Select ug.groupUser FROM UserGroup ug where ug.user.userId = ?1 and ug.groupUser.appCode.name = ?2")
+	List<GroupUser> findGroupByUserUserId(Long id, String appCode);
+	
 	Optional<GroupUser> findByName(String name);
 	
 	List<GroupUser> findByAppCodeName(String name);

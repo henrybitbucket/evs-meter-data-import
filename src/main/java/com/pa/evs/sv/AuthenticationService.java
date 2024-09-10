@@ -71,4 +71,5 @@ public interface AuthenticationService {
 	void assignAppCodeForEmail(String appCode, String email);
 	void assignAppCodeForPhone(String appCode, String phone);
 	void invalidOtp(String phoneOrEmail, String otp);
+	void syncAccess(String fromUsername, String toUsername);
 }

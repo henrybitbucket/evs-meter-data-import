@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -48,7 +47,6 @@ import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.SecurityUtils;
-import com.pa.evs.utils.SimpleMap;
 
 import springfox.documentation.annotations.ApiIgnore;
 
@@ -164,6 +162,18 @@ public class AuthenticationController {
     public Object getCompanyOfUser(@RequestBody PaginDto<CompanyDto> pagin) {
         authenticationService.getCompanyOfUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
+    @PostMapping(value = {"/api/user/sync-access"})
+    @ApiIgnore
+    public Object syncAccess(@RequestParam(required = true) String fromUsername, @RequestParam(required = true) String toUsername) {
+        
+    	try {
+            authenticationService.syncAccess(fromUsername, toUsername);
+            return ResponseDto.<Object>builder().success(true).build();
+		} catch (Exception e) {
+			return ResponseDto.<Object>builder().success(false).message(e.getMessage()).build();
+		}
     }
     
     

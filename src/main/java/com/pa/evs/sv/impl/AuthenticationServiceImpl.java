@@ -2460,6 +2460,57 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		
 		dto.setId(userDto.getId());
 	}
+
+	@Transactional
+	@Override
+	public void syncAccess(String fromUsername, String toUsername) {
+
+		if (!SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
+			throw new RuntimeException("Access denied!");
+		}
+		
+		if ("henry@gmail.com".equalsIgnoreCase(toUsername)) {
+			throw new RuntimeException("Access denied!");
+		}
+		
+		Users from = userRepository.findByEmail(fromUsername);
+		Users to = userRepository.findByEmail(toUsername);
+		
+		if (from == null) {
+			throw new RuntimeException("User " + fromUsername + " notfound!");
+		}
+		
+		if (to == null) {
+			throw new RuntimeException("User " + toUsername + " notfound!");
+		}
+
+		String appCode = AppCodeSelectedHolder.get();
+		List<GroupUser> groups = groupUserRepository.findGroupByUserUserId(from.getUserId(), appCode);
+		List<Role> roles = roleRepository.findRoleByUserUserId(from.getUserId(), appCode);
+		List<Permission> permissions = permissionRepository.findPermissionByUserUserId(from.getUserId(), appCode);
+		
+		userGroupRepository.findByUserIdAndAppCode(to.getUserId(), appCode)
+		.forEach(userGroupRepository::delete);
+		userGroupRepository.flush();
+		
+		userRoleRepository.findByUserIdAndAppCode(to.getUserId(), appCode)
+		.forEach(userRoleRepository::delete);
+		userRoleRepository.flush();
+		
+		userPermissionRepository.findByUserIdAndAppCode(to.getUserId(), appCode)
+		.forEach(userPermissionRepository::delete);
+		userPermissionRepository.flush();
+		
+		for (GroupUser g : groups) {
+			userGroupRepository.save(UserGroup.builder().groupUser(g).user(to).build());
+		}
+		for (Role r : roles) {
+			userRoleRepository.save(UserRole.builder().role(r).user(to).build());
+		}
+		for (Permission p : permissions) {
+			userPermissionRepository.save(UserPermission.builder().permission(p).user(to).build());
+		}
+	}
 	
 	@PostConstruct
 	public void init() {
@@ -2472,4 +2523,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			});
 		}).start();
 	}
+
 }
+ 

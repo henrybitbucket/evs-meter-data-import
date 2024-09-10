@@ -22,4 +22,7 @@ public interface UserPermissionRepository extends JpaRepository<UserPermission, 
 	@Modifying
 	@Query("DELETE FROM UserPermission up where up.user.userId = ?1 AND up.permission.id = ?2")
 	void deleteByUserIdAndPermissionId(Long userId, Long pId);
+
+	@Query("FROM UserPermission ug WHERE ug.user.userId = ?1 and ug.permission.appCode.name = ?2")
+	List<UserPermission> findByUserIdAndAppCode(Long userId, String appCode);
 }

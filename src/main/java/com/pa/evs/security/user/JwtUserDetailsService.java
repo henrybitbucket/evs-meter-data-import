@@ -14,7 +14,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pa.evs.model.RolePermission;
+import com.pa.evs.model.Permission;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.RoleGroupRepository;
 import com.pa.evs.repository.RolePermissionRepository;
@@ -68,32 +68,32 @@ public class JwtUserDetailsService implements UserDetailsService {
         }
         
         Set<Long> allRoleIds = new HashSet<>();
-        List<String> roles = user.getRoles().stream().map(r -> {
-        	allRoleIds.add(r.getRole().getId());
+        List<String> roles = userRepository.findRolesByUserId(user.getUserId()).stream().map(r -> {
+        	allRoleIds.add(r.getId());
 //        	if ("MMS".equalsIgnoreCase(r.getRole().getAppCode().getName())) {
-        		return r.getRole().getName();
+        		return r.getName();
 //        	}
 //        	return r.getRole().getAppCode().getName() + "_" + r.getRole().getName();
         }).collect(Collectors.toList());
         
         List<String> allRls = user.getAllRoles();
         allRls.addAll(roles);
-        List<String> groups = userGroupRepository.findByUserUserIdIn(Arrays.asList(user.getUserId()))
+        List<String> groups = userGroupRepository.findGroupUserByUserIdIn(Arrays.asList(user.getUserId()))
         .stream().map(ug -> {
 //        	if ("MMS".equalsIgnoreCase(ug.getGroupUser().getAppCode().getName())) {
-        		return ug.getGroupUser().getName();
+        		return ug.getName();
 //        	}
 //        	return ug.getGroupUser().getAppCode().getName() + "_" + ug.getGroupUser().getName();
         }).collect(Collectors.toList());
         
         if (!groups.isEmpty()) {
-        	roleGroupRepository.findByGroupUserNameIn(groups)
+        	roleGroupRepository.findRoleByGroupUserNameIn(groups)
         	.forEach(rg -> {
         		
-        		allRoleIds.add(rg.getRole().getId());
-        		if (!allRls.contains(rg.getRole().getName())) {
+        		allRoleIds.add(rg.getId());
+        		if (!allRls.contains(rg.getName())) {
 //        			if ("MMS".equalsIgnoreCase(rg.getRole().getAppCode().getName())) {
-        				allRls.add(rg.getRole().getName());
+        				allRls.add(rg.getName());
 //                	} else {
 //                		allRls.add(rg.getRole().getAppCode().getName() + "_" + rg.getRole().getName());                		
 //                	}
@@ -102,21 +102,21 @@ public class JwtUserDetailsService implements UserDetailsService {
         }
         
         List<String> allPms = user.getAllPermissions();
-        List<RolePermission> rolePermissions = rolePermissionRepository.findByRoleIdIn(allRoleIds);
-        for (RolePermission rolePermission : rolePermissions) {
-        	if (!allPms.contains(rolePermission.getPermission().getName())) {
+        List<Permission> permissions = rolePermissionRepository.findPermissionByRoleIdIn(allRoleIds);
+        for (Permission permission : permissions) {
+        	if (!allPms.contains(permission.getName())) {
 //        		if ("MMS".equalsIgnoreCase(rolePermission.getPermission().getAppCode().getName())) {
-        			allPms.add(rolePermission.getPermission().getName());
+        			allPms.add(permission.getName());
 //        		} else {
 //        			allPms.add(rolePermission.getPermission().getAppCode().getName() + "_" + rolePermission.getPermission().getName());	
 //        		}
         	}
         }
         
-        user.getPermissions().forEach(up -> {
-        	if (!allPms.contains(up.getPermission().getName())) {
+        userRepository.findPermissionsByUserId(user.getUserId()).forEach(up -> {
+        	if (!allPms.contains(up.getName())) {
 //        		if ("MMS".equalsIgnoreCase(up.getPermission().getAppCode().getName())) {
-        			allPms.add(up.getPermission().getName());
+        			allPms.add(up.getName());
 //        		} else {
 //        			allPms.add(up.getPermission().getAppCode().getName() + "_" + up.getPermission().getName());	
 //        		}
@@ -124,10 +124,10 @@ public class JwtUserDetailsService implements UserDetailsService {
         });
         
         List<String> allProjects = user.getAllProjects();
-        user.getProjects().forEach(pt -> allProjects.add(pt.getProject().getName()));
+        userRepository.findProjectsByUserId(user.getUserId()).forEach(pt -> allProjects.add(pt.getName()));
 
         List<String> allAppCodes = user.getAllAppCodes();
-        user.getAppCodes().forEach(ac -> allAppCodes.add(ac.getAppCode().getName()));
+        userRepository.findAppCodesByUserId(user.getUserId()).forEach(ac -> allAppCodes.add(ac.getName()));
         user.setAllAppCodes(new ArrayList<>(new HashSet<>(allAppCodes)));
         return JwtUserFactory.create(user);
     }

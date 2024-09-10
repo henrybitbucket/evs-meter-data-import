@@ -28,5 +28,8 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
 	void deleteNotInRoleIds(Long userId, String appCode, Set<Long> ids);
 
 	List<UserRole> findByRoleId(Long id);
+	
+	@Query("FROM UserRole ug WHERE ug.user.userId = ?1 and ug.role.appCode.name = ?2")
+	List<UserRole> findByUserIdAndAppCode(Long userId, String appCode);
 }
  

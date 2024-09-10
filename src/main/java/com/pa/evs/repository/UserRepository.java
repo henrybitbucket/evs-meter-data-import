@@ -7,6 +7,10 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import com.pa.evs.model.AppCode;
+import com.pa.evs.model.Permission;
+import com.pa.evs.model.ProjectTag;
+import com.pa.evs.model.Role;
 import com.pa.evs.model.Users;
 
 public interface UserRepository extends JpaRepository<Users, Long> {
@@ -28,4 +32,17 @@ public interface UserRepository extends JpaRepository<Users, Long> {
 	List<Users> findByUserIdIn(Collection<Long> userIds);
 	
 	Optional<Users> findById(Long id);
+
+	@Query(value = "SELECT ur.role FROM UserRole ur where ur.user.userId = ?1")
+	List<Role> findRolesByUserId(Long userId);
+
+	@Query(value = "SELECT ur.permission FROM UserPermission ur where ur.user.userId = ?1")
+	List<Permission> findPermissionsByUserId(Long userId);
+
+	@Query(value = "SELECT ur.project FROM UserProject ur where ur.user.userId = ?1")
+	List<ProjectTag> findProjectsByUserId(Long userId);
+
+	@Query(value = "SELECT ur.appCode FROM UserAppCode ur where ur.user.userId = ?1")
+	List<AppCode> findAppCodesByUserId(Long userId);
+
 }
