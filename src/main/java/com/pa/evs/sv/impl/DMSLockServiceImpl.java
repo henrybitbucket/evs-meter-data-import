@@ -48,6 +48,7 @@ import com.pa.evs.dto.LockAddressReq;
 import com.pa.evs.dto.LockDto;
 import com.pa.evs.dto.LockEnventLogResDto;
 import com.pa.evs.dto.LockEventLogSearchReq;
+import com.pa.evs.dto.LockRequestDto;
 import com.pa.evs.dto.LockWorkOrderReq;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.SaveLogReq;
@@ -79,6 +80,7 @@ import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.DESUtil;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
+import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.TimeZoneHolder;
 import com.pa.evs.utils.Utils;
 
@@ -127,6 +129,31 @@ public class DMSLockServiceImpl implements DMSLockService {
 	
 	@Autowired
 	UserRepository userRepository;
+	
+
+	@Override
+	public Object getLocks(LockRequestDto dto) {
+		StringBuilder sqlBuilder = new StringBuilder(" SELECT lock FROM DMSLock lock WHERE 1=1 ");
+		if (dto.getRequest() != null && StringUtils.isNotBlank(dto.getRequest().getLockName())) {
+			sqlBuilder.append(" AND UPPER(lock.lockName) like '%" + dto.getRequest().getLockName().trim().toUpperCase() + "%' ");	
+		}
+		if (dto.getRequest() != null && StringUtils.isNotBlank(dto.getRequest().getLockBid())) {
+			sqlBuilder.append(" AND UPPER(lock.lockBid) like '%" + dto.getRequest().getLockBid().trim().toUpperCase() + "%' ");	
+		}
+		if (dto.getRequest() != null && StringUtils.isNotBlank(dto.getRequest().getLockNumber())) {
+			sqlBuilder.append(" AND UPPER(lock.lockNumber) like '%" + dto.getRequest().getLockNumber().trim().toUpperCase() + "%' ");	
+		}		
+				
+		sqlBuilder.append(" ORDER BY lock.lockName ASC ");
+		
+		List<Map<String, Object>> rs = new ArrayList<>();
+		em.createQuery(sqlBuilder.toString()).getResultList()
+		.forEach(obj -> {
+			DMSLock lock = (DMSLock) obj;
+			rs.add(SimpleMap.init("lock_name", lock.getLockName()).more("lock_bid", lock.getLockBid()).more("lock_number", lock.getLockNumber()));
+		});
+		return rs;
+	}
 	
 	@Transactional(readOnly = true)
 	@Override

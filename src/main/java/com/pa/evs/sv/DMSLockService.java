@@ -10,6 +10,7 @@ import com.pa.evs.dto.EcodeReq;
 import com.pa.evs.dto.LockAddressReq;
 import com.pa.evs.dto.LockDto;
 import com.pa.evs.dto.LockEventLogSearchReq;
+import com.pa.evs.dto.LockRequestDto;
 import com.pa.evs.dto.LockWorkOrderReq;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.SaveLogReq;
@@ -45,4 +46,6 @@ public interface DMSLockService {
 	Object getLockWorkOrders(LockWorkOrderReq dto);
 
 	Object getEcode(EcodeReq req);
+
+	Object getLocks(LockRequestDto dto);
 }

@@ -33,6 +33,7 @@ import com.pa.evs.dto.EcodeReq;
 import com.pa.evs.dto.LockAddressReq;
 import com.pa.evs.dto.LockDto;
 import com.pa.evs.dto.LockEventLogSearchReq;
+import com.pa.evs.dto.LockRequestDto;
 import com.pa.evs.dto.LockWorkOrderReq;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
@@ -62,6 +63,15 @@ public class AppPASController {
 	@Autowired
 	DMSProjectService dmsProjectService;
 
+	@PostMapping("/api/getLocks")
+	public ResponseEntity<Object> getLocks(HttpServletResponse response, @RequestBody LockRequestDto dto) {
+		try {
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(dmsLockService.getLocks(dto)).build());
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+	}
+	
 	@PostMapping("/api/pas_locks")
 	public ResponseEntity<Object> search(HttpServletResponse response, @RequestBody PaginDto<DMSLockDto> pagin) {
 		try {
