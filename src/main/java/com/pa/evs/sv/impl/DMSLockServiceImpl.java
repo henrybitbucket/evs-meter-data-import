@@ -154,7 +154,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 					.init("lock_name", lock.getLockName())
 					.more("lock_bid", lock.getLockBid())
 					.more("lock_number", lock.getLockNumber())
-					.more("battery", "7")
+					.more("battery", lock.getBattery())
 					);
 		});
 		return rs;
@@ -922,9 +922,8 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Transactional
 	@Override
 	public void saveLog(SaveLogReq dto) {
-		if (!dmsLockRepository.findByLockBid(dto.getBid()).isPresent()) {
-			throw new RuntimeException("Lock not found!");
-		}
+		DMSLock lock = dmsLockRepository.findByLockBid(dto.getBid()).orElseThrow(() -> new RuntimeException("Lock not found!"));
+		
 		if (dto.isOfflineMode() && dto.getTimestamp() == null) {
 			throw new RuntimeException("Timestamp is required when offline mode!");
 		}
@@ -942,6 +941,11 @@ public class DMSLockServiceImpl implements DMSLockService {
 			dmsLockEventLogRepository.flush();
 			entity.setCreateDate(new Date(dto.getTimestamp().toEpochMilli()));
 			dmsLockEventLogRepository.save(entity);
+		}
+		
+		if (StringUtils.isNotBlank(entity.getBattery())) {
+			lock.setBattery(entity.getBattery());
+			dmsLockRepository.save(lock);
 		}
 	}
 	

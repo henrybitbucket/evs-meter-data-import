@@ -61,5 +61,8 @@ public class DMSLock extends BaseEntity {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "vendor_id")
 	private DMSLockVendor vendor;
+	
+	@Column(name = "battery")
+    private String battery;
 
 }
