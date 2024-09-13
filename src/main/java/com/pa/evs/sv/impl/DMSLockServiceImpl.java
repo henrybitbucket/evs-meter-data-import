@@ -150,7 +150,12 @@ public class DMSLockServiceImpl implements DMSLockService {
 		em.createQuery(sqlBuilder.toString()).getResultList()
 		.forEach(obj -> {
 			DMSLock lock = (DMSLock) obj;
-			rs.add(SimpleMap.init("lock_name", lock.getLockName()).more("lock_bid", lock.getLockBid()).more("lock_number", lock.getLockNumber()));
+			rs.add(SimpleMap
+					.init("lock_name", lock.getLockName())
+					.more("lock_bid", lock.getLockBid())
+					.more("lock_number", lock.getLockNumber())
+					.more("battery", "7")
+					);
 		});
 		return rs;
 	}
