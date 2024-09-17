@@ -1,8 +1,10 @@
 package com.pa.evs.ctrl;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -70,13 +72,19 @@ public class CaRequestLogController {
     @Autowired
     CaRequestLogService caRequestLogService;
     
-    @PostMapping(RestPath.GET_CA_REQUEST_LOG)
+    @SuppressWarnings("unchecked")
+	@PostMapping(RestPath.GET_CA_REQUEST_LOG)
     public ResponseEntity<?> getMCUs(HttpServletResponse response, @RequestBody PaginDto<CARequestLog> pagin) throws IOException {
         
         PaginDto<CARequestLog> result = caRequestLogService.search(pagin);
         if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
         	result.getResults().forEach(o -> o.setProfile((String)pagin.getOptions().get("profile")));
-            File file = caRequestLogService.downloadCsv(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
+            File file = null;
+            if ("true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "")) {
+            	file = caRequestLogService.downloadCsvFullMCUs(result.getResults(), (List<String>) pagin.getOptions().get("sns"));
+            } else {
+            	file = caRequestLogService.downloadCsv(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
+            }
             String fileName = file.getName();
             
             try (FileInputStream fis = new FileInputStream(file)) {
@@ -105,6 +113,29 @@ public class CaRequestLogController {
             }
         });
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+    }
+    
+    @PostMapping("/api/export-by-upload-ca-request-logs")
+    public ResponseEntity<?> exportMCUs(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response,
+            @RequestParam(value = "file") final MultipartFile file) throws Exception {
+    	
+    	PaginDto<CARequestLog> pagin = new PaginDto<>();
+    	try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+			IOUtils.copy(file.getInputStream(), bos);
+			List<String> sns = new ArrayList<>();
+			for (String l : new String(bos.toByteArray()).split("\r*\n")) {
+				sns.add(l.replaceAll("[^a-zA-Z0-9]", "").trim());
+			}
+			pagin.getOptions().put("sns", sns);
+		} catch (Exception e) {
+			//
+		}
+    	pagin.getOptions().put("downloadFullMCU", true);
+    	pagin.getOptions().put("downloadCsv", true);
+    	
+    	return getMCUs(response, pagin);
     }
     
     @PostMapping("/api/meters")

@@ -995,6 +995,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             String queryRemarkMCU = (String) options.get("queryRemarkMCU");
             String queryRemarkMeter = (String) options.get("queryRemarkMeter");
             
+            Object sns = options.get("sns");
+            
             String queryTagTypes = (String) options.get("queryTagTypes");
             if (StringUtils.isBlank(queryTagTypes)) {
             	queryTagTypes = "ALL";
@@ -1189,6 +1191,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	
         	if (!queryTags.isEmpty()) {
         		sqlCommonBuilder.append(" AND (exists (select 1 from DeviceProject dp where dp.device.id = ca.id " + ("ALL".equalsIgnoreCase(queryTagTypes) ? " and dp.type <> 'NA' " : " and dp.type = '" + queryTagTypes + "' ")  + " and dp.project.id in (" + queryTags.toString().replace("[", "").replace("]", "") + "))) ");
+        	}
+        	
+        	if (sns != null && sns instanceof List && !((List<String>) sns).isEmpty()) {
+        		sqlCommonBuilder.append(" AND ca.sn in (" + sns.toString().replaceAll(" *, *", "','").replaceAll("\\[", "'").replaceAll("]", "'") + ") ");
         	}
         }
         
@@ -1386,6 +1392,15 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         String tag = sdf.format(new Date());
         String fileName = "meter-" + tag + ".csv";
         return CsvUtils.writeMeterCsv(listInput, fileName, activateDate);
+    }
+    
+	@Override
+    @Transactional(readOnly = true)
+    public File downloadCsvFullMCUs(List<CARequestLog> listInput, List<String> sns) throws IOException {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmmss");
+        String tag = sdf.format(new Date());
+        String fileName = "mcu-" + tag + ".csv";
+        return CsvUtils.writeMCUCsv(listInput, fileName, sns);
     }
     
     @Override

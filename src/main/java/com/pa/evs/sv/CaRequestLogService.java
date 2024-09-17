@@ -84,4 +84,6 @@ public interface CaRequestLogService {
 			PaginDto<CARequestLog> filter);
 
 	File downloadCsvMeter(List<CARequestLog> listInput, Long activateDate) throws IOException;
+
+	File downloadCsvFullMCUs(List<CARequestLog> listInput, List<String> sns) throws IOException;
 }

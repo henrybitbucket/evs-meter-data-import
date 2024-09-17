@@ -60,6 +60,48 @@ public class CsvUtils {
         return toCsv(headers, listInput, (idx, it, l) -> CsvUtils.toCSVRecord(idx, it), buildPathFile(fileName), activateDate);
     }
     
+    public static File writeMCUCsv(List<CARequestLog> listInput, String fileName, List<String> sns) throws IOException{
+        listInput = listInput.stream().filter(input -> !input.getUid().equals("server.csr")).collect(Collectors.toList());
+        List<String> headers = Arrays.asList(
+                "MCU SN", "MCU UUID", "eSIM ID", "MSN", "Status", "P2 CoupleState", "Version", "Vendor", "Last Seen", "Group", "EnrollTime");
+        
+        List<CARequestLog> tmp = new ArrayList<>();
+        for (String sn : sns) {
+        	CARequestLog mcu = listInput.stream().filter(c -> c.getSn().equalsIgnoreCase(sn)).findFirst().orElse(new CARequestLog());
+        	if (mcu.getSn() == null) {
+        		mcu.setSn(sn);
+        	}
+        	tmp.add(mcu);
+        }
+        return toCsv(headers, tmp, (idx, it, l) -> {
+        	
+        	CARequestLog mcu = it;
+            List<String> record = new ArrayList<>();
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            sdf.setTimeZone(TimeZoneHolder.get());
+            record.add(StringUtils.isNotBlank(mcu.getSn()) ? mcu.getSn() : "");
+            
+            if (mcu.getId() != null) {
+	            record.add(StringUtils.isNotBlank(mcu.getUid()) ? mcu.getUid() : "");
+	            record.add(StringUtils.isNotBlank(mcu.getCid()) ? mcu.getCid() : "");
+	            record.add(StringUtils.isNotBlank(mcu.getMsn()) ? mcu.getMsn() : "");
+	            record.add(mcu.getStatus() != null ? mcu.getStatus().toString() : "");
+	            record.add(mcu.getType() != null ? mcu.getType().toString() : "");
+	            record.add(mcu.getVer() != null ? mcu.getVer().toString() : "");
+	            record.add(mcu.getVendor() != null ? mcu.getVendor().getName() : "");
+	            record.add(mcu.getLastSubscribeDatetime() != null ? sdf.format(new Date(mcu.getLastSubscribeDatetime())) : "");
+	            
+	            record.add(mcu.getGroup() != null ? mcu.getGroup().getId().toString() : "");
+	            record.add(mcu.getEnrollmentDatetime() != null ? sdf.format(new Date(mcu.getEnrollmentDatetime())) : "");
+            } else {
+            	record.add("unfind");
+            }
+            
+            return postProcessCsv(record);
+        }, buildPathFile(fileName), 1l);
+    }
+    
     // ID (Key),Building,Block,Level,Unit,Postcode,,Street Address,State.City,Coupled,UpdatedTime,Remark
     public static File writeAddressCsv(List<BuildingDto> listInput, String exportType, String fileName) throws IOException{
         List<String> headers = Arrays.asList(
