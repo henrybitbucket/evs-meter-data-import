@@ -126,7 +126,9 @@ public class CaRequestLogController {
 			IOUtils.copy(file.getInputStream(), bos);
 			List<String> sns = new ArrayList<>();
 			for (String l : new String(bos.toByteArray()).split("\r*\n")) {
-				sns.add(l.replaceAll("[^a-zA-Z0-9]", "").trim());
+				if (!l.trim().startsWith("//")) {
+					sns.add(l.replaceAll("[^a-zA-Z0-9]", "").trim());
+				}
 			}
 			pagin.getOptions().put("sns", sns);
 		} catch (Exception e) {
