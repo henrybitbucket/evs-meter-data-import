@@ -116,5 +116,14 @@ public class DMSApplication extends BaseEntity {
 	private Integer timePeriodTimeInDayHourEnd;
 	private Integer timePeriodTimeInDayMinuteStart;
 	private Integer timePeriodTimeInDayMinuteEnd;
+	
+	@Column(name = "guest_token_id", nullable = true, columnDefinition = "TEXT")
+	private String guestTokenId;
+	
+	@Column(name = "guest_token_start_time", nullable = true)
+	private Long guestTokenStartTime;
+	
+	@Column(name = "guest_token_end_time", nullable = true)
+	private Long guestTokenEndTime;
     
 }

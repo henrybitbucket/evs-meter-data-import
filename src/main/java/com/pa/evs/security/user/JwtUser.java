@@ -72,6 +72,9 @@ public class JwtUser implements UserDetails {
     @JsonIgnore
     private  boolean enabled;
     private  Date lastPasswordResetDate;
+    
+    @JsonIgnore
+    private  Date tokenExpireDate;
 
 //    public JwtUser(
 //          Long id,
@@ -156,4 +159,10 @@ public class JwtUser implements UserDetails {
 	public void setProjects(List<String> projects) {
 		this.projects = projects;
 	}
+
+	public void setTokenExpireDate(Date tokenExpireDate) {
+		this.tokenExpireDate = tokenExpireDate;
+	}
+	
+	
 }

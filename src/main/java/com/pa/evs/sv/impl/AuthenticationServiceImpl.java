@@ -244,7 +244,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		// Reload password post-security so we can generate the token
 		final JwtUser userDetails = (JwtUser) userDetailsService.loadUserByUsername(email);
 		if (SecurityUtils.getByPassUser() != null) {
-			final String token = jwtTokenUtil.generateToken(userDetails);
+			Map<String, Object> claims = new LinkedHashMap<>();
+			claims.put("tokenExpireDate", userDetails.getTokenExpireDate());
+			final String token = jwtTokenUtil.doGenerateToken(claims, userDetails.getUsername());
 			return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE,
 					LoginResponseDto.builder().token(token).authorities(
 							userDetails.getAuthorities().stream().map(au -> au.getAuthority()).collect(Collectors.toList()))
@@ -302,7 +304,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		final String token = jwtTokenUtil.generateToken(userDetails);
 		this.updateLastLogin(email);
 		this.loadRoleAndPermission();
-		String pwd = loginRequestDTO.getPassword();
 		String dmsLockToken = null;
 //		if (userDetails.getAppCodes().contains("DMS") && StringUtils.isNotBlank(user.getPhoneNumber())) {
 //			if (pwd.length() < 8) {
@@ -856,7 +857,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		String email = loginRequestDTO.getEmail();
 		// Reload password post-security so we can generate the token
 		final UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-		final String token = jwtTokenUtil.generateToken(userDetails);
+		Map<String, Object> claims = new LinkedHashMap<>();
+		final String token = jwtTokenUtil.doGenerateToken(claims, userDetails.getUsername());
 
 		return apiResponse.response(ValueConstant.SUCCESS, ValueConstant.TRUE,
 				LoginResponseDto.builder().token(token).build());

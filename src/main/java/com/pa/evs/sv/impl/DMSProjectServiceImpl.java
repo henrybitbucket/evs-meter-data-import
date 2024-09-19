@@ -44,7 +44,9 @@ import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSTimePeriodDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
 import com.pa.evs.dto.LoginRequestDto;
+import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.DMSApplication;
@@ -56,6 +58,7 @@ import com.pa.evs.model.DMSProjectPicUser;
 import com.pa.evs.model.DMSProjectSite;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
+import com.pa.evs.model.Login;
 import com.pa.evs.model.OTP;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.DMSApplicationHistoryRepository;
@@ -75,6 +78,7 @@ import com.pa.evs.repository.DMSWorkOrdersRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.repository.UserRepository;
+import com.pa.evs.security.jwt.JwtTokenUtil;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.DMSProjectService;
@@ -86,6 +90,8 @@ import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
+
+import io.jsonwebtoken.Claims;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 @Service
@@ -999,7 +1005,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			}
 		}
 
-		Object credential = null;
+		ResponseDto<LoginResponseDto> credential = null;
 		JwtUser guest = null;
 		try {
 			if (user == null) {
@@ -1040,6 +1046,15 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 		                .lastPasswordResetDate(new Date())
 		                .build();
 			}
+			
+			if (maxPeriod == null) {
+				try {
+					maxPeriod = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2100-01-01 00:00:00").getTime();
+				} catch (Exception e) {
+					//
+				}
+			}
+			guest.setTokenExpireDate(new Date(maxPeriod));
 			SecurityUtils.setByPassUser(guest);
 			credential = authenticationService.login(LoginRequestDto.builder().email(email).password(pwd).build());	
 		} finally {
@@ -1055,6 +1070,11 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			} else {
                 SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(guest, null, guest.getAuthorities()));
 			}
+			String guestToken = credential.getResponse().getToken();
+			String tokenId = AppProps.getContext().getBean(JwtTokenUtil.class).getClaimFromToken(guestToken, Claims::getAudience);
+			dto.setTokenStartTime(System.currentTimeMillis());
+			dto.setTokenEndTime(guest.getTokenExpireDate().getTime());
+			dto.setTokenId(tokenId);
 			submitApplication(projectId, (DMSApplicationSaveReqDto) dto);
 		}
 		return credential;
@@ -1155,7 +1175,9 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 				.timePeriodTimeInDayHourEnd(dto.getTimePeriod().getTimePeriodTimeInDayHourEnd())
 				.timePeriodTimeInDayMinuteStart(dto.getTimePeriod().getTimePeriodTimeInDayMinuteStart())
 				.timePeriodTimeInDayMinuteEnd(dto.getTimePeriod().getTimePeriodTimeInDayMinuteEnd())	
-				
+				.guestTokenId(dto.getTokenId())
+				.guestTokenStartTime(dto.getTokenStartTime())
+				.guestTokenEndTime(dto.getTokenEndTime())
 				// for highlight changed
 				.build());
 		
@@ -1568,12 +1590,50 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 	public void checkTerminateApplication() {
 		em.createQuery("UPDATE DMSApplication SET status = 'TERMINATED' where status = 'APPROVAL' and timeTerminate is not null and timeTerminate <= " + System.currentTimeMillis()).executeUpdate();
 	}
+	
+	@Transactional
+	public void checkTerminateApplicationGuest() {
+		
+		long newGuestAppTimeExpiry = 30l * 60 * 1000;
+		try {
+			newGuestAppTimeExpiry = Long.parseLong(AppProps.get("NEW_GUEST_APP_TIME_EXPIRY_MINUTE", "30")) * 60l * 1000l;
+		} catch (Exception e) {
+			newGuestAppTimeExpiry = 30l * 60 * 1000;
+		}
+		List<DMSApplication> apps = em.createQuery(" FROM DMSApplication WHERE isGuest = true and guestTokenId is not null and status <> 'APPROVAL' and guestTokenStartTime < " + (System.currentTimeMillis() - newGuestAppTimeExpiry)).getResultList();
+		
+		List<String> tokenIds = apps.stream().map(DMSApplication::getGuestTokenId).collect(Collectors.toList());
+		if (!tokenIds.isEmpty()) {
+			em.createQuery("UPDATE Login SET endTime = startTime where tokenId in (:tokenIds)")
+			.setParameter("tokenIds", tokenIds)
+			.executeUpdate();
+		}
+		
+		for (DMSApplication a : apps) {
+			em.createQuery("DELETE FROM DMSApplicationUser u where u.app.id = " + a.getId()).executeUpdate();
+			em.createQuery("DELETE FROM DMSApplicationSite u where u.app.id = " + a.getId()).executeUpdate();
+			em.createQuery("DELETE FROM DMSApplicationHistory u where u.app.id = " + a.getId()).executeUpdate();
+			em.flush();
+			dmsApplicationRepository.delete(a);
+		}
+	}
 
 	@Transactional
 	@PostConstruct
 	public void init() {
 		SchedulerHelper.scheduleJob("0/30 * * * * ? *", () -> {
-			AppProps.getContext().getBean(this.getClass()).checkTerminateApplication();
+			
+			try {
+				AppProps.getContext().getBean(this.getClass()).checkTerminateApplication();
+			} catch (Exception e) {
+				
+			}
+			try {
+				AppProps.getContext().getBean(this.getClass()).checkTerminateApplicationGuest();
+			} catch (Exception e) {
+				
+			}
+			
 		}, "checkTerminateApplication");
 	}
 }

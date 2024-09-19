@@ -96,7 +96,7 @@ public class JwtTokenUtil implements Serializable {
 
     public String doGenerateToken(Map<String, Object> claims, String subject) {
         final Date createdDate = clock.now();
-        final Date expirationDate = calculateExpirationDate(createdDate);
+        final Date expirationDate = claims.get("tokenExpireDate") != null ? (Date) claims.get("tokenExpireDate") : calculateExpirationDate(createdDate);
         String tokenId = UUID.randomUUID().toString();
         
         Login login = new Login();
