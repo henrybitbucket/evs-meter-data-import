@@ -936,6 +936,12 @@ public class DMSLockServiceImpl implements DMSLockService {
 				entity.setCreatedBy(SecurityUtils.getEmail());
 			}
 		}
+		
+		DMSLocationLock locationLock = dmsLocationLockRepository.findByLockId(lock.getId()).orElse(null);
+		if (locationLock != null) {
+			entity.setLocationName(Utils.formatHomeAddress(locationLock));
+		}
+		
 		dmsLockEventLogRepository.save(entity);
 		if (dto.isOfflineMode()) {
 			dmsLockEventLogRepository.flush();
@@ -953,28 +959,36 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Transactional(readOnly = true)
 	public Object getLockEventLogs(LockEventLogSearchReq dto) {
 		
-		StringBuilder sql = new StringBuilder("FROM DMSLockEventLog WHERE 1=1 ");
+		StringBuilder sql = new StringBuilder();
+		sql.append(" SELECT log, lock, ");
+		sql.append(" (select u.email from Users u where u.phoneNumber = log.createdBy) as email ");
+		sql.append(" FROM DMSLockEventLog log ");
+		sql.append(" left join DMSLock lock on (log.bid = lock.lockBid) ");
+		// sql.append(" left join DMSLocationLock l_lock on (l_lock.lock = lock) ");
+		sql.append(" WHERE 1=1 ");
+		
+		
 		if (StringUtils.isNotBlank(dto.getRequest().getBid())) {
-			sql.append(" AND bid='" + dto.getRequest().getBid() + "' ");
+			sql.append(" AND log.bid='" + dto.getRequest().getBid() + "' ");
 		}
 		
 		if (dto.getRequest().getFrom() != null) {
-			sql.append(" AND createDate >= :from ");
+			sql.append(" AND log.createDate >= :from ");
 		}
 
 		if (dto.getRequest().getTo() != null) {
-			sql.append(" AND createDate <= :to ");
+			sql.append(" AND log.createDate <= :to ");
 		}
 		
 		if (StringUtils.isNotBlank(dto.getRequest().getMobile())) {
-			sql.append(" AND lower(mobile) like '%" + dto.getRequest().getMobile().trim().toLowerCase() + "%' ");
+			sql.append(" AND lower(log.mobile) like '%" + dto.getRequest().getMobile().trim().toLowerCase() + "%' ");
 		}
 
 		if (dto.getRequest().getOfflineMode() != null) {
-			sql.append(" AND offlineMode = " + dto.getRequest().getOfflineMode() + " ");
+			sql.append(" AND log.offlineMode = " + dto.getRequest().getOfflineMode() + " ");
 		}
 		
-		sql.append(" ORDER BY modifyDate DESC ");
+		sql.append(" ORDER BY log.modifyDate DESC ");
 		
 		Query q = em.createQuery(sql.toString());
 		
@@ -986,12 +1000,21 @@ public class DMSLockServiceImpl implements DMSLockService {
 			q.setParameter("to", new Date(dto.getRequest().getTo().toEpochMilli()));
 		}
 		
-		return q
-		.setMaxResults(100)
-		.getResultList()
-		.stream()
-		.map(l -> LockEnventLogResDto.from((DMSLockEventLog) l))
-		.collect(Collectors.toList());
+		List<Object[]> arr = q.setMaxResults(100).getResultList();
+		
+		List<LockEnventLogResDto> res = new ArrayList<>();
+		for (Object[] objs : arr) {
+			DMSLockEventLog log = (DMSLockEventLog) objs[0];
+			DMSLock lock = (DMSLock) objs[1];
+			LockEnventLogResDto evt = LockEnventLogResDto.from(log, lock);
+			evt.setUsername((String) objs[2]);
+			if (StringUtils.isBlank(evt.getUsername())) {
+				evt.setUsername(evt.getMobile());
+			}
+			res.add(evt);
+		}
+		
+		return res;
 	}
 
 	@Override

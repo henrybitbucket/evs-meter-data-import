@@ -3,6 +3,7 @@ package com.pa.evs.dto;
 import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.pa.evs.model.DMSLock;
 import com.pa.evs.model.DMSLockEventLog;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,11 +17,20 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 public class LockEnventLogResDto {
+
+	@JsonProperty(value = "lock_id")
+	private String lockId;
 	
 	@JsonProperty(value = "log_timestamp")
 	private Instant time;
 
 	private String bid;
+	
+	@JsonProperty(value = "lock_name")
+	private String lockName;
+	
+	@JsonProperty(value = "user_name")
+	private String username;
 	
 	private String mobile;
 	
@@ -41,7 +51,14 @@ public class LockEnventLogResDto {
 	
 	private Boolean offlineMode;
 	
+	@JsonProperty(value = "location_name")
+    private String locationName;
+	
 	public static LockEnventLogResDto from(DMSLockEventLog fr) {
+		return from(fr, null);
+	}
+	
+	public static LockEnventLogResDto from(DMSLockEventLog fr, DMSLock lock) {
 		return builder()
 				.time(Instant.ofEpochMilli(fr.getCreateDate().getTime()))
 				.bid(fr.getBid())
@@ -52,6 +69,9 @@ public class LockEnventLogResDto {
 				.lat(fr.getLat())
 				.mobile(fr.getCreatedBy())
 				.offlineMode(fr.getOfflineMode())
+				.lockName(lock == null ? null : lock.getLockName())
+				.lockId(lock == null ? null : lock.getOriginalId())
+				.locationName(fr.getLocationName())
 				.build();
 	}
 }
