@@ -379,16 +379,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 	public void init() {
 		
         new Thread(() -> {
-    		try {
-    			loginPAS();
-    		} finally {
-    			SchedulerHelper.scheduleJob("0 0/3 * * * ? *", () -> {
-    				loginPAS();
-    			}, "APP_PAS_LOGIN");
-    		}
-    		
-    		// sync on init
-    		AppProps.getContext().getBean(this.getClass()).syncLock(null);
+    		AppProps.getContext().getBean(this.getClass()).updateEventLog();;
         }).start();
 
 	}
@@ -953,6 +944,21 @@ public class DMSLockServiceImpl implements DMSLockService {
 			lock.setBattery(entity.getBattery());
 			dmsLockRepository.save(lock);
 		}
+	}
+	
+	
+	@Transactional
+	public void updateEventLog() {
+		dmsLockEventLogRepository.findAll()
+		.forEach(entity -> {
+			DMSLock lock = dmsLockRepository.findByLockBid(entity.getBid()).orElseThrow(() -> new RuntimeException("Lock not found!"));
+			DMSLocationLock locationLock = dmsLocationLockRepository.findByLockId(lock.getId()).orElse(null);
+			if (locationLock != null) {
+				entity.setLocationName(Utils.formatHomeAddress(locationLock));
+			}
+			
+			dmsLockEventLogRepository.save(entity);			
+		});
 	}
 	
 	@Override

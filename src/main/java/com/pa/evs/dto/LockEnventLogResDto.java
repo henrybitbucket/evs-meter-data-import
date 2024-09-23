@@ -18,6 +18,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class LockEnventLogResDto {
 
+	private Long id;
+	
 	@JsonProperty(value = "lock_id")
 	private String lockId;
 	
@@ -72,6 +74,7 @@ public class LockEnventLogResDto {
 				.lockName(lock == null ? null : lock.getLockName())
 				.lockId(lock == null ? null : lock.getOriginalId())
 				.locationName(fr.getLocationName())
+				.id(fr.getId())
 				.build();
 	}
 }
