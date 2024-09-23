@@ -1,6 +1,7 @@
 package com.pa.evs.sv.impl;
 
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -27,12 +28,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pa.evs.dto.ApplicationRequestDto;
 import com.pa.evs.dto.CreateDMSAppUserDto;
 import com.pa.evs.dto.DMSApplicationDto;
 import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
@@ -58,7 +59,6 @@ import com.pa.evs.model.DMSProjectPicUser;
 import com.pa.evs.model.DMSProjectSite;
 import com.pa.evs.model.DMSSite;
 import com.pa.evs.model.DMSWorkOrders;
-import com.pa.evs.model.Login;
 import com.pa.evs.model.OTP;
 import com.pa.evs.model.Users;
 import com.pa.evs.repository.DMSApplicationHistoryRepository;
@@ -1635,5 +1635,43 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			}
 			
 		}, "checkTerminateApplication");
+	}
+
+	// get public applications as request https://powerautomationsg.atlassian.net/browse/LOCKS-38
+	@Override
+	public Object getAllApplications(ApplicationRequestDto dto) {
+		
+		StringBuilder sql = new StringBuilder(" SELECT app.id, app.name, app.status, app.createDate, app.modifyDate, app.project.name ");
+		sql.append(" FROM DMSApplication app where app.status <> 'DELETED' ");
+		
+		if (dto != null && dto.getRequest() != null && dto.getRequest().getFrom() != null) {
+			sql.append(" AND app.createDate >= :from ");
+		}
+		
+		if (dto != null && dto.getRequest() != null && dto.getRequest().getTo() != null) {
+			sql.append(" AND app.createDate <= :to ");
+		}		
+		Query query = em.createQuery(sql.append(" ORDER BY app.modifyDate DESC ").toString());
+
+		if (dto != null && dto.getRequest() != null && dto.getRequest().getFrom() != null) {
+			query.setParameter("from", new Date(dto.getRequest().getFrom().toEpochMilli()));
+		}
+		if (dto != null && dto.getRequest() != null && dto.getRequest().getTo() != null) {
+			query.setParameter("to", new Date(dto.getRequest().getTo().toEpochMilli()));
+		}	
+		
+		List<Object[]> ens = query.setMaxResults(20000).getResultList();
+		List<Map<String, Object>> rs = new ArrayList<>();
+		for (Object[] app : ens) {
+			Map<String, Object> it = new LinkedHashMap<>();
+			it.put("id", app[0]);
+			it.put("name", app[1]);
+			it.put("status", app[2]);
+			it.put("createdDate", Instant.ofEpochMilli(((Date) app[3]).getTime()));
+			it.put("lastModifiedDate", Instant.ofEpochMilli(((Date) app[4]).getTime()));
+			it.put("projectName", app[5]);
+			rs.add(it);
+		}
+		return rs;
 	}
 }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pa.evs.dto.ApplicationRequestDto;
 import com.pa.evs.dto.DMSApplicationDto;
 import com.pa.evs.dto.DMSLocationSiteDto;
 import com.pa.evs.dto.DMSProjectDto;
@@ -60,6 +61,16 @@ public class DMSProjectController {
 	public PaginDto<DMSApplicationDto> searchApplications(@RequestBody PaginDto<DMSApplicationDto> pagin) {
 		dmsProjectService.searchApplications(pagin);
 		return pagin;
+	}
+	
+	// // get public applications as request https://powerautomationsg.atlassian.net/browse/LOCKS-38
+	@PostMapping("/api/dms/getAllApplications")
+	public Object getAllApplications(@RequestBody ApplicationRequestDto dto) {
+		try {
+			return ResponseDto.builder().success(true).response(dmsProjectService.getAllApplications(dto)).message(ResponseEnum.SUCCESS.getErrorDescription()).build();
+		} catch (Exception ex) {
+			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
+		}
 	}
 	
 	@PostMapping("/api/dms/applications/{applicationId}/users")

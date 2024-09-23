@@ -2,6 +2,7 @@ package com.pa.evs.sv;
 
 import java.util.List;
 
+import com.pa.evs.dto.ApplicationRequestDto;
 import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
 import com.pa.evs.dto.DMSApplicationSaveReqDto;
 import com.pa.evs.dto.DMSProjectDto;
@@ -50,4 +51,6 @@ public interface DMSProjectService {
 	Object updateApplication(Long projectId, DMSApplicationSaveReqDto dto);
 
 	void terminateApplication(Long applicationId);
+
+	Object getAllApplications(ApplicationRequestDto dto);
 }

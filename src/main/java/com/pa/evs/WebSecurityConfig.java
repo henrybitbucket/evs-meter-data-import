@@ -132,6 +132,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	            .antMatchers("/api/dms/sites/*").permitAll()
 	            .antMatchers("/api/sites").permitAll()
 	            .antMatchers("/api/getLocks").permitAll()
+	            .antMatchers("/api/dms/getAllApplications").permitAll()
 	            
 	            .antMatchers(HttpMethod.POST, "/api/dms-assigned-locks2**").permitAll()
 	            .antMatchers(HttpMethod.POST, "/api/lock/*/code2**").permitAll()
