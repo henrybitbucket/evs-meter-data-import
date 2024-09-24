@@ -402,10 +402,12 @@ public class DMSProjectServiceImpl implements DMSProjectService {
 			cmmBuilder.append(" AND fl.id = " + pagin.getOptions().get("applicationId") + " ");
 		}	
 		
-		if (!SecurityUtils.hasAnyRole("DMS_R_APPROVE_APPLICATION", "DMS_R_REJECT_APPLICATION")) {
-			cmmBuilder.append(" AND fl.createdBy = '" + SecurityUtils.getPhoneNumber() + "' ");
-		} else {
-			cmmBuilder.append(" AND (fl.createdBy = '" + SecurityUtils.getPhoneNumber() + "' OR  exists (select 1 from DMSProjectPicUser pic where pic.project.id = fl.project.id and pic.picUser.email = '" + SecurityUtils.getEmail() + "')) ");	
+		if (pagin.getOptions().get("applicationId") == null || !SecurityUtils.hasAnyRole("DMS_SUPER_ADMIN")) {
+			if (!SecurityUtils.hasAnyRole("DMS_R_APPROVE_APPLICATION", "DMS_R_REJECT_APPLICATION")) {
+				cmmBuilder.append(" AND fl.createdBy = '" + SecurityUtils.getPhoneNumber() + "' ");
+			} else {
+				cmmBuilder.append(" AND (fl.createdBy = '" + SecurityUtils.getPhoneNumber() + "' OR  exists (select 1 from DMSProjectPicUser pic where pic.project.id = fl.project.id and pic.picUser.email = '" + SecurityUtils.getEmail() + "')) ");	
+			}			
 		}
 		
 		sqlBuilder.append(cmmBuilder);
