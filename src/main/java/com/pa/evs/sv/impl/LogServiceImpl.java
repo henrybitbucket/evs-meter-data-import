@@ -89,7 +89,7 @@ public class LogServiceImpl implements LogService {
         	sqlCommonBuilder.append(" AND cl.group.id = " + groupId + " ");
         }
         if (StringUtils.isNotBlank(batchId)) {
-        	sqlCommonBuilder.append(" AND (l.batchId = '" + batchId + "' or exists(select l1.id from Log l1 where l1.batchId = '" + batchId + "' and l1.pType = l.pType and l1.msn = l.msn and l1.mid = l.oid )) ");
+        	sqlCommonBuilder.append(" AND (l.batchId = '" + batchId + "' or exists(select l1.id from Log l1 where l1.batchId = '" + batchId + "' and l1.msn = l.msn and l1.mid = l.oid )) ");
         }
         if (StringUtils.isBlank(uid) && StringUtils.isNotBlank(msn)) {
         	sqlCommonBuilder.append(" AND l.msn like '%" + msn + "%'");
