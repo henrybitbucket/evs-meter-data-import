@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -339,9 +338,33 @@ public class EVSPAServiceImpl implements EVSPAService {
 		return null;
 	}
 
+	@SuppressWarnings("rawtypes")
 	@Override
 	public Log publish(String topic, Object message, String type, String batchId) throws Exception {
-		Log log = publish(topic, message, type);
+		
+		
+		Log log = null;
+		if ("OTA".equals(type) && CommonController.CMD_OPTIONS.get() != null && CommonController.CMD_OPTIONS.get().get("selectVersion") != null) {
+			
+			Map<String, Object> publishData = new HashMap<>((Map) message);
+			publishData.put("type", type);
+			Log logP = Log.build(publishData, "PUBLISH");
+			logP.setTopic(topic);
+			logP.setMqttAddress(evsPAMQTTAddress);
+			
+			LOG.info("> OTA request update firmwave " + logP.getUid() + " -> " + CommonController.CMD_OPTIONS.get().get("selectVersion"));
+			Optional<CARequestLog> opt = caRequestLogRepository.findByUid(logP.getUid());
+			if (opt.isPresent()) {
+				opt.get().setLatestINFFirmwaveRequest(System.currentTimeMillis() + "@@INF@@" + logP.getMid() + "@@" + CommonController.CMD_OPTIONS.get().get("selectVersion") + "@@" + SecurityUtils.getEmail());
+				caRequestLogRepository.save(opt.get());
+				caRequestLogRepository.flush();
+			}
+			log = sendOTA(0, logP, opt, type, 0);
+		} else {
+			log = publish(topic, message, type);
+		}
+		
+		
     	Users user = userRepository.findByEmail(SecurityUtils.getEmail());
 		if (log != null && StringUtils.isNotBlank(batchId)) {
 			LogBatch batch = logBatchRepository.findByUuid(batchId).orElse(LogBatch.builder().email(SecurityUtils.getEmail()).uuid(batchId).user(user).build());
@@ -406,6 +429,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			return logP;
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
+		} finally {
+			CommonController.CMD_OPTIONS.remove();
 		}
 		return null;
 	}
@@ -984,9 +1009,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 			status = validateUidAndMsn(log);
 		}
 
+		sendOTA(status, log, opt, type, 15);
+	}
+	
+	private Log sendOTA(int status, Log log, Optional<CARequestLog> opt, String type, long sleepSeconds) throws Exception {
+		Map<String, Object> data;
+		
+		Log plLog = null;
 		if (status == 0) {
 			LOG.debug("sleep 15s");
-			TimeUnit.SECONDS.sleep(15);
+			if (sleepSeconds > 0) {
+				TimeUnit.SECONDS.sleep(sleepSeconds);
+			}
 			String urlS3 = "";
 			Map<String, Object> mapPl = new LinkedHashMap<>();
 			if (opt.isPresent()) {
@@ -1034,7 +1068,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.debug("evs.pa.privatekey.path: " + opt.get().getVendor().getKeyPath());
 			String sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(opt.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload), opt.get().getVendor().getSignatureAlgorithm());
 			header.put("sig", sig);
-			publish(alias + log.getUid(), data, type);
+			plLog = publish(alias + log.getUid(), data, type);
 
 			//update last OTA time
 			if (opt.isPresent()) {
@@ -1057,8 +1091,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
-			publish(alias + log.getUid(), data, type);
+			plLog = publish(alias + log.getUid(), data, type);
 		}
+		
+		return plLog;
 	}
 	
 	private void handleACTRes(Map<String, Object> data, String type, Log log, int status) throws Exception {

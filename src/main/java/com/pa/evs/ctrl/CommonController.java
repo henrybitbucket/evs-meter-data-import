@@ -292,7 +292,7 @@ public class CommonController {
             }
 
             //check OTA is in progress ot NOT
-            if (!"TCM_INFO".equalsIgnoreCase(command.getType()) && "INF".equalsIgnoreCase(command.getCmd())) {
+            if (!"TCM_INFO".equalsIgnoreCase(command.getType()) && ("INF".equalsIgnoreCase(command.getCmd()) || "OTA".equalsIgnoreCase(command.getCmd()))) {
                 long timeDiff = Calendar.getInstance().getTimeInMillis() - (ca.get().getLastOtaDate() == null ? Calendar.getInstance().getTimeInMillis() : ca.get().getLastOtaDate());
                 if (timeDiff <= otaTimeout * 60 * 1000 && ca.get().getIsOta() != null && ca.get().getIsOta()) {
                     return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message("OTA is in processing. This request is skipped").build());

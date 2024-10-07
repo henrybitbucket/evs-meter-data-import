@@ -1231,7 +1231,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         final List<Object[]> list = query.getResultList();
         List<CARequestLog> rp = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
-        	 
+
         	Object[] obj = list.get(i);
         	
         	CARequestLog ca = (CARequestLog) obj[0];
@@ -1255,7 +1255,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	ca.setDeviceProject(null);
         	ca.setHomeAddress(Utils.formatHomeAddress(ca));
         	
-        	if (StringUtils.isBlank(ca.getDeviceCsrSignatureAlgorithm())) {
+        	if (!BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv")) 
+        			&& "true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "") 
+        			&& StringUtils.isBlank(ca.getDeviceCsrSignatureAlgorithm())) {
         		AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.getUid());
         	}
         	
@@ -1269,7 +1271,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         }
         
         pagin.setResults(rp);
-        getRLSLog(rp);
+        if (!BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv")) 
+    			&& "true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "") ) {
+        	getRLSLog(rp);	
+        }
+        
         if (searchMeter) {
         	for (Object[] obj : list) {
             	CARequestLog ca = (CARequestLog) obj[0];

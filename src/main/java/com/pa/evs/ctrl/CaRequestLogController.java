@@ -76,6 +76,9 @@ public class CaRequestLogController {
 	@PostMapping(RestPath.GET_CA_REQUEST_LOG)
     public ResponseEntity<?> getMCUs(HttpServletResponse response, @RequestBody PaginDto<CARequestLog> pagin) throws IOException {
         
+    	if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv")) || "true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "")) {
+    		pagin.setLimit(Integer.MAX_VALUE);
+    	}
         PaginDto<CARequestLog> result = caRequestLogService.search(pagin);
         if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
         	result.getResults().forEach(o -> o.setProfile((String)pagin.getOptions().get("profile")));

@@ -1,9 +1,12 @@
 package com.pa.evs.sv.impl;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -30,10 +33,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.pa.evs.dto.DMSAccDto;
 import com.pa.evs.dto.VendorDto;
-import com.pa.evs.model.DMSMcAcc;
-import com.pa.evs.model.DMSVendorMCAcc;
 import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.DMSVendorMCAccRepository;
@@ -45,9 +45,9 @@ import com.pa.evs.utils.AppProps;
 
 @Service
 @Transactional
-public class VendorServiceIplm implements VendorService {
+public class VendorServiceImpl implements VendorService {
 
-	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(VendorServiceIplm.class);
+	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(VendorServiceImpl.class);
 
 	@Autowired
 	VendorRepository vendorRepository;
@@ -142,18 +142,42 @@ public class VendorServiceIplm implements VendorService {
 	@Transactional
 	public void buildPathFileOfVendor(Vendor ven, InputStream keyContent, InputStream csrContent) {
 		if (StringUtils.isNotBlank(ven.getKeyPath()) && ven.getKeyContent() != null) {
-			try (OutputStream out = new FileOutputStream(ven.getKeyPath())) {
+			File temp = new File(ven.getKeyPath() + ".tmp");
+			try (OutputStream out = new FileOutputStream(temp)) {
 				IOUtils.copy(keyContent == null ? ven.getKeyContent().getBinaryStream() : keyContent, out);
+				if (temp.length() > 0l) {
+					Files.copy(temp.toPath(), new File(ven.getKeyPath()).toPath(), StandardCopyOption.REPLACE_EXISTING);
+				}
 			} catch (Exception e) {
 				LOG.error("Error when build path key : ", e.getMessage(), e);
+			} finally {
+				try {
+					Files.deleteIfExists(temp.toPath());
+				} catch (Exception e2) {
+					//
+				}
 			}
 		}
 		if (StringUtils.isNotBlank(ven.getCsrPath()) && ven.getCsrBlob() != null) {
-			try (OutputStream out = new FileOutputStream(ven.getCsrPath())) {
+			File temp = new File(ven.getCsrPath() + ".tmp");
+			try (OutputStream out = new FileOutputStream(temp)) {
 				IOUtils.copy(csrContent == null ? ven.getCsrBlob().getBinaryStream() : csrContent, out);
+				if (temp.length() > 0l) {
+					Files.copy(temp.toPath(), new File(ven.getCsrPath()).toPath(), StandardCopyOption.REPLACE_EXISTING);
+				}
 			} catch (Exception e) {
 				LOG.error("Error when build path csr : ", e.getMessage(), e);
+			} finally {
+				try {
+					Files.deleteIfExists(temp.toPath());
+				} catch (Exception e2) {
+					//
+				}
 			}
+		}
+		if (StringUtils.isBlank(ven.getLabel())) {
+			ven.setLabel(ven.getName().replace("inkfields", "inksfield"));
+			vendorRepository.save(ven);
 		}
 	}
 
