@@ -3,16 +3,13 @@ package com.pa.evs.utils;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileReader;
-import java.io.IOException;
-import java.security.InvalidKeyException;
+import java.io.StringWriter;
 import java.security.KeyFactory;
 import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.Signature;
-import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.interfaces.RSAPrivateCrtKey;
@@ -24,10 +21,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
+import org.bouncycastle.util.io.pem.PemWriter;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+
 import com.pa.evs.sv.impl.EVSPAServiceImpl;
 
 /**
@@ -478,7 +482,114 @@ public class RSAUtil {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String pl = "{\"id\":\"89049032000001000000128255791124\",\"cmd\":\"PW1\"}";
-		System.out.println(initSignedRequest("D:/home/evs-data/master_key_vendor_1_SHA256withECDSA_1697540135474.key", pl, "SHA256withECDSA"));;
+		// MGQCMDj9+UUcehFegfjXFmLE3hUYzwKeflf58HCWlUqPQzffeAnFkZ0agaW9PF1sCEDMGwIwW4hY2GEXNe5sUEMn8cmY7IYbxyEfXAPMKpzNQ+vkgJL29cGgPi37aVA09/NbT5hZ
+		// MGUCMQCNNW9oRWCE3Lj2qF3jF/BlrQSK2tnc1lh00w/4oda8AoqkkbhjAySr36ALrfjJJI0CMDUM3e3rHpChFeCvpRu9D5pdpP5Fy2hi4v6OaCHtP/RaWlcHUqmwZXMw+z0BN4CxkQ==
+		
+		
+		boolean val = validateServerKeyAndCsrKey("D:\\BUS\\THN\\pa-evs\\src\\main\\resources\\sv-ca\\server.key", "D:\\BUS\\THN\\pa-evs\\src\\main\\resources\\sv-ca\\server.csr");
+		System.out.println(val);
+		
+		String payload = "{\"id\":\"89049032000001000000128255791124\",\"cmd\":\"PW1\"}";
+		System.out.println(initSignedRequest("D:/home/evs-data/master_key_vendor_1_SHA256withECDSA_1712724921565.key", payload, "SHA256withECDSA"));
+		
+		Certificate c = generateCertificate("-----BEGIN CERTIFICATE-----\r\n"
+				+ "MIICXDCCAgOgAwIBAgIQYNmtuKXYxTHMxPob0dkMQTAKBggqhkjOPQQDAjBfMQsw\r\n"
+				+ "CQYDVQQGEwJTRzELMAkGA1UECgwCUEExDjAMBgNVBAsMBUJVNTAwMQswCQYDVQQI\r\n"
+				+ "DAJOQTESMBAGA1UEAwwJUEFDQSBGRkZGMRIwEAYDVQQHDAlBbGV4YW5kcmEwHhcN\r\n"
+				+ "MjEwNzI2MDE0NjU0WhcNMjMwNzI2MDI0NjU0WjBnMQswCQYDVQQGEwJTRzELMAkG\r\n"
+				+ "A1UECAwCTkExEjAQBgNVBAcMCVNpbmdhcG9yZTELMAkGA1UECgwCUEExDjAMBgNV\r\n"
+				+ "BAsMBUJVNTAwMRowGAYDVQQDDBFtYXN0ZXIuZXZzLmNvbS5zZzB2MBAGByqGSM49\r\n"
+				+ "AgEGBSuBBAAiA2IABK24Ek7o762rmjOlV+nRYG/qqHhuxYPa+PGTjw2KtdzH20w2\r\n"
+				+ "9GwbwLuLhZn9sa1/q243hOBQrmM9Lt+e37j0BR36UlF30EJ5gnE+wu4TcrJ2Njcs\r\n"
+				+ "kAbzdsFWQ56TfhA5F6N8MHowCQYDVR0TBAIwADAfBgNVHSMEGDAWgBTEeueXIA2S\r\n"
+				+ "uEEJTIwoqMVhBhmELjAdBgNVHQ4EFgQUituPGcm7xBe4tUurRPm7edMtGgwwDgYD\r\n"
+				+ "VR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAKBggq\r\n"
+				+ "hkjOPQQDAgNHADBEAiAFZfMhH0VekhKPoJmQrJSV/dgnZvOfWtDTa73puF8p2wIg\r\n"
+				+ "EgWEufejkciy1sjPyig/le8QEKhUQMdjwGYwF1MIHf0=\r\n"
+				+ "-----END CERTIFICATE-----");
+		PublicKey publicKey = c.getPublicKey();
+		System.out.println(publicKey);
+		
+		StringWriter writer = new StringWriter();
+		PemWriter pemWriter = new PemWriter(writer);
+		pemWriter.writeObject(new PemObject("PUBLIC KEY", publicKey.getEncoded()));
+		pemWriter.flush();
+		pemWriter.close();
+		
+		System.out.println(writer.toString());
+		System.out.println("---------------");
+		
+//		PEMReader pemReader = new PEMReader(new FileReader("D:\\BUS\\THN\\pa-evs\\src\\main\\resources\\sv-ca\\server.key"));
+//		Security.addProvider(new BouncyCastleProvider());
+//		pemReader.readObject();
+//		KeyPair keyPair = (KeyPair) pemReader.readObject();
+//		PublicKey publicKey = keyPair.getPublic();
+//		System.out.println(publicKey);
+		
+//		StringWriter writer = new StringWriter();
+//		PemWriter pemWriter = new PemWriter(writer);
+//		pemWriter.writeObject(new PemObject("PUBLIC KEY", publicKey.getEncoded()));
+//		pemWriter.flush();
+//		pemWriter.close();
+//		
+//		System.out.println(writer.toString());
+//		publicKey = null;
+		
+		
+		
+//		String sig = "MGUCMQCrldDRA9Wh+/8w+t1fRdIZuG9AVdOfDwWZNMPTMysG1gVy/SxQJcRsrYIzoaziMucCMGXiCdxGQHYSV8OZytyKTvJLzuM2B5+g51pbuGu3LT9lSkDqu/ocvqOMtup+Kr5YEw==";
+//		payload = "{\"id\":\"BIE2IEYAAMAJWABIAA\",\"cmd\":\"PW1\"}";
+//		Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA");
+//		ecdsaVerify.initVerify(publicKey);
+//		ecdsaVerify.update(payload.getBytes("UTF-8"));
+//		System.out.println(ecdsaVerify.verify(Base64.getDecoder().decode(sig)));
+		
+		// Certificate certificate = generateCertificate("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNWVENDQWZ5Z0F3SUJBZ0lRR1MvZUp0TTVZNjd6M0VFY1NIVVpKVEFLQmdncWhrak9QUVFEQWpCU01Rc3cKQ1FZRFZRUUdFd0pUUnpFTE1Ba0dBMVVFQ2d3Q1VFRXhEakFNQmdOVkJBc01CVUpWTlRBd01SSXdFQVlEVlFRRApEQWxRUVVOQklFWkdSa1l4RWpBUUJnTlZCQWNNQ1VGc1pYaGhibVJ5WVRBZUZ3MHlNekV3TVRjeE1EVXhNalphCkZ3MHlOREE1TURFeE1UVXhNalphTUcweEN6QUpCZ05WQkFZVEFsTkhNUXN3Q1FZRFZRUUlEQUpPUVRFU01CQUcKQTFVRUJ3d0pVMmx1WjJGd2IzSmxNUXN3Q1FZRFZRUUtEQUpRUVRFT01Bd0dBMVVFQ3d3RlFsVTFNREF4SURBZQpCZ05WQkFNTUYzTmxjblpsY2k1b1pHSnpiV0Z5ZEdodmJXVXVZMjl0TUhZd0VBWUhLb1pJemowQ0FRWUZLNEVFCkFDSURZZ0FFRXhtQ3Btc2paRlhmRDJLY1hORnJtQktJNGpUS2dYSkpiOXpTaEFmQWhwZFp5OVRxS0ZaRkdYeUsKcGxmQVNSZTd6L3VDTlpTZitKZjIwNzJ0YUs0RWk3ekVJSTd1VHRwR0gyRnlsbUNHUXAwbndFclVUSlNQY0dPbgpWaG12Mm5YTG8zd3dlakFKQmdOVkhSTUVBakFBTUI4R0ExVWRJd1FZTUJhQUZOY1A4SWJLVGh1TTd6RlNrVkphCk1ESnNEcXJGTUIwR0ExVWREZ1FXQkJTY3Npc1hEV2lMUmlRVnd4Q2g3STlPckxseER6QU9CZ05WSFE4QkFmOEUKQkFNQ0JhQXdIUVlEVlIwbEJCWXdGQVlJS3dZQkJRVUhBd0VHQ0NzR0FRVUZCd01DTUFvR0NDcUdTTTQ5QkFNQwpBMGNBTUVRQ0lEYjhsTXlGTFpMN3Q5cCtWbzE1SU5oZ2xFYkJ4MWVrUmhsdDNPb2VMVmw5QWlCRzZES0xvT2hPClZNK0x5Q2hqNEJOK0JENWZicTBpbnpCLzB6cWJSWE9GN1E9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==");
+		
+		Certificate certificate = generateCertificate("LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNXRENDQWYyZ0F3SUJBZ0lSQUlJN0ZHWE9iY01XYkg3ZDczdUdXYzR3Q2dZSUtvWkl6ajBFQXdJd1VqRUwKTUFrR0ExVUVCaE1DVTBjeEN6QUpCZ05WQkFvTUFsQkJNUTR3REFZRFZRUUxEQVZDVlRVd01ERVNNQkFHQTFVRQpBd3dKVUVGRFFTQkdSa1pHTVJJd0VBWURWUVFIREFsQmJHVjRZVzVrY21Fd0hoY05NalF4TURFMk1UY3lOVEl4CldoY05NalV3T1RBeE1UZ3lOVEl4V2pCdE1Rc3dDUVlEVlFRR0V3SlRSekVMTUFrR0ExVUVDQXdDVGtFeEVqQVEKQmdOVkJBY01DVk5wYm1kaGNHOXlaVEVMTUFrR0ExVUVDZ3dDVUVFeERqQU1CZ05WQkFzTUJVSlZOVEF3TVNBdwpIZ1lEVlFRRERCZHpaWEoyWlhJdWFHUmljMjFoY25Sb2IyMWxMbU52YlRCMk1CQUdCeXFHU000OUFnRUdCU3VCCkJBQWlBMklBQkJNWmdxWnJJMlJWM3c5aW5GelJhNWdTaU9JMHlvRnlTVy9jMG9RSHdJYVhXY3ZVNmloV1JSbDgKaXFaWHdFa1h1OC83Z2pXVW4vaVg5dE85cldpdUJJdTh4Q0NPN2s3YVJoOWhjcFpnaGtLZEo4QksxRXlVajNCagpwMVlacjlwMXk2TjhNSG93Q1FZRFZSMFRCQUl3QURBZkJnTlZIU01FR0RBV2dCVFhEL0NHeWs0YmpPOHhVcEZTCldqQXliQTZxeFRBZEJnTlZIUTRFRmdRVW5MSXJGdzFvaTBZa0ZjTVFvZXlQVHF5NWNROHdEZ1lEVlIwUEFRSC8KQkFRREFnV2dNQjBHQTFVZEpRUVdNQlFHQ0NzR0FRVUZCd01CQmdnckJnRUZCUWNEQWpBS0JnZ3Foa2pPUFFRRApBZ05KQURCR0FpRUFqU1V1cHJ4a2FMdG14V2FKbjlVTUJnWmFlNFFBclF6Nlh1V1k3QzUzU28wQ0lRQ2hEdjNZCjlzMit1dUZaMVNCcytWckxBbWxBaGNpNnJlVXY2Y29zNFc3bEN3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=");
+		
+		certificate = generateCertificate("MIICXDCCAgOgAwIBAgIQYNmtuKXYxTHMxPob0dkMQTAKBggqhkjOPQQDAjBfMQswCQYDVQQGEwJTRzELMAkGA1UECgwCUEExDjAMBgNVBAsMBUJVNTAwMQswCQYDVQQIDAJOQTESMBAGA1UEAwwJUEFDQSBGRkZGMRIwEAYDVQQHDAlBbGV4YW5kcmEwHhcNMjEwNzI2MDE0NjU0WhcNMjMwNzI2MDI0NjU0WjBnMQswCQYDVQQGEwJTRzELMAkGA1UECAwCTkExEjAQBgNVBAcMCVNpbmdhcG9yZTELMAkGA1UECgwCUEExDjAMBgNVBAsMBUJVNTAwMRowGAYDVQQDDBFtYXN0ZXIuZXZzLmNvbS5zZzB2MBAGByqGSM49AgEGBSuBBAAiA2IABK24Ek7o762rmjOlV+nRYG/qqHhuxYPa+PGTjw2KtdzH20w29GwbwLuLhZn9sa1/q243hOBQrmM9Lt+e37j0BR36UlF30EJ5gnE+wu4TcrJ2NjcskAbzdsFWQ56TfhA5F6N8MHowCQYDVR0TBAIwADAfBgNVHSMEGDAWgBTEeueXIA2SuEEJTIwoqMVhBhmELjAdBgNVHQ4EFgQUituPGcm7xBe4tUurRPm7edMtGgwwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAKBggqhkjOPQQDAgNHADBEAiAFZfMhH0VekhKPoJmQrJSV/dgnZvOfWtDTa73puF8p2wIgEgWEufejkciy1sjPyig/le8QEKhUQMdjwGYwF1MIHf0=");
+//		PublicKey publicKey = certificate.getPublicKey();
+//		StringWriter writer = new StringWriter();
+//		PemWriter pemWriter = new PemWriter(writer);
+//		pemWriter.writeObject(new PemObject("PUBLIC KEY", publicKey.getEncoded()));
+//		pemWriter.flush();
+//		pemWriter.close();
+//		
+//		System.out.println(writer.toString());
+		
+		String sig = "MGYCMQCCgVZ2GAXCoqwJfkuUJmClV5RCSaa+pDaMFE0QWO/HiLlHBbMzapCTWr1P9XI6UbUCMQC5ZywaWmiN/TC/i6uXwOUaVRjNR8W5q138n3ihusm+cH+XZUyKVOxaKbINWbTTszg=";
+		payload = "{\"p1\":\"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNXRENDQWYyZ0F3SUJBZ0lSQUlJN0ZHWE9iY01XYkg3ZDczdUdXYzR3Q2dZSUtvWkl6ajBFQXdJd1VqRUwKTUFrR0ExVUVCaE1DVTBjeEN6QUpCZ05WQkFvTUFsQkJNUTR3REFZRFZRUUxEQVZDVlRVd01ERVNNQkFHQTFVRQpBd3dKVUVGRFFTQkdSa1pHTVJJd0VBWURWUVFIREFsQmJHVjRZVzVrY21Fd0hoY05NalF4TURFMk1UY3lOVEl4CldoY05NalV3T1RBeE1UZ3lOVEl4V2pCdE1Rc3dDUVlEVlFRR0V3SlRSekVMTUFrR0ExVUVDQXdDVGtFeEVqQVEKQmdOVkJBY01DVk5wYm1kaGNHOXlaVEVMTUFrR0ExVUVDZ3dDVUVFeERqQU1CZ05WQkFzTUJVSlZOVEF3TVNBdwpIZ1lEVlFRRERCZHpaWEoyWlhJdWFHUmljMjFoY25Sb2IyMWxMbU52YlRCMk1CQUdCeXFHU000OUFnRUdCU3VCCkJBQWlBMklBQkJNWmdxWnJJMlJWM3c5aW5GelJhNWdTaU9JMHlvRnlTVy9jMG9RSHdJYVhXY3ZVNmloV1JSbDgKaXFaWHdFa1h1OC83Z2pXVW4vaVg5dE85cldpdUJJdTh4Q0NPN2s3YVJoOWhjcFpnaGtLZEo4QksxRXlVajNCagpwMVlacjlwMXk2TjhNSG93Q1FZRFZSMFRCQUl3QURBZkJnTlZIU01FR0RBV2dCVFhEL0NHeWs0YmpPOHhVcEZTCldqQXliQTZxeFRBZEJnTlZIUTRFRmdRVW5MSXJGdzFvaTBZa0ZjTVFvZXlQVHF5NWNROHdEZ1lEVlIwUEFRSC8KQkFRREFnV2dNQjBHQTFVZEpRUVdNQlFHQ0NzR0FRVUZCd01CQmdnckJnRUZCUWNEQWpBS0JnZ3Foa2pPUFFRRApBZ05KQURCR0FpRUFqU1V1cHJ4a2FMdG14V2FKbjlVTUJnWmFlNFFBclF6Nlh1V1k3QzUzU28wQ0lRQ2hEdjNZCjlzMit1dUZaMVNCcytWckxBbWxBaGNpNnJlVXY2Y29zNFc3bEN3PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=\",\"id\":\"BIE2IEYAAMAJWABIAA\",\"cmd\":\"ACT\"}";
+		Signature ecdsaVerify = Signature.getInstance("SHA256withECDSA");
+		ecdsaVerify.initVerify(publicKey);
+		ecdsaVerify.update(payload.getBytes("UTF-8"));
+		System.out.println(ecdsaVerify.verify(Base64.getDecoder().decode(sig)) == true);
+		System.out.println(1);
+	}
+	
+	public static void main5(String[] a) throws Exception {
+		org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+		org.apache.http.conn.ssl.TrustStrategy acceptingTrustStrategy = new org.apache.http.conn.ssl.TrustStrategy() {
+			public boolean isTrusted(java.security.cert.X509Certificate[] x509Certificates, String s) throws java.security.cert.CertificateException {
+				return true;
+			}
+		};
+		
+		java.security.KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
+		keyStore.load(new java.io.FileInputStream("F:\\vmw\\Starfish Demo Postman\\NetSeT-User Demo0000000058-copy.jks"), "79565965".toCharArray());
+        
+		javax.net.ssl.SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom()
+				.loadKeyMaterial(keyStore, "79565965".toCharArray())
+				.loadTrustMaterial(null, acceptingTrustStrategy).build();
+		SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext);
+
+		CloseableHttpClient httpClient = HttpClients.custom().setSSLSocketFactory(csf).build();
+		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
+		requestFactory.setHttpClient(httpClient);
+		restTemplate.setRequestFactory(requestFactory);
+		Object x = restTemplate.getForEntity("https://starfishdemo.local:8443/starfish/ca", Object.class).getBody();
+		System.out.println(x);
+		
+		//CsvUtils.toCsv(headers, items, converter, filePath, activateDate)
 	}
 }

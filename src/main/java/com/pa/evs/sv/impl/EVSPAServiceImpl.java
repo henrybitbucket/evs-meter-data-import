@@ -16,7 +16,6 @@ import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -346,7 +345,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		Log log = null;
 		if ("OTA".equals(type) && CommonController.CMD_OPTIONS.get() != null && CommonController.CMD_OPTIONS.get().get("selectVersion") != null) {
 			
-			Map<String, Object> publishData = new HashMap<>((Map) message);
+			Map<String, Object> publishData = new LinkedHashMap<>((Map) message);
 			publishData.put("type", type);
 			Log logP = Log.build(publishData, "PUBLISH");
 			logP.setTopic(topic);
@@ -391,7 +390,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
 			
 			//save log
-			Map<String, Object> publishData = new HashMap<>((Map) message);
+			Map<String, Object> publishData = new LinkedHashMap<>((Map) message);
 			publishData.put("type", type);
 			Log logP = Log.build(publishData, "PUBLISH");
 			logP.setTopic(topic);
@@ -442,7 +441,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			LOG.info("Publish " + topic + " -> " + new ObjectMapper().writeValueAsString(message));
 
 			//save log
-			Map<String, Object> publishData = new HashMap<>((Map) message);
+			Map<String, Object> publishData = new LinkedHashMap<>((Map) message);
 			Log logP = Log.build(publishData, "PUBLISH");
 			logP.setTopic(topic);
 			logP.setMqttAddress(evsPAMQTTAddress);
@@ -520,7 +519,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Date datetime = sf.parse(((String) o.get("dt")).replace(".000", ""));
 			sf.applyPattern("yyyyMMdd");
 
-			Map<String, Object> tmp = new HashMap<>(o);
+			Map<String, Object> tmp = new LinkedHashMap<>(o);
 			tmp.put("uid", payload.get("id"));
 			tmp.put("dt", datetime.getTime());
 			tmp.put("dtd", datetime);
@@ -683,8 +682,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 		Optional<Object> opt = localMap.getUidMsnMap().containsKey(log.getUid()) ? Optional.<Object>of(true) : Optional.<Object>empty();
 		if (!opt.isPresent()) {
 			//Publish device not found
-			Map<String, Object> data = new HashMap<>();
-			Map<String, Object> header = new HashMap<>();
+			Map<String, Object> data = new LinkedHashMap<>();
+			Map<String, Object> header = new LinkedHashMap<>();
 			data.put("header", header);
 			header.put("oid", log.getMid());
 			header.put("uid", log.getUid());
@@ -715,8 +714,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		
 		//Publish
-		final Map<String, Object> dataRes = new HashMap<>();
-		Map<String, Object> header = new HashMap<>();
+		final Map<String, Object> dataRes = new LinkedHashMap<>();
+		Map<String, Object> header = new LinkedHashMap<>();
 		dataRes.put("header", header);
 		header.put("oid", log.getMid());
 		header.put("uid", log.getUid());
@@ -754,7 +753,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		updateLastMDTSubscribe(subscribeLog);
 		
 		//save log publish log
-		Map<String, Object> publishData = new HashMap<>((Map) dataRes);
+		Map<String, Object> publishData = new LinkedHashMap<>((Map) dataRes);
 		publishData.put("type", type);
 		Log logP = Log.build(publishData, "PUBLISH");
 		logP.setTopic(alias + subscribeLog.getUid());
@@ -782,8 +781,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 					
 					// reply -> MCU
 					// publish
-					Map<String, Object> dataP = new HashMap<>();
-					Map<String, Object> header = new HashMap<>();
+					Map<String, Object> dataP = new LinkedHashMap<>();
+					Map<String, Object> header = new LinkedHashMap<>();
 					dataP.put("header", header);
 					header.put("oid", log.getMid());
 					header.put("uid", log.getUid());
@@ -1052,15 +1051,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 				log.setMid(nextvalMID(opt.get().getVendor()));
 			}
 			//Publish
-			data = new HashMap<>();
-			Map<String, Object> header = new HashMap<>();
+			data = new LinkedHashMap<>();
+			Map<String, Object> header = new LinkedHashMap<>();
 			data.put("header", header);
 			header.put("mid", log.getMid() == null ? log.getOid() : log.getMid());
 			header.put("uid", log.getUid());
 			header.put("gid", log.getUid());
 			header.put("msn", log.getMsn());
 			
-			Map<String, Object> payload = new HashMap<>();
+			Map<String, Object> payload = new LinkedHashMap<>();
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
@@ -1078,8 +1077,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 			localMap.getOtaMap().put(log.getMid(), Calendar.getInstance().getTimeInMillis());
 		} else if (!isReceivedINFBySentOTA(log)) {
-			data = new HashMap<>();
-			Map<String, Object> header = new HashMap<>();
+			data = new LinkedHashMap<>();
+			Map<String, Object> header = new LinkedHashMap<>();
 			data.put("header", header);
 			header.put("mid", log.getMid() == null ? log.getOid() : log.getMid());
 			header.put("uid", log.getUid());
@@ -1087,7 +1086,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			header.put("msn", log.getMsn());
 			header.put("status", status);
 			
-			Map<String, Object> payload = new HashMap<>();
+			Map<String, Object> payload = new LinkedHashMap<>();
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "OTA");
@@ -1108,7 +1107,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	private void handleOTARes(Map<String, Object> data, String type, Log log, int status) throws Exception {
 
-		/**Map<String, Object> savehData = new HashMap<>(data);
+		/**Map<String, Object> savehData = new LinkedHashMap<>(data);
 		savehData.put("type", type);
 		Log logP = Log.build(savehData, "PUBLISH");
 		logP.setMqttAddress(evsPAMQTTAddress);
@@ -1135,8 +1134,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 		updateLastSubscribe(log);
 
 		//publish
-		Map<String, Object> data = new HashMap<>();
-		Map<String, Object> header = new HashMap<>();
+		Map<String, Object> data = new LinkedHashMap<>();
+		Map<String, Object> header = new LinkedHashMap<>();
 		data.put("header", header);
 		header.put("oid", log.getMid());
 		header.put("uid", log.getUid());
@@ -1151,25 +1150,31 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		if (status == 0) {
 			// Send file
-			data = new HashMap<>();
-			header = new HashMap<>();
+			data = new LinkedHashMap<>();
+			header = new LinkedHashMap<>();
 			data.put("header", header);
 			header.put("mid", log.getMid());
 			header.put("uid", log.getUid());
 			header.put("gid", log.getGid());
 			header.put("msn", log.getMsn()); 
-			Map<String, Object> payload = new HashMap<>();
+			Map<String, Object> payload = new LinkedHashMap<>();
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "ACT");
 			Optional<CARequestLog> otp = caRequestLogRepository.findByUid(log.getUid());
 			payload.put("p1", !otp.isPresent() ? null : otp.get().getVendor().getCertificate());
 			
+			if (otp.get().getVendor().getId() == 1l) {
+				// payload.put("p1", !otp.isPresent() ? null : "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNiekNDQWhXZ0F3SUJBZ0lRU0tVei9zenhwODV4S256bFl4eEUyREFLQmdncWhrak9QUVFEQWpCU01Rc3cKQ1FZRFZRUUdFd0pUUnpFTE1Ba0dBMVVFQ2d3Q1VFRXhEakFNQmdOVkJBc01CVUpWTlRBd01SSXdFQVlEVlFRRApEQWxRUVVOQklFWkdSa1l4RWpBUUJnTlZCQWNNQ1VGc1pYaGhibVJ5WVRBZUZ3MHlOREV5TURNd05qSTBNamxhCkZ3MHlOVEV3TVRrd056STBNamxhTUlHRk1Rc3dDUVlEVlFRR0V3SlRSekVMTUFrR0ExVUVDQXdDVGtFeEVqQVEKQmdOVkJBY01DVk5wYm1kaGNHOXlaVEVMTUFrR0ExVUVDZ3dDVUVFeERqQU1CZ05WQkFzTUJVSlZOVEF3TVJvdwpHQVlEVlFRRERCRnRZWE4wWlhJdVpYWnpMbU52YlM1elp6RWNNQm9HQ1NxR1NJYjNEUUVKQVJZTmNHRkFaWFp6CkxtTnZiUzV6WnpCMk1CQUdCeXFHU000OUFnRUdCU3VCQkFBaUEySUFCSzI0RWs3bzc2MnJtak9sVituUllHL3EKcUhodXhZUGErUEdUancyS3RkekgyMHcyOUd3YndMdUxoWm45c2ExL3EyNDNoT0JRcm1NOUx0K2UzN2owQlIzNgpVbEYzMEVKNWduRSt3dTRUY3JKMk5qY3NrQWJ6ZHNGV1E1NlRmaEE1RjZOOE1Ib3dDUVlEVlIwVEJBSXdBREFmCkJnTlZIU01FR0RBV2dCVFhEL0NHeWs0YmpPOHhVcEZTV2pBeWJBNnF4VEFkQmdOVkhRNEVGZ1FVaXR1UEdjbTcKeEJlNHRVdXJSUG03ZWRNdEdnd3dEZ1lEVlIwUEFRSC9CQVFEQWdXZ01CMEdBMVVkSlFRV01CUUdDQ3NHQVFVRgpCd01CQmdnckJnRUZCUWNEQWpBS0JnZ3Foa2pPUFFRREFnTklBREJGQWlBVzFnMHdnQklmL3R6UElLRk9NNm5VCmNGV2wzV2tWSlExUzNxcEkwVTNYRHdJaEFQS2FORHRhdi9JSTF4c1J6R25PZFRjaG9Ha1V4VFFvSmRibFdOd2wKUmI1MAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==");
+			}
+			
 			Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
 			String sig = "";
 			
 			try {
-				sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(opt.get().getVendor().getKeyPath(), new ObjectMapper().writeValueAsString(payload), opt.get().getVendor().getSignatureAlgorithm());
+				sig = opt.isPresent() && BooleanUtils.isTrue(opt.get().getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(opt.get().getVendor().getObrKeyPath(), new ObjectMapper().writeValueAsString(payload), opt.get().getVendor().getSignatureAlgorithm());
+				
+				LOG.info("OBR KEY: " + opt.get().getVendor().getObrKeyPath());
 			} catch (Exception e) {
 				LOG.error(e.getMessage(), e);
 			}
@@ -1422,7 +1427,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	}
 	
-	private void handleOnM3ModuleRequestSubscribe(final String topic, final MqttMessage mqttMessage) {
+	private void handleOnM3ModuleRequestSubscribe(final String topic, String msn, final MqttMessage mqttMessage) {
 		try {
 //			/check_ac_status
 //			/check_ac_lock_status
@@ -1430,7 +1435,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 //			'Read Aircon Status for 202206000520 (3), Status: AirCon_Status: read failed, Coil: None'
 //			'Read Lock Status for 202206000520(3), Status: Lock_Status: read failed, Coil: None'
 			String raw = new String(mqttMessage.getPayload());
-			String msn = topic.replace(AppProps.get("m3.pa.evs.ntu", "pa/evs/ntu/"), "");
+			// String msn = topic.replace(AppProps.get("m3.pa.evs.ntu", "pa/evs/ntu/"), "");
 			CARequestLog dv = caRequestLogRepository.findByMsn(msn).orElse(new CARequestLog());
 			//save log
 			Log log = Log.builder()
@@ -1485,13 +1490,13 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (caRequestLog.isPresent()) {
 
 			String kwh = logService.getKwh(caRequestLog.get().getUid(), payload);
-			Map<String, Object> data1 = new HashMap<>();
-			Map<String, Object> header1 = new HashMap<>();
+			Map<String, Object> data1 = new LinkedHashMap<>();
+			Map<String, Object> header1 = new LinkedHashMap<>();
 			List<Map<String, Object>> dataTag = new ArrayList<>();
 			data.put("header", header1);
 			header1.put("mid", mid);
 			header1.put("msn", msn);
-			Map<String, Object> payload1 = new HashMap<>();
+			Map<String, Object> payload1 = new LinkedHashMap<>();
 			data.put("payload", payload1);
 			payload1.put("id", "");
 			payload1.put("type", "MDT");
@@ -1561,13 +1566,32 @@ public class EVSPAServiceImpl implements EVSPAService {
 		/// M3 Module subscribe 
 		/// https://powerautomationsg.atlassian.net/browse/BE-251
 		try {
-			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), AppProps.get("m3.pa.evs.ntu", "pa/evs/ntu/") + "+", QUALITY_OF_SERVICE, (o, topic) -> {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/ntu/+", QUALITY_OF_SERVICE, (o, topic) -> {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+				String msn = ((String) topic).replace("pa/evs/ntu/", "");
 				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
-					EX.submit(() -> handleOnM3ModuleRequestSubscribe((String) topic, mqttMessage));
+					EX.submit(() -> handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage));
 				} else {
-					new Thread(() -> {handleOnM3ModuleRequestSubscribe((String) topic, mqttMessage);}).start();
+					new Thread(() -> {handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage);}).start();
+				}
+				return null;
+			});
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+		
+		/// M3 Module subscribe 
+		/// https://powerautomationsg.atlassian.net/browse/BE-271
+		try {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/pgpr/blk8/+", QUALITY_OF_SERVICE, (o, topic) -> {
+				final MqttMessage mqttMessage = (MqttMessage) o;
+				LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+				String msn = ((String) topic).replace("pa/evs/pgpr/blk8/", "");
+				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
+					EX.submit(() -> handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage));
+				} else {
+					new Thread(() -> {handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage);}).start();
 				}
 				return null;
 			});
@@ -2074,7 +2098,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		//Mqtt.publish("dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
 		//Mqtt.publish("dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
 		//qtt.publish("dev/evs/pa/data", new ObjectMapper().readValue(json, Map.class), QUALITY_OF_SERVICE, false);
-		/*Map<String, Object> map = new HashMap<>();
+		/*Map<String, Object> map = new LinkedHashMap<>();
 		map.put("id", "BIERWXAABMAGSAEAAA");
 		map.put("cmd", "PW1");
 		String payload = new ObjectMapper().writeValueAsString(map);
@@ -2134,37 +2158,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String evsPAMQTTAddress = "ssl://3.1.87.138:8883";
+		String evsPAMQTTAddress = "ssl://13.215.218.153:8883";
 		String mqttClientId = System.currentTimeMillis() + "";
 		
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/pgpr/blk8/202206000516", "Read Aircon Status for 202206000516 (3), Status: AirCon_Status: read failed, Coil: [false]", 2, false);
+		System.out.println("publish " + "pa/evs/pgpr/blk8/202206000516");
 		
-		String json = "{\r\n"
-				+ "  \"header\": {\r\n"
-				+ "    \"mid\": 35130,\r\n"
-				+ "    \"uid\": \"BIERWXAABMAB2AEBAA\",\r\n"
-				+ "    \"msn\": \"2022060000551\",\r\n"
-				+ "    \"sig\": \"MGYCMQDNU5hVg4UlX6qzK33/2wbqLEcxNqsuNTuW2bBOR+T64q+d2f6WpQbsTbZkbSoKZnkCMQCKZUfZAxuI67BL4ivmnd/t6+9vcP9hDELoCXw0OWbqZXBcsFOX6ebEqzCfBHifJVE=\"\r\n"
-				+ "  },\r\n"
-				+ "  \"payload\": {\r\n"
-				+ "    \"id\": \"BIERWXAABMAB2AEBAA\",\r\n"
-				+ "    \"type\": \"MDT\",\r\n"
-				+ "    \"data\": [\r\n"
-				+ "      {\r\n"
-				+ "        \"uid\": \"BIERWXAABMAB2AEBAA\",\r\n"
-				+ "        \"msn\": \"2022060000551\",\r\n"
-				+ "        \"kwh\": \"33.161\",\r\n"
-				+ "        \"kw\": \"8.3\",\r\n"
-				+ "        \"i\": \"0.1\",\r\n"
-				+ "        \"v\": \"247.2\",\r\n"
-				+ "        \"pf\": \"1.0000\",\r\n"
-				+ "        \"dt\": \"2024-03-10T20:27:04.000\"\r\n"
-				+ "      }\r\n"
-				+ "    ]\r\n"
-				+ "  }\r\n"
-				+ "}";
+		// String json = "{\"header\":{\"mid\":748066,\"uid\":\"BIE2IEYAAMAGMAFBAA\",\"msn\":\"202102001345\",\"sig\":\"MGYCMQCso6x4Z0cJBbjCk6eiiG7V1+8oFooMNBPEO1kbneg4nddk1gmkXnj4S6f/rUQeFIECMQCMSx3qOXu9cGDPCr7iPpEMFXzz4QDRNd5MdZIga4Ek7QDatVn+BGE8w9KBri62By0=\"},\"payload\":{\"id\":\"BIE2IEYAAMAGMAFBAA\",\"type\":\"OBR\",\"data\":202102001345}}";
+		String json = "{\"header\":{\"mid\":748065,\"uid\":\"BIE2IEYAAMACIACEAA\",\"msn\":\"201906000016\",\"sig\":\"MGYCMQCso6x4Z0cJBbjCk6eiiG7V1+8oFooMNBPEO1kbneg4nddk1gmkXnj4S6f/rUQeFIECMQCMSx3qOXu9cGDPCr7iPpEMFXzz4QDRNd5MdZIga4Ek7QDatVn+BGE8w9KBri62By0=\"},\"payload\":{\"id\":\"BIE2IEYAAMACIACEAA\",\"type\":\"OBR\",\"data\":201906000016}}";
 		IMqttAsyncClient client = Mqtt.getInstance(evsPAMQTTAddress, "test.mdt." + mqttClientId);
 		Map<String, Object> payload = new ObjectMapper().readValue(json, Map.class);
 		Mqtt.publish(client, "evs/pa/data", payload, 2, false);
+
 
 	}
 

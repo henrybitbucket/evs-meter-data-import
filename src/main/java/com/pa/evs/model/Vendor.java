@@ -7,6 +7,8 @@ import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.Table;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.AllArgsConstructor;
@@ -46,6 +48,9 @@ public class Vendor extends BaseEntity {
     @Column(name = "key_path")
     private String keyPath;
     
+    @Column(name = "obr_key_path")
+    private String obrKeyPath;
+    
     @JsonIgnore
 	@Lob
 	@Column(name = "key_content")
@@ -65,4 +70,10 @@ public class Vendor extends BaseEntity {
     @Builder.Default
     private Long maxMidValue = 4294967295l;
     
+    public String getObrKeyPath() {
+    	if (StringUtils.isBlank(obrKeyPath)) {
+    		return keyPath;
+    	}
+    	return obrKeyPath;
+    }
 }

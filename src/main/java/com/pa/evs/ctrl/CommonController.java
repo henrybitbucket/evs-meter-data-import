@@ -1147,11 +1147,16 @@ public class CommonController {
     //curl -X POST -H "Content-Type: multipart/form-data" -F "vendorId=1" -F "signatureAlgorithm=" -F "keyType=" -F "csr=@/home/henry/server/server.csr" -F "prkey=@/home/henry/server/server.key" -H "Authorization: Bearer m3a3ec06e6-d8b7-4e85-aa25-0fb5a3e95ee1" "http://localhost:7770/api/update-vendor-master-key"
 	@PostMapping("/api/update-vendor-master-key")
 	public ResponseEntity<Object> updateVendorMasterKey(HttpServletRequest req, HttpServletResponse res,
-			@RequestParam(required = true) Long vendorId, @RequestParam(required = false) String signatureAlgorithm,
-			@RequestParam(required = false) String keyType, @RequestParam MultipartFile csr,
-			@RequestParam MultipartFile prkey) {
+			@RequestParam(required = true) Long vendorId, 
+			@RequestParam(required = false) String signatureAlgorithm,
+			@RequestParam(required = false) String keyType, 
+			@RequestParam MultipartFile csr,
+			@RequestParam MultipartFile prkey,
+			@RequestParam(required = false) MultipartFile obrPrkey
+			) {
 		File fileCsr = null;
 		File fileKey = null;
+		File fileObrKey = null;
 		try {
 			
 			if (csr != null) {
@@ -1165,6 +1170,7 @@ public class CommonController {
 				signatureAlgorithm = RSAUtil.getSignatureAlgorithm(fileCsr.getPath().replaceAll("\\\\", "/"));
 			}
 			
+			/////
 			if (prkey != null) {
 				fileKey = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_keyTemp_"
 						+ prkey.getOriginalFilename());
@@ -1175,6 +1181,17 @@ public class CommonController {
 			if (fileKey != null && StringUtils.isBlank(keyType)) {
 				keyType = RSAUtil.getKeyType(fileCsr.getPath().replaceAll("\\\\", "/"));
 			}
+			
+			////
+			if (obrPrkey != null) {
+				fileObrKey = new File(evsDataFolder.replaceAll("\\\\", "/") + "/" + vendorId + "_keyTemp_"
+						+ obrPrkey.getOriginalFilename());
+				try (OutputStream outStream = new FileOutputStream(fileObrKey.getPath())) {
+					outStream.write(obrPrkey.getBytes());
+				}
+			}
+			
+			/////
 			if (fileCsr != null && fileKey != null && RSAUtil.validateServerKeyAndCsrKey(
 					fileKey.getPath().replaceAll("\\\\", "/"), fileCsr.getPath().replaceAll("\\\\", "/"))) {
 
