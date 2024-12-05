@@ -404,6 +404,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 				if (logP.getMid() == null) {
 					logP.setMid((Long) CommonController.CMD_OPTIONS.get().get("mid"));
 				}
+				if (StringUtils.isBlank(logP.getMsn())) {
+					logP.setMsn((String) CommonController.CMD_OPTIONS.get().get("msn"));
+				}
 			}
 			logRepository.save(logP);
 			
@@ -665,6 +668,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	@Override
 	public Long nextvalMID(Vendor vendor) {
+		if (vendor.getId() == null) {
+			vendor.setId(0l);
+		}
 		Number mid = sequenceService.nextvalMID(vendor.getId()).longValue();
 		// TC Module mid (message id) format is uint32, the max number is 4294967295
 		if (vendor.getMaxMidValue() == null) {
@@ -1913,7 +1919,6 @@ public class EVSPAServiceImpl implements EVSPAService {
     						sequenceService.nextvalMID(10000l, vendor.getId());
     					}
     				} catch (Exception e) {
-    					
     					e.printStackTrace();
     				}
     					
@@ -1921,6 +1926,16 @@ public class EVSPAServiceImpl implements EVSPAService {
             } catch (Exception e) {
                 //
             }
+    		
+			try {
+				sequenceService.createMIDSeq(0l);
+				Number lastValue = sequenceService.nextvalMID(0l);
+				if (lastValue.longValue() < 10000l) {
+					sequenceService.nextvalMID(10000l, 0l);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
     		
     		
     		try {
@@ -2161,14 +2176,14 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String evsPAMQTTAddress = "ssl://13.215.218.153:8883";
 		String mqttClientId = System.currentTimeMillis() + "";
 		
-		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/pgpr/blk8/202206000516", "Read Aircon Status for 202206000516 (3), Status: AirCon_Status: read failed, Coil: [false]", 2, false);
-		System.out.println("publish " + "pa/evs/pgpr/blk8/202206000516");
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/pgpr/blk8/201808000190", "Read Aircon Status for 201808000190 (3), Status: AirCon_Status: read failed, Coil: [false]", 2, false);
+		System.out.println("publish " + "pa/evs/pgpr/blk8/201808000190");
 		
 		// String json = "{\"header\":{\"mid\":748066,\"uid\":\"BIE2IEYAAMAGMAFBAA\",\"msn\":\"202102001345\",\"sig\":\"MGYCMQCso6x4Z0cJBbjCk6eiiG7V1+8oFooMNBPEO1kbneg4nddk1gmkXnj4S6f/rUQeFIECMQCMSx3qOXu9cGDPCr7iPpEMFXzz4QDRNd5MdZIga4Ek7QDatVn+BGE8w9KBri62By0=\"},\"payload\":{\"id\":\"BIE2IEYAAMAGMAFBAA\",\"type\":\"OBR\",\"data\":202102001345}}";
-		String json = "{\"header\":{\"mid\":748065,\"uid\":\"BIE2IEYAAMACIACEAA\",\"msn\":\"201906000016\",\"sig\":\"MGYCMQCso6x4Z0cJBbjCk6eiiG7V1+8oFooMNBPEO1kbneg4nddk1gmkXnj4S6f/rUQeFIECMQCMSx3qOXu9cGDPCr7iPpEMFXzz4QDRNd5MdZIga4Ek7QDatVn+BGE8w9KBri62By0=\"},\"payload\":{\"id\":\"BIE2IEYAAMACIACEAA\",\"type\":\"OBR\",\"data\":201906000016}}";
-		IMqttAsyncClient client = Mqtt.getInstance(evsPAMQTTAddress, "test.mdt." + mqttClientId);
-		Map<String, Object> payload = new ObjectMapper().readValue(json, Map.class);
-		Mqtt.publish(client, "evs/pa/data", payload, 2, false);
+//		String json = "{\"header\":{\"mid\":748065,\"uid\":\"BIE2IEYAAMACIACEAA\",\"msn\":\"201906000016\",\"sig\":\"MGYCMQCso6x4Z0cJBbjCk6eiiG7V1+8oFooMNBPEO1kbneg4nddk1gmkXnj4S6f/rUQeFIECMQCMSx3qOXu9cGDPCr7iPpEMFXzz4QDRNd5MdZIga4Ek7QDatVn+BGE8w9KBri62By0=\"},\"payload\":{\"id\":\"BIE2IEYAAMACIACEAA\",\"type\":\"OBR\",\"data\":201906000016}}";
+//		IMqttAsyncClient client = Mqtt.getInstance(evsPAMQTTAddress, "test.mdt." + mqttClientId);
+//		Map<String, Object> payload = new ObjectMapper().readValue(json, Map.class);
+//		Mqtt.publish(client, "evs/pa/data", payload, 2, false);
 
 
 	}

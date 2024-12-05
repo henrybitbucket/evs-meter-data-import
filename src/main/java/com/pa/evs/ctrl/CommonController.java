@@ -66,6 +66,7 @@ import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.Log;
 import com.pa.evs.model.Pi;
 import com.pa.evs.model.RelayStatusLog;
+import com.pa.evs.model.Vendor;
 import com.pa.evs.repository.CARequestLogRepository;
 import com.pa.evs.repository.LogRepository;
 import com.pa.evs.repository.RelayStatusLogRepository;
@@ -256,16 +257,20 @@ public class CommonController {
             	ca = caRequestLogService.findByMsn(command.getMsn());
             }
             
-            if (!ca.isPresent()) {
+            if (!ca.isPresent() && !(command.getOptions().get("topic") != null 
+            		&& "true".equalsIgnoreCase("" + command.getOptions().get("DIRECT")))) {
                 return ResponseEntity.<Object>ok(ResponseDto.builder().success(false).message("device not exists!").build());
             }
             
-            AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.get());
+            if (ca.isPresent()) {
+            	AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.get());	
+            }
             
-            Long mid = evsPAService.nextvalMID(ca.get().getVendor());
-            command.setUid(ca.get().getUid());
-            command.getOptions().put("uid", ca.get().getUid());
+            Long mid = evsPAService.nextvalMID(ca.isPresent() ? ca.get().getVendor() : Vendor.builder().build());
+            command.setUid(ca.isPresent() ? ca.get().getUid() : null);
+            command.getOptions().put("uid", ca.isPresent() ? ca.get().getUid() : null);
             command.getOptions().put("mid", mid);
+            command.getOptions().put("msn", ca.isPresent() ? ca.get().getMsn() : command.getMsn());
             CMD_OPTIONS.set(command.getOptions());
 
             if (command.getOptions().get("topic") != null 
