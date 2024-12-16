@@ -1450,7 +1450,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 					.topic(topic)
 					.type("SUBSCRIBE")
 					.raw(raw)
-					.pType(raw.toLowerCase().contains("read aircon status") ? "airconstatus" : raw.toLowerCase().contains("read lock status") ? "lockstatus" : "unknown")
+					.pType(raw.toLowerCase().contains("read aircon status") ? "airconstatus" : (raw.toLowerCase().contains("lock status")) ? "lockstatus" : "unknown")
 					.build();
 			log.setMqttAddress(evsPAMQTTAddress);
 			LOG.debug(">Subscribe 4M3Module " + topic + " -> " + raw);
@@ -1594,6 +1594,22 @@ public class EVSPAServiceImpl implements EVSPAService {
 				final MqttMessage mqttMessage = (MqttMessage) o;
 				LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
 				String msn = ((String) topic).replace("pa/evs/pgpr/blk8/", "");
+				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
+					EX.submit(() -> handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage));
+				} else {
+					new Thread(() -> {handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage);}).start();
+				}
+				return null;
+			});
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+		
+		try {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/pgpr/blk7/+", QUALITY_OF_SERVICE, (o, topic) -> {
+				final MqttMessage mqttMessage = (MqttMessage) o;
+				LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+				String msn = ((String) topic).replace("pa/evs/pgpr/blk7/", "");
 				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
 					EX.submit(() -> handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage));
 				} else {
@@ -2173,10 +2189,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		String evsPAMQTTAddress = "ssl://13.215.218.153:8883";
+		String evsPAMQTTAddress = "ssl://3.1.87.138:8883";
 		String mqttClientId = System.currentTimeMillis() + "";
 		
-		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/pgpr/blk8/201808000190", "Read Aircon Status for 201808000190 (3), Status: AirCon_Status: read failed, Coil: [false]", 2, false);
+		String json = "{\"meter_sn\":\"201808000121\",\"command\":\"lockstatus\"}";
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/pgpr/blk8", new ObjectMapper().readValue(json, Map.class), 2, false);
 		System.out.println("publish " + "pa/evs/pgpr/blk8/201808000190");
 		
 		// String json = "{\"header\":{\"mid\":748066,\"uid\":\"BIE2IEYAAMAGMAFBAA\",\"msn\":\"202102001345\",\"sig\":\"MGYCMQCso6x4Z0cJBbjCk6eiiG7V1+8oFooMNBPEO1kbneg4nddk1gmkXnj4S6f/rUQeFIECMQCMSx3qOXu9cGDPCr7iPpEMFXzz4QDRNd5MdZIga4Ek7QDatVn+BGE8w9KBri62By0=\"},\"payload\":{\"id\":\"BIE2IEYAAMAGMAFBAA\",\"type\":\"OBR\",\"data\":202102001345}}";
