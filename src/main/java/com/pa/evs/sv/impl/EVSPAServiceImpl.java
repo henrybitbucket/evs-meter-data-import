@@ -1620,6 +1620,22 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} catch (Exception e) {
 			LOG.error(e.getMessage(), e);
 		}
+		
+		try {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/pgpr/blk17/+", QUALITY_OF_SERVICE, (o, topic) -> {
+				final MqttMessage mqttMessage = (MqttMessage) o;
+				LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+				String msn = ((String) topic).replace("pa/evs/pgpr/blk17/", "");
+				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
+					EX.submit(() -> handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage));
+				} else {
+					new Thread(() -> {handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage);}).start();
+				}
+				return null;
+			});
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
 
 	}
 
