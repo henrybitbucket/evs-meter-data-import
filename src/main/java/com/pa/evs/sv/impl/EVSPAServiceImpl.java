@@ -1450,7 +1450,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 					.topic(topic)
 					.type("SUBSCRIBE")
 					.raw(raw)
-					.pType(raw.toLowerCase().contains("read aircon status") ? "airconstatus" : (raw.toLowerCase().contains("lock status")) ? "lockstatus" : "unknown")
+					.pType(raw.toLowerCase().contains("read aircon status") ? "airconstatus" : (raw.toLowerCase().contains("lock status") || topic.contains("/blk")) ? "lockstatus" : "unknown")
 					.build();
 			log.setMqttAddress(evsPAMQTTAddress);
 			LOG.debug(">Subscribe 4M3Module " + topic + " -> " + raw);
