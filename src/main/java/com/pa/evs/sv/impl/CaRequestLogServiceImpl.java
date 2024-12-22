@@ -1171,9 +1171,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (StringUtils.isNotBlank(queryRemarkMCU)) {
             	sqlCommonBuilder.append(" AND upper(ca.remarkMCU) like upper('%" + queryRemarkMCU.trim() + "%') ");
             }
-            if (StringUtils.isNotBlank(queryRemarkMeter)) {
+            if (!searchMeter && StringUtils.isNotBlank(queryRemarkMeter)) {
             	sqlCommonBuilder.append(" AND ca.msn is not null and ca.msn <> '' and upper(ca.remarkMeter) like upper('%" + queryRemarkMeter.trim() + "%') ");
-            }            
+            }
+            if (!!searchMeter && StringUtils.isNotBlank(queryRemarkMeter)) {
+            	sqlCommonBuilder.append(" AND m.msn is not null and m.msn <> '' and upper(m.remark) like upper('%" + queryRemarkMeter.trim() + "%') ");
+            }
             if (StringUtils.isNotBlank(queryPostalCode)) {
                 sqlCommonBuilder.append(" AND ((exists (select 1 from Building bd where bd.id = ca.building.id and upper(bd.address.postalCode) = '" + queryPostalCode.toUpperCase() + "') ");
                 sqlCommonBuilder.append(" or (exists (select 1 FROM Address add1 where add1.id = ca.address.id and upper(add1.postalCode) = '" + queryPostalCode.toUpperCase() + "') ))) ");
