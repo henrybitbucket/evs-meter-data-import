@@ -223,7 +223,7 @@ public class RSAUtil {
 	 * @return
 	 * @throws Exception
 	 */
-	private static Certificate generateCertificate(String key) throws Exception {
+	public static Certificate generateCertificate(String key) throws Exception {
 
 		byte[] keyBytes = loadKeyFromString(key);
 		CertificateFactory certFactory = CertificateFactory.getInstance("X.509");

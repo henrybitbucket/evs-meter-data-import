@@ -2293,4 +2293,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		
 		return null;
 	}
+	
+	public static void main(String[] args) {
+		
+	}
 }
