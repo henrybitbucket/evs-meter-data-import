@@ -30,9 +30,13 @@ public class AddressDto {
 	private String createdBy;
 	private String updatedBy;
 	private String remark;
+	private String remarkForMeter;
 	private String locationTag;
 	private String coupleState;
 	private String coupleMsn;
+	private String importMsn;
+	
+	private boolean skipAddress;
 
 	private String coupleSn;
 
@@ -291,4 +295,28 @@ public class AddressDto {
 		this.locationTag = locationTag;
 	}
 
+	public String getRemarkForMeter() {
+		return remarkForMeter;
+	}
+
+	public void setRemarkForMeter(String remarkForMeter) {
+		this.remarkForMeter = remarkForMeter;
+	}
+
+	public String getImportMsn() {
+		return importMsn;
+	}
+
+	public void setImportMsn(String importMsn) {
+		this.importMsn = importMsn;
+	}
+
+	public boolean isSkipAddress() {
+		return skipAddress;
+	}
+
+	public void setSkipAddress(boolean skipAddress) {
+		this.skipAddress = skipAddress;
+	}
+	
 }

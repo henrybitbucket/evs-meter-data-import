@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.constant.RestPath;
+import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.DeviceSettingDto;
 import com.pa.evs.dto.PaginDto;
@@ -152,7 +154,28 @@ public class CaRequestLogController {
         PaginDto<CARequestLog> result = caRequestLogService.searchMMSMeter(pagin);
         if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
         	result.getResults().forEach(o -> o.setProfile((String)pagin.getOptions().get("profile")));
-            File file = caRequestLogService.downloadCsvMeter(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
+            // File file = caRequestLogService.downloadCsvMeter(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
+        	
+    		List<String> headers = Arrays.asList(
+    				"MSN","Remark for meter","City","Postal","Building","Street","Block","Level","Unit"
+    				);
+    		File file = CsvUtils.toCsv(headers, result.getResults(), (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add(StringUtils.isNotBlank(it.getMsn()) ? it.getMsn() : "");
+                record.add(StringUtils.isNotBlank(it.getRemarkMeter()) ? it.getRemarkMeter() : "");
+                record.add(it.getBuilding() != null && StringUtils.isNotBlank(it.getBuilding().getAddress().getCity()) ? it.getBuilding().getAddress().getCity() : "");
+                record.add(it.getBuilding() != null && StringUtils.isNotBlank(it.getBuilding().getAddress().getPostalCode()) ? it.getBuilding().getAddress().getPostalCode() : "");
+                record.add(it.getBuilding() != null && StringUtils.isNotBlank(it.getBuilding().getName()) ? it.getBuilding().getName() : "");
+                record.add(it.getBuilding() != null && StringUtils.isNotBlank(it.getBuilding().getAddress().getStreet()) ? it.getBuilding().getAddress().getStreet() : "");
+                record.add(it.getBlock() != null && StringUtils.isNotBlank(it.getBlock().getName()) ? it.getBlock().getName() : "");
+                record.add(it.getFloorLevel() != null && StringUtils.isNotBlank(it.getFloorLevel().getName()) ? it.getFloorLevel().getName() : "");
+                record.add(it.getBuildingUnit() != null && StringUtils.isNotBlank(it.getBuildingUnit().getName()) ? it.getBuildingUnit().getName() : "");
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("export_meter_result_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
             String fileName = file.getName();
             
             try (FileInputStream fis = new FileInputStream(file)) {

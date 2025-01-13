@@ -11,6 +11,7 @@ import com.pa.evs.model.Address;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.model.DMSLocationLock;
 import com.pa.evs.model.FloorLevel;
+import com.pa.evs.model.MMSMeter;
 
 
 public class Utils {
@@ -83,6 +84,46 @@ public class Utils {
                     .append(caRqlog.getBuilding().getAddress().getPostalCode());
         } else if (caRqlog.getAddress() != null) {
         	return formatHomeAddress(null, caRqlog.getAddress());
+        }
+        return address.toString();
+    }
+    
+    public static String formatHomeAddress(MMSMeter mmsMeter) {
+        StringBuilder address = new StringBuilder("");
+        if (mmsMeter.getBuilding() != null) {
+        	Object streetNumber = mmsMeter.getBuilding().getAddress().getStreetNumber();
+        	if (streetNumber == null) {
+        		streetNumber = "";
+        	} else {
+        		streetNumber = streetNumber + " ";
+        	}
+        	
+        	if (mmsMeter.getBlock() != null) {
+        		address.append("Block ").append(mmsMeter.getBlock().getName()).append(", ");
+        	}
+        	if (mmsMeter.getBuildingUnit() != null && mmsMeter.getFloorLevel() != null) {
+        		String fName = mmsMeter.getFloorLevel().getName();
+        		if (fName == null) {
+        			fName = mmsMeter.getFloorLevel().getLevel();
+        		}
+        		String uName = mmsMeter.getBuildingUnit().getName();
+        		if (uName == null) {
+        			uName = mmsMeter.getBuildingUnit().getUnit();
+        		}
+        		address.append(fName).append("-").append(uName).append(" ");
+        	} else if (mmsMeter.getFloorLevel() != null) {
+        		address.append(mmsMeter.getFloorLevel().getName()).append(" ");
+        	}
+        	
+            address.append(mmsMeter.getBuilding().getName()).append(", ")
+                    .append(streetNumber)
+                    .append(StringUtils.isBlank(mmsMeter.getBuilding().getAddress().getStreet()) ? "" : (mmsMeter.getBuilding().getAddress().getStreet() + ", "))
+                    .append(StringUtils.isBlank(mmsMeter.getBuilding().getAddress().getTown()) ? "" : (mmsMeter.getBuilding().getAddress().getTown() + ", "))
+                    .append(StringUtils.isNotBlank(mmsMeter.getBuilding().getAddress().getCity()) ? (mmsMeter.getBuilding().getAddress().getCity() + ", ") : "")
+                    .append(StringUtils.isNotBlank(mmsMeter.getBuilding().getAddress().getCountry()) ? (mmsMeter.getBuilding().getAddress().getCountry() + ", ") : "")
+                    .append(mmsMeter.getBuilding().getAddress().getPostalCode());
+        } else if (mmsMeter.getAddress() != null) {
+        	return formatHomeAddress(null, mmsMeter.getAddress());
         }
         return address.toString();
     }

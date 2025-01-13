@@ -937,8 +937,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(ca) FROM CARequestLog ca");
         
         if (searchMeter) {
-        	sqlBuilder = new StringBuilder("SELECT ca, m FROM MMSMeter m join CARequestLog ca on ca.uid = m.lastUid ");
-        	sqlCountBuilder = new StringBuilder("SELECT count(ca) FROM MMSMeter m join CARequestLog ca on ca.uid = m.lastUid ");
+        	sqlBuilder = new StringBuilder("SELECT ca, m FROM MMSMeter m left join CARequestLog ca on ca.msn = m.msn ");
+        	sqlCountBuilder = new StringBuilder("SELECT count(m) FROM MMSMeter m left join CARequestLog ca on ca.msn = m.msn ");
         }
         
         List<String> tags = SecurityUtils.getProjectTags();
@@ -1238,6 +1238,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	Object[] obj = list.get(i);
         	
         	CARequestLog ca = (CARequestLog) obj[0];
+        	if (ca == null) {
+        		ca = new CARequestLog();
+        		ca.setVendor(new Vendor());
+        	}
         	if (list.size() == 1 && ca.getDeviceProject() != null) {
         		for (DeviceProject t : ca.getDeviceProject()) {
         			if (t.getProject() != null && "NA".equalsIgnoreCase(t.getType())) {
@@ -1265,7 +1269,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	}
         	
         	if (searchMeter) {
-	        	obj[0] = clone((CARequestLog) obj[0]);
+	        	obj[0] = clone((CARequestLog) (obj[0] == null ? ca : obj[0]));
 	    		rp.add((CARequestLog) obj[0]); 
         	} else {
         		rp.add(ca); 
@@ -1283,6 +1287,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	for (Object[] obj : list) {
             	CARequestLog ca = (CARequestLog) obj[0];
             	MMSMeter meter = (MMSMeter) obj[1];
+            	if (ca == null) {
+            		ca = new CARequestLog();
+            	}
             	if (searchMeter && meter != null && StringUtils.isBlank(meter.getUid())) {
             		ca.setUid(null);
             		ca.setSn(null);

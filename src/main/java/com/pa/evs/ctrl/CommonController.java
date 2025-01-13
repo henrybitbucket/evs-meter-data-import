@@ -8,6 +8,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.EnumSet;
@@ -44,6 +45,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.converter.ExceptionConvertor;
+import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.AddressLogDto;
 import com.pa.evs.dto.Command;
 import com.pa.evs.dto.DeviceRemoveLogDto;
@@ -765,6 +767,65 @@ public class CommonController {
         	}
         	String fileName = file.getName();
             
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping("/api/meter/upload")
+    public ResponseEntity<Object> updateMeterAddress(
+            HttpServletRequest httpServletRequest,
+            @RequestParam String importType,
+            @RequestParam(value = "file") final MultipartFile file, HttpServletResponse response) throws Exception {
+        
+        try {
+        	
+        	
+    		List<String> headers = Arrays.asList(
+    				"MSN","Remark for meter","City","Postal","Building","Street","Block","Level","Unit", "Message"
+    				);
+    		
+    		
+    		List<AddressDto> dtos = addressService.handleUploadMeter(file, importType);
+    		File csv = CsvUtils.toCsv(headers, dtos, (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add(StringUtils.isNotBlank(it.getImportMsn()) ? it.getImportMsn() : "");
+                record.add(StringUtils.isNotBlank(it.getRemarkForMeter()) ? it.getRemarkForMeter() : "");
+                record.add(StringUtils.isNotBlank(it.getCity()) ? it.getCity() : "");
+                record.add(StringUtils.isNotBlank(it.getPostalCode()) ? it.getPostalCode() : "");
+                record.add(StringUtils.isNotBlank(it.getBuilding()) ? it.getBuilding() : "");
+                record.add(StringUtils.isNotBlank(it.getStreet()) ? it.getStreet() : "");
+                record.add(StringUtils.isNotBlank(it.getBlock()) ? it.getBlock() : "");
+                record.add(StringUtils.isNotBlank(it.getLevel()) ? it.getLevel() : "");
+                record.add(StringUtils.isNotBlank(it.getUnitNumber()) ? it.getUnitNumber() : "");
+                record.add(StringUtils.isNotBlank(it.getMessage()) ? it.getMessage() : "Success");
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("import_meter_result_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+        	String fileName = file.getName();
+            
+        	SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
+        	
+        	try (FileOutputStream logFileFos = new FileOutputStream(CsvUtils.EXPORT_TEMP + "/logs/import_meter_" + importType + "_" + sf.format(new Date()) + "_" + System.currentTimeMillis() + ".csv"); 
+        			FileInputStream fis = new FileInputStream(csv)) {
+        		IOUtils.copy(fis, logFileFos);
+        	}
+        	
             try (FileInputStream fis = new FileInputStream(csv)) {
                 response.setContentLengthLong(csv.length());
                 response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");

@@ -48,6 +48,12 @@ public class CsvUtils {
         } catch (Exception e) {
             logger.error(e.getMessage());
         }
+        
+        try {
+            Files.createDirectories(Paths.get(EXPORT_TEMP + "/logs"));
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
     }
 
     public static File writeCaRequestLogCsv(List<CARequestLog> listInput, String fileName, Long activateDate) throws IOException{
@@ -280,13 +286,13 @@ public class CsvUtils {
         return postProcessCsv(record);
     }
     
-    private static String buildPathFile(String fileName) throws IOException {
+    public static String buildPathFile(String fileName) throws IOException {
         String parentFolder = (CsvUtils.EXPORT_TEMP + '/' + System.currentTimeMillis() + Math.random()).replace(".", "");
         Files.createDirectories(Paths.get(parentFolder));
         return parentFolder + '/' + fileName;
     }
     
-    private static List<String> postProcessCsv(List<String> record) {
+    public static List<String> postProcessCsv(List<String> record) {
         List<String> escaped = new ArrayList<>(record.size());
 
         for (String column : record) {

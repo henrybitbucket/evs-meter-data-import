@@ -11,4 +11,6 @@ public interface AddressService {
 
 	List<AddressDto> handleUpload(MultipartFile file, String importType) throws IOException;
 
+	List<AddressDto> handleUploadMeter(MultipartFile file, String importType) throws IOException;
+
 }

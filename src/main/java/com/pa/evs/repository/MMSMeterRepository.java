@@ -13,6 +13,8 @@ public interface MMSMeterRepository extends JpaRepository<MMSMeter, Long> {
 
 	MMSMeter findByMsn(String msn);
 	
+	MMSMeter findByBuildingUnitId(Long unitId);
+	
     @Query(value = "SELECT * from {h-schema}mms_meter where building_id = ?1 and floor_level_id = ?2 and building_unit_id = ?3", nativeQuery = true)
     List<MMSMeter> findByBuildingAndFloorLevelAndBuildingUnit(Long buildingId, Long floorLevelId, Long buildingUnitId);
     
