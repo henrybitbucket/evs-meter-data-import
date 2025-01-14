@@ -1733,6 +1733,27 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			updateCacheUidMsnDevice(caRequestLog.getUid(), "remove");
 		}
 	}
+    
+    @Transactional
+	@Override
+	public void removeMeter(String msn) {
+		MMSMeter meter = mmsMeterRepository.findByMsn(msn);
+		if (meter == null) {
+			throw new RuntimeException("Meter doesn't exists!");
+		}
+		
+		if (meter.getBuildingUnit() != null) {
+			throw new RuntimeException("Meter has been linked to address!");
+		}
+		
+		CARequestLog device = caRequestLogRepository.findByMsn(msn).orElse(null);
+		
+		if (device != null) {
+			throw new RuntimeException("Meter has been linked to the MCU!");
+		}
+		
+		mmsMeterRepository.delete(meter);
+	}
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateDeviceLogs(DeviceRemoveLog log, String reason, String operation, AddressLog addrLog) {

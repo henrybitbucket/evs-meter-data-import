@@ -474,6 +474,7 @@ public class AddressServiceImpl implements AddressService {
 					meter = new MMSMeter();
 					meter.setMsn(a.getImportMsn());
 					
+					meter.setRemark(a.getRemarkForMeter());
 					if (buildingUnit != null) {
 						
 						MMSMeter meterUnitCoupled = mmsMeterRepository.findByBuildingUnitId(buildingUnit.getId());
@@ -489,6 +490,13 @@ public class AddressServiceImpl implements AddressService {
 					mmsMeterRepository.save(meter);
 					return;
 				}
+				if (buildingUnit != null) {
+					meter.setBuildingUnit(buildingUnit);
+					meter.setBlock(block);
+					meter.setFloorLevel(floor);
+					meter.setBuilding(building);				
+				}
+
 				mmsMeterRepository.save(meter);
 			}
 		});
@@ -500,7 +508,9 @@ public class AddressServiceImpl implements AddressService {
 		Map<String, Integer> head = new LinkedHashMap<>(); 
 		List<AddressDto> rs = new ArrayList<>();
 		for (String line: IOUtils.readLines(file, StandardCharsets.UTF_8)) {
-			
+			if (StringUtils.isBlank(line)) {
+				continue;
+			}
 			boolean parseHead = head.isEmpty();
 			int count = 0;
 			AddressDto dto = null;
@@ -527,7 +537,7 @@ public class AddressServiceImpl implements AddressService {
 						dto.setCity(it);
 					} else if (head.computeIfAbsent("Remark", k->-1) == count) {
 						dto.setRemark(it);
-					} else if (head.computeIfAbsent("Remark for meter", k->-1) == count || head.computeIfAbsent("\"Remark for meter\"", k->-1) == count) {
+					} else if (head.computeIfAbsent("Remark for meter", k->-1) == count || head.computeIfAbsent("remark for meter", k->-1) == count || head.computeIfAbsent("\"Remark for meter\"", k->-1) == count) {
 						dto.setRemarkForMeter(it);
 					} else if (head.computeIfAbsent("Coupled MCU SN", k->-1) == count) {
 						dto.setCoupleSn(it);

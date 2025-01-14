@@ -86,4 +86,6 @@ public interface CaRequestLogService {
 	File downloadCsvMeter(List<CARequestLog> listInput, Long activateDate) throws IOException;
 
 	File downloadCsvFullMCUs(List<CARequestLog> listInput, List<String> sns) throws IOException;
+
+	void removeMeter(String msn);
 }

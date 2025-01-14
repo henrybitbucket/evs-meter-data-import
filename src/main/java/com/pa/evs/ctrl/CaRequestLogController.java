@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -204,6 +205,20 @@ public class CaRequestLogController {
             }
         });
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+    }
+    
+    @DeleteMapping("/api/meter/{msn}")
+    public ResponseEntity<?> removeMeter(
+    		HttpServletRequest httpServletRequest,
+    		@PathVariable final String msn
+    		) throws Exception {
+    	
+		try {
+			caRequestLogService.removeMeter(msn);
+		} catch (Exception e) {
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).errorDescription(e.getMessage()).build());
+		}
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
     @PostMapping(RestPath.CA_REQUEST_LOG)
