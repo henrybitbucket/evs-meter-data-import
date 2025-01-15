@@ -3,6 +3,7 @@ package com.pa.evs.sv.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -36,9 +37,11 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ibm.icu.math.BigDecimal;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.constant.Message;
 import com.pa.evs.dto.CaRequestLogDto;
+import com.pa.evs.dto.CoupleDeCoupleMSNDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.DeviceSettingDto;
 import com.pa.evs.dto.PaginDto;
@@ -1303,8 +1306,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             		
             	}
             	if (searchMeter && meter != null) {
-            		ca.setRemark(meter.getRemark());
-            		
+            		ca.setRemarkMeter(meter.getRemark());
+            		ca.setMsn(meter.getMsn());
             		ca.setBuilding(meter.getBuilding());
             		ca.setBlock(meter.getBlock());
             		ca.setFloorLevel(meter.getFloorLevel());
@@ -1685,6 +1688,74 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 pagin.getResults().add(dto);
         }); 
     }
+    
+    @Override
+	@Transactional
+	public List<CoupleDeCoupleMSNDto> handleCoupleDeCoupleMSNUpload(MultipartFile file, String importType) throws IOException {
+
+		List<CoupleDeCoupleMSNDto> dtos = parseCsv(file.getInputStream(), "meter");
+		
+		dtos.forEach(a -> {
+			
+			if (StringUtils.isNotBlank(a.getMessage())) {
+				// ignore
+				return;
+			}
+			
+			MMSMeter meter = mmsMeterRepository.findByMsn(a.getMsn());
+			if (meter == null) {
+				meter = new MMSMeter();
+				meter.setMsn(a.getMsn());
+			}
+			meter.setRemark(a.getRemarkForMeter());
+			mmsMeterRepository.save(meter);
+			mmsMeterRepository.flush();
+			
+			CARequestLog ca = caRequestLogRepository.findBySn(a.getSn()).orElse(null);
+			
+			if (ca == null) {
+				a.setMessage("MCU SN doesn't exist!");
+				return;
+			}
+			
+			if ("Couple".equalsIgnoreCase(a.getAction())) {
+				if (meter.getMsn().equalsIgnoreCase(ca.getMsn())) {
+					a.setMessage("P2 couple is same!");
+					return;				
+				}
+				if (!meter.getMsn().equalsIgnoreCase(ca.getMsn()) && (StringUtils.isNotBlank(ca.getMsn()) || caRequestLogRepository.findByMsn(meter.getMsn()).isPresent())) {
+					a.setMessage("MCU or Meter was already coupled!");
+					return;				
+				}
+				linkMsn(SimpleMap.init("sn", ca.getSn()).more("msn", meter.getMsn()));
+				mmsMeterRepository.flush();
+				caRequestLogRepository.flush();
+			}
+			
+			if ("Decouple".equalsIgnoreCase(a.getAction())) {
+				if (meter.getMsn().equalsIgnoreCase(ca.getMsn())) {
+					unLinkMsn(ca.getUid());
+					mmsMeterRepository.flush();
+					caRequestLogRepository.flush();
+					a.setMessage("Decoupled successfully!");
+					return;				
+				}
+				if (StringUtils.isBlank(ca.getMsn()) && !caRequestLogRepository.findByMsn(meter.getMsn()).isPresent()) {
+					a.setMessage("Already decoupled!");
+					return;				
+				}
+				if (!meter.getMsn().equalsIgnoreCase(ca.getMsn())) {
+					a.setMessage("Failed with wrong decouple!");
+					return;				
+				}
+
+			}
+			mmsMeterRepository.flush();
+			caRequestLogRepository.flush();
+		});
+		
+		return dtos;
+	}	
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void removelog() {
@@ -2301,6 +2372,56 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	        	}
 	        }
 		});
+	}
+	
+	private static List<CoupleDeCoupleMSNDto> parseCsv(InputStream file, String importType) throws IOException {
+		Map<String, Integer> head = new LinkedHashMap<>(); 
+		List<CoupleDeCoupleMSNDto> rs = new ArrayList<>();
+		for (String line: org.apache.commons.io.IOUtils.readLines(file, StandardCharsets.UTF_8)) {
+			if (StringUtils.isBlank(line)) {
+				continue;
+			}
+			boolean parseHead = head.isEmpty();
+			int count = 0;
+			CoupleDeCoupleMSNDto dto = null;
+			for (String it: line.split(" *, *")) {
+				if (parseHead) {
+					head.put(it, count);
+				} else {
+					if (dto == null) {
+						dto = new CoupleDeCoupleMSNDto();
+					}
+					if (head.computeIfAbsent("MCUSN", k->-1) == count) {
+						dto.setSn(StringUtils.isBlank(it) ? null : it.trim());
+					} else if (head.computeIfAbsent("MeterSN", k->-1) == count) {
+						dto.setMsn((it.contains("+") ? (new BigDecimal(it).longValue() + "") : it).trim());
+					} else if (head.computeIfAbsent("RemarkForMeter", k->-1) == count) {
+						dto.setRemarkForMeter(it);
+					} else if (head.computeIfAbsent("Action", k->-1) == count || head.computeIfAbsent("Action (Couple/Decouple)", k->-1) == count) {
+						dto.setAction(StringUtils.isBlank(it) ? null : it);
+					}
+				}
+				count++;
+			}
+			head.computeIfAbsent("Message", k -> 100);
+			if (dto != null) {
+				if (!"Decouple".equalsIgnoreCase(dto.getAction()) && !"Couple".equalsIgnoreCase(dto.getAction())) {
+					dto.setMessage("Action invalid!");
+				}
+				if (StringUtils.isBlank(dto.getMsn())) {
+					dto.setMessage("MSN invalid!");
+				}
+				if (StringUtils.isBlank(dto.getSn())) {
+					dto.setMessage("SN invalid!");
+				}
+				dto.setLine(count);
+				dto.setHead(head);
+				rs.add(dto);				
+			}
+
+			
+		}
+		return rs;
 	}
 	
 	private static <T> T clone(T obj) {

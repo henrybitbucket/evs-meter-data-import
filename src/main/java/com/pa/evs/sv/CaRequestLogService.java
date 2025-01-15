@@ -10,6 +10,7 @@ import java.util.Set;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.CaRequestLogDto;
+import com.pa.evs.dto.CoupleDeCoupleMSNDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.DeviceSettingDto;
 import com.pa.evs.dto.PaginDto;
@@ -88,4 +89,6 @@ public interface CaRequestLogService {
 	File downloadCsvFullMCUs(List<CARequestLog> listInput, List<String> sns) throws IOException;
 
 	void removeMeter(String msn);
+
+	List<CoupleDeCoupleMSNDto> handleCoupleDeCoupleMSNUpload(MultipartFile file, String importType) throws IOException;
 }

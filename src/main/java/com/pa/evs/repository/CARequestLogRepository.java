@@ -24,6 +24,7 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	
 	Optional<CARequestLog> findByBuildingUnitId(Long unitId);
 	List<CARequestLog> findByMsnIn(Collection<String> msn);
+	List<CARequestLog> findBySnIn(Collection<String> sn);
 	
 	Optional<CARequestLog> findByMsn(String msn);
 	

@@ -48,6 +48,7 @@ import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.AddressLogDto;
 import com.pa.evs.dto.Command;
+import com.pa.evs.dto.CoupleDeCoupleMSNDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.FirmwareDto;
 import com.pa.evs.dto.GroupDto;
@@ -785,7 +786,7 @@ public class CommonController {
     }
     
     @PostMapping("/api/meter/upload")
-    public ResponseEntity<Object> updateMeterAddress(
+    public ResponseEntity<Object> uploadMeterAddress(
             HttpServletRequest httpServletRequest,
             @RequestParam String importType,
             @RequestParam(value = "file") final MultipartFile file, HttpServletResponse response) throws Exception {
@@ -842,6 +843,144 @@ public class CommonController {
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
+
+    @GetMapping("/api/meter/template")
+    public ResponseEntity<Object> uploadMeterAddressTempplate(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response) throws Exception {
+        
+        try {
+    		List<String> headers = Arrays.asList(
+    				"MSN","Remark for meter","City","Postal","Building","Street","Block","Level","Unit"
+    				);
+    		
+    		File csv = CsvUtils.toCsv(headers, Arrays.asList(""), (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add("202606101561");
+                record.add("FCU-A2E/04-101-1");
+                record.add("SG");
+                record.add("117288");
+                record.add("Valour House Building");
+                record.add("Valour House Building");
+                record.add("B");
+                record.add("L4");
+                record.add("04-104");
+                
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("import-meter-template_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+    		String fileName = "import-meter-template.csv";
+    		
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    } 
+    
+    @GetMapping("/api/couple-decouple-msn/template")
+    public ResponseEntity<Object> coupleDeCoupleMSNUploadTempplate(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response) throws Exception {
+        
+        try {
+    		List<String> headers = Arrays.asList(
+    				"MCUSN","MeterSN","RemarkForMeter","Action (Couple/Decouple)"
+    				);
+    		
+    		File csv = CsvUtils.toCsv(headers, Arrays.asList(""), (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add("SM02AMX21AAA01AA0390");
+                record.add("202700000002");
+                record.add("RemarkForMeter");
+                record.add("Decouple");
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("couple-decouple-msn-template_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+    		String fileName = "couple-decouple-msn-template.csv";
+    		
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    } 
+    
+    @PostMapping("/api/couple-decouple-msn/upload")
+    public ResponseEntity<Object> coupleDeCoupleMSNUpload(
+            HttpServletRequest httpServletRequest,
+            @RequestParam String importType,
+            @RequestParam(value = "file") final MultipartFile file, HttpServletResponse response) throws Exception {
+        
+        try {
+    		List<String> headers = Arrays.asList(
+    				"MCUSN","MeterSN","RemarkForMeter","Action (Couple/Decouple)", "Message"
+    				);
+    		List<CoupleDeCoupleMSNDto> dtos = caRequestLogService.handleCoupleDeCoupleMSNUpload(file, importType);
+    		File csv = CsvUtils.toCsv(headers, dtos, (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add(StringUtils.isNotBlank(it.getSn()) ? it.getSn() : "");
+                record.add(StringUtils.isNotBlank(it.getMsn()) ? it.getMsn() : "");
+                record.add(StringUtils.isNotBlank(it.getAction()) ? it.getAction() : "");
+                record.add(StringUtils.isNotBlank(it.getRemarkForMeter()) ? it.getRemarkForMeter() : "");
+                record.add(StringUtils.isNotBlank(it.getMessage()) ? it.getMessage() : "Success");
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("import_couple_decouple_result_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+        	String fileName = file.getName();
+            
+        	SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
+        	
+        	try (FileOutputStream logFileFos = new FileOutputStream(CsvUtils.EXPORT_TEMP + "/logs/import_couple-decouple_" + importType + "_" + sf.format(new Date()) + "_" + System.currentTimeMillis() + ".csv"); 
+        			FileInputStream fis = new FileInputStream(csv)) {
+        		IOUtils.copy(fis, logFileFos);
+        	}
+        	
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }    
     
     @GetMapping("/api/vendors")
     public ResponseEntity<Object> getVendors(HttpServletRequest httpServletRequest) throws Exception {

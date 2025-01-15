@@ -1,5 +1,6 @@
 package com.pa.evs.repository;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,8 @@ import com.pa.evs.model.MMSMeter;
 public interface MMSMeterRepository extends JpaRepository<MMSMeter, Long> {
 
 	MMSMeter findByMsn(String msn);
+	
+	List<MMSMeter> findByMsnIn(Collection<String> msns);
 	
 	MMSMeter findByBuildingUnitId(Long unitId);
 	
