@@ -346,7 +346,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			
 			mmsMeter.setMsn(msn);
 			mmsMeter.setLastUid(ca.getUid());
-			
+			MMSMeter checkExistsUid = mmsMeterRepository.findByUid(ca.getUid());
+			if (checkExistsUid != null) {
+				checkExistsUid.setUid(null);
+				mmsMeterRepository.save(checkExistsUid);
+				mmsMeterRepository.flush();
+			}
 			mmsMeter.setUid(msn.equalsIgnoreCase(ca.getMsn()) ? ca.getUid() : null);
 			
 			mmsMeterRepository.save(mmsMeter);

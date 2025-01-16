@@ -14,6 +14,8 @@ public interface MMSMeterRepository extends JpaRepository<MMSMeter, Long> {
 
 	MMSMeter findByMsn(String msn);
 	
+	MMSMeter findByUid(String uid);
+	
 	List<MMSMeter> findByMsnIn(Collection<String> msns);
 	
 	MMSMeter findByBuildingUnitId(Long unitId);
