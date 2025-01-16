@@ -39,6 +39,12 @@ public class MMSMeter extends BaseEntity {
     
     private String lastestCoupledUser;
     
+    @Column(name = "latest_decouple_address", columnDefinition = "TEXT")
+    private String latestDecoupleAddress;
+    
+    @Column(name = "latest_coupled_address", columnDefinition = "TEXT")
+    private String latestCoupledAddress;
+    
     @ManyToOne
 	@JoinColumn(name = "building_id")
 	private Building building;

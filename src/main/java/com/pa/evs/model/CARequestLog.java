@@ -243,6 +243,12 @@ public class CARequestLog extends BaseEntity {
     
 	@Transient
     private String lastestDecoupleUser;
+	
+	@Transient
+    private String latestDecoupleMeterAddress;
+    
+	@Transient
+    private String latestCoupledMeterAddress;
 
 	public static CARequestLog build(Map<String, Object> data) throws Exception {
 		

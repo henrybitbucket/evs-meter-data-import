@@ -259,46 +259,47 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				return null;
 			}
 			
-			MMSMeter mmsMeter = mmsMeterRepository.findByMsn(msn);
-			if (mmsMeter == null) {
-				mmsMeter = new MMSMeter();
+			MMSMeter meter = mmsMeterRepository.findByMsn(msn);
+			if (meter == null) {
+				meter = new MMSMeter();
 			}
 			
-			boolean isCoupled = StringUtils.isNotBlank(mmsMeter.getUid());
+			boolean isCoupled = StringUtils.isNotBlank(meter.getUid());
 			
 			if (isCoupled && StringUtils.isBlank(ca.getMsn())) {
 				
 				// next-de-couple
-				mmsMeter.setLastestDecoupleTime(System.currentTimeMillis());
-				mmsMeter.setLastestDecoupleUser(SecurityUtils.getEmail());
+				meter.setLastestDecoupleTime(System.currentTimeMillis());
+				meter.setLastestDecoupleUser(SecurityUtils.getEmail());
 				
 				// copy address to meter
 				if (ca.getBuildingUnit() != null) {
 					List<MMSMeter> list = mmsMeterRepository.findByBuildingAndFloorLevelAndBuildingUnit(ca.getBuilding().getId(), ca.getFloorLevel().getId(), ca.getBuildingUnit().getId());
 				
-					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != mmsMeter.getId().longValue()) {
+					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != meter.getId().longValue()) {
 						message = null; // "Because the MCU address is already linked to another Meter, the meter address will not be copied from the MCU address."; 
 					} else {
-						mmsMeter.setBuilding(ca.getBuilding());
-						mmsMeter.setBlock(ca.getBlock());
-						mmsMeter.setFloorLevel(ca.getFloorLevel());
-						mmsMeter.setBuildingUnit(ca.getBuildingUnit());
-						mmsMeter.setAddress(ca.getAddress());
-						mmsMeter.setHomeAddress(ca.getHomeAddress());
+						meter.setBuilding(ca.getBuilding());
+						meter.setBlock(ca.getBlock());
+						meter.setFloorLevel(ca.getFloorLevel());
+						meter.setBuildingUnit(ca.getBuildingUnit());
+						meter.setAddress(ca.getAddress());
+						meter.setHomeAddress(ca.getHomeAddress());
 					}
 				}
+				meter.setUid(null);
 				ca.setRemarkMeter(null);
 			}
 			
 			if (!isCoupled && StringUtils.isNotBlank(ca.getMsn())) {
 				// next-couple
-				mmsMeter.setLastestCoupledTime(System.currentTimeMillis());
-				mmsMeter.setLastestCoupledUser(SecurityUtils.getEmail());
+				meter.setLastestCoupledTime(System.currentTimeMillis());
+				meter.setLastestCoupledUser(SecurityUtils.getEmail());
 				
 				// resume address meter -> mcu
-				if (mmsMeter.getBuildingUnit() != null) {
+				if (meter.getBuildingUnit() != null) {
 					
-					List<CARequestLog> list = caRequestLogRepository.findByBuildingAndFloorLevelAndBuildingUnit(mmsMeter.getBuilding().getId(), mmsMeter.getFloorLevel().getId(), mmsMeter.getBuildingUnit().getId());
+					List<CARequestLog> list = caRequestLogRepository.findByBuildingAndFloorLevelAndBuildingUnit(meter.getBuilding().getId(), meter.getFloorLevel().getId(), meter.getBuildingUnit().getId());
 					
 					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != ca.getId().longValue()) {
 
@@ -312,15 +313,15 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 						caRequestLogRepository.save(otherMCU);
 						caRequestLogRepository.flush();
 					}
-					ca.setBuildingUnit(mmsMeter.getBuildingUnit());
-					ca.setFloorLevel(mmsMeter.getBuildingUnit().getFloorLevel());
-					ca.setBlock(mmsMeter.getBuildingUnit().getFloorLevel().getBlock());
-					ca.setBuilding(mmsMeter.getBuildingUnit().getFloorLevel().getBuilding());
-					ca.setAddress(mmsMeter.getAddress());
+					ca.setBuildingUnit(meter.getBuildingUnit());
+					ca.setFloorLevel(meter.getBuildingUnit().getFloorLevel());
+					ca.setBlock(meter.getBuildingUnit().getFloorLevel().getBlock());
+					ca.setBuilding(meter.getBuildingUnit().getFloorLevel().getBuilding());
+					ca.setAddress(meter.getAddress());
 					ca.setHomeAddress(Utils.formatHomeAddress(ca));
 					message = "The address of Meter and MCU are linked to a unified address: " + Utils.formatHomeAddress(ca);
 				}
-				ca.setRemarkMeter(mmsMeter.getRemark());
+				ca.setRemarkMeter(meter.getRemark());
 			}
 			
 			if (isCoupled && msn.equalsIgnoreCase(ca.getMsn())) {
@@ -330,31 +331,63 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				if (ca.getBuildingUnit() != null) {
 					List<MMSMeter> list = mmsMeterRepository.findByBuildingAndFloorLevelAndBuildingUnit(ca.getBuilding().getId(), ca.getFloorLevel().getId(), ca.getBuildingUnit().getId());
 					
-					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != mmsMeter.getId().longValue()) {
+					if (list.size() > 1 || !list.isEmpty() && list.get(0).getId().longValue() != meter.getId().longValue()) {
 						message = "Because the MCU address is already linked to another Meter, the meter address will not be copied from the MCU address."; 
 					} else {
-						mmsMeter.setBuilding(ca.getBuilding());
-						mmsMeter.setBlock(ca.getBlock());
-						mmsMeter.setFloorLevel(ca.getFloorLevel());
-						mmsMeter.setBuildingUnit(ca.getBuildingUnit());
-						mmsMeter.setAddress(ca.getAddress());
-						mmsMeter.setHomeAddress(ca.getHomeAddress());
+						meter.setBuilding(ca.getBuilding());
+						meter.setBlock(ca.getBlock());
+						meter.setFloorLevel(ca.getFloorLevel());
+						meter.setBuildingUnit(ca.getBuildingUnit());
+						meter.setAddress(ca.getAddress());
+						meter.setHomeAddress(ca.getHomeAddress());
 					}				
+				} else {
+					meter.setBuilding(ca.getBuilding());
+					meter.setBlock(ca.getBlock());
+					meter.setFloorLevel(ca.getFloorLevel());
+					meter.setBuildingUnit(ca.getBuildingUnit());
+					meter.setAddress(ca.getAddress());
+					meter.setHomeAddress(ca.getHomeAddress());
 				}
-				mmsMeter.setRemark(ca.getRemarkMeter());
+				meter.setRemark(ca.getRemarkMeter());
 			}
 			
-			mmsMeter.setMsn(msn);
-			mmsMeter.setLastUid(ca.getUid());
+			meter.setMsn(msn);
+			meter.setLastUid(ca.getUid());
 			MMSMeter checkExistsUid = mmsMeterRepository.findByUid(ca.getUid());
 			if (checkExistsUid != null) {
 				checkExistsUid.setUid(null);
 				mmsMeterRepository.save(checkExistsUid);
 				mmsMeterRepository.flush();
 			}
-			mmsMeter.setUid(msn.equalsIgnoreCase(ca.getMsn()) ? ca.getUid() : null);
 			
-			mmsMeterRepository.save(mmsMeter);
+			// check chang mester address
+			try {
+				if (meter.getBuildingUnit() != null) {
+					
+					long lastestDecouple = StringUtils.isBlank(meter.getLatestDecoupleAddress()) ? -1l : Long.parseLong(meter.getLatestDecoupleAddress().split("@@")[1]);
+					long lastestCoupled = StringUtils.isBlank(meter.getLatestCoupledAddress()) ? -1l : Long.parseLong(meter.getLatestCoupledAddress().split("@@")[1]);
+					
+					if (StringUtils.isBlank(meter.getLatestCoupledAddress()) || lastestCoupled < lastestDecouple) {
+						meter.setLatestCoupledAddress(meter.getBuildingUnit().getId() + "@@" + System.currentTimeMillis() + "@@" + SecurityUtils.getEmail());	
+					}
+					
+				}
+				if (meter.getBuildingUnit() == null) {
+					long lastestDecouple = StringUtils.isBlank(meter.getLatestDecoupleAddress()) ? -1l : Long.parseLong(meter.getLatestDecoupleAddress().split("@@")[1]);
+					long lastestCoupled = StringUtils.isBlank(meter.getLatestCoupledAddress()) ? -1l : Long.parseLong(meter.getLatestCoupledAddress().split("@@")[1]);
+					
+					if (lastestCoupled > 0l && StringUtils.isBlank(meter.getLatestDecoupleAddress()) || lastestCoupled > lastestDecouple) {
+						meter.setLatestDecoupleAddress("__@@" + System.currentTimeMillis() + "@@" + SecurityUtils.getEmail());
+					}
+				}
+			} catch (Exception e) {
+				//
+			}
+			
+			meter.setUid(msn.equalsIgnoreCase(ca.getMsn()) ? ca.getUid() : null);
+			
+			mmsMeterRepository.save(meter);
 			caRequestLogRepository.save(ca);
 		} catch (Exception e) {
 			LOG.error("ERROR in updateMMSMeter: " +  e.getMessage());
@@ -920,6 +953,32 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				meter.setBuildingUnit(null);
 
 			}
+			
+			// check chang mester address
+			try {
+				if (meter.getBuildingUnit() != null) {
+					
+					long lastestDecouple = StringUtils.isBlank(meter.getLatestDecoupleAddress()) ? -1l : Long.parseLong(meter.getLatestDecoupleAddress().split("@@")[1]);
+					long lastestCoupled = StringUtils.isBlank(meter.getLatestCoupledAddress()) ? -1l : Long.parseLong(meter.getLatestCoupledAddress().split("@@")[1]);
+					
+					if (StringUtils.isBlank(meter.getLatestCoupledAddress()) || lastestCoupled < lastestDecouple) {
+						meter.setLatestCoupledAddress(meter.getBuildingUnit().getId() + "@@" + System.currentTimeMillis() + "@@" + SecurityUtils.getEmail());	
+					}
+					
+				}
+				if (meter.getBuildingUnit() == null) {
+					long lastestDecouple = StringUtils.isBlank(meter.getLatestDecoupleAddress()) ? -1l : Long.parseLong(meter.getLatestDecoupleAddress().split("@@")[1]);
+					long lastestCoupled = StringUtils.isBlank(meter.getLatestCoupledAddress()) ? -1l : Long.parseLong(meter.getLatestCoupledAddress().split("@@")[1]);
+					
+					if (lastestCoupled > 0l && StringUtils.isBlank(meter.getLatestDecoupleAddress()) || lastestCoupled > lastestDecouple) {
+						meter.setLatestDecoupleAddress("__@@" + System.currentTimeMillis() + "@@" + SecurityUtils.getEmail());
+					}
+				}
+			} catch (Exception e) {
+				//
+			}
+			
+			mmsMeterRepository.save(meter);
 		} catch (Exception e) {/**/}
     }
     
@@ -1321,6 +1380,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             		ca.setHomeAddress(meter.getHomeAddress());
             		
             		ca.setTypeP3(meter.getBuildingUnit() != null ? DeviceType.COUPLED : DeviceType.NOT_COUPLED);
+            		ca.setLatestCoupledMeterAddress(meter.getLatestCoupledAddress());
+            		ca.setLatestDecoupleMeterAddress(meter.getLatestDecoupleAddress());
             	}
         	}
         }
