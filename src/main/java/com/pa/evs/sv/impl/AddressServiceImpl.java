@@ -342,6 +342,30 @@ public class AddressServiceImpl implements AddressService {
 					a.setMessage("Meter doesn't exist!");
 					return;
 				}
+				if (meter.getBuildingUnit() == null || !meter.getBuildingUnit().getName().equalsIgnoreCase(a.getUnitNumber())) {
+					a.setMessage("No P3 couple or unit not match!");
+					return;
+				}
+				if (meter.getFloorLevel() == null || !meter.getFloorLevel().getName().equalsIgnoreCase(a.getLevel())) {
+					a.setMessage("No P3 couple or level not match!");
+					return;
+				}
+				if (meter.getBlock() == null || !meter.getBlock().getName().equalsIgnoreCase(a.getBlock())) {
+					a.setMessage("No P3 couple or block not match!");
+					return;
+				}
+				if (meter.getBuilding() == null || !meter.getBuilding().getName().equalsIgnoreCase(a.getBuilding())) {
+					a.setMessage("No P3 couple or building not match!");
+					return;
+				}
+				if (meter.getBuilding() == null || meter.getBuilding().getAddress() == null || !StringUtils.equals(meter.getBuilding().getAddress().getPostalCode(), a.getPostalCode())) {
+					a.setMessage("No P3 couple or postalcode not match!");
+					return;
+				}
+				if (meter.getBuilding() == null || meter.getBuilding().getAddress() == null || !StringUtils.equals(meter.getBuilding().getAddress().getCity(), a.getCity())) {
+					a.setMessage("No P3 couple or city not match!");
+					return;
+				}
 				meter.setBuilding(null);
 				meter.setBlock(null);
 				meter.setFloorLevel(null);
