@@ -331,10 +331,41 @@ public class AddressServiceImpl implements AddressService {
 			mapAE.put((e.getPostalCode() + "__" + e.getCity() + "__" + b.getName()).trim().replaceAll(" *__ *", "__"), e);
 		});
 		dtos.forEach(a -> {
-			if (StringUtils.isNotBlank(a.getMessage())) {
+			if (!"Decouple-address".equalsIgnoreCase(importType) && StringUtils.isNotBlank(a.getMessage())) {
 				// ignore
 				return;
 			}
+			
+			if ("Decouple-address".equalsIgnoreCase(importType)) {
+				MMSMeter meter = mmsMeterRepository.findByMsn(a.getImportMsn());
+				if (meter == null) {
+					a.setMessage("Meter doesn't exist!");
+					return;
+				}
+				meter.setBuilding(null);
+				meter.setBlock(null);
+				meter.setFloorLevel(null);
+				meter.setBuildingUnit(null);
+				meter.setHomeAddress(null);
+				
+				CARequestLog ca = caRequestLogRepository.findByMsn(a.getImportMsn()).orElse(null);
+				if (ca != null) {
+					ca.setBuilding(null);
+					ca.setBlock(null);
+					ca.setFloorLevel(null);
+					ca.setBuildingUnit(null);
+					ca.setHomeAddress(null);
+					caRequestLogRepository.save(ca);
+					caRequestLogRepository.flush();
+				}
+				
+				checkChangeAddress(meter);
+				mmsMeterRepository.save(meter);
+				mmsMeterRepository.flush();
+				a.setMessage(null);
+				return;
+			}
+			
 			String combineKey = (a.getPostalCode() + "__" + a.getCity() + "__" + a.getBuilding()).trim().replaceAll(" *__ *", "__");
 			Address add = mapAE.computeIfAbsent(combineKey, st -> new Address());
 			
@@ -487,6 +518,8 @@ public class AddressServiceImpl implements AddressService {
 						meter.setFloorLevel(floor);
 						meter.setBuilding(building);
 					}
+					
+					checkChangeAddress(meter);
 					mmsMeterRepository.save(meter);
 					return;
 				}
@@ -497,12 +530,40 @@ public class AddressServiceImpl implements AddressService {
 					meter.setBuilding(building);				
 				}
 
+				checkChangeAddress(meter);
 				mmsMeterRepository.save(meter);
 			}
 		});
 		
 		return dtos;
 	}	
+	
+	public void checkChangeAddress(MMSMeter meter) {
+		
+		// check change mester address
+		try {
+			if (meter.getBuildingUnit() != null) {
+				
+				long lastestDecouple = StringUtils.isBlank(meter.getLatestDecoupleAddress()) ? -1l : Long.parseLong(meter.getLatestDecoupleAddress().split("@@")[1]);
+				long lastestCoupled = StringUtils.isBlank(meter.getLatestCoupledAddress()) ? -1l : Long.parseLong(meter.getLatestCoupledAddress().split("@@")[1]);
+				
+				if (StringUtils.isBlank(meter.getLatestCoupledAddress()) || lastestCoupled < lastestDecouple) {
+					meter.setLatestCoupledAddress(meter.getBuildingUnit().getId() + "@@" + System.currentTimeMillis() + "@@" + SecurityUtils.getEmail());	
+				}
+				
+			}
+			if (meter.getBuildingUnit() == null) {
+				long lastestDecouple = StringUtils.isBlank(meter.getLatestDecoupleAddress()) ? -1l : Long.parseLong(meter.getLatestDecoupleAddress().split("@@")[1]);
+				long lastestCoupled = StringUtils.isBlank(meter.getLatestCoupledAddress()) ? -1l : Long.parseLong(meter.getLatestCoupledAddress().split("@@")[1]);
+				
+				if (lastestCoupled > 0l && StringUtils.isBlank(meter.getLatestDecoupleAddress()) || lastestCoupled > lastestDecouple) {
+					meter.setLatestDecoupleAddress("__@@" + System.currentTimeMillis() + "@@" + SecurityUtils.getEmail());
+				}
+			}
+		} catch (Exception e) {
+			//
+		}
+	}
 	
 	private static List<AddressDto> parseCsv(InputStream file, String importType) throws IOException {
 		Map<String, Integer> head = new LinkedHashMap<>(); 
