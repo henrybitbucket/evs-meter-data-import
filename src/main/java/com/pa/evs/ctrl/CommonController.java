@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,12 +39,17 @@ import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -103,6 +109,7 @@ import com.pa.evs.sv.P1ReportService;
 import com.pa.evs.sv.SettingService;
 import com.pa.evs.sv.VendorService;
 import com.pa.evs.sv.impl.EVSPAServiceImpl;
+import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CMD;
@@ -1451,14 +1458,40 @@ public class CommonController {
 //	curl -X POST -H "Content-Type: multipart/form-data" -F "files=@D:/home/pi/00000000becf3452-6cdffb90000f.thesmarthome.sg-eSE.csr" http://localhost:7770/api/ca-request
 //	curl -X POST -H "Content-Type: multipart/form-data" -F "files=@D:/test.csr" http://localhost:7770/api/ca-request
 //	curl -X POST -H "Content-Type: multipart/form-data" -F "files=@D:/test.csr" http://localhost:7770/api/ca-request
+//	curl -X POST -H "Content-Type: multipart/form-data" -F "files=@D:/home/pi/00000000becf3452-6cdffb90000f.thesmarthome.sg-eSE.csr" http://localhost:7770/api/ca-request?vendor=aws
 //	"C:\Program Files\Java\jdk-19\bin\keytool" -importkeystore -srckeystore "NetSeT-User Demo0000000058.pfx" -srcstoretype pkcs12 -destkeystore "NetSeT-User Demo0000000058.jks" -deststoretype JKS
 	@SuppressWarnings("unchecked")
 	@PostMapping("/api/ca-request")
 	public Object requestCA(@RequestParam(required = true) MultipartFile[] files, 
 			HttpServletRequest req, HttpServletResponse res,
 			@RequestParam(required = false) String msn,
+			@RequestParam(required = false, defaultValue = "starfish") String vendor,// aws - starfish
 			@RequestParam(required = false) String certificateAuthority
 			) throws Exception {
+		
+		if ("aws".equalsIgnoreCase(vendor)) {
+			String fileName = evsDataFolder + "/__request__" + UUID.randomUUID().toString() + "_" + files[0].getOriginalFilename();
+			
+			try (FileOutputStream fos = new FileOutputStream(fileName)) {
+				String decoded = new String(files[0].getBytes()).replace("-----BEGIN CERTIFICATE REQUEST-----", "").replace("-----END CERTIFICATE REQUEST-----", "").replaceAll("[\r\n\t]", "");
+				fos.write("-----BEGIN CERTIFICATE REQUEST-----\r\n".getBytes());
+				int start = 0;
+				while (true) {
+					int end = start + 64;
+					end = end > decoded.length() ? decoded.length() : end;
+					fos.write((decoded.substring(start, end) + "\r\n").getBytes());
+					if (end >= decoded.length()) {
+						break;
+					}
+					start = end;
+				}
+				fos.write("-----END CERTIFICATE REQUEST-----".getBytes());
+				return requestAwsCA(AppProps.get("portal.pa.ca.request.url"), new FileSystemResource(new File(fileName)));
+			} finally {
+				Files.deleteIfExists(Paths.get(fileName));
+			}
+		}
+		
 		org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
 		org.apache.http.conn.ssl.TrustStrategy acceptingTrustStrategy = new org.apache.http.conn.ssl.TrustStrategy() {
 			public boolean isTrusted(java.security.cert.X509Certificate[] x509Certificates, String s) throws java.security.cert.CertificateException {
@@ -1531,6 +1564,18 @@ public class CommonController {
 			ex = e;
 		}
 		return SimpleMap.init("error", ex.getMessage());
+	}
+	
+	@SuppressWarnings("unchecked")
+	private static Map<String, Object> requestAwsCA(String caRequestUrl, Resource resource) {
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+		MultiValueMap<String, Object> data = new LinkedMultiValueMap<>();
+		
+		data.add("msn", UUID.randomUUID().toString());
+		data.add("files", resource);
+		HttpEntity<Object> entity = new HttpEntity<>(data, headers);
+		return ApiUtils.getRestTemplate().exchange(caRequestUrl, HttpMethod.POST, entity, Map.class).getBody();
 	}
 	
 	@PostConstruct
