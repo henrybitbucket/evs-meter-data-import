@@ -31,11 +31,13 @@ import com.pa.evs.model.Building;
 import com.pa.evs.model.Building.BuildingType;
 import com.pa.evs.model.BuildingUnit;
 import com.pa.evs.model.FloorLevel;
+import com.pa.evs.model.MBoxBle;
 import com.pa.evs.repository.AddressRepository;
 import com.pa.evs.repository.BlockRepository;
 import com.pa.evs.repository.BuildingRepository;
 import com.pa.evs.repository.BuildingUnitRepository;
 import com.pa.evs.repository.FloorLevelRepository;
+import com.pa.evs.repository.MBoxBleRepository;
 import com.pa.evs.sv.BuildingService;
 import com.pa.evs.utils.Utils;
 
@@ -61,6 +63,9 @@ public class BuildingServiceImpl implements BuildingService {
 	
 	@Autowired
 	BuildingUnitRepository buildingUnitRepository;
+	
+	@Autowired
+	MBoxBleRepository mBoxBleRepository;
 
 	@Override
 	public void save(BuildingDto dto) throws ApiException {
@@ -395,44 +400,10 @@ public class BuildingServiceImpl implements BuildingService {
 		}
 		
 		List<Block> blocks = blockRepository.findAllByBuilding(entity);
-		if(!blocks.isEmpty()) {
-			for(Block block : blocks) {
-				List<FloorLevel> fls = floorLevelRepository.findAllByBlock(block);
-				for(FloorLevel floorLevel : fls) {
-					List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(floorLevel);
-					for(BuildingUnit buildingUnit : buildingUnits) {
-						sns = buildingUnitRepository.linkedSN(buildingUnit.getId());
-						if (!sns.isEmpty()) {
-							throw new RuntimeException("Unit is already linked to the device(MCU SN = " + sns.get(0) + ")");
-						}
-						msns = buildingUnitRepository.linkedMSN(buildingUnit.getId());
-						if (!msns.isEmpty()) {
-							throw new RuntimeException("Unit is already linked to the device(Meter SN = " + msns.get(0) + ")");
-						}
-						
-						buildingUnitRepository.delete(buildingUnit);
-					}
-					sns = floorLevelRepository.linkedSN(floorLevel.getId());
-					if (!sns.isEmpty()) {
-						throw new RuntimeException("Floor is already linked to the device(MCU SN = " + sns.get(0) + ")");
-					}
-					msns = floorLevelRepository.linkedMSN(floorLevel.getId());
-					if (!msns.isEmpty()) {
-						throw new RuntimeException("Floor is already linked to the device(Meter SN = " + msns.get(0) + ")");
-					}
-					
-					floorLevelRepository.delete(floorLevel);
-				}
-				sns = blockRepository.linkedSN(block.getId());
-				if (!sns.isEmpty()) {
-					throw new RuntimeException("Block is already linked to the device(MCU SN = " + sns.get(0) + ")");
-				}
-				msns = blockRepository.linkedMSN(block.getId());
-				if (!msns.isEmpty()) {
-					throw new RuntimeException("Block is already linked to the device(Meter SN = " + msns.get(0) + ")");
-				}				
-				blockRepository.delete(block);
-			}
+		if (!blocks.isEmpty()) {
+			for (Block block : blocks) {
+	            deleteBlock(block);
+	        }
 		} else {
 			List<FloorLevel> fls = floorLevelRepository.findAllByBuilding(entity);
 			for(FloorLevel floorLevel : fls) {
@@ -464,6 +435,72 @@ public class BuildingServiceImpl implements BuildingService {
 		
 		buildingRepository.delete(entity);
 		em.createNativeQuery("delete from {h-schema}address where id = " + entity.getAddress().getId()).executeUpdate();
+		em.flush();
+	}
+	
+	
+	private void deleteBlock(Block block) {
+	    List<FloorLevel> floorLevels = floorLevelRepository.findAllByBlock(block);
+	    for (FloorLevel floorLevel : floorLevels) {
+	    	deleteFloorLevel(floorLevel);
+	    }
+	    validateAndDeleteBlock(block);
+	}
+
+	private void deleteFloorLevel(FloorLevel floorLevel) {
+	    List<BuildingUnit> buildingUnits = buildingUnitRepository.findAllByFloorLevel(floorLevel);
+	    for (BuildingUnit buildingUnit : buildingUnits) {
+	        deleteBuildingUnitHierarchy(buildingUnit);
+	    }
+	    validateAndDeleteFloorLevel(floorLevel);
+	}
+	
+	private void deleteBuildingUnitHierarchy(BuildingUnit buildingUnit) {
+	    List<MBoxBle> mBoxBles = mBoxBleRepository.findAllByBuildingUnit(buildingUnit);
+	    for (MBoxBle mBoxBle : mBoxBles) {
+	        clearMBoxBle(mBoxBle);
+	    }
+	    validateAndDeleteBuildingUnit(buildingUnit);
+	}
+	
+	private void clearMBoxBle(MBoxBle mBoxBle) {
+	    mBoxBle.setAddress(null);
+	    mBoxBle.setBlock(null);
+	    mBoxBle.setBuilding(null);
+	    mBoxBle.setBuildingUnit(null);
+	    mBoxBle.setFloorLevel(null);
+	    mBoxBleRepository.save(mBoxBle);
+	    mBoxBleRepository.flush();
+	}
+	
+	private void validateAndDeleteBuildingUnit(BuildingUnit buildingUnit) {
+	    if (!buildingUnitRepository.linkedSN(buildingUnit.getId()).isEmpty()) {
+	        throw new RuntimeException("Unit is already linked to the device (MCU SN = " + buildingUnitRepository.linkedSN(buildingUnit.getId()).get(0) + ")");
+	    }
+	    if (!buildingUnitRepository.linkedMSN(buildingUnit.getId()).isEmpty()) {
+	        throw new RuntimeException("Unit is already linked to the device (Meter SN = " + buildingUnitRepository.linkedMSN(buildingUnit.getId()).get(0) + ")");
+	    }
+	    buildingUnitRepository.delete(buildingUnit);
+	}
+	
+	private void validateAndDeleteFloorLevel(FloorLevel floorLevel) {
+	    if (!floorLevelRepository.linkedSN(floorLevel.getId()).isEmpty()) {
+	        throw new RuntimeException("Floor is already linked to the device (MCU SN = " + floorLevelRepository.linkedSN(floorLevel.getId()).get(0) + ")");
+	    }
+	    if (!floorLevelRepository.linkedMSN(floorLevel.getId()).isEmpty()) {
+	        throw new RuntimeException("Floor is already linked to the device (Meter SN = " + floorLevelRepository.linkedMSN(floorLevel.getId()).get(0) + ")");
+	    }
+	    floorLevelRepository.delete(floorLevel);
+	}
+
+	private void validateAndDeleteBlock(Block block) {
+	    if (!blockRepository.linkedSN(block.getId()).isEmpty()) {
+	        throw new RuntimeException("Block is already linked to the device (MCU SN = " + blockRepository.linkedSN(block.getId()).get(0) + ")");
+	    }
+	    if (!blockRepository.linkedMSN(block.getId()).isEmpty()) {
+	        throw new RuntimeException("Block is already linked to the device (Meter SN = " + blockRepository.linkedMSN(block.getId()).get(0) + ")");
+	    }
+	    blockRepository.delete(block);
 	}
 
 	@Override
