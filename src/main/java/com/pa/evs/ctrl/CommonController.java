@@ -1465,13 +1465,12 @@ public class CommonController {
 	public Object requestCA(@RequestParam(required = true) MultipartFile[] files, 
 			HttpServletRequest req, HttpServletResponse res,
 			@RequestParam(required = false) String msn,
-			@RequestParam(required = false, defaultValue = "starfish") String vendor,// aws - starfish
+			@RequestParam(required = false, defaultValue = "starfish") String v,// aws - starfish
 			@RequestParam(required = false) String certificateAuthority
 			) throws Exception {
 		
-		if ("aws".equalsIgnoreCase(vendor)) {
+		if ("aws".equalsIgnoreCase(v)) {
 			String fileName = evsDataFolder + "/__request__" + UUID.randomUUID().toString() + "_" + files[0].getOriginalFilename();
-			
 			try (FileOutputStream fos = new FileOutputStream(fileName)) {
 				String decoded = new String(files[0].getBytes()).replace("-----BEGIN CERTIFICATE REQUEST-----", "").replace("-----END CERTIFICATE REQUEST-----", "").replaceAll("[\r\n\t]", "");
 				fos.write("-----BEGIN CERTIFICATE REQUEST-----\r\n".getBytes());
