@@ -21,11 +21,10 @@ import javax.net.ssl.SSLContext;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.io.HttpClientConnectionManager;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
 import org.apache.http.conn.ssl.TrustStrategy;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.ssl.SSLContexts;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -114,19 +113,15 @@ public final class ApiUtils {
 				}
 			};
 			SSLContext sslContext = SSLContexts.custom().loadTrustMaterial(null, acceptingTrustStrategy).build();
-			SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext);
 
-			// stop redirect follow
-			LaxRedirectStrategy laxRedirectStrategy = new LaxRedirectStrategy() {
-
-				@Override
-				protected boolean isRedirectable(String method) {
-					//
-					return super.isRedirectable(method);
-				}
-			};
-			CloseableHttpClient httpClient = HttpClients.custom().setSSLSocketFactory(csf)
-					.setRedirectStrategy(laxRedirectStrategy).build();
+			HttpClientConnectionManager connManager = PoolingHttpClientConnectionManagerBuilder.create()
+	                .setSSLSocketFactory(SSLConnectionSocketFactoryBuilder.create().setSslContext(sslContext).build())
+	                .build();
+			
+			org.apache.hc.client5.http.impl.classic.CloseableHttpClient httpClient = org.apache.hc.client5.http.impl.classic.HttpClients
+					.custom()
+					.setConnectionManager(connManager)
+					.build();
 			HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 			requestFactory.setHttpClient(httpClient);
 			restTemplate.setRequestFactory(requestFactory);

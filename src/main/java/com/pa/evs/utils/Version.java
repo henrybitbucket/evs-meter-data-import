@@ -22,6 +22,8 @@ public final class Version {
 				.append(INIT)
 				.append("-")
 				.append(VERSION.get("buildtime"))
+				.append("-")
+				.append(VERSION.get("artifactId"))
 				.append("(")
 				.append(VERSION.get("branch"))
 				.append("-")

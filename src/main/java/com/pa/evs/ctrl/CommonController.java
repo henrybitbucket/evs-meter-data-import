@@ -22,13 +22,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.io.HttpClientConnectionManager;
+import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -120,10 +124,10 @@ import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.TimeZoneHolder;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
 
 @RestController
-@ApiIgnore
+@Hidden
 public class CommonController {
 
 	static final Logger LOG = LogManager.getLogger(CommonController.class);
@@ -1498,17 +1502,23 @@ public class CommonController {
 			}
 		};
 		
-//		java.security.KeyStore keyStore = java.security.KeyStore.getInstance("PKCS12");
-//		keyStore.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("NetSeT-User Demo0000000058.pfx"), "79565965".toCharArray());
-		java.security.KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
-		keyStore.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("NetSeT-User Demo0000000058.jks"), "79565965".toCharArray());
+		java.security.KeyStore keyStore = java.security.KeyStore.getInstance("PKCS12");
+		keyStore.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("NetSeT-User Demo0000000058.pfx"), "79565965".toCharArray());
+//		java.security.KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
+//		keyStore.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("NetSeT-User Demo0000000058.jks"), "79565965".toCharArray());
 		
 		javax.net.ssl.SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom()
 				.loadKeyMaterial(keyStore, "79565965".toCharArray())
 				.loadTrustMaterial(null, acceptingTrustStrategy).build();
 		
-		SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext);
-		CloseableHttpClient httpClient = HttpClients.custom().setSSLSocketFactory(csf).build();
+		HttpClientConnectionManager connManager = PoolingHttpClientConnectionManagerBuilder.create()
+                .setSSLSocketFactory(SSLConnectionSocketFactoryBuilder.create().setSslContext(sslContext).build())
+                .build();
+		
+		org.apache.hc.client5.http.impl.classic.CloseableHttpClient httpClient = org.apache.hc.client5.http.impl.classic.HttpClients
+				.custom()
+				.setConnectionManager(connManager)
+				.build();
 		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 		requestFactory.setHttpClient(httpClient);
 		restTemplate.setRequestFactory(requestFactory);

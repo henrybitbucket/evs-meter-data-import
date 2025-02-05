@@ -2,13 +2,13 @@ package com.pa.evs.sv;
 
 import java.util.Optional;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.SFileDto;
 import com.pa.evs.model.SFile;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 public interface FileService {
 

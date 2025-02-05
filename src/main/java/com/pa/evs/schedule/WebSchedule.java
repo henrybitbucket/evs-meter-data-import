@@ -1,5 +1,19 @@
 package com.pa.evs.schedule;
 
+import java.util.Date;
+import java.util.List;
+
+import org.quartz.JobDetail;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerFactory;
+import org.quartz.Trigger;
+import org.quartz.impl.StdSchedulerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
 import com.pa.evs.enums.JasperFormat;
 import com.pa.evs.model.GroupTask;
 import com.pa.evs.model.ReportTask;
@@ -13,23 +27,9 @@ import com.pa.evs.sv.ReportService;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.SecurityUtils;
 
-import org.quartz.JobDetail;
-import org.quartz.Scheduler;
-import org.quartz.SchedulerFactory;
-import org.quartz.Trigger;
-import org.quartz.impl.StdSchedulerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.persistence.EntityManager;
-
-import java.util.Date;
-import java.util.List;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.persistence.EntityManager;
 
 @Component
 public class WebSchedule {

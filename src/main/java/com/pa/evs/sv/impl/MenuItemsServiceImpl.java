@@ -2,13 +2,9 @@ package com.pa.evs.sv.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import javax.annotation.PostConstruct;
-import javax.transaction.Transactional;
 
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONArray;
@@ -17,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,7 +23,6 @@ import com.pa.evs.dto.MenuItemsDto;
 import com.pa.evs.dto.PermissionDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.model.AppCode;
-import com.pa.evs.model.Firmware;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.MenuItems;
 import com.pa.evs.model.Permission;
@@ -38,6 +34,8 @@ import com.pa.evs.repository.PermissionRepository;
 import com.pa.evs.repository.RoleRepository;
 import com.pa.evs.sv.MenuItemsService;
 import com.pa.evs.utils.SecurityUtils;
+
+import jakarta.annotation.PostConstruct;
 
 @Service
 @Transactional

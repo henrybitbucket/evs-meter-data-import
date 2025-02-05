@@ -2,8 +2,6 @@ package com.pa.evs.sv.impl;
 
 import java.util.Map;
 
-import javax.annotation.PostConstruct;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,6 +18,7 @@ import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.ExternalLogger;
 import com.pa.evs.utils.SecurityUtils;
 
+import jakarta.annotation.PostConstruct;
 import software.amazon.awssdk.services.sns.model.SnsException;
 
 @Service

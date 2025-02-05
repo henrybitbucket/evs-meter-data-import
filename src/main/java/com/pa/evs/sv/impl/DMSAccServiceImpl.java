@@ -6,14 +6,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import javax.transaction.Transactional;
-
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.DMSAccDto;
 import com.pa.evs.dto.DMSLockVendorDto;
@@ -28,6 +25,9 @@ import com.pa.evs.repository.DMSVendorMCAccRepository;
 import com.pa.evs.sv.DMSAccService;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.SecurityUtils;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 
 @Service
 public class DMSAccServiceImpl implements DMSAccService {

@@ -14,10 +14,10 @@ import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.SettingDto;
 import com.pa.evs.sv.SettingService;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
 
 @Controller
-@ApiIgnore
+@Hidden
 public class SettingsController {
 
 	@Autowired

@@ -34,6 +34,7 @@ import com.pa.evs.dto.P1OnlineStatusDto;
 import com.pa.evs.enums.DeviceType;
 import com.pa.evs.model.CARequestLog;
 import com.pa.evs.sv.SettingService;
+import com.pa.evs.utils.CsvUtils.CsvRecordConverter;
 
 public class CsvUtils {
     

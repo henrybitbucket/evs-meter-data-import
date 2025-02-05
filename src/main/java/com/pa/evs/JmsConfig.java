@@ -16,13 +16,12 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pa.evs.sv.impl.EVSPAServiceImpl;
 import com.pa.evs.utils.ExternalLogger;
 
 import lombok.extern.log4j.Log4j2;
 
-@Configuration
-@EnableJms
+//@Configuration
+//@EnableJms
 @Log4j2
 public class JmsConfig {
 	
@@ -47,24 +46,24 @@ public class JmsConfig {
 	@Bean
 	public JmsTemplate jmsTemplate() {
 		JmsTemplate template = new JmsTemplate();
-		template.setConnectionFactory(connectionFactory());
+		//template.setConnectionFactory(connectionFactory());
 		return template;
 	}
 
 	@Bean(name = "jmsContainerFactory")
 	public DefaultJmsListenerContainerFactory jmsListenerContainerFactory() {
 		DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
-		factory.setConnectionFactory(connectionFactory());
+//		factory.setConnectionFactory(connectionFactory());
 		factory.setConcurrency("1-5");
 		return factory;
 	}
 
-	@Component("ajms")
-	@org.springframework.core.annotation.Order(value = org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
-	@org.springframework.context.annotation.DependsOn({"jmsTemplate", "connectionFactory", "jmsContainerFactory"})
+//	@Component("ajms")
+//	@org.springframework.core.annotation.Order(value = org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
+//	@org.springframework.context.annotation.DependsOn({"jmsTemplate", "connectionFactory", "jmsContainerFactory"})
 	public static class AJMS {
 		
-		private static final org.slf4j.Logger TMPLOG = ExternalLogger.getLogger(EVSPAServiceImpl.class);
+		private static final org.slf4j.Logger TMPLOG = ExternalLogger.getLogger(AJMS.class);
 		private static final Map<String, org.slf4j.Logger> LOGS = new ConcurrentHashMap<>();
 
 		@Value("${testJms:true}")

@@ -17,12 +17,12 @@ import com.pa.evs.sv.DMSBlockService;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.AppProps;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
 
 
 @SuppressWarnings("rawtypes")
 @RestController
-@ApiIgnore
+@Hidden
 public class BlockController {
 
 	@Autowired

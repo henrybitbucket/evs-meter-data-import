@@ -1,12 +1,6 @@
 package com.pa.evs.ctrl;
 
-import com.pa.evs.dto.PaginDto;
-import com.pa.evs.dto.PermissionDto;
-import com.pa.evs.dto.ResponseDto;
-import com.pa.evs.dto.RoleDto;
-import com.pa.evs.sv.RoleService;
-
-import springfox.documentation.annotations.ApiIgnore;
+import java.io.IOException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,12 +14,18 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
+import com.pa.evs.dto.PaginDto;
+import com.pa.evs.dto.PermissionDto;
+import com.pa.evs.dto.ResponseDto;
+import com.pa.evs.dto.RoleDto;
+import com.pa.evs.sv.RoleService;
+
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.servlet.http.HttpServletRequest;
 
 
 @RestController
-@ApiIgnore
+@Hidden
 public class RoleController {
 
     static final Logger logger = LogManager.getLogger(RoleController.class);

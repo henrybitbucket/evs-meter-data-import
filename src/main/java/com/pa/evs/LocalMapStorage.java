@@ -1,11 +1,12 @@
 package com.pa.evs;
 
-import lombok.Getter;
-import org.springframework.stereotype.Component;
-
-import javax.annotation.PostConstruct;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.springframework.stereotype.Component;
+
+import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 
 @Component
 @Getter

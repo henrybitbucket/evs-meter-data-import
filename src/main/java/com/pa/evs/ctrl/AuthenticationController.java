@@ -6,8 +6,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -48,7 +46,9 @@ import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.SecurityUtils;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 public class AuthenticationController {
@@ -94,7 +94,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.USERS})
-    @ApiIgnore
+    @Hidden
     public Object getUsers(@RequestBody PaginDto<UserDto> pagin) {
     	Map<String, Object> options = pagin.getOptions();
     	Boolean isCreateApplication = options.get("isCreateApplication") != null ?  (Boolean) options.get("isCreateApplication") : null;
@@ -123,49 +123,49 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.USERPERMISSION})
-    @ApiIgnore
+    @Hidden
     public Object getPermissionsOfUser(@RequestBody PaginDto<UserDto> pagin) {
         authenticationService.getPermissionsOfUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
     @PostMapping(value = {RestPath.USERROLELOGGING})
-    @ApiIgnore
+    @Hidden
     public Object getRoleOfUserLogin(@RequestBody PaginDto<RoleDto> pagin) {
         authenticationService.getRoleOfUserLogin(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
     @PostMapping(value = {RestPath.USERROLE})
-    @ApiIgnore
+    @Hidden
     public Object getRoleOfUser(@RequestBody PaginDto<RoleDto> pagin) {
         authenticationService.getRoleOfUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
     @PostMapping(value = {RestPath.USER_PROJECT_LOGGING})
-    @ApiIgnore
+    @Hidden
     public Object getProjectOfUserLogin(@RequestBody PaginDto<ProjectTagDto> pagin) {
         authenticationService.getProjectTagOfUserLogin(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
     @PostMapping(value = {RestPath.USER_PROJECT})
-    @ApiIgnore
+    @Hidden
     public Object getProjectOfUser(@RequestBody PaginDto<ProjectTagDto> pagin) {
         authenticationService.getProjectTagOfUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
     @PostMapping(value = {RestPath.USER_COMPANY})
-    @ApiIgnore
+    @Hidden
     public Object getCompanyOfUser(@RequestBody PaginDto<CompanyDto> pagin) {
         authenticationService.getCompanyOfUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
     @PostMapping(value = {"/api/user/sync-access"})
-    @ApiIgnore
+    @Hidden
     public Object syncAccess(@RequestParam(required = true) String fromUsername, @RequestParam(required = true) String toUsername) {
         
     	try {
@@ -178,7 +178,7 @@ public class AuthenticationController {
     
     
     @GetMapping(value = {RestPath.USERPLATFORM})
-    @ApiIgnore
+    @Hidden
     public Object getPfOfUser(@RequestParam(required = true) String email) {
     	try {
 	        Object pfs = authenticationService.getPfOfUser(email);
@@ -189,7 +189,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.USERPLATFORM})
-    @ApiIgnore
+    @Hidden
     public Object savePfOfUser(@RequestBody PlatformUserLoginDto dto) {
         try {
 			if (!SecurityUtils.hasAnyRole("SUPER_ADMIN", AppCodeSelectedHolder.get() + "_SUPER_ADMIN")) {
@@ -203,20 +203,20 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.USERGROUP})
-    @ApiIgnore
+    @Hidden
     public Object getGroupOfUser(@RequestBody PaginDto<GroupUserDto> pagin) {
         authenticationService.getGroupOfUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     @PostMapping(value = {RestPath.EACHUSERPERMISSION})
-    @ApiIgnore
+    @Hidden
     public Object getPermissionsEachUser(@RequestBody PaginDto<PermissionDto> pagin) {
         authenticationService.getPermissionsEachUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
     @PostMapping(value = {RestPath.USER})
-    @ApiIgnore
+    @Hidden
     public Object saveUser(@RequestBody UserDto user) {
         try {
         	authenticationService.save(user);
@@ -228,7 +228,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.UPDATEROLE})
-    @ApiIgnore
+    @Hidden
     public ResponseEntity<Object> saveRole(@RequestBody UserDto user) {
         try {
         	authenticationService.saveRole(user);
@@ -239,7 +239,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.UPDATEGROUP})
-    @ApiIgnore
+    @Hidden
     public ResponseEntity<Object> linkGroupUser(@RequestBody UserDto dto) throws IOException {
         try {
         	authenticationService.saveGroup(dto);
@@ -250,7 +250,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.UPDATEPERMISSON})
-    @ApiIgnore
+    @Hidden
     public ResponseEntity<Object> linkPermission(@RequestBody UserDto dto) throws IOException {
         try {
         	authenticationService.savePermission(dto);
@@ -261,7 +261,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.UPDATEPROJECT})
-    @ApiIgnore
+    @Hidden
     public ResponseEntity<Object> saveProject(@RequestBody UserDto user) {
         try {
         	authenticationService.saveProject(user);
@@ -272,7 +272,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.UPDATECOMPANY})
-    @ApiIgnore
+    @Hidden
     public ResponseEntity<Object> saveCompany(@RequestBody UserDto user) {
         try {
         	authenticationService.saveCompany(user);
@@ -288,7 +288,7 @@ public class AuthenticationController {
     }
     
     @DeleteMapping(value = {RestPath.USER + "/{id}"})
-    @ApiIgnore
+    @Hidden
     public Object removeUser(@PathVariable Long id){
         
         try {
@@ -301,7 +301,7 @@ public class AuthenticationController {
     }
     
     @GetMapping(RestPath.USER_USERNAME)
-    @ApiIgnore
+    @Hidden
     public ResponseEntity<?> getUsernameById(HttpServletRequest httpServletRequest, @RequestParam(name = "user_id") Long userId) {
     	return ResponseEntity.<Object>ok(
         		ResponseDto.<Object>builder()
@@ -311,7 +311,7 @@ public class AuthenticationController {
     }
     
     @GetMapping(RestPath.USER_USER_DETAILS)
-    @ApiIgnore
+    @Hidden
     public ResponseEntity<?> getUserById(HttpServletRequest httpServletRequest, @RequestParam(name = "user_id") Long userId) {
     	return ResponseEntity.<Object>ok(
         		ResponseDto.<Object>builder()
@@ -321,7 +321,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {"/api/user/changePassword"})
-    @ApiIgnore
+    @Hidden
     public ResponseDto<? extends Object> changePassword(@RequestBody ChangePasswordDto changePasswordDto) {
         try {
         	authenticationService.changePwd(changePasswordDto);
@@ -332,7 +332,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {"/api/user/resetPassword"})
-    @ApiIgnore
+    @Hidden
     public ResponseDto<? extends Object> resetPassword(@RequestBody ResetPasswordDto resetPasswordDto) {
         try {
         	authenticationService.resetPwd(resetPasswordDto);
@@ -343,7 +343,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {"/api/user/updatePhoneNumber"})
-    @ApiIgnore
+    @Hidden
     public ResponseDto<? extends Object> updatePhoneNumber(@RequestBody Map<String, Object> dto) {
         try {
         	String phoneNumber = (String) dto.get("phoneNumber");
@@ -365,7 +365,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {"/api/user/credential-type"})
-    @ApiIgnore
+    @Hidden
     public ResponseEntity<?> getCredentialType(HttpServletRequest httpServletRequest, @RequestParam(name = "username") String username, @RequestBody(required = false) Map<String, Object> payload) {
     	try {
     		if (payload != null && payload.get("username") != null) {
@@ -383,7 +383,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {"/api/user/validate-password"})
-    @ApiIgnore
+    @Hidden
     public ResponseEntity<?> validatePassword(HttpServletRequest httpServletRequest, @RequestBody LoginRequestDto loginRequestDTO) {
     	try {
         	return ResponseEntity.ok(ResponseDto.<Object>builder().success(true).response(authenticationService.validatePassword(loginRequestDTO)).build());

@@ -2,8 +2,6 @@ package com.pa.evs.dto;
 
 import java.util.Date;
 
-import javax.persistence.Column;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;

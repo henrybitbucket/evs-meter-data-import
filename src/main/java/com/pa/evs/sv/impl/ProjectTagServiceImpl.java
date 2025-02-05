@@ -5,13 +5,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import javax.annotation.PostConstruct;
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import javax.transaction.Transactional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ProjectTagDto;
@@ -20,6 +16,10 @@ import com.pa.evs.model.ProjectTag;
 import com.pa.evs.repository.ProjectTagRepository;
 import com.pa.evs.sv.ProjectTagService;
 import com.pa.evs.utils.SecurityUtils;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 
 @Service
 public class ProjectTagServiceImpl implements ProjectTagService {

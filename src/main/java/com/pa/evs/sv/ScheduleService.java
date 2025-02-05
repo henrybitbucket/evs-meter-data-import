@@ -1,5 +1,7 @@
 package com.pa.evs.sv;
 
+import java.util.List;
+
 import com.pa.evs.dto.GetReportTaskResponseDto;
 import com.pa.evs.dto.GroupTaskDto;
 import com.pa.evs.dto.PaginDto;
@@ -9,10 +11,8 @@ import com.pa.evs.dto.ScheduleDto;
 import com.pa.evs.exception.ApiException;
 import com.pa.evs.model.GroupTask;
 
-import java.util.List;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 public interface ScheduleService {
     void createSchedule(ScheduleDto data);

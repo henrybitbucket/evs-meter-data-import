@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import io.swagger.annotations.ApiModelProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -55,17 +54,14 @@ public class DMSApplicationSaveReqDto {
 	private boolean isGuestSubmit = false;
 	
 	@Schema(hidden = true)
-	@ApiModelProperty(hidden = true)
 	@JsonIgnore
 	private String tokenId;
 
 	@Schema(hidden = true)
-	@ApiModelProperty(hidden = true)
 	@JsonIgnore
 	private Long tokenStartTime;
 	
 	@Schema(hidden = true)
-	@ApiModelProperty(hidden = true)
 	@JsonIgnore
 	private Long tokenEndTime;
 }

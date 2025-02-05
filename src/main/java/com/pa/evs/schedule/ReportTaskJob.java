@@ -8,8 +8,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import javax.persistence.EntityManager;
-
 import org.apache.commons.io.FileUtils;
 import org.hibernate.Session;
 import org.quartz.Job;
@@ -35,6 +33,8 @@ import com.pa.evs.repository.ReportFileRepository;
 import com.pa.evs.repository.ReportTaskRepository;
 import com.pa.evs.sv.ReportService;
 import com.pa.evs.utils.JasperUtil;
+
+import jakarta.persistence.EntityManager;
 
 @Component
 public class ReportTaskJob implements Job {

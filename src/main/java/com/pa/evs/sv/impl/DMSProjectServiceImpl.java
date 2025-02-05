@@ -15,9 +15,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
+import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -1073,7 +1073,7 @@ public class DMSProjectServiceImpl implements DMSProjectService {
                 SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(guest, null, guest.getAuthorities()));
 			}
 			String guestToken = credential.getResponse().getToken();
-			String tokenId = AppProps.getContext().getBean(JwtTokenUtil.class).getClaimFromToken(guestToken, Claims::getAudience);
+			String tokenId = AppProps.getContext().getBean(JwtTokenUtil.class).getClaimFromTokenAudience(guestToken, Claims::getAudience);
 			dto.setTokenStartTime(System.currentTimeMillis());
 			dto.setTokenEndTime(guest.getTokenExpireDate().getTime());
 			dto.setTokenId(tokenId);

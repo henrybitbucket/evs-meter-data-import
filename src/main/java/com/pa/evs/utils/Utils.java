@@ -13,7 +13,6 @@ import com.pa.evs.model.DMSLocationLock;
 import com.pa.evs.model.FloorLevel;
 import com.pa.evs.model.MMSMeter;
 
-
 public class Utils {
     public static String formatMac(String mac) {
         char[] c = mac.toUpperCase().replace(":", "").toCharArray();
@@ -292,6 +291,5 @@ public class Utils {
 		System.out.println("a".matches("[a-z]"));
 	}
 }
-
 
 

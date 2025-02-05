@@ -5,9 +5,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -36,10 +33,12 @@ import com.pa.evs.sv.ReportService;
 import com.pa.evs.utils.JasperUtil;
 import com.pa.evs.utils.TimeZoneHolder;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
-@ApiIgnore
+@Hidden
 public class ReportController {
 
     static final Logger logger = LogManager.getLogger(ReportController.class);

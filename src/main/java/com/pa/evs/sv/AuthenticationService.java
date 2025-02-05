@@ -3,8 +3,6 @@ package com.pa.evs.sv;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-
 import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.CompanyDto;
 import com.pa.evs.dto.CreateDMSAppUserDto;
@@ -21,6 +19,8 @@ import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.model.SubGroup;
 import com.pa.evs.security.user.JwtUser;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 public interface AuthenticationService {
 	

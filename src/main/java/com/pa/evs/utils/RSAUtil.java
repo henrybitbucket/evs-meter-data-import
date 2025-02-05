@@ -3,6 +3,7 @@ package com.pa.evs.utils;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileReader;
+import java.io.Reader;
 import java.io.StringWriter;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -17,19 +18,24 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.io.HttpClientConnectionManager;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
 import org.bouncycastle.jce.PKCS10CertificationRequest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 import org.bouncycastle.util.io.pem.PemWriter;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 
 import com.pa.evs.sv.impl.EVSPAServiceImpl;
@@ -481,7 +487,7 @@ public class RSAUtil {
 		}
 	}
 	
-	public static void main(String[] args) throws Exception {
+	public static void main6(String[] args) throws Exception {
 		// MGQCMDj9+UUcehFegfjXFmLE3hUYzwKeflf58HCWlUqPQzffeAnFkZ0agaW9PF1sCEDMGwIwW4hY2GEXNe5sUEMn8cmY7IYbxyEfXAPMKpzNQ+vkgJL29cGgPi37aVA09/NbT5hZ
 		// MGUCMQCNNW9oRWCE3Lj2qF3jF/BlrQSK2tnc1lh00w/4oda8AoqkkbhjAySr36ALrfjJJI0CMDUM3e3rHpChFeCvpRu9D5pdpP5Fy2hi4v6OaCHtP/RaWlcHUqmwZXMw+z0BN4CxkQ==
 		
@@ -567,7 +573,7 @@ public class RSAUtil {
 		System.out.println(1);
 	}
 	
-	public static void main5(String[] a) throws Exception {
+	public static void main(String[] a) throws Exception {
 		org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
 		org.apache.http.conn.ssl.TrustStrategy acceptingTrustStrategy = new org.apache.http.conn.ssl.TrustStrategy() {
 			public boolean isTrusted(java.security.cert.X509Certificate[] x509Certificates, String s) throws java.security.cert.CertificateException {
@@ -575,21 +581,49 @@ public class RSAUtil {
 			}
 		};
 		
-		java.security.KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
-		keyStore.load(new java.io.FileInputStream("F:\\vmw\\Starfish Demo Postman\\NetSeT-User Demo0000000058-copy.jks"), "79565965".toCharArray());
-        
+		java.security.KeyStore keyStore = java.security.KeyStore.getInstance("PKCS12");
+		keyStore.load(new java.io.FileInputStream("F:\\vmw\\Starfish Demo Postman\\NetSeT-User Demo0000000058.pfx"), "79565965".toCharArray());
+		
 		javax.net.ssl.SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom()
 				.loadKeyMaterial(keyStore, "79565965".toCharArray())
 				.loadTrustMaterial(null, acceptingTrustStrategy).build();
-		SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext);
+		
+		HttpClientConnectionManager connManager = PoolingHttpClientConnectionManagerBuilder.create()
+        .setSSLSocketFactory(SSLConnectionSocketFactoryBuilder.create().setSslContext(sslContext).build())
+        .build();
 
-		CloseableHttpClient httpClient = HttpClients.custom().setSSLSocketFactory(csf).build();
+		org.apache.hc.client5.http.impl.classic.CloseableHttpClient httpClient = org.apache.hc.client5.http.impl.classic.HttpClients
+		.custom()
+		.setConnectionManager(connManager)
+		.build();
+
 		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 		requestFactory.setHttpClient(httpClient);
 		restTemplate.setRequestFactory(requestFactory);
-		Object x = restTemplate.getForEntity("https://starfishdemo.local:8443/starfish/ca", Object.class).getBody();
-		System.out.println(x);
 		
-		//CsvUtils.toCsv(headers, items, converter, filePath, activateDate)
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		Map<String, Object> data = new LinkedHashMap<>();
+		data.put("userId", 33);
+		data.put("request", "MIICuDCCAaACAQAwdTEQMA4GA1UEBwwHQmVvZ3JhZDELMAkGA1UEBhMCUlMxHDAaBgNVBAMME1dlYlNlcnZlciBWZWxpa2kgMDExJzAlBgNVBAoMHk5ldFNlVCBHbG9iYWwgU29sdXRpb25zIGQuby5vLjENMAsGA1UECwwEUEtJIDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAJTzmkyX9Kw8JJBTeeVsEgA5/955a4JGDncFo8NsuZ/U0dOJYvOR+3q4cgoCmOTCLecOPCsAACsmM43NUkUXaw+95F5JBjFC9FFoEQ0CQeBUzAsxqlE1AcCfNxH7ibEI/WLCfVv5ehYbQFynIFtdxInC/ChiRbIFyglpcYeqF+7kq5I2ioFXo9qF6GkP+Me2r9UIyYdHOV3YqDIbqYeyI/nbBSNk3zpUKtP1TdUYvrGzX5NYB6LnCocQgn0ecOiR9t76HuBtBg1ptKzFkGJe4eWmwDiyt7z+fpPB420xgDauZbwf104T7D7mXTHWY1NyqAPHguvn9zl7A/b6HQSo0wMCAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAiZod7V6kjWuSgK+j1/vLjUu/9lLcKVLHTLz7IWbX931gtZX0+Utt6ngq3KKu66BMbDUTu7M75zQYOwIrX91fGAFnyzoHjbm33iElxguoSbpWt8dPD3wLMAR+m1vblWv7Fa99e/UT/G3wZj+zBHbIj40AEBK3cbbdvE+bQuwxFYBHYJjHKiujmFmqu0Uahlri4yO0fNhdSPn2sHPJUV+gDd3QOpQrHw8YVXTrhvjp4S+oBRxFjDu7j/iHNEy2XxnysF6n7axJIx2dNQYL5d/QzarJFbFFoYQNE1vbVsARe9wsKjDSSpd5vS9IyQwIwA81sPihseuMlaP8xXG6HpgPow==");
+		data.put("certProfileId", 5);
+		data.put("caId", 9);
+		data.put("notBefore", "2024-12-26");
+		data.put("notAfter", "2025-12-26");
+		HttpEntity<Object> entity = new HttpEntity<>(data, headers);
+		
+//		Object x = restTemplate.exchange("https://starfishdemo.local:8443/starfish/certificateRequest", HttpMethod.POST, entity, Object.class).getBody();
+//		System.out.println(x);
+		
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		Reader reader = new java.io.InputStreamReader(new ByteArrayInputStream("MIICuDCCAaACAQAwdTEQMA4GA1UEBwwHQmVvZ3JhZDELMAkGA1UEBhMCUlMxHDAaBgNVBAMME1dlYlNlcnZlciBWZWxpa2kgMDExJzAlBgNVBAoMHk5ldFNlVCBHbG9iYWwgU29sdXRpb25zIGQuby5vLjENMAsGA1UECwwEUEtJIDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAJTzmkyX9Kw8JJBTeeVsEgA5/955a4JGDncFo8NsuZ/U0dOJYvOR+3q4cgoCmOTCLecOPCsAACsmM43NUkUXaw+95F5JBjFC9FFoEQ0CQeBUzAsxqlE1AcCfNxH7ibEI/WLCfVv5ehYbQFynIFtdxInC/ChiRbIFyglpcYeqF+7kq5I2ioFXo9qF6GkP+Me2r9UIyYdHOV3YqDIbqYeyI/nbBSNk3zpUKtP1TdUYvrGzX5NYB6LnCocQgn0ecOiR9t76HuBtBg1ptKzFkGJe4eWmwDiyt7z+fpPB420xgDauZbwf104T7D7mXTHWY1NyqAPHguvn9zl7A/b6HQSo0wMCAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAiZod7V6kjWuSgK+j1/vLjUu/9lLcKVLHTLz7IWbX931gtZX0+Utt6ngq3KKu66BMbDUTu7M75zQYOwIrX91fGAFnyzoHjbm33iElxguoSbpWt8dPD3wLMAR+m1vblWv7Fa99e/UT/G3wZj+zBHbIj40AEBK3cbbdvE+bQuwxFYBHYJjHKiujmFmqu0Uahlri4yO0fNhdSPn2sHPJUV+gDd3QOpQrHw8YVXTrhvjp4S+oBRxFjDu7j/iHNEy2XxnysF6n7axJIx2dNQYL5d/QzarJFbFFoYQNE1vbVsARe9wsKjDSSpd5vS9IyQwIwA81sPihseuMlaP8xXG6HpgPow==".getBytes()));
+		
+		reader = new java.io.InputStreamReader(new ByteArrayInputStream(("-----BEGIN CERTIFICATE REQUEST-----\r\n"
+				+ "MIICuDCCAaACAQAwdTEQMA4GA1UEBwwHQmVvZ3JhZDELMAkGA1UEBhMCUlMxHDAaBgNVBAMME1dlYlNlcnZlciBWZWxpa2kgMDExJzAlBgNVBAoMHk5ldFNlVCBHbG9iYWwgU29sdXRpb25zIGQuby5vLjENMAsGA1UECwwEUEtJIDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAJTzmkyX9Kw8JJBTeeVsEgA5/955a4JGDncFo8NsuZ/U0dOJYvOR+3q4cgoCmOTCLecOPCsAACsmM43NUkUXaw+95F5JBjFC9FFoEQ0CQeBUzAsxqlE1AcCfNxH7ibEI/WLCfVv5ehYbQFynIFtdxInC/ChiRbIFyglpcYeqF+7kq5I2ioFXo9qF6GkP+Me2r9UIyYdHOV3YqDIbqYeyI/nbBSNk3zpUKtP1TdUYvrGzX5NYB6LnCocQgn0ecOiR9t76HuBtBg1ptKzFkGJe4eWmwDiyt7z+fpPB420xgDauZbwf104T7D7mXTHWY1NyqAPHguvn9zl7A/b6HQSo0wMCAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAiZod7V6kjWuSgK+j1/vLjUu/9lLcKVLHTLz7IWbX931gtZX0+Utt6ngq3KKu66BMbDUTu7M75zQYOwIrX91fGAFnyzoHjbm33iElxguoSbpWt8dPD3wLMAR+m1vblWv7Fa99e/UT/G3wZj+zBHbIj40AEBK3cbbdvE+bQuwxFYBHYJjHKiujmFmqu0Uahlri4yO0fNhdSPn2sHPJUV+gDd3QOpQrHw8YVXTrhvjp4S+oBRxFjDu7j/iHNEy2XxnysF6n7axJIx2dNQYL5d/QzarJFbFFoYQNE1vbVsARe9wsKjDSSpd5vS9IyQwIwA81sPihseuMlaP8xXG6HpgPow==\r\n"
+				+ "-----END CERTIFICATE REQUEST-----").getBytes()));
+		PemReader pemReader = new PemReader(reader);
+		PKCS10CertificationRequest csr =
+				new PKCS10CertificationRequest(pemReader.readPemObject().getContent());
+		System.out.println(csr);
 	}
 }

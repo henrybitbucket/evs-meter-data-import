@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,12 +27,13 @@ import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CsvUtils;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.servlet.http.HttpServletResponse;
 
 
 @SuppressWarnings("rawtypes")
 @RestController
-@ApiIgnore
+@Hidden
 public class BuildingController {
 
 	@Autowired

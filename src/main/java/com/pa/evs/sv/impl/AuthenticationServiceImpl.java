@@ -16,11 +16,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -109,13 +104,16 @@ import com.pa.evs.sv.SettingService;
 import com.pa.evs.utils.ApiResponse;
 import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.AppProps;
-import com.pa.evs.utils.ChinaPadLockUtils;
 import com.pa.evs.utils.SchedulerHelper;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.Utils;
 
 import io.jsonwebtoken.Claims;
+import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 @SuppressWarnings("unchecked")
@@ -336,7 +334,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	public void logout(String token) {
 		Claims claims = jwtTokenUtil.getAllClaimsFromToken(token);
         final String username = claims.getSubject();
-        final String tokenId = claims.getAudience();
+        final String tokenId = new ArrayList<>(claims.getAudience()).get(0);
         
         Optional<Login> loginOpt = loginRepository.findByTokenIdAndUserName(tokenId, username);
         

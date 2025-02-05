@@ -1,11 +1,6 @@
 package com.pa.evs.schedule;
 
-import com.pa.evs.enums.JasperFormat;
-import com.pa.evs.model.ReportTask;
-import com.pa.evs.repository.ReportFileRepository;
-import com.pa.evs.repository.ReportTaskRepository;
-import com.pa.evs.sv.EVSPAService;
-import com.pa.evs.sv.ReportService;
+import java.util.Calendar;
 
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
@@ -14,9 +9,14 @@ import org.quartz.JobDetail;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 
-import java.util.Calendar;
+import com.pa.evs.enums.JasperFormat;
+import com.pa.evs.model.ReportTask;
+import com.pa.evs.repository.ReportFileRepository;
+import com.pa.evs.repository.ReportTaskRepository;
+import com.pa.evs.sv.EVSPAService;
+import com.pa.evs.sv.ReportService;
 
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 
 public class ReportTaskSchedule implements ISchedule {
 

@@ -14,10 +14,9 @@ import com.pa.evs.dto.DMSLockVendorDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.VendorDMSAccDto;
-import com.pa.evs.dto.VendorDto;
 import com.pa.evs.sv.DMSAccService;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
 
 @RestController
 public class DMSAccController {
@@ -26,14 +25,14 @@ public class DMSAccController {
 	private DMSAccService dmsAccService;
 
 	@PostMapping(value = { RestPath.GET_DMS_MC_USERS })
-	@ApiIgnore
+	@Hidden
 	public Object getDMSMCUsers(@RequestBody PaginDto<DMSAccDto> pagin) {
 		dmsAccService.getDMSMCUsers(pagin);
 		return ResponseDto.<Object>builder().success(true).response(pagin).build();
 	}
 
 	@PostMapping(value = { RestPath.SAVE_DMS_MC_USERS })
-	@ApiIgnore
+	@Hidden
 	public Object saveDMSMCUser(@RequestBody DMSAccDto user) {
 		try {
 			dmsAccService.saveDMSMCUser(user);
@@ -44,7 +43,7 @@ public class DMSAccController {
 	}
 
 	@GetMapping(value = { RestPath.GET_VENDOR_AND_MC_USERS })
-	@ApiIgnore
+	@Hidden
 	public Object getVendorAndMcAccs(@PathVariable Long vendorId) {
 		try {
 			return ResponseDto.<Object>builder().response(dmsAccService.getVendorAndMcAccs(vendorId)).success(true)
@@ -55,7 +54,7 @@ public class DMSAccController {
 	}
 
 	@PostMapping(value = { RestPath.SAVE_OR_UPDATE_VENDOR_AND_MC_USERS })
-	@ApiIgnore
+	@Hidden
 	public Object saveOrUpdateVendorAndUser(@RequestBody VendorDMSAccDto dto) {
 		try {
 			dmsAccService.saveOrUpdateVendorAndUser(dto);
@@ -66,7 +65,7 @@ public class DMSAccController {
 	}
 
 	@DeleteMapping(value = { RestPath.DELETE_VENDOR_AND_MC_USERS })
-	@ApiIgnore
+	@Hidden
 	public Object deleteVendor(@PathVariable Long vendorId) {
 		try {
 			dmsAccService.deleteVendor(vendorId);
@@ -77,7 +76,7 @@ public class DMSAccController {
 	}
 	
 	@PostMapping(value = { RestPath.GET_PAGIN_VENDORS })
-	@ApiIgnore
+	@Hidden
 	public Object getVendorsUsers(@RequestBody PaginDto<DMSLockVendorDto> pagin) {
 		dmsAccService.getVendorsUsers(pagin);
 		return ResponseDto.<Object>builder().success(true).response(pagin).build();

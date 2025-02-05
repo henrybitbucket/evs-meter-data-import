@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import com.pa.evs.repository.RoleGroupRepository;
 import com.pa.evs.repository.RolePermissionRepository;
 import com.pa.evs.repository.UserGroupRepository;
 import com.pa.evs.repository.UserRepository;
+import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.SecurityUtils;
 
 @Service
@@ -66,6 +68,7 @@ public class JwtUserDetailsService implements UserDetailsService {
         if (user == null) {
             return null;
         }
+        // AppProps.getContext().getBean(PasswordEncoder.class).matches("P0wer!2", user.getPassword());
         
         Set<Long> allRoleIds = new HashSet<>();
         List<String> roles = userRepository.findRolesByUserId(user.getUserId()).stream().map(r -> {

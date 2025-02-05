@@ -3,7 +3,7 @@
 	<Appenders>
 		<Console name="LogToConsole" target="SYSTEM_OUT">
 			<PatternLayout
-				pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %t %-5level %logger{36} - %msg %cthrowable{full}%n" />
+				pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %t %-5level %logger{36} - %msg %xwThrowable{full}%n" />
 		</Console>
 		<RollingFile name="RollingFile"
 			fileName="app.log"
@@ -12,7 +12,7 @@
 			>			
 			<PatternLayout>
 				<alwaysWriteExceptions>false</alwaysWriteExceptions>
-				<Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %t %-5level %logger{36} - %msg %cthrowable{full}%n</Pattern>
+				<Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %t %-5level %logger{36} - %msg %xwThrowable{full}%n</Pattern>
 			</PatternLayout>
 			<Policies>
 				<TimeBasedTriggeringPolicy/>
@@ -28,6 +28,15 @@
 			<AppenderRef ref="RollingFile" />
 			<AppenderRef ref="LogToConsole" />
 		</Logger>
+		
+		<Logger name="vn" level="info" additivity="false">
+			<AppenderRef ref="RollingFile" />
+			<AppenderRef ref="LogToConsole" />
+		</Logger>
+		<Logger name="vn" level="debug" additivity="false">
+			<AppenderRef ref="RollingFile" />
+			<AppenderRef ref="LogToConsole" />
+		</Logger>		
 		
 		<Logger name="org.springframework" level="info" additivity="false">
 			<AppenderRef ref="RollingFile" />

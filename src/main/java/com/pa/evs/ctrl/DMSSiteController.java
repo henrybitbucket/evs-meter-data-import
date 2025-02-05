@@ -10,19 +10,18 @@ import org.springframework.web.bind.annotation.RestController;
 import com.pa.evs.dto.DMSLocationSiteDto;
 import com.pa.evs.dto.DMSSiteDto;
 import com.pa.evs.dto.DMSWorkOrdersDto;
-import com.pa.evs.dto.GroupUserDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.DMSSiteService;
 import com.pa.evs.sv.WorkOrdersService;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
 
 
 @SuppressWarnings("rawtypes")
 @RestController
-@ApiIgnore
+@Hidden
 public class DMSSiteController {
 
 	@Autowired

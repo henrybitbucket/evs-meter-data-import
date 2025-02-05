@@ -1,8 +1,5 @@
 package com.pa.evs.dto;
 
-import com.pa.evs.utils.SimpleDateFormatter;
-import com.pa.evs.utils.StringUtil;
-
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -12,6 +9,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
+
+import com.pa.evs.utils.SimpleDateFormatter;
 
 public class ReportJasperParameterDto implements Serializable {
 

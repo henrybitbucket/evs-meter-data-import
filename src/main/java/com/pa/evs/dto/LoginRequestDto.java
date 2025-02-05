@@ -1,7 +1,7 @@
 package com.pa.evs.dto;
 
 
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,7 +14,7 @@ import lombok.Setter;
 @Setter
 @Builder
 public class LoginRequestDto {
-	@ApiModelProperty(hidden = true)
+	@Schema(hidden = true)
     private String account;
     private String email;
     private String password;

@@ -2,8 +2,6 @@ package com.pa.evs.ctrl;
 
 import java.util.List;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,10 +14,11 @@ import com.pa.evs.dto.MenuItemsDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.sv.MenuItemsService;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
-@ApiIgnore
+@Hidden
 public class MenuItemsController {
 	
 	@Autowired

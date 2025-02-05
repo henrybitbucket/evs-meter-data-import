@@ -1,15 +1,17 @@
 package com.pa.evs.security.jwt;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -21,9 +23,10 @@ import com.pa.evs.sv.SettingService;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Clock;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.impl.DefaultClock;
+import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtTokenUtil implements Serializable {
@@ -37,8 +40,8 @@ public class JwtTokenUtil implements Serializable {
     
     @Autowired LoginRepository loginRepository;
 
-    @Value("${jwt.secret}")
-    private String secret;
+//    @Value("${jwt.secret}")
+    private String secret = "3301605591108950415L3301605591108950415L";
 
     public Long getExpiration() {
     	SettingDto dto = settingService.findByKey("TIME_LOGIN_EXPIRED");
@@ -64,15 +67,21 @@ public class JwtTokenUtil implements Serializable {
         final Claims claims = getAllClaimsFromToken(token);
         return claimsResolver.apply(claims);
     }
+    
+    public <T> T getClaimFromTokenAudience(String token, Function<Claims, Collection<T>> claimsResolver) {
+        final Claims claims = getAllClaimsFromToken(token);
+        List<T> lst = new ArrayList<>(claimsResolver.apply(claims));
+        return lst.isEmpty() ? null : lst.get(0);
+    }
 
     public Claims getAllClaimsFromToken(String token) {
     	if (token != null && token.startsWith("Bearer ")) {
     		token = token.substring(7);
     	}
-        return Jwts.parser()
-            .setSigningKey(secret)
-            .parseClaimsJws(token)
-            .getBody();
+    	JwtParser jwtParser = Jwts.parser()
+    		    .verifyWith(Keys.hmacShaKeyFor(secret.getBytes()))
+    		    .build();
+    	return (Claims) jwtParser.parse(token).getPayload();
     }
 
     private Boolean isTokenExpired(String token) {
@@ -106,14 +115,17 @@ public class JwtTokenUtil implements Serializable {
         login.setUserName(subject);
         loginRepository.save(login);
         
+        claims.put("tokenId", tokenId);
+        claims.put("subject", subject);
+        
         return Jwts.builder()
-            .setClaims(claims)
-            .setAudience(tokenId)
-            .setSubject(subject)
-            .setIssuedAt(createdDate)
-            .setExpiration(expirationDate)
-            .signWith(SignatureAlgorithm.HS512, secret)
-            .compact();
+                .claims(claims)
+                .audience().add(tokenId).and()
+                .subject(subject)
+                .issuedAt(createdDate)
+                .expiration(expirationDate)
+                .signWith(Keys.hmacShaKeyFor(secret.getBytes()), Jwts.SIG.HS256)
+                .compact();
     }
 
     public Boolean canTokenBeRefreshed(String token, Date lastPasswordReset) {
@@ -127,20 +139,20 @@ public class JwtTokenUtil implements Serializable {
         final Date expirationDate = calculateExpirationDate(createdDate);
 
         final Claims claims = getAllClaimsFromToken(token);
-        claims.setIssuedAt(createdDate);
-        claims.setExpiration(expirationDate);
 
         return Jwts.builder()
-            .setClaims(claims)
-            .signWith(SignatureAlgorithm.HS512, secret)
-            .compact();
+                .claims(claims)
+                .issuedAt(createdDate)
+                .expiration(expirationDate)
+                .signWith(Keys.hmacShaKeyFor(secret.getBytes()), Jwts.SIG.HS256)
+                .compact();
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
         JwtUser user = (JwtUser) userDetails;
         final String username = getUsernameFromToken(token);
         Claims claims = getAllClaimsFromToken(token);
-        final String tokenId = claims.getAudience();
+        final String tokenId = new ArrayList<>(claims.getAudience()).get(0);
         
         Optional<Login> loginOpt = loginRepository.findByTokenIdAndUserName(tokenId, username);
         

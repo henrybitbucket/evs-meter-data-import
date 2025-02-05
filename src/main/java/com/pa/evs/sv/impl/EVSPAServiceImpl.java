@@ -33,14 +33,9 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import javax.annotation.PostConstruct;
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
-import org.eclipse.paho.client.mqttv3.IMqttAsyncClient;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -130,10 +125,14 @@ import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.ZipUtils;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+
 @Component
 @SuppressWarnings("unchecked")
 @EnableScheduling
-@org.springframework.context.annotation.DependsOn({"ajms", "jmsTemplate", "connectionFactory", "jmsContainerFactory"})
+//@org.springframework.context.annotation.DependsOn({"ajms", "jmsTemplate", "connectionFactory", "jmsContainerFactory"})
 public class EVSPAServiceImpl implements EVSPAService {
 
 	private static final org.slf4j.Logger LOG = ExternalLogger.getLogger(EVSPAServiceImpl.class);// org.slf4j.LoggerFactory.getLogger(EVSPAServiceImpl.class);
@@ -2069,6 +2068,12 @@ public class EVSPAServiceImpl implements EVSPAService {
 		data.add("msn", uuid);
 		data.add("files", resource);
 		HttpEntity<Object> entity = new HttpEntity<>(data, headers);
+		
+		// change default ca-request url
+		if (AppProps.get("evs.default.ca.service.url", "").startsWith("http")) {
+			caRequestUrl = AppProps.get("evs.default.ca.service.url", "");
+		}
+		
 		Map<String, Object> response = ApiUtils.getRestTemplate().exchange(caRequestUrl, HttpMethod.POST, entity, Map.class).getBody();
 		String pem = (response.get("cas") + "").replaceAll(".*\"Certificate\": \"(-----BEGIN CERTIFICATE-----[\na-zA-Z0-9=\\\\/+]+-----END CERTIFICATE-----).*", "$1").replace("\\n", "\n");
 		
@@ -2581,3 +2586,4 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 
 }
+

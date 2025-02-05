@@ -3,8 +3,6 @@ package com.pa.evs.ctrl;
 import java.io.IOException;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,11 +22,12 @@ import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.GroupUserService;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.servlet.http.HttpServletRequest;
 
 
 @RestController
-@ApiIgnore
+@Hidden
 public class GroupUserController {
 
     static final Logger logger = LogManager.getLogger(GroupUserController.class);

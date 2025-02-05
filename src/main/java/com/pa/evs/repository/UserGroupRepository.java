@@ -12,7 +12,7 @@ import com.pa.evs.model.UserGroup;
 public interface UserGroupRepository extends JpaRepository<UserGroup, Long> {
 
 
-	@Query(value = "SELECT ug.groupUser FROM UserGroup ug where ug.user.userId = ?1")
+	@Query(value = "SELECT ug.groupUser FROM UserGroup ug where ug.user.userId in ?1")
 	List<GroupUser> findGroupUserByUserIdIn(List<Long> asList);
 
 	List<UserGroup> findByUserUserIdIn(List<Long> asList);

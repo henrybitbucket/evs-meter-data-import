@@ -24,12 +24,12 @@ import com.pa.evs.sv.DMSProjectService;
 import com.pa.evs.sv.DMSSiteService;
 import com.pa.evs.sv.WorkOrdersService;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
 
 
 @SuppressWarnings("rawtypes")
 @RestController
-@ApiIgnore
+@Hidden
 public class DMSProjectController {
 
 	@Autowired
@@ -151,7 +151,7 @@ public class DMSProjectController {
 	}	
 	
     @PostMapping(value = {"/api/dms/pic-users"})
-    @ApiIgnore
+    @Hidden
     public Object getPicUsers(@RequestBody PaginDto<UserDto> pagin) {
     	dmsProjectService.searchDMSPicUsers(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();

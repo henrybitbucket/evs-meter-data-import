@@ -1,8 +1,5 @@
 package com.pa.evs.ctrl;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -13,10 +10,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.pa.evs.sv.AppEventLogService;
 
-import springfox.documentation.annotations.ApiIgnore;
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 @RestController
-@ApiIgnore
+@Hidden
 public class ShutdownController implements ApplicationContextAware {
     
     private ApplicationContext context;

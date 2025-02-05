@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
-
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,6 +13,9 @@ import com.pa.evs.dto.AddressLogDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.model.AddressLog;
 import com.pa.evs.sv.AddressLogService;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 
 @Service
 public class AddressLogServiceImpl implements AddressLogService {

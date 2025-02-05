@@ -1,5 +1,16 @@
 package com.pa.evs.ctrl;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.pa.evs.converter.ExceptionConvertor;
 import com.pa.evs.dto.GetGroupTaskResponseDto;
 import com.pa.evs.dto.GetReportTaskResponseDto;
@@ -12,25 +23,12 @@ import com.pa.evs.dto.ScheduleDto;
 import com.pa.evs.enums.ResponseEnum;
 import com.pa.evs.sv.ScheduleService;
 
-import springfox.documentation.annotations.ApiIgnore;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
-@ApiIgnore
+@Hidden
 public class ScheduleController {
 
     static final Logger logger = LogManager.getLogger(ScheduleController.class);
