@@ -35,9 +35,21 @@
 		<slack.api.version>1.2.0</slack.api.version>
 		<glassfish.version>1.13.1</glassfish.version>
 		<jasperreport.version>6.8.0</jasperreport.version>
-		<log4j2.version>2.15.0</log4j2.version>
+		<log4j2.version>2.20.0</log4j2.version>
 	</properties>
 	<dependencies>
+		<!-- Add Log4j2 Dependency -->
+		<!-- exclude logback , add log4j2 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
