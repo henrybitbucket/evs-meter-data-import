@@ -1392,7 +1392,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 
 	private void updateLastSubscribe(Log log) {
 		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
+		LOG.info("check updateLastSubscribe ONLINE " + log.getUid() + " " + log.getMsn());
 		if (opt.isPresent()) {
+			LOG.info("updateLastSubscribe ONLINE " + log.getUid() + " " + log.getMsn());
 			opt.get().setStatus(DeviceStatus.ONLINE);
 			opt.get().setLastSubscribeDatetime(Calendar.getInstance().getTimeInMillis());
 			caRequestLogRepository.save(opt.get());
