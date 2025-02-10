@@ -1132,7 +1132,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 //		}
  
 		if (StringUtils.isBlank(log.getMsn())) {
-			log.setMsn("20200101001001");
+			CARequestLog ca = caRequestLogRepository.findByUid(log.getUid()).orElse(new CARequestLog());
+			log.setMsn(StringUtils.isBlank(ca.getMsn()) ? "20200101001001" : ca.getMsn());
 		}
 //		https://powerautomationsg.atlassian.net/browse/MMS-93 END
 
