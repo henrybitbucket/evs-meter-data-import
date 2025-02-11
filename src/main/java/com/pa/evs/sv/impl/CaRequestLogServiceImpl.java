@@ -1209,30 +1209,30 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             
             if (StringUtils.isNotBlank(queryBuilding)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" AND m.building.id= '" + queryBuilding + "' ");
+            		sqlCommonBuilder.append(" AND m.building.id= " + queryBuilding + " ");
             	} else {
-            		sqlCommonBuilder.append(" AND ca.building.id= '" + queryBuilding + "' ");	
+            		sqlCommonBuilder.append(" AND ca.building.id= " + queryBuilding + " ");	
             	}
             }
             if (StringUtils.isNotBlank(queryBlock)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" AND m.block.id= '" + queryBlock + "' ");
+            		sqlCommonBuilder.append(" AND m.block.id= " + queryBlock + " ");
             	} else {
-            		sqlCommonBuilder.append(" AND ca.block.id= '" + queryBlock + "' ");	
+            		sqlCommonBuilder.append(" AND ca.block.id= " + queryBlock + " ");	
             	}
             }
             if (StringUtils.isNotBlank(queryFloorLevel)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" AND m.floorLevel.id= '" + queryFloorLevel + "' ");
+            		sqlCommonBuilder.append(" AND m.floorLevel.id= " + queryFloorLevel + " ");
             	} else {
-            		sqlCommonBuilder.append(" AND ca.floorLevel.id= '" + queryFloorLevel + "' ");
+            		sqlCommonBuilder.append(" AND ca.floorLevel.id= " + queryFloorLevel + " ");
             	}
             }
             if (StringUtils.isNotBlank(queryBuildingUnit)) {
             	if (searchMeter) {
-            		sqlCommonBuilder.append(" AND m.buildingUnit.id= '" + queryBuildingUnit + "' ");
+            		sqlCommonBuilder.append(" AND m.buildingUnit.id= " + queryBuildingUnit + " ");
             	} else {
-            		sqlCommonBuilder.append(" AND ca.buildingUnit.id= '" + queryBuildingUnit + "' ");
+            		sqlCommonBuilder.append(" AND ca.buildingUnit.id= " + queryBuildingUnit + " ");
             	}
             }
             if (StringUtils.isNotBlank(queryRemarkMCU)) {
