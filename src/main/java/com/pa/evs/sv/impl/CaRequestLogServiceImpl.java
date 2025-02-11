@@ -1346,7 +1346,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         
         pagin.setResults(rp);
         if (!BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv")) 
-    			&& "true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "") ) {
+    			&& !"true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "") ) {
         	getRLSLog(rp);	
         }
         
