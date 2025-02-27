@@ -1489,7 +1489,7 @@ public class CommonController {
 					start = end;
 				}
 				fos.write("-----END CERTIFICATE REQUEST-----".getBytes());
-				return requestAwsCA(AppProps.get("portal.pa.ca.request.url"), new FileSystemResource(new File(fileName)));
+				return requestAwsCA(AppProps.get("portal.pa.ca.request.aws.url", "https://provisioning.thesmarthome.sg/api/evs-ca-request"), new FileSystemResource(new File(fileName)));
 			} finally {
 				Files.deleteIfExists(Paths.get(fileName));
 			}
