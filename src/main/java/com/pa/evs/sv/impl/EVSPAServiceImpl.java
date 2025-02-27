@@ -2078,7 +2078,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		}
 		
 		Map<String, Object> response = ApiUtils.getRestTemplate().exchange(caRequestUrl, HttpMethod.POST, entity, Map.class).getBody();
-		String pem = (response.get("cas") + "").replaceAll(".*\"Certificate\": \"(-----BEGIN CERTIFICATE-----[\na-zA-Z0-9=\\\\/+]+-----END CERTIFICATE-----).*", "$1").replace("\\n", "\n");
+		String pem = (response.get("cas") + "").replaceAll(".*\"Certificate\": *\"(-----BEGIN CERTIFICATE-----[\na-zA-Z0-9=\\\\/+]+-----END CERTIFICATE-----).*", "$1").replace("\\n", "\n");
 		
 		if (!pem.contains("-----BEGIN CERTIFICATE-----")) {
 			throw new RuntimeException("CA request ERROR " + uuid + "\n" + response.get("cas"));
@@ -2212,7 +2212,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "pa/evs/ntu/202206000056", "Read Lock Status for 202206000520(3), Status: Lock_Status: read failed, Coil: None", 2, false);
 	}
 	
-	public static void main(String[] args) throws Exception {
+	public static void main6(String[] args) throws Exception {
 		String evsPAMQTTAddress = "ssl://3.1.87.138:8883";
 		String mqttClientId = System.currentTimeMillis() + "";
 		
@@ -2227,6 +2227,31 @@ public class EVSPAServiceImpl implements EVSPAService {
 //		Mqtt.publish(client, "evs/pa/data", payload, 2, false);
 
 
+	}
+	
+	public static void main(String[] args) throws Exception {
+		
+		String evsPAMQTTAddress = "tcp://192.168.80.96:1883";
+		String mqttClientId = System.currentTimeMillis() + "";
+		
+		String json = "{\"header\":{\"mid\":10181,\"uid\":\"89049032000001000000128256736680\",\"gid\":\"89049032000001000000128256736680\",\"msn\":\"202206000057\",\"sig\":\"\"},\"payload\":{\"id\":\"89049032000001000000128256736680\",\"type\":\"OBR\",\"data\":\"202206000057\"}}";
+
+		String topic = "evs/pa/data";
+		
+		int[] counts = new int[] {0};
+		ExecutorService ex = Executors.newFixedThreadPool(1);
+		
+		Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), "evs/pa/data", 2, o -> {
+			final MqttMessage mqttMessage = (MqttMessage) o;
+			LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+			ex.submit(() -> {
+				counts[0] = counts[0] + 1;
+				System.out.println("count->" + counts[0]);
+			});
+			return null;
+		});
+		
+		Mqtt.publish(Mqtt.getInstance(evsPAMQTTAddress, System.currentTimeMillis() + ""), topic, json, 2, false);
 	}
 
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
