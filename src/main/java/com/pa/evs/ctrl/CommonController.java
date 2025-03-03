@@ -1,6 +1,5 @@
 package com.pa.evs.ctrl;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -11,6 +10,7 @@ import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -22,20 +22,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
-import org.apache.hc.client5.http.io.HttpClientConnectionManager;
-import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
-import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
@@ -44,14 +33,12 @@ import org.bouncycastle.util.io.pem.PemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -111,6 +98,7 @@ import com.pa.evs.sv.NotificationService;
 import com.pa.evs.sv.P1OnlineStatusService;
 import com.pa.evs.sv.P1ReportService;
 import com.pa.evs.sv.SettingService;
+import com.pa.evs.sv.StarfishCAService;
 import com.pa.evs.sv.VendorService;
 import com.pa.evs.sv.impl.EVSPAServiceImpl;
 import com.pa.evs.utils.ApiUtils;
@@ -125,6 +113,9 @@ import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.TimeZoneHolder;
 
 import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @Hidden
@@ -196,6 +187,8 @@ public class CommonController {
 	@Autowired RelayStatusLogRepository relayStatusLogRepository;
 	
 	@Autowired LogRepository logRepository;
+	
+	@Autowired StarfishCAService starfishCAService;
 	
 	public static final Map<Object, String> MID_TYPE = new LinkedHashMap<>();
 	
@@ -1464,7 +1457,6 @@ public class CommonController {
 //	curl -X POST -H "Content-Type: multipart/form-data" -F "files=@D:/test.csr" http://localhost:7770/api/ca-request
 //	curl -X POST -H "Content-Type: multipart/form-data" -F "files=@D:/home/pi/00000000becf3452-6cdffb90000f.thesmarthome.sg-eSE.csr" http://localhost:7770/api/ca-request?vendor=aws
 //	"C:\Program Files\Java\jdk-19\bin\keytool" -importkeystore -srckeystore "NetSeT-User Demo0000000058.pfx" -srcstoretype pkcs12 -destkeystore "NetSeT-User Demo0000000058.jks" -deststoretype JKS
-	@SuppressWarnings("unchecked")
 	@PostMapping("/api/ca-request")
 	public Object requestCA(@RequestParam(required = true) MultipartFile[] files, 
 			HttpServletRequest req, HttpServletResponse res,
@@ -1495,69 +1487,9 @@ public class CommonController {
 			}
 		}
 		
-		org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-		org.apache.http.conn.ssl.TrustStrategy acceptingTrustStrategy = new org.apache.http.conn.ssl.TrustStrategy() {
-			public boolean isTrusted(java.security.cert.X509Certificate[] x509Certificates, String s) throws java.security.cert.CertificateException {
-				return true;
-			}
-		};
-		
-		java.security.KeyStore keyStore = java.security.KeyStore.getInstance("PKCS12");
-		keyStore.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("NetSeT-User Demo0000000058.pfx"), "79565965".toCharArray());
-//		java.security.KeyStore keyStore = java.security.KeyStore.getInstance("JKS");
-//		keyStore.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("NetSeT-User Demo0000000058.jks"), "79565965".toCharArray());
-		
-		javax.net.ssl.SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom()
-				.loadKeyMaterial(keyStore, "79565965".toCharArray())
-				.loadTrustMaterial(null, acceptingTrustStrategy).build();
-		
-		HttpClientConnectionManager connManager = PoolingHttpClientConnectionManagerBuilder.create()
-                .setSSLSocketFactory(SSLConnectionSocketFactoryBuilder.create().setSslContext(sslContext).build())
-                .build();
-		
-		org.apache.hc.client5.http.impl.classic.CloseableHttpClient httpClient = org.apache.hc.client5.http.impl.classic.HttpClients
-				.custom()
-				.setConnectionManager(connManager)
-				.build();
-		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
-		requestFactory.setHttpClient(httpClient);
-		restTemplate.setRequestFactory(requestFactory);
-
-		
 		Exception ex = null;
-		try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-			IOUtils.copy(files[0].getInputStream(), bos);
-			
-			String content = new String(new String(bos.toByteArray())
-					.replaceAll("\r*\n", "")
-					.replace("\r", "")
-					.replaceAll("\\s+","")
-					.replaceAll("-----([^\\-])+-----", ""));
-			//-----BEGIN CERTIFICATE REQUEST-----
-			//MIICuDCCAaACAQAwdTEQMA4GA1UEBwwHQmVvZ3JhZDELMAkGA1UEBhMCUlMxHDAaBgNVBAMME1dlYlNlcnZlciBWZWxpa2kgMDExJzAlBgNVBAoMHk5ldFNlVCBHbG9iYWwgU29sdXRpb25zIGQuby5vLjENMAsGA1UECwwEUEtJIDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAJTzmkyX9Kw8JJBTeeVsEgA5/955a4JGDncFo8NsuZ/U0dOJYvOR+3q4cgoCmOTCLecOPCsAACsmM43NUkUXaw+95F5JBjFC9FFoEQ0CQeBUzAsxqlE1AcCfNxH7ibEI/WLCfVv5ehYbQFynIFtdxInC/ChiRbIFyglpcYeqF+7kq5I2ioFXo9qF6GkP+Me2r9UIyYdHOV3YqDIbqYeyI/nbBSNk3zpUKtP1TdUYvrGzX5NYB6LnCocQgn0ecOiR9t76HuBtBg1ptKzFkGJe4eWmwDiyt7z+fpPB420xgDauZbwf104T7D7mXTHWY1NyqAPHguvn9zl7A/b6HQSo0wMCAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAiZod7V6kjWuSgK+j1/vLjUu/9lLcKVLHTLz7IWbX931gtZX0+Utt6ngq3KKu66BMbDUTu7M75zQYOwIrX91fGAFnyzoHjbm33iElxguoSbpWt8dPD3wLMAR+m1vblWv7Fa99e/UT/G3wZj+zBHbIj40AEBK3cbbdvE+bQuwxFYBHYJjHKiujmFmqu0Uahlri4yO0fNhdSPn2sHPJUV+gDd3QOpQrHw8YVXTrhvjp4S+oBRxFjDu7j/iHNEy2XxnysF6n7axJIx2dNQYL5d/QzarJFbFFoYQNE1vbVsARe9wsKjDSSpd5vS9IyQwIwA81sPihseuMlaP8xXG6HpgPow==
-			//-----END CERTIFICATE REQUEST-----
-			
-			Calendar c = Calendar.getInstance();
-			SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd");
-			Date startDate = c.getTime();
-			c.add(Calendar.DAY_OF_YEAR, 365);
-			Date endDate = c.getTime();
-			
-			HttpHeaders headers = new HttpHeaders();
-			headers.setContentType(MediaType.APPLICATION_JSON);
-			Map<String, Object> data = new LinkedHashMap<>();
-			data.put("userId", Integer.parseInt(AppProps.get("starfish.ca-request.userId", "33")));
-			data.put("certProfileId", Integer.parseInt(AppProps.get("starfish.ca-request.certProfileId", "5")));
-			data.put("caId", Integer.parseInt(AppProps.get("starfish.ca-request.caId", "9")));
-			data.put("request", content);
-			data.put("notBefore", sf.format(startDate));
-			data.put("notAfter", sf.format(endDate));
-			HttpEntity<Object> entity = new HttpEntity<>(data, headers);
-			
-			Map<String, Object> body = restTemplate.exchange(AppProps.get("starfish.ca-request.url", "https://starfishdemo.local:8443/starfish/certificateRequest"), HttpMethod.POST, entity, Map.class).getBody();
-			Map<String, Object> ca = (Map<String, Object>) body.get("data");
-			ca = (Map<String, Object>) ca.get("digitalCertificate");
-			
+		try {
+			Map<String, Object> ca = starfishCAService.requestCA(files[0].getInputStream(), null, null, null);
 			Map<String, Object> awsFormatCrt = new LinkedHashMap<>();
 			
 			StringWriter writer = new StringWriter();
@@ -1568,7 +1500,9 @@ public class CommonController {
 			
 			awsFormatCrt.put("Certificate", writer.toString());
 			
-			return SimpleMap.init("cas", new ObjectMapper().writeValueAsString(awsFormatCrt)).more("startDate", startDate.getTime()).more("endDate", endDate.getTime());
+			return SimpleMap.init("cas", new ObjectMapper().writeValueAsString(awsFormatCrt))
+					.more("startDate", Instant.parse(ca.get("notBefore") + "Z").toEpochMilli())
+					.more("endDate", Instant.parse(ca.get("notAfter") + "Z").toEpochMilli());
 		} catch (Exception e) {
 			ex = e;
 		}

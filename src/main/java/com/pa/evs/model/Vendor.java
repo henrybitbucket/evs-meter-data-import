@@ -62,6 +62,9 @@ public class Vendor extends BaseEntity {
     @Column(name = "csr_path")
     private String csrPath;
     
+    @Column(name = "ca_service", columnDefinition = "varchar(255) default 'aws'")
+    private String caService;
+    
     @JsonIgnore
 	@Lob
 	@Column(name = "csr_blob")

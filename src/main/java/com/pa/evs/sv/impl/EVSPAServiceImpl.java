@@ -2,6 +2,7 @@ package com.pa.evs.sv.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -114,6 +115,7 @@ import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.LogService;
+import com.pa.evs.sv.StarfishCAService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
 import com.pa.evs.utils.CMD;
@@ -186,6 +188,8 @@ public class EVSPAServiceImpl implements EVSPAService {
     @Autowired private FirmwareRepository firmwareRepository;
     
 	@Autowired private RelayStatusLogRepository relayStatusLogRepository;
+	
+	@Autowired StarfishCAService starfishCAService;
     
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
 	
@@ -1168,10 +1172,15 @@ public class EVSPAServiceImpl implements EVSPAService {
 			payload.put("id", log.getUid());
 			payload.put("cmd", "ACT");
 			Optional<CARequestLog> otp = caRequestLogRepository.findByUid(log.getUid());
-			payload.put("p1", !otp.isPresent() ? null : otp.get().getVendor().getCertificate());
-			
-			if (otp.get().getVendor().getId() == 1l) {
-				// payload.put("p1", !otp.isPresent() ? null : "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNiekNDQWhXZ0F3SUJBZ0lRU0tVei9zenhwODV4S256bFl4eEUyREFLQmdncWhrak9QUVFEQWpCU01Rc3cKQ1FZRFZRUUdFd0pUUnpFTE1Ba0dBMVVFQ2d3Q1VFRXhEakFNQmdOVkJBc01CVUpWTlRBd01SSXdFQVlEVlFRRApEQWxRUVVOQklFWkdSa1l4RWpBUUJnTlZCQWNNQ1VGc1pYaGhibVJ5WVRBZUZ3MHlOREV5TURNd05qSTBNamxhCkZ3MHlOVEV3TVRrd056STBNamxhTUlHRk1Rc3dDUVlEVlFRR0V3SlRSekVMTUFrR0ExVUVDQXdDVGtFeEVqQVEKQmdOVkJBY01DVk5wYm1kaGNHOXlaVEVMTUFrR0ExVUVDZ3dDVUVFeERqQU1CZ05WQkFzTUJVSlZOVEF3TVJvdwpHQVlEVlFRRERCRnRZWE4wWlhJdVpYWnpMbU52YlM1elp6RWNNQm9HQ1NxR1NJYjNEUUVKQVJZTmNHRkFaWFp6CkxtTnZiUzV6WnpCMk1CQUdCeXFHU000OUFnRUdCU3VCQkFBaUEySUFCSzI0RWs3bzc2MnJtak9sVituUllHL3EKcUhodXhZUGErUEdUancyS3RkekgyMHcyOUd3YndMdUxoWm45c2ExL3EyNDNoT0JRcm1NOUx0K2UzN2owQlIzNgpVbEYzMEVKNWduRSt3dTRUY3JKMk5qY3NrQWJ6ZHNGV1E1NlRmaEE1RjZOOE1Ib3dDUVlEVlIwVEJBSXdBREFmCkJnTlZIU01FR0RBV2dCVFhEL0NHeWs0YmpPOHhVcEZTV2pBeWJBNnF4VEFkQmdOVkhRNEVGZ1FVaXR1UEdjbTcKeEJlNHRVdXJSUG03ZWRNdEdnd3dEZ1lEVlIwUEFRSC9CQVFEQWdXZ01CMEdBMVVkSlFRV01CUUdDQ3NHQVFVRgpCd01CQmdnckJnRUZCUWNEQWpBS0JnZ3Foa2pPUFFRREFnTklBREJGQWlBVzFnMHdnQklmL3R6UElLRk9NNm5VCmNGV2wzV2tWSlExUzNxcEkwVTNYRHdJaEFQS2FORHRhdi9JSTF4c1J6R25PZFRjaG9Ha1V4VFFvSmRibFdOd2wKUmI1MAotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==");
+			if (otp.isPresent() && "starfish".equalsIgnoreCase(otp.get().getVendor().getCaService())) {
+				try (FileInputStream in = new FileInputStream(otp.get().getVendor().getCsrPath())) {
+					Map<String, Object> ca = starfishCAService.requestCA(in, log.getUid() + ".MCU.MMS.sg", null, null);
+					payload.put("p1", Base64.getEncoder().encodeToString(starfishCAService.formatCA(ca.get("content") + "").getBytes()));
+				} catch (Exception e) {
+					//
+				}
+			} else {
+				payload.put("p1", !otp.isPresent() ? null : otp.get().getVendor().getCertificate());	
 			}
 			
 			Optional<CARequestLog> opt = caRequestLogRepository.findByUid(log.getUid());
