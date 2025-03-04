@@ -19,7 +19,7 @@ public interface EVSPAService {
 
 	Log publish(String topic, Object message, String type) throws Exception;
 
-	Long nextvalMID(Vendor vendor);
+	Long nextvalMID(Vendor vendor, CARequestLog ca);
 
     boolean upload(String fileName, String version, String hashCode, InputStream in);
 

@@ -50,7 +50,7 @@ public class GroupTaskJob implements Job {
             if (!caRequestLogs.isEmpty()) {
                 caRequestLogs.forEach(ca -> {
                     try {
-                        Long mid = evsPAService.nextvalMID(ca.getVendor());
+                        Long mid = evsPAService.nextvalMID(ca.getVendor(), ca);
                         SimpleMap<String, Object> map = SimpleMap.init("id", ca.getUid()).more("cmd", command.name());
                         String sig = BooleanUtils.isTrue(ca.getVendor().getEmptySig()) ? "" : RSAUtil.initSignedRequest(pkPath, new ObjectMapper().writeValueAsString(map), ca.getVendor().getSignatureAlgorithm());
                         evsPAService.publish(alias + ca.getUid(), SimpleMap.init(

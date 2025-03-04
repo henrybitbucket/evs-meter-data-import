@@ -5,6 +5,8 @@ import java.util.List;
 import com.pa.evs.enums.VendorType;
 import com.pa.evs.model.Vendor;
 
+import lombok.Builder;
+
 /**
  * @author tonyk
  *
@@ -16,6 +18,10 @@ public class VendorDto {
 	private String descrption;
 	private String signatureAlgorithm;
 	private String keyType;
+	
+    private Long maxMidValue;
+    
+    private Integer midResetTime;
 
 	public VendorDto() {
 	}
@@ -66,4 +72,20 @@ public class VendorDto {
 		this.keyType = keyType;
 	}
 
+	public Long getMaxMidValue() {
+		return maxMidValue;
+	}
+
+	public void setMaxMidValue(Long maxMidValue) {
+		this.maxMidValue = maxMidValue;
+	}
+
+	public Integer getMidResetTime() {
+		return midResetTime;
+	}
+
+	public void setMidResetTime(Integer midResetTime) {
+		this.midResetTime = midResetTime;
+	}
+	
 }

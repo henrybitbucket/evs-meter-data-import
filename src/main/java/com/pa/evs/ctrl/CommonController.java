@@ -71,6 +71,7 @@ import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.SFileDto;
 import com.pa.evs.dto.SettingDto;
+import com.pa.evs.dto.VendorDto;
 import com.pa.evs.enums.CommandEnum;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
@@ -285,7 +286,7 @@ public class CommonController {
             	AppProps.getContext().getBean(EVSPAServiceImpl.class).updateDeviceCsrInfo(ca.get());	
             }
             
-            Long mid = evsPAService.nextvalMID(ca.isPresent() ? ca.get().getVendor() : Vendor.builder().build());
+            Long mid = evsPAService.nextvalMID(ca.isPresent() ? ca.get().getVendor() : Vendor.builder().build(), ca.isPresent() ? ca.get() : null);
             command.setUid(ca.isPresent() ? ca.get().getUid() : null);
             command.getOptions().put("uid", ca.isPresent() ? ca.get().getUid() : null);
             command.getOptions().put("mid", mid);
@@ -1001,6 +1002,11 @@ public class CommonController {
     @GetMapping("/api/vendors")
     public ResponseEntity<Object> getVendors(HttpServletRequest httpServletRequest) throws Exception {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(vendorService.getVendors()).success(true).build());
+    }
+    
+    @PostMapping("/api/vendor")
+    public ResponseEntity<Object> saveVendor(HttpServletRequest httpServletRequest, @RequestBody VendorDto dto) throws Exception {
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(vendorService.saveVendor(dto)).success(true).build());
     }
     
     @PostMapping("/api/address-logs")

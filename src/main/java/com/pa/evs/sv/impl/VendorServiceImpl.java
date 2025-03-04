@@ -107,7 +107,8 @@ public class VendorServiceImpl implements VendorService {
 			dto.setDescrption(ven.getDescription());
 			dto.setKeyType(ven.getKeyType());
 			dto.setSignatureAlgorithm(ven.getSignatureAlgorithm());
-			
+			dto.setMaxMidValue(ven.getMaxMidValue());
+			dto.setMidResetTime(ven.getMidResetTime());
 			res.add(dto);
 		}
 		return res;
@@ -240,8 +241,17 @@ public class VendorServiceImpl implements VendorService {
 				throw new RuntimeException("Vendor not found!");
 			}
 			Vendor vendor = vendorOpt.get();
-			vendor.setName(dto.getName());
-			vendor.setDescription(dto.getDescrption());
+			if (StringUtils.isNotBlank(dto.getName())) {
+				vendor.setName(dto.getName());	
+			}
+			if (StringUtils.isNotBlank(dto.getDescrption())) {
+				vendor.setDescription(dto.getDescrption());
+			}
+			
+			if (dto.getMaxMidValue() != null && dto.getMaxMidValue() > 0) {
+				vendor.setMaxMidValue(dto.getMaxMidValue());	
+			}
+			
 			vendorRepository.save(vendor);
 			return vendor;
 		} else {
@@ -252,6 +262,9 @@ public class VendorServiceImpl implements VendorService {
 			Vendor newVendor = new Vendor();
 			newVendor.setName(dto.getName());
 			newVendor.setDescription(dto.getDescrption());
+			if (dto.getMaxMidValue() != null && dto.getMaxMidValue() > 0) {
+				newVendor.setMaxMidValue(dto.getMaxMidValue());	
+			}
 			vendorRepository.save(newVendor);
 			return newVendor;
 		}

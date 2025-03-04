@@ -669,8 +669,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 		});
 	}
 	
+	@Transactional
 	@Override
-	public Long nextvalMID(Vendor vendor) {
+	public Long nextvalMID(Vendor vendor, CARequestLog ca) {
 		if (vendor.getId() == null) {
 			vendor.setId(0l);
 		}
@@ -683,7 +684,40 @@ public class EVSPAServiceImpl implements EVSPAService {
 			sequenceService.nextvalMID(10000l, vendor.getId());
 			mid = sequenceService.nextvalMID(vendor.getId()).longValue();
 		}
+
+		if (vendor != null && vendor.getId() != null && vendor.getId() > 0l) {
+			vendor.setMidResetTime((vendor.getMidResetTime() == null ? 0 : vendor.getMidResetTime()) + 1);
+			vendorRepository.save(vendor);
+		}
+		
+		if (ca != null && ca.getId() != null && ca.getId() > 0l) {
+			ca.setModifyDate(new Date());
+			caRequestLogRepository.save(ca);
+			caRequestLogRepository.flush();
+			if (ca.getNextvalMID() >= vendor.getMaxMidValue()) {
+				String uid = ca.getUid();
+				new Thread(() -> {
+					AppProps.getContext().getBean(this.getClass()).checkResetNextvalMidMCU(uid);
+				}).start();;
+			}
+
+			return ca.getNextvalMID();
+		}
+		
 		return mid.longValue();
+	}
+	
+	@Transactional
+	public void checkResetNextvalMidMCU(String uid) {
+		try {
+			Thread.sleep(5000l);
+		} catch (Exception e) {
+			//
+		}
+		CARequestLog ca = caRequestLogRepository.findByUid(uid).orElse(null);
+		if (ca != null && ca.getNextvalMID() != null && ca.getNextvalMID() >= ca.getVendor().getMaxMidValue()) {
+			em.createNativeQuery("update {h-schema}ca_request_log update set nextval_mid = 1, mid_reset_time = (mid_reset_time + 1) where uid = '" + uid + "' ").executeUpdate();
+		}
 	}
 
 	private int validateUid(Log log) {
@@ -1057,7 +1091,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 			
 			if (log.getMid() == null && opt.isPresent()) {
-				log.setMid(nextvalMID(opt.get().getVendor()));
+				log.setMid(nextvalMID(opt.get().getVendor(), opt.get()));
 			}
 			//Publish
 			data = new LinkedHashMap<>();
@@ -1480,7 +1514,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		String cmd = (String)payload.get("cmd");
 		Optional<CARequestLog> caRequestLog = caRequestLogRepository.findByMsn(msn);
 		if (caRequestLog.isPresent()) {
-			Long nextMid = nextvalMID(caRequestLog.get().getVendor());
+			Long nextMid = nextvalMID(caRequestLog.get().getVendor(), caRequestLog.get());
 			localMap.getLocalMap().put(nextMid, mid.longValue());
 			header.put("mid", nextMid);
 			header.put("uid", caRequestLog.get().getUid());

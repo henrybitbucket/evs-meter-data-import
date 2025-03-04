@@ -73,6 +73,9 @@ public class Vendor extends BaseEntity {
     @Builder.Default
     private Long maxMidValue = 4294967295l;
     
+    @Builder.Default
+    private Integer midResetTime = 0;
+    
     public String getObrKeyPath() {
     	if (StringUtils.isBlank(obrKeyPath)) {
     		return keyPath;

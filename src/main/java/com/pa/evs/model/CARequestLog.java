@@ -19,6 +19,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pa.evs.dto.ProjectTagDto;
@@ -238,6 +239,15 @@ public class CARequestLog extends BaseEntity {
 	@Column(name = "remark_meter", length = 500)
 	private String remarkMeter;
 	
+	@Version
+	@Column(name = "nextval_mid", columnDefinition = "bigint not null default 1")
+	@Builder.Default
+	private Long nextvalMID = 1l;
+	
+	@Column(name = "mid_reset_time", columnDefinition = "int not null default 0")
+    @Builder.Default
+    private Integer midResetTime = 0;
+	
 	@Transient
     private Long lastestDecoupleTime;
     
@@ -249,6 +259,13 @@ public class CARequestLog extends BaseEntity {
     
 	@Transient
     private String latestCoupledMeterAddress;
+	
+	public Long getNextvalMID() {
+		if (nextvalMID == null) {
+			nextvalMID = 1l;
+		}
+		return nextvalMID;
+	}
 
 	public static CARequestLog build(Map<String, Object> data) throws Exception {
 		
