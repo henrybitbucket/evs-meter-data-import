@@ -202,6 +202,12 @@ public class AddressServiceImpl implements AddressService {
 				String msn = a.getCoupleMsn();
 				if (StringUtils.isNotBlank(a.getCoupleMsn())) {
 
+					CARequestLog ca = msnCA.get(a.getCoupleMsn());
+					if (ca == null) {
+						a.setMessage("Meter SN doesn't exists!");
+						return;
+					}
+					
 					CARequestLog caUnitCoupled = caRequestLogRepository.findByBuildingUnitId(buildingUnit.getId()).orElse(null);
 					
 					if (caUnitCoupled != null && "de-couple".equalsIgnoreCase(msn)) {
@@ -222,13 +228,7 @@ public class AddressServiceImpl implements AddressService {
 					}
 					
 					if (caUnitCoupled != null && caUnitCoupled.getBuildingUnit() != null) {
-						a.setMessage(Message.ADDRESS_IS_ASSIGNED);
-						return;
-					}
-					
-					CARequestLog ca = msnCA.get(a.getCoupleMsn());
-					if (ca == null) {
-						a.setMessage("Meter SN doesn't exists!");
+						a.setMessage(ca.getId().longValue() != caUnitCoupled.getId().longValue() ?  Message.ADDRESS_IS_ASSIGNED : "Already coupled!");
 						return;
 					}
 					
@@ -624,9 +624,9 @@ public class AddressServiceImpl implements AddressService {
 						dto.setRemark(it);
 					} else if (head.computeIfAbsent("Remark for meter", k->-1) == count || head.computeIfAbsent("remark for meter", k->-1) == count || head.computeIfAbsent("\"Remark for meter\"", k->-1) == count) {
 						dto.setRemarkForMeter(it);
-					} else if (head.computeIfAbsent("Coupled MCU SN", k->-1) == count) {
+					} else if (head.computeIfAbsent("Coupled MCU SN", k->-1) == count || head.computeIfAbsent("MCU SN", k->-1) == count) {
 						dto.setCoupleSn(it);
-					} else if (head.computeIfAbsent("Coupled Meter No.", k->-1) == count) {
+					} else if (head.computeIfAbsent("Coupled Meter No.", k->-1) == count || head.computeIfAbsent("Meter SN", k->-1) == count) {
 						dto.setCoupleMsn(it.contains("+") ? (new BigDecimal(it).longValue() + "") : it);
 					} else if (head.computeIfAbsent("MSN", k->-1) == count || head.computeIfAbsent("\"MSN\"", k->-1) == count) {
 						dto.setImportMsn(it.contains("+") ? (new BigDecimal(it).longValue() + "") : it);

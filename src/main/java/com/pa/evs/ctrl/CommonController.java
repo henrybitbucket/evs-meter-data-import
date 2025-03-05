@@ -906,7 +906,54 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
-    } 
+    }
+    
+    @GetMapping("/api/address-upload-template")
+    public ResponseEntity<Object> uploadBuildingAddressTempplate(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response,
+            String importType
+    		) throws Exception {
+        
+        try {
+        	String hd = "Building,Block,Level,Unit,Postcode,Street Address,State.City,Remark";
+        	if ("couple-with-msn".equalsIgnoreCase(importType)) {
+        		hd = "MCU SN,Meter SN,City,Street,Postcode,Building,Block,Level,Unit,Remark";
+        	}
+        	List<String> headers = new ArrayList<>();
+        	for (String h : hd.split(" *, *")) {
+        		headers.add(h.trim());
+        	}
+    		File csv = CsvUtils.toCsv(headers, Arrays.asList(""), (idx, it, l) -> {
+                List<String> record = new ArrayList<>();
+                String bd = "10 College Ave West,10,10,101E,138609,10 College Ave West,Singapore,10003052";
+            	if ("couple-with-msn".equalsIgnoreCase(importType)) {
+            		bd = "EM02BC012310010001188,202308000686,Singapore,10 College Ave West,138609,10 College Ave West,10,10,101E,10003052";
+            	}
+                for (String b : bd.split(" *, *")) {
+                	record.add(b.trim());
+            	}
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("import-building-address-template_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+    		String fileName = "import-building-address-template-" + importType +".csv";
+    		
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }     
     
     @GetMapping("/api/couple-decouple-msn/template")
     public ResponseEntity<Object> coupleDeCoupleMSNUploadTempplate(
