@@ -1069,7 +1069,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 				Long vendor = opt.get().getVendor().getId();
 				
 				String[] latestINFFirmwaveRequest = (opt.get().getLatestINFFirmwaveRequest() + "").split("@@");
-				String nextVersion = firmwareService.getLatestFirmware().get(vendor).getVersion();
+				String nextVersion = null;
+				if (firmwareService.getLatestFirmware().get(vendor) != null) {
+					nextVersion= firmwareService.getLatestFirmware().get(vendor).getVersion();
+				}
 				if (latestINFFirmwaveRequest.length >= 4) {
 					nextVersion = latestINFFirmwaveRequest[3];
 					LOG.debug("handleINFRes selectVersion - uid: {}, vendor: {}, firmware: {}", opt.get().getUid(), vendor, nextVersion);
