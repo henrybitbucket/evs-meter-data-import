@@ -41,7 +41,7 @@ public class FirmwareServiceImpl implements FirmwareService {
     @Autowired
     private VendorRepository vendorRepository;
 
-    private Map<Long, Firmware> cache = null;
+    private Map<Long, Firmware> cache = new LinkedHashMap<>();
 
     @Value("${evs.pa.firmware.version}")
     private String firmwareVersion;
@@ -57,7 +57,7 @@ public class FirmwareServiceImpl implements FirmwareService {
 
     	new Thread(() -> {
         	List<Firmware> firmware = firmwareRepository.findTopByVendorOrderByIdDesc();
-            if (cache == null) {
+            if (cache == null || cache.isEmpty()) {
             	cache = new LinkedHashMap<>();
             	firmware.forEach(fw -> {
                 	cache.put(fw.getVendor().getId(), fw);
