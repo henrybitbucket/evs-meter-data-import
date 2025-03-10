@@ -511,47 +511,50 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	private void sendToMeterClient(Map<String, Object> src, String type, Log msgLog) throws Exception {
 
-		SimpleDateFormat sf = new SimpleDateFormat();
-		sf.applyPattern("yyyyMMdd");
-
-		Map<String, Object> header = (Map<String, Object>) src.get("header");
-		Map<String, Object> payload = (Map<String, Object>) src.get("payload");
-		List<Map<String, Object>> data = (List<Map<String, Object>>) payload.get("data");
-
-		File file = null;
-		String fName = null;
-		for (Map<String, Object> o : data) {
-			sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
-			Date datetime = sf.parse(((String) o.get("dt")).replace(".000", ""));
+		try {
+			SimpleDateFormat sf = new SimpleDateFormat();
 			sf.applyPattern("yyyyMMdd");
 
-			Map<String, Object> tmp = new LinkedHashMap<>(o);
-			tmp.put("uid", payload.get("id"));
-			tmp.put("dt", datetime.getTime());
-			tmp.put("dtd", datetime);
-			tmp.put("dtn", Integer.parseInt(sf.format(datetime)));
-			tmp.put("rawdt", o.get("dt"));
-			MeterLog log = MeterLog.build(tmp);
-			
-            try {
-            	if (fName == null) {
-            		fName = "evsv3ga100_" + header.get("msn") + "_" + sf.format(datetime) + ".txt";
-                }
-            	file = createFile(header, data);
-			} catch (Exception e) {
-				e.printStackTrace();
+			Map<String, Object> header = (Map<String, Object>) src.get("header");
+			Map<String, Object> payload = (Map<String, Object>) src.get("payload");
+			List<Map<String, Object>> data = (List<Map<String, Object>>) payload.get("data");
+
+			File file = null;
+			String fName = null;
+			for (Map<String, Object> o : data) {
+				sf.applyPattern("yyyy-MM-dd'T'HH:mm:ss");
+				Date datetime = sf.parse(((String) o.get("dt")).replace(".000", ""));
+				sf.applyPattern("yyyyMMdd");
+
+				Map<String, Object> tmp = new LinkedHashMap<>(o);
+				tmp.put("uid", payload.get("id"));
+				tmp.put("dt", datetime.getTime());
+				tmp.put("dtd", datetime);
+				tmp.put("dtn", Integer.parseInt(sf.format(datetime)));
+				tmp.put("rawdt", o.get("dt"));
+				MeterLog log = MeterLog.build(tmp);
+				
+	            try {
+	            	if (fName == null) {
+	            		fName = "evsv3ga100_" + header.get("msn") + "_" + sf.format(datetime) + ".txt";
+	                }
+	            	file = createFile(header, data);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+	            
+	            meterLogRepository.save(log);
 			}
-            
-            meterLogRepository.save(log);
-		}
-		
-		// un publish
-		Log publishLog = null; //publish(evsMeterLocalDataSendTopic, src, type);
-		
-		try {
-			logMDTSent((String)header.get("msn"), (Integer)header.get("mid"), file, msgLog, publishLog, fName);
+			
+			// un publish
+			Log publishLog = null; //publish(evsMeterLocalDataSendTopic, src, type);
+			try {
+				logMDTSent((String)header.get("msn"), (Integer)header.get("mid"), file, msgLog, publishLog, fName);
+			} catch (Exception e) {
+				LOG.error(e.getMessage(), e);
+			}
 		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
+			e.printStackTrace();
 		}
 	}
 	
@@ -772,14 +775,22 @@ public class EVSPAServiceImpl implements EVSPAService {
 		
 		// save subscribe/publish message log
 		final int statusTmp = status;
-		EX_POOL_SDB.submit(() -> {
-			try {
-				LOG.info("Publish " + alias + log.getUid() + " -> " + new ObjectMapper().writeValueAsString(dataRes));
-				AppProps.getContext().getBean(this.getClass()).saveMDTMessage(data, type, log, statusTmp, dataRes);
-			} catch (Exception e) {
-				LOG.error(e.getMessage(), e);
-			}
-		});
+//		EX_POOL_SDB.submit(() -> {
+//			try {
+//				LOG.info("Publish " + alias + log.getUid() + " -> " + new ObjectMapper().writeValueAsString(dataRes));
+//				AppProps.getContext().getBean(this.getClass()).saveMDTMessage(data, type, log, statusTmp, dataRes);
+//			} catch (Exception e) {
+//				LOG.error(e.getMessage(), e);
+//			}
+//		});
+		try {
+			LOG.info("Publish " + alias + log.getUid() + " -> " + new ObjectMapper().writeValueAsString(dataRes));
+			
+			LOG.info("saveMDTMessage1 " + log.getMsn() + " " + log.getMid());
+			AppProps.getContext().getBean(this.getClass()).saveMDTMessage(data, type, log, statusTmp, dataRes);
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
 		
 	}
 	
@@ -793,6 +804,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 		if (status == 0) {
 			sendToMeterClient(data, type, subscribeLog);
 		}
+		LOG.info("saveMDTMessage2 " + subscribeLog.getMsn() + " " +subscribeLog.getMid());
 		updateLastMDTSubscribe(subscribeLog);
 		
 		//save log publish log
@@ -1448,8 +1460,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 	}
 
 	private void updateLastMDTSubscribe(Log log) {
+		LOG.info("updateLastMDTSubscribe1 " + log.getMsn() + " " +log.getMid() + " " + log.getUid());
 		Optional<CARequestLog> opt = caRequestLogRepository.findByUidAndMsn(log.getUid() + "", log.getMsn());
 		if (opt.isPresent()) {
+			LOG.info("updateLastMDTSubscribe2 " + log.getMsn() + " " +log.getMid() + " " + log.getUid());
 			opt.get().setStatus(DeviceStatus.ONLINE);
 			opt.get().setLastSubscribeDatetime(Calendar.getInstance().getTimeInMillis());
 			opt.get().setLastMdtDate(Calendar.getInstance().getTimeInMillis());
