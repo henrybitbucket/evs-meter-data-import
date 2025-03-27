@@ -134,7 +134,7 @@ class SecurityConfig {
             .requestMatchers("/api/dms/getAllApplications").permitAll()
             .requestMatchers("/api/ca-request").permitAll()
             .requestMatchers("/api/couple-decouple-msn/template").permitAll()
-            .requestMatchers("/api/meter/template", "/api/ca-request", "/api/address-upload-template").permitAll()
+            .requestMatchers("/api/meter/template", "/api/ca-request", "/api/address-upload-template", "/health").permitAll()
             
             .requestMatchers(HttpMethod.POST, "/api/dms-assigned-locks2**").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/lock/*/code2**").permitAll()
