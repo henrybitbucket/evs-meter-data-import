@@ -10,4 +10,7 @@ public interface StarfishCAService {
 
 	String formatCA(String base64) throws Exception;
 
+	Map<String, Object> requestCA(Integer validityDays, String caCequestUrl, InputStream csr, String endEntityProfileId,
+			String entityUsername, String certProfileId, String caId) throws IOException;
+
 }

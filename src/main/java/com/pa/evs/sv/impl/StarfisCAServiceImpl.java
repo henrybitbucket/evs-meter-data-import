@@ -47,9 +47,17 @@ public class StarfisCAServiceImpl implements StarfishCAService {
 	// starfish.ca-request.certProfileId
 	// starfish.ca-request.endEntityProfileId
 	// https://powerautomationsg.atlassian.net/browse/MMS-419
+	
+	@Override
+	public Map<String, Object> requestCA(InputStream csr, String entityUsername, String certProfileId, String caId) throws IOException {
+		
+		String caCequestUrl = AppProps.get("starfish.ca-request.url", "https://starfishdemo.local:8443/starfish/certificateRequest");
+		return requestCA(365, caCequestUrl, csr, null, entityUsername, certProfileId, caId);
+	}
+	
 	@Override
 	@SuppressWarnings("unchecked")
-	public Map<String, Object> requestCA(InputStream csr, String entityUsername, String certProfileId, String caId) throws IOException {
+	public Map<String, Object> requestCA(Integer validityDays, String caCequestUrl, InputStream csr, String endEntityProfileId, String entityUsername, String certProfileId, String caId) throws IOException {
 		
 		String entityId = null;
 		certProfileId = StringUtils.isNotBlank(certProfileId) ? certProfileId : AppProps.get("starfish.ca-request.certProfileId", "7");
@@ -61,6 +69,9 @@ public class StarfisCAServiceImpl implements StarfishCAService {
 			}
 		}
 		
+		if (validityDays == null || validityDays <= 0) {
+			validityDays = 365;
+		}
 		try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
 			IOUtils.copy(csr, bos);
 			
@@ -76,7 +87,7 @@ public class StarfisCAServiceImpl implements StarfishCAService {
 			Calendar c = Calendar.getInstance();
 			SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd");
 			Date startDate = c.getTime();
-			c.add(Calendar.DAY_OF_YEAR, 365);
+			c.add(Calendar.DAY_OF_YEAR, validityDays);
 			Date endDate = c.getTime();
 			
 			HttpHeaders headers = new HttpHeaders();

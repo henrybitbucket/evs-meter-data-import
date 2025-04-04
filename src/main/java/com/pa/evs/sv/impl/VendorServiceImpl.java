@@ -96,6 +96,7 @@ public class VendorServiceImpl implements VendorService {
 		}).start();
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public List<VendorDto> getVendors() {
 		List<VendorDto> res = new ArrayList<>();
@@ -109,6 +110,12 @@ public class VendorServiceImpl implements VendorService {
 			dto.setSignatureAlgorithm(ven.getSignatureAlgorithm());
 			dto.setMaxMidValue(ven.getMaxMidValue());
 			dto.setMidResetTime(ven.getMidResetTime());
+			dto.setCaService(ven.getCaService());
+			try {
+				dto.setCaServiceConfig(new ObjectMapper().readValue(ven.getCaServiceConfig(), Map.class));
+			} catch (Exception e) {
+				//
+			}
 			res.add(dto);
 		}
 		return res;
@@ -235,12 +242,14 @@ public class VendorServiceImpl implements VendorService {
 	
 	@Override
 	public Vendor saveVendor(VendorDto dto) {
+		
+		Vendor vendor;
 		if (dto.getId() != null) {
 			Optional<Vendor> vendorOpt = vendorRepository.findById(dto.getId());
 			if (!vendorOpt.isPresent()) {
 				throw new RuntimeException("Vendor not found!");
 			}
-			Vendor vendor = vendorOpt.get();
+			vendor = vendorOpt.get();
 			if (StringUtils.isNotBlank(dto.getName())) {
 				vendor.setName(dto.getName());	
 			}
@@ -248,12 +257,15 @@ public class VendorServiceImpl implements VendorService {
 				vendor.setDescription(dto.getDescrption());
 			}
 			
+			if (StringUtils.isNotBlank(dto.getCaService())) {
+				vendor.setCaService(dto.getCaService());
+			}
+			
 			if (dto.getMaxMidValue() != null && dto.getMaxMidValue() > 0) {
 				vendor.setMaxMidValue(dto.getMaxMidValue());	
 			}
 			
 			vendorRepository.save(vendor);
-			return vendor;
 		} else {
 			Vendor vendorOpt = vendorRepository.findByName(dto.getName());
 			if (vendorOpt != null) {
@@ -265,9 +277,40 @@ public class VendorServiceImpl implements VendorService {
 			if (dto.getMaxMidValue() != null && dto.getMaxMidValue() > 0) {
 				newVendor.setMaxMidValue(dto.getMaxMidValue());	
 			}
+			
+			if (StringUtils.isNotBlank(dto.getCaService())) {
+				newVendor.setCaService(dto.getCaService());
+			}
+			
 			vendorRepository.save(newVendor);
-			return newVendor;
+			vendor = newVendor;
 		}
+		
+		if (dto.getCaServiceConfig() != null && !dto.getCaServiceConfig().isEmpty()) {
+			if (StringUtils.isBlank((String) dto.getCaServiceConfig().get("certificateRequestUrl"))) {
+				throw new RuntimeException("certificateRequestUrl invalid!");
+			}
+			if (dto.getCaServiceConfig().get("validityDays") == null || StringUtils.isBlank(String.valueOf(dto.getCaServiceConfig().get("validityDays") + ""))) {
+				throw new RuntimeException("validityDays invalid!");
+			}
+			if ("starfish".equalsIgnoreCase(vendor.getCaService())) {
+				if (dto.getCaServiceConfig().get("certProfileId") == null || StringUtils.isBlank(dto.getCaServiceConfig().get("certProfileId") + "")) {
+					throw new RuntimeException("certProfileId invalid!");
+				}
+				if (dto.getCaServiceConfig().get("caId") == null ||  StringUtils.isBlank((String) dto.getCaServiceConfig().get("caId") + "")) {
+					throw new RuntimeException("caId invalid!");
+				}				
+			}
+
+			try {
+				vendor.setCaServiceConfig(new ObjectMapper().writeValueAsString(dto.getCaServiceConfig()));
+				vendorRepository.save(vendor);
+			} catch (Exception e) {
+				//
+			}
+		}
+		
+		return vendor;
 	}
 	
 	public static void main(String[] args) throws Exception  {

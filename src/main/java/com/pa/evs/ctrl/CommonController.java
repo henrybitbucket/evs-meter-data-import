@@ -1053,7 +1053,11 @@ public class CommonController {
     
     @PostMapping("/api/vendor")
     public ResponseEntity<Object> saveVendor(HttpServletRequest httpServletRequest, @RequestBody VendorDto dto) throws Exception {
-    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(vendorService.saveVendor(dto)).success(true).build());
+    	try {
+    		return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().response(vendorService.saveVendor(dto)).success(true).build());
+		} catch (Exception e) {
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+		}
     }
     
     @PostMapping("/api/address-logs")

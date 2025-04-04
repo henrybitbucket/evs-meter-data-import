@@ -1,11 +1,8 @@
 package com.pa.evs.dto;
 
-import java.util.List;
+import java.util.Map;
 
-import com.pa.evs.enums.VendorType;
 import com.pa.evs.model.Vendor;
-
-import lombok.Builder;
 
 /**
  * @author tonyk
@@ -22,6 +19,11 @@ public class VendorDto {
     private Long maxMidValue;
     
     private Integer midResetTime;
+    
+    // json (certificateRequestUrl, entityId, certProfileId, caId, validityDays)
+    private Map<String, Object> caServiceConfig;
+    
+    private String caService;
 
 	public VendorDto() {
 	}
@@ -87,5 +89,20 @@ public class VendorDto {
 	public void setMidResetTime(Integer midResetTime) {
 		this.midResetTime = midResetTime;
 	}
-	
+
+	public Map<String, Object> getCaServiceConfig() {
+		return caServiceConfig;
+	}
+
+	public void setCaServiceConfig(Map<String, Object> caServiceConfig) {
+		this.caServiceConfig = caServiceConfig;
+	}
+
+	public String getCaService() {
+		return caService;
+	}
+
+	public void setCaService(String caService) {
+		this.caService = caService;
+	}
 }

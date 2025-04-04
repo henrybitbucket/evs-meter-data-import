@@ -1223,7 +1223,24 @@ public class EVSPAServiceImpl implements EVSPAService {
 			Optional<CARequestLog> otp = caRequestLogRepository.findByUid(log.getUid());
 			if (otp.isPresent() && "starfish".equalsIgnoreCase(otp.get().getVendor().getCaService())) {
 				try (FileInputStream in = new FileInputStream(otp.get().getVendor().getCsrPath())) {
-					Map<String, Object> ca = starfishCAService.requestCA(in, log.getUid() + ".MCU.MMS.sg", null, null);
+					String config = otp.get().getVendor().getCaServiceConfig();
+					String certProfileId = null;
+					String caId = null;
+					String caUrl = null;
+					String endEntityProfileId = null;
+					
+					Integer validityDays = 365;
+					if (StringUtils.isNotBlank(config)) {
+						Map<String, Object> cfg = new ObjectMapper().readValue(config, Map.class);
+						certProfileId = cfg.get("certProfileId") + "";
+						caId = cfg.get("caId") + "";
+						caUrl = cfg.get("certificateRequestUrl") + "";
+						endEntityProfileId = cfg.get("endEntityProfileId") + "";
+						
+						validityDays = Integer.parseInt(cfg.get("validityDays") + "");
+					}
+					LOG.info("onboarding starfishCAService.requestCA " + validityDays + " " + caUrl + " certProfileId: " + certProfileId + " caId: " + caId);
+					Map<String, Object> ca = starfishCAService.requestCA(validityDays, caUrl, in, endEntityProfileId, log.getUid() + ".MCU.MMS.sg", certProfileId, caId);
 					payload.put("p1", Base64.getEncoder().encodeToString(starfishCAService.formatCA(ca.get("content") + "").getBytes()));
 				} catch (Exception e) {
 					//

@@ -76,6 +76,10 @@ public class Vendor extends BaseEntity {
     @Builder.Default
     private Integer midResetTime = 0;
     
+    // json (certificateRequestUrl, entityId, certProfileId, caId, validityDays)
+    @Column(name = "ca_server_config", columnDefinition = "TEXT")
+    private String caServiceConfig;
+    
     public String getObrKeyPath() {
     	if (StringUtils.isBlank(obrKeyPath)) {
     		return keyPath;
