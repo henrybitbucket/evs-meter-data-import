@@ -1328,6 +1328,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	ca.getVendor();
         	ca.setDeviceProject(null);
         	ca.setHomeAddress(Utils.formatHomeAddress(ca));
+        	ca.setTypeP3(ca.getBuildingUnit() != null && ca.getBuildingUnit().getId() != null ? DeviceType.COUPLED : DeviceType.NOT_COUPLED);
         	
         	if (!BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv")) 
         			&& "true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "") 
@@ -1363,6 +1364,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             		ca.setCid(null);
             		ca.setType(DeviceType.NOT_COUPLED);
             		ca.setTypeP2(DeviceType.NOT_COUPLED);
+            		
+            		ca.setTypeP3(meter.getBuildingUnit() != null && meter.getBuildingUnit().getId() != null ? DeviceType.COUPLED : DeviceType.NOT_COUPLED);
+            		
             		ca.setRemarkMeter(meter.getRemark());
             		ca.setMsn(meter.getMsn());
             		ca.setLastestDecoupleUser(meter.getLastestCoupledUser());

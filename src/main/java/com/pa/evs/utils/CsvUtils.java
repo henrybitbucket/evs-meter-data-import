@@ -60,7 +60,7 @@ public class CsvUtils {
     public static File writeCaRequestLogCsv(List<CARequestLog> listInput, String fileName, Long activateDate) throws IOException{
         listInput = listInput.stream().filter(input -> !input.getUid().equals("server.csr")).collect(Collectors.toList());
         List<String> headers = Arrays.asList(
-                "eSIM", "Profile", "ActivationDate(yyyy-mm-dd)");
+                "eSIM ID(ICCID)", "Profile", "ActivationDate(yyyy-mm-dd)");
         return toCsv(headers, listInput, CsvUtils::toCSVRecord, buildPathFile(fileName), activateDate);
     }
     
