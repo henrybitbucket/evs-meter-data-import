@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -88,6 +89,30 @@ public class CaRequestLogController {
             File file = null;
             if ("true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "")) {
             	file = caRequestLogService.downloadCsvFullMCUs(result.getResults(), (List<String>) pagin.getOptions().get("sns"));
+            
+            } else if ("fullMCU".equals(pagin.getOptions().get("downloadType"))) {
+        		List<String> headers = Arrays.asList(
+        				"MCU SN", "MCU UUID", "eSIM ICCID", "MSISDN", "MSN", "P2Couple State", "P3Couple State", "Version", "MCU Vendor", "Last Seen"
+        				);
+        		
+        		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        		file = CsvUtils.toCsv(headers, result.getResults(), (idx, it, l) -> {
+                	
+                    List<String> record = new ArrayList<>();
+                    record.add(StringUtils.isNotBlank(it.getSn()) ? it.getSn() : "");
+                    record.add(StringUtils.isNotBlank(it.getUid()) ? it.getUid() : "");
+                    record.add(StringUtils.isNotBlank(it.getCid()) ? it.getCid() : "");
+                    record.add(StringUtils.isNotBlank(it.getMSISDN()) ? it.getMSISDN() : "");
+                    record.add(StringUtils.isNotBlank(it.getMsn()) ? it.getMsn() : "");
+                    record.add(it.getType() != null ? it.getType().toString() : "");
+                    record.add(it.getTypeP3() != null ? it.getTypeP3().toString() : "");
+                    record.add(StringUtils.isNotBlank(it.getVer()) ? it.getVer() : "");
+                    record.add(it.getVendor() != null ? it.getVendor().getName() : "");
+                    record.add(it.getLastSubscribeDatetime() != null ? sdf.format(new Date(it.getLastSubscribeDatetime())) : "");
+                    
+                    return CsvUtils.postProcessCsv(record);
+                }, CsvUtils.buildPathFile("ca-request-logs-" + System.currentTimeMillis() + ".csv"), 1l);
+            	
             } else {
             	file = caRequestLogService.downloadCsv(result.getResults(), (Long) pagin.getOptions().get("activateDate"));
             }

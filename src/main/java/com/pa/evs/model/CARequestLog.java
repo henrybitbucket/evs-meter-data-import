@@ -49,6 +49,9 @@ public class CARequestLog extends BaseEntity {
 	private String cid;
 	
     private String msn;
+    
+    @Column(name = "msisdn")
+    private String mSISDN;
 
     @Column(name = "status")
 	@Enumerated(EnumType.STRING)

@@ -1191,16 +1191,28 @@ public class EVSPAServiceImpl implements EVSPAService {
 //		https://powerautomationsg.atlassian.net/browse/MMS-93 END
 
 		updateLastSubscribe(log);
+		
+		Optional<CARequestLog> otp = caRequestLogRepository.findByUid(log.getUid());
 
 		//publish
 		Map<String, Object> data = new LinkedHashMap<>();
 		Map<String, Object> header = new LinkedHashMap<>();
+		Map<String, Object> payload = new LinkedHashMap<>();
 		data.put("header", header);
+		if (otp.isPresent() && "starfish".equals(otp.get().getVendor().getCaService())) {
+			data.put("payload", payload);
+			try {
+				payload.put("csr", otp.isPresent() ? RSAUtil.generateCSRFromPrivateKey(otp.get().getVendor().getObrKeyPath()) : "");
+			} catch (Exception e) {
+				//
+			}
+		}
 		header.put("oid", log.getMid());
 		header.put("uid", log.getUid());
 		header.put("gid", log.getGid());
 		header.put("msn", log.getMsn());
 		header.put("status", status);
+
 		publish(alias + log.getUid(), data, type);
 
 		//wait 5s
@@ -1216,11 +1228,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 			header.put("uid", log.getUid());
 			header.put("gid", log.getGid());
 			header.put("msn", log.getMsn()); 
-			Map<String, Object> payload = new LinkedHashMap<>();
+			payload = new LinkedHashMap<>();
 			data.put("payload", payload);
 			payload.put("id", log.getUid());
 			payload.put("cmd", "ACT");
-			Optional<CARequestLog> otp = caRequestLogRepository.findByUid(log.getUid());
+			
 			if (otp.isPresent() && "starfish".equalsIgnoreCase(otp.get().getVendor().getCaService())) {
 				try (FileInputStream in = new FileInputStream(otp.get().getVendor().getCsrPath())) {
 					String config = otp.get().getVendor().getCaServiceConfig();

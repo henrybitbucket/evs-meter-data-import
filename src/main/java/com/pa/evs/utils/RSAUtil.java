@@ -467,6 +467,10 @@ public class RSAUtil {
 		}
 		return "";
 	}
+	
+	public static String generateCSRFromPrivateKey(String privateKeyPath) {
+		return "";
+	}
 
 	public static boolean verifySign(String csrPath, String payload, String sig, String signatureAlgorithm) {
 		if (!"true".equalsIgnoreCase(AppProps.get("USE_VENDOR_KEY", "false"))) {
