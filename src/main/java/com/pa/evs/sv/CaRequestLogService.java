@@ -91,4 +91,6 @@ public interface CaRequestLogService {
 	void removeMeter(String msn);
 
 	List<CoupleDeCoupleMSNDto> handleCoupleDeCoupleMSNUpload(MultipartFile file, String importType) throws IOException;
+
+	List<Map<String, Object>> handleUploadMSISDN(MultipartFile file) throws IOException;
 }

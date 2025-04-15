@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.icu.math.BigDecimal;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.constant.Message;
+import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.CoupleDeCoupleMSNDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
@@ -1692,7 +1693,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     }
     
     @Override
-    public void searchCaRequestLog (PaginDto<CaRequestLogDto> pagin) {
+    public void searchCaRequestLog(PaginDto<CaRequestLogDto> pagin) {
     	Map<String, Object> map = pagin.getOptions();
 		
         Long fromDate = (Long) map.get("fromDate");
@@ -1758,7 +1759,71 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                 pagin.getResults().add(dto);
         }); 
     }
-    
+
+    @Override
+	@Transactional
+	public List<Map<String, Object>> handleUploadMSISDN(MultipartFile file) throws IOException {
+
+		List<Map<String, Object>> dtos = parseCsv(file.getInputStream());
+		List<String> eids = dtos.stream().filter(d -> StringUtils.isNotBlank((String) d.get("ICCID"))).map(d -> ((String) d.get("ICCID")).toUpperCase().trim())
+				.collect(Collectors.toList());
+		
+		Map<String, CARequestLog> mapCidCA = new LinkedHashMap<>();
+		caRequestLogRepository.findByCidIn(eids)
+		.forEach(ca -> mapCidCA.put(ca.getCid(), ca));
+		
+		List<String> statusList = Arrays.asList("Activate", "Suspend", "NA", "Expired");
+		
+		for (Map<String, Object> dto : dtos) {
+			String message = (String) dto.get("message");
+			String status = (String) dto.get("Status");
+			String stateChangeTime = (String) dto.get("StateChangeTime");
+			String eid = (String) dto.get("ICCID");
+			String msisdn = (String) dto.get("MSISDN");
+			
+			if (StringUtils.isNotBlank(message)) {
+				continue;
+			}
+			
+			if (StringUtils.isBlank(eid)) {
+				dto.put("message", "ICCID invalid!");
+				continue;
+			}
+			eid = eid.toUpperCase().trim();
+			
+			
+			if (StringUtils.isBlank(msisdn)) {
+				dto.put("message", "MSISDN invalid!");
+				continue;
+			}
+			msisdn = msisdn.toUpperCase().trim();
+			
+			if (StringUtils.isBlank(status) || statusList.indexOf(status.trim()) < 0) {
+				dto.put("message", "Status invalid! (Activate/Suspend/NA/Expired)");
+				continue;
+			}
+			
+			CARequestLog ca = mapCidCA.get(eid);
+			if (ca == null) {
+				dto.put("message", "ICCID notfound!");
+				continue;				
+			}
+			
+			CARequestLog existsCA = caRequestLogRepository.findByMsiSdn(msisdn);
+			if (existsCA != null && !eid.endsWith(existsCA.getCid())) {
+				dto.put("message", "MSISDN already link to other ICCID!");
+				continue;				
+			}
+			
+			ca.setMsiSdn(msisdn);
+			ca.setMSISDNStatus(status.trim());
+			ca.setMSISDNStateChangeTime(stateChangeTime.trim());
+			caRequestLogRepository.save(ca);
+			caRequestLogRepository.flush();
+		}
+		
+		return dtos;
+    }
     @Override
 	@Transactional
 	public List<CoupleDeCoupleMSNDto> handleCoupleDeCoupleMSNUpload(MultipartFile file, String importType) throws IOException {
@@ -2490,6 +2555,45 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			}
 
 			
+		}
+		return rs;
+	}
+	
+	private static List<Map<String, Object>> parseCsv(InputStream file) throws IOException {
+		Map<String, Integer> head = new LinkedHashMap<>(); 
+		List<Map<String, Object>> rs = new ArrayList<>();
+		for (String line: org.apache.commons.io.IOUtils.readLines(file, StandardCharsets.UTF_8)) {
+			if (StringUtils.isBlank(line)) {
+				continue;
+			}
+			boolean parseHead = head.isEmpty();
+			int count = 0;
+			Map<String, Object> dto = null;
+			for (String it: line.split(" *, *")) {
+				if (parseHead) {
+					head.put(it, count);
+				} else {
+					if (dto == null) {
+						dto = new LinkedHashMap<>();
+					}
+					if (head.computeIfAbsent("ICCID", k->-1) == count) {
+						dto.put("ICCID", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("MSISDN", k->-1) == count) {
+						dto.put("MSISDN", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Status", k->-1) == count) {
+						dto.put("Status", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("StateChangeTime", k->-1) == count) {
+						dto.put("StateChangeTime", StringUtils.isBlank(it) ? "" : it);
+					}
+				}
+				count++;
+			}
+			head.computeIfAbsent("Message", k -> 100);
+			if (dto != null) {
+				dto.put("line", count);
+				dto.put("head", head);
+				rs.add(dto);				
+			}
 		}
 		return rs;
 	}

@@ -532,7 +532,57 @@ public class CommonController {
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
+    
+    @PostMapping("/api/device-msisdn/upload")
+    public ResponseEntity<Object> uploadMsiSdn(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @RequestParam(value = "file") final MultipartFile file) throws Exception {
 
+
+        try {
+    		List<String> headers = Arrays.asList(
+    				"ICCID","MSISDN","Status","StateChangeTime", "Message"
+    				);
+    		List<Map<String, Object>> dtos = caRequestLogService.handleUploadMSISDN(file);
+    		File csv = CsvUtils.toCsv(headers, dtos, (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add(StringUtils.isNotBlank((String) it.get("ICCID")) ? (String) it.get("ICCID") : "");
+                record.add(StringUtils.isNotBlank((String) it.get("MSISDN")) ? (String) it.get("MSISDN") : "");
+                record.add(StringUtils.isNotBlank((String) it.get("Status")) ? (String) it.get("Status") : "");
+                record.add(StringUtils.isNotBlank((String) it.get("StateChangeTime")) ? (String) it.get("StateChangeTime") : "");
+                record.add(StringUtils.isNotBlank((String) it.get("Message")) ? (String) it.get("Message") : "Success");
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("import_couple_decouple_result_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+        	String fileName = file.getName();
+            
+        	SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
+        	
+        	try (FileOutputStream logFileFos = new FileOutputStream(CsvUtils.EXPORT_TEMP + "/logs/import_msisdn_" + sf.format(new Date()) + "_" + System.currentTimeMillis() + ".csv"); 
+        			FileInputStream fis = new FileInputStream(csv)) {
+        		IOUtils.copy(fis, logFileFos);
+        	}
+        	
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }    
 
     @PostMapping("/api/logs")
     public ResponseEntity<Object> getRelatedLogs(HttpServletRequest httpServletRequest, HttpServletResponse response, @RequestBody PaginDto<LogDto> pagin) throws Exception {
@@ -908,6 +958,27 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
+    @GetMapping("/api/device-csr/template")
+    public ResponseEntity<Object> uploadDeviceCSRTempplate(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response) throws Exception {
+        
+        try {
+    		String fileName = "csr-template.zip";
+            try (InputStream fis = Thread.currentThread().getContextClassLoader().getResourceAsStream("EnrollCSR6.zip")) {
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/zip");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", "csr-template");
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
     @GetMapping("/api/address-upload-template")
     public ResponseEntity<Object> uploadBuildingAddressTempplate(
             HttpServletRequest httpServletRequest,
@@ -994,7 +1065,51 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
-    } 
+    }
+    
+    @GetMapping("/api/telco-msisdn/template")
+    public ResponseEntity<Object> telcoMsisdnTemplate(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response) throws Exception {
+        
+        try {
+    		List<String> headers = Arrays.asList(
+    				"ICCID","MSISDN","Status","StateChangeTime"
+    				);
+    		List<List<String>> src = Arrays.asList(
+    				Arrays.asList("893107122132681408", "3197030339057", "Suspend", "2021-08-14 10:02"), 
+    				Arrays.asList("893107042131441155", "3197030309481", "Activate", "2022-07-04 12:12")
+    				);
+    		File csv = CsvUtils.toCsv(headers, src, (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add(it.get(0));
+                record.add(it.get(1));
+                record.add(it.get(2));
+                record.add(it.get(3));
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("telco-msisdn-template_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+    		String fileName = "telco-msisdn-template.csv";
+    		
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
     
     @PostMapping("/api/couple-decouple-msn/upload")
     public ResponseEntity<Object> coupleDeCoupleMSNUpload(

@@ -50,8 +50,14 @@ public class CARequestLog extends BaseEntity {
 	
     private String msn;
     
-    @Column(name = "msisdn")
-    private String mSISDN;
+    @Column(name = "msisdn", unique = true)
+    private String msiSdn;
+    
+    @Column(name = "msisdn_status")
+    private String mSISDNStatus;
+    
+    @Column(name = "msisdn_state_change_time")
+    private String mSISDNStateChangeTime;
 
     @Column(name = "status")
 	@Enumerated(EnumType.STRING)

@@ -44,6 +44,12 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	@Query(value = "SELECT cid FROM {h-schema}ca_request_log WHERE cid in (?1)", nativeQuery = true)
 	Set<String> findCidByCidIn(java.util.Collection<String> cids);
 	
+	List<CARequestLog> findByCidIn(java.util.Collection<String> cids);
+	
+	List<CARequestLog> findByMsiSdnIn(java.util.Collection<String> msisdns);
+	
+	CARequestLog findByMsiSdn(String msisdn);
+	
 	Optional<CARequestLog> findByCid(String cid);
 	
 	@Query("SELECT certificate FROM CARequestLog WHERE uid = ?1")

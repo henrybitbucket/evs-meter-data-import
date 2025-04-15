@@ -102,7 +102,7 @@ public class CaRequestLogController {
                     record.add(StringUtils.isNotBlank(it.getSn()) ? it.getSn() : "");
                     record.add(StringUtils.isNotBlank(it.getUid()) ? it.getUid() : "");
                     record.add(StringUtils.isNotBlank(it.getCid()) ? it.getCid() : "");
-                    record.add(StringUtils.isNotBlank(it.getMSISDN()) ? it.getMSISDN() : "");
+                    record.add(StringUtils.isNotBlank(it.getMsiSdn()) ? it.getMsiSdn() : "");
                     record.add(StringUtils.isNotBlank(it.getMsn()) ? it.getMsn() : "");
                     record.add(it.getType() != null ? it.getType().toString() : "");
                     record.add(it.getTypeP3() != null ? it.getTypeP3().toString() : "");
