@@ -1,7 +1,11 @@
 package com.pa.evs.sv;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+
+import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.DMSLocationLockDto;
 import com.pa.evs.dto.DMSLockDto;
@@ -48,4 +52,6 @@ public interface DMSLockService {
 	Object getEcode(EcodeReq req);
 
 	Object getLocks(LockRequestDto dto);
+
+	List<Map<String, Object>> handleUploadLocks(MultipartFile file) throws IOException;
 }

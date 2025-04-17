@@ -1,6 +1,9 @@
 package com.pa.evs.sv.impl;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -14,10 +17,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,9 +27,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.dto.BlockDto;
@@ -73,7 +74,9 @@ import com.pa.evs.repository.DMSLockEventLogRepository;
 import com.pa.evs.repository.DMSLockRepository;
 import com.pa.evs.repository.DMSLockVendorRepository;
 import com.pa.evs.repository.GroupUserRepository;
+import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.repository.UserRepository;
+import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.DMSLockService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
@@ -83,6 +86,10 @@ import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 import com.pa.evs.utils.TimeZoneHolder;
 import com.pa.evs.utils.Utils;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 
 @Service
 @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -98,10 +105,16 @@ public class DMSLockServiceImpl implements DMSLockService {
 	private String dmsKeyUrl;
 	
 	@Autowired
+	AuthenticationService authenticationService;
+	
+	@Autowired
 	DMSLockRepository dmsLockRepository;
 	
 	@Autowired
 	DMSLockEventLogRepository dmsLockEventLogRepository;
+	
+	@Autowired
+	PasswordEncoder passwordEncoder;
 	
 	@Autowired
 	DMSLockVendorRepository dmsLockVendorRepository;
@@ -130,6 +143,8 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Autowired
 	UserRepository userRepository;
 	
+	@Autowired
+	PlatformUserLoginRepository platformUserLoginRepository;
 
 	@Override
 	public Object getLocks(LockRequestDto dto) {
@@ -434,13 +449,20 @@ public class DMSLockServiceImpl implements DMSLockService {
 		String locationKey = unit.getId() + "__" + level.getId() + "__" + block.getId() + "__" + building.getId();
 		
 		DMSLocationLock locationLock = dmsLocationLockRepository.findByLockId(dto.getLockId()).orElse(new DMSLocationLock());
+		
+		DMSLock dmsLock = dmsLockRepository.findById(dto.getLockId()).orElseThrow(() -> new RuntimeException("Lock not found!"));
 		locationLock.setBuilding(building);
 		locationLock.setBlock(block);
 		locationLock.setFloorLevel(level);
 		locationLock.setBuildingUnit(unit);
-		locationLock.setLock(dmsLockRepository.findById(dto.getLockId()).orElseThrow(() -> new RuntimeException("Lock not found!")));
+		locationLock.setLock(dmsLock);
 		locationLock.setLocationKey(locationKey);
 		dmsLocationLockRepository.save(locationLock);
+		
+		if (StringUtils.isNotBlank(dto.getLockName())) {
+			dmsLock.setLockName(dto.getLockName());
+			dmsLockRepository.save(dmsLock);
+		}
 	}
 
 	@Transactional
@@ -1060,4 +1082,121 @@ public class DMSLockServiceImpl implements DMSLockService {
 		});
 		return rs.getLocks();
 	}
+	
+    @Override
+	@Transactional
+	public List<Map<String, Object>> handleUploadLocks(MultipartFile file) throws IOException {
+
+		List<Map<String, Object>> dtos = parseLockCsv(file.getInputStream());
+		List<String> lockNumbers = dtos.stream().filter(d -> StringUtils.isNotBlank((String) d.get("LockNumber"))).map(d -> ((String) d.get("LockNumber")).trim())
+				.collect(Collectors.toList());
+		
+		Map<String, DMSLock> mapLockNumberLock = new LinkedHashMap<>();
+		dmsLockRepository.findByLockNumberIn(lockNumbers)
+		.forEach(l -> mapLockNumberLock.put(l.getLockNumber(), l));
+		DMSLockVendor vendorDefault = dmsLockVendorRepository.findById(1l).orElse(null);
+		
+		for (Map<String, Object> dto : dtos) {
+			String message = (String) dto.get("message");
+			String lockName = (String) dto.get("LockName");
+			String lockNumber = (String) dto.get("LockNumber");
+			String lockBid = (String) dto.get("LockBid");
+			String key = (String) dto.get("Key");
+			
+			if (StringUtils.isNotBlank(message)) {
+				continue;
+			}
+			
+			if (StringUtils.isBlank(lockName)) {
+				dto.put("Message", "LockName invalid!");
+				continue;
+			}
+			lockName = lockName.trim();
+			
+			
+			if (StringUtils.isBlank(lockNumber)) {
+				dto.put("Message", "LockNumber invalid!");
+				continue;
+			}
+			lockNumber = lockNumber.trim();
+			
+			if (StringUtils.isBlank(lockBid)) {
+				dto.put("Message", "LockBid invalid!");
+				continue;
+			}
+			lockBid = lockBid.trim();
+			
+			if (StringUtils.isBlank(key)) {
+				dto.put("Message", "Key invalid!");
+				continue;
+			}
+			key = key.trim();
+			
+			DMSLock dmsLock = mapLockNumberLock.computeIfAbsent(lockNumber, k -> new DMSLock());
+			dmsLock.setLockName(lockName);
+			dmsLock.setLockNumber(lockNumber);
+			dmsLock.setSecretKey(key);
+			dmsLock.setLockBid(lockBid);
+			if (dmsLock.getVendor() == null) {
+				dmsLock.setVendor(vendorDefault);
+			}
+			if (dmsLock.getAreaId() == null) {
+				dmsLock.setAreaId("627");
+			}
+			
+			DMSLock existsLock = dmsLockRepository.findByLockBid(lockBid).orElse(null);
+			if (existsLock != null && !lockNumber.endsWith(existsLock.getLockNumber())) {
+				dto.put("Message", "LockBid already link to other LockNumber!");
+				continue;				
+			}
+			
+			dmsLockRepository.save(dmsLock);
+			dmsLockRepository.flush();
+			if (StringUtils.isBlank(dmsLock.getOriginalId())) {
+				dmsLock.setOriginalId("89"  + dmsLock.getId() + "0");
+			}
+		}
+		
+		return dtos;
+    }
+    
+	private static List<Map<String, Object>> parseLockCsv(InputStream file) throws IOException {
+		Map<String, Integer> head = new LinkedHashMap<>(); 
+		List<Map<String, Object>> rs = new ArrayList<>();
+		for (String line: org.apache.commons.io.IOUtils.readLines(file, StandardCharsets.UTF_8)) {
+			if (StringUtils.isBlank(line)) {
+				continue;
+			}
+			boolean parseHead = head.isEmpty();
+			int count = 0;
+			Map<String, Object> dto = null;
+			for (String it: line.split(" *, *")) {
+				if (parseHead) {
+					head.put(it, count);
+				} else {
+					if (dto == null) {
+						dto = new LinkedHashMap<>();
+					}
+					if (head.computeIfAbsent("LockName", k->-1) == count) {
+						dto.put("LockName", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("LockNumber", k->-1) == count) {
+						dto.put("LockNumber", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("LockBid", k->-1) == count) {
+						dto.put("LockBid", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Key", k->-1) == count) {
+						dto.put("Key", StringUtils.isBlank(it) ? "" : it);
+					}
+				}
+				count++;
+			}
+			head.computeIfAbsent("Message", k -> 100);
+			if (dto != null) {
+				dto.put("line", count);
+				dto.put("head", head);
+				rs.add(dto);				
+			}
+		}
+		return rs;
+	}
+	
 }

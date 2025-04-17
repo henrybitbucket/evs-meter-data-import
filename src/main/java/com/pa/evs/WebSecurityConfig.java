@@ -139,6 +139,8 @@ class SecurityConfig {
             		"/api/address-upload-template", 
             		"/api/device-csr/template",
             		"/api/telco-msisdn/template",
+            		"/api/upload-dmslock/template",
+            		"/api/upload-user/template",
             		"/health").permitAll()
             
             .requestMatchers(HttpMethod.POST, "/api/dms-assigned-locks2**").permitAll()

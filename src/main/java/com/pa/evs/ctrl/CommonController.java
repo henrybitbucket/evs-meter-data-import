@@ -1067,6 +1067,93 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
+    @GetMapping("/api/upload-dmslock/template")
+    public ResponseEntity<Object> importDMSLockTempplate(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response) throws Exception {
+        
+        try {
+    		List<String> headers = Arrays.asList(
+    				"LockName","LockNumber","LockBid","Key"
+    				);
+    		
+    		File csv = CsvUtils.toCsv(headers, Arrays.asList(""), (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add("Lock 0028202401030026");
+                record.add("0028202401030026");
+                record.add("CD:1D:42:25:F4:D0");
+                record.add("G01OrvY4");
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("upload-dmslock-template_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+    		String fileName = "upload-dmslock-template.csv";
+    		
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @GetMapping("/api/upload-user/template")
+    public ResponseEntity<Object> importDMSUserTempplate(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response) throws Exception {
+        
+        try {
+    		List<String> headers = Arrays.asList(
+    				"No.","Company","Hours","Days","Contact Name","Email","Contact Mobile","Pwd"
+    				);
+    		
+    		File csv = CsvUtils.toCsv(headers, Arrays.asList(""), (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add("191");
+                record.add("Fujitec");
+                record.add("All");
+                record.add("All");
+                record.add("OMAR BIN KAHMIS");
+                record.add("6591548940@dms.mptct");
+                record.add("+6591548940");
+                record.add("Kah213940!");
+                
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("upload-user-template_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+    		String fileName = "upload-user-template.csv";
+    		
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
     @GetMapping("/api/telco-msisdn/template")
     public ResponseEntity<Object> telcoMsisdnTemplate(
             HttpServletRequest httpServletRequest,

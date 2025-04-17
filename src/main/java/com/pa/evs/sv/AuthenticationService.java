@@ -1,7 +1,10 @@
 package com.pa.evs.sv;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.CompanyDto;
@@ -72,4 +75,6 @@ public interface AuthenticationService {
 	void assignAppCodeForPhone(String appCode, String phone);
 	void invalidOtp(String phoneOrEmail, String otp);
 	void syncAccess(String fromUsername, String toUsername);
+	List<Map<String, Object>> handleUploadDMSUsers(MultipartFile file) throws IOException;
+	void saveNewTx(UserDto dto);
 }

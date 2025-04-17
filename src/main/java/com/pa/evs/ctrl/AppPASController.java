@@ -1,16 +1,27 @@
 package com.pa.evs.ctrl;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.dto.DMSApplicationGuestSaveReqDto;
@@ -43,6 +55,7 @@ import com.pa.evs.sv.DMSLockService;
 import com.pa.evs.sv.DMSProjectService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppCodeSelectedHolder;
+import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.TimeZoneHolder;
 
@@ -451,4 +464,55 @@ public class AppPASController {
 			return ResponseDto.builder().success(false).message(ex.getMessage()).build();
 		}
 	}
+	
+    @PostMapping("/api/dms-lock/upload")
+    public ResponseEntity<Object> uploadMsiSdn(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @RequestParam(value = "file") final MultipartFile file) throws Exception {
+
+
+        try {
+    		List<String> headers = Arrays.asList(
+    				"LockName", "LockNumber", "LockBid", "Key", "Message"
+    				);
+    		List<Map<String, Object>> dtos = dmsLockService.handleUploadLocks(file);
+    		File csv = CsvUtils.toCsv(headers, dtos, (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add(StringUtils.isNotBlank((String) it.get("LockName")) ? (String) it.get("LockName") : "");
+                record.add(StringUtils.isNotBlank((String) it.get("LockNumber")) ? (String) it.get("LockNumber") : "");
+                record.add(StringUtils.isNotBlank((String) it.get("LockBid")) ? (String) it.get("LockBid") : "");
+                record.add(StringUtils.isNotBlank((String) it.get("Key")) ? (String) it.get("Key") : "");
+                record.add(StringUtils.isNotBlank((String) it.get("Message")) ? (String) it.get("Message") : "Success");
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("import_dms_lock_result_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+        	String fileName = file.getName();
+            
+        	SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
+        	
+        	try (FileOutputStream logFileFos = new FileOutputStream(CsvUtils.EXPORT_TEMP + "/logs/import_dms_lock_" + sf.format(new Date()) + "_" + System.currentTimeMillis() + ".csv"); 
+        			FileInputStream fis = new FileInputStream(csv)) {
+        		IOUtils.copy(fis, logFileFos);
+        	}
+        	
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOGGER.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
 }

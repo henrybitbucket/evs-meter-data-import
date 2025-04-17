@@ -15,6 +15,8 @@ import lombok.Setter;
 public class DMSLocationLockDto {
 
 	private Long lockId;
+	
+	private String lockName;
 
 	private Long buildingId;
 	

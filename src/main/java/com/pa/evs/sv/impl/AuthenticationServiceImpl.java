@@ -1,5 +1,8 @@
 package com.pa.evs.sv.impl;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -32,6 +35,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.pa.evs.TopFilter.HttpServletRequestHolder;
 import com.pa.evs.constant.Message;
@@ -55,6 +59,7 @@ import com.pa.evs.exception.customException.AuthenticationException;
 import com.pa.evs.exception.customException.DuplicateUserException;
 import com.pa.evs.model.AppCode;
 import com.pa.evs.model.Company;
+import com.pa.evs.model.DMSUserProfile;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.Login;
 import com.pa.evs.model.OTP;
@@ -77,6 +82,7 @@ import com.pa.evs.model.Users;
 import com.pa.evs.repository.AppCodeRepository;
 import com.pa.evs.repository.CompanyRepository;
 import com.pa.evs.repository.CountryCodeRepository;
+import com.pa.evs.repository.DMSUserProfileRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.LoginRepository;
 import com.pa.evs.repository.PermissionRepository;
@@ -204,6 +210,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 	
 	@Autowired
 	NotificationService notificationService;
+	
+	@Autowired
+	DMSUserProfileRepository dmsUserProfileRepository;
 
 	@Autowired
 	EntityManager em;
@@ -427,6 +436,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 	}
 
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	@Override
+	public void saveNewTx(UserDto dto) {
+		save(dto);
+	}
 	@Transactional
 	@Override
 	public void save(UserDto dto) {
@@ -2510,6 +2524,160 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		for (Permission p : permissions) {
 			userPermissionRepository.save(UserPermission.builder().permission(p).user(to).build());
 		}
+	}
+	
+	@Override
+	public List<Map<String, Object>> handleUploadDMSUsers(MultipartFile file) throws IOException {
+
+		List<Map<String, Object>> dtos = parseUserCsv(file.getInputStream());
+		List<String> phones = dtos.stream().filter(d -> StringUtils.isNotBlank((String) d.get("Contact Mobile"))).map(d -> ((String) d.get("Contact Mobile")).trim())
+				.collect(Collectors.toList());
+		
+		Map<String, Users> mapPhoneUser = new LinkedHashMap<>();
+		userRepository.findByPhoneNumberIn(phones)
+		.forEach(l -> mapPhoneUser.put(l.getPhoneNumber(), l));
+		
+		for (Map<String, Object> dto : dtos) {
+			String message = (String) dto.get("message");
+			String company = (String) dto.get("Company");
+			String hours = (String) dto.get("Hours");
+			String days = (String) dto.get("Days");
+			String contactName = (String) dto.get("Contact Name");
+			
+			String email = (String) dto.get("Email");
+			String contactMobile = (String) dto.get("Contact Mobile");
+			String pwd = (String) dto.get("Pwd");
+			
+			if (StringUtils.isNotBlank(message)) {
+				continue;
+			}
+			
+			if (StringUtils.isBlank(email)) {
+				dto.put("Message", "email invalid!");
+				continue;
+			}
+			email = email.trim().toLowerCase();
+
+			if (StringUtils.isBlank(company)) {
+				dto.put("Message", "company invalid!");
+				continue;
+			}
+			company = company.trim();
+			
+			
+			if (StringUtils.isBlank(hours)) {
+				dto.put("Message", "hours invalid!");
+				continue;
+			}
+			hours = hours.trim();
+			
+			if (StringUtils.isBlank(days)) {
+				dto.put("Message", "days invalid!");
+				continue;
+			}
+			days = days.trim();
+			
+			if (StringUtils.isBlank(contactName)) {
+				dto.put("Message", "contactName invalid!");
+				continue;
+			}
+			contactName = contactName.trim();
+			
+			if (StringUtils.isBlank(contactMobile) || !contactMobile.trim().matches("^\\+[0-9]+$")) {
+				dto.put("Message", "contactMobile invalid! (^\\+[0-9]+$)");
+				continue;
+			}
+			hours = hours.trim();
+			
+			Users dmsUser = mapPhoneUser.get(contactMobile);
+			if (dmsUser != null && dmsUser.getUserId() != null) {
+				dto.put("Message", "User with phone alreader exists!");
+				continue;
+			}
+	    	
+			Users existsUser = userRepository.findByEmail(email.trim().toLowerCase());
+			if (existsUser != null && !contactMobile.endsWith(existsUser.getPhoneNumber())) {
+				dto.put("Message", "Phone already link to other email!");
+				continue;				
+			}
+			
+			try {
+				
+				AppProps.getContext().getBean(this.getClass()).
+				saveNewTx(UserDto.builder()
+						.email(email)
+						.firstName(contactName)
+						.lastName("USER")
+						.phoneNumber(contactMobile)
+						.loginOtpRequire(false)
+						.password(pwd)
+						.build());
+				
+				DMSUserProfile profile = dmsUserProfileRepository.findByEmail(email);
+				if (profile == null) {
+					profile = new DMSUserProfile();
+				}
+				profile.setCompany(company);
+				profile.setCompany(hours);
+				profile.setDays(days);
+				profile.setEmail(email);
+				dmsUserProfileRepository.save(profile);
+			} catch (Exception e) {
+				dto.put("Message", e.getMessage());
+				continue;
+			}
+
+			userRepository.flush();
+		}
+		
+		return dtos;
+    }
+    
+	private static List<Map<String, Object>> parseUserCsv(InputStream file) throws IOException {
+		Map<String, Integer> head = new LinkedHashMap<>(); 
+		List<Map<String, Object>> rs = new ArrayList<>();
+		for (String line: org.apache.commons.io.IOUtils.readLines(file, StandardCharsets.UTF_8)) {
+			if (StringUtils.isBlank(line)) {
+				continue;
+			}
+			boolean parseHead = head.isEmpty();
+			int count = 0;
+			Map<String, Object> dto = null;
+			for (String it: line.split(" *, *")) {
+				if (parseHead) {
+					head.put(it, count);
+				} else {
+					if (dto == null) {
+						dto = new LinkedHashMap<>();
+					}
+					if (head.computeIfAbsent("No.", k->-1) == count) {
+						dto.put("No.", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Company", k->-1) == count) {
+						dto.put("Company", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Hours", k->-1) == count) {
+						dto.put("Hours", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Days", k->-1) == count) {
+						dto.put("Days", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Contact Name", k->-1) == count) {
+						dto.put("Contact Name", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Email", k->-1) == count) {
+						dto.put("Email", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Contact Mobile", k->-1) == count) {
+						dto.put("Contact Mobile", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Pwd", k->-1) == count) {
+						dto.put("Pwd", StringUtils.isBlank(it) ? "" : it);
+					}
+				}
+				count++;
+			}
+			head.computeIfAbsent("Message", k -> 100);
+			if (dto != null) {
+				dto.put("line", count);
+				dto.put("head", head);
+				rs.add(dto);				
+			}
+		}
+		return rs;
 	}
 	
 	@PostConstruct
