@@ -421,7 +421,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 			token = (String) data.get("token");
 			System.out.println(token);
 		} catch (Exception e) {
-			LOGGER.error(e.getMessage(), e);
+			LOGGER.error(e.getMessage());
 		}
 	}
 

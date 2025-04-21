@@ -7,6 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.pa.evs.dto.ProjectTagDto;
+import com.pa.evs.enums.DeviceStatus;
+import com.pa.evs.enums.DeviceType;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,12 +25,6 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.pa.evs.dto.ProjectTagDto;
-import com.pa.evs.enums.DeviceStatus;
-import com.pa.evs.enums.DeviceType;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -47,6 +46,9 @@ public class CARequestLog extends BaseEntity {
     private String sn;
 
 	private String cid;
+	
+	@Column(name = "cid_first_18")
+	private String cidFirst18;
 	
     private String msn;
     
@@ -274,6 +276,15 @@ public class CARequestLog extends BaseEntity {
 			nextvalMID = 1l;
 		}
 		return nextvalMID;
+	}
+	
+	public void setCid(String cid) {
+		this.cid = cid;
+		
+		cidFirst18 = cid;
+		if (cidFirst18 != null && cidFirst18.length() >= 18) {
+			cidFirst18 = cidFirst18.substring(0, 18);
+		}
 	}
 
 	public static CARequestLog build(Map<String, Object> data) throws Exception {

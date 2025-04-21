@@ -35,7 +35,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.icu.math.BigDecimal;
 import com.pa.evs.LocalMapStorage;
 import com.pa.evs.constant.Message;
-import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.CoupleDeCoupleMSNDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
@@ -1765,12 +1764,21 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	public List<Map<String, Object>> handleUploadMSISDN(MultipartFile file) throws IOException {
 
 		List<Map<String, Object>> dtos = parseCsv(file.getInputStream());
-		List<String> eids = dtos.stream().filter(d -> StringUtils.isNotBlank((String) d.get("ICCID"))).map(d -> ((String) d.get("ICCID")).toUpperCase().trim())
-				.collect(Collectors.toList());
+		List<String> eids = dtos.stream().filter(d -> StringUtils.isNotBlank((String) d.get("ICCID"))).map(d -> {
+			String eid = ((String) d.get("ICCID")).toUpperCase().trim();
+			if (eid.length() <= 18) {
+				return eid;
+			}
+			return eid.substring(0, 18);
+		})
+		.collect(Collectors.toList());
 		
-		Map<String, CARequestLog> mapCidCA = new LinkedHashMap<>();
-		caRequestLogRepository.findByCidIn(eids)
-		.forEach(ca -> mapCidCA.put(ca.getCid(), ca));
+		Map<String, List<CARequestLog>> mapCidCA = new LinkedHashMap<>();
+		caRequestLogRepository.findByCidFirst18In(eids)
+		.forEach(ca -> {
+			List<CARequestLog> cas = mapCidCA.computeIfAbsent(ca.getCidFirst18(), k -> new ArrayList<>());
+			cas.add(ca);
+		});
 		
 		List<String> statusList = Arrays.asList("Activate", "Suspend", "NA", "Expired");
 		
@@ -1806,11 +1814,16 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				continue;
 			}
 			
-			CARequestLog ca = mapCidCA.get(eid);
-			if (ca == null) {
+			List<CARequestLog> cas = mapCidCA.get(eid);
+			if (cas == null || cas.isEmpty()) {
 				dto.put("Message", "ICCID notfound!");
-				continue;				
+				continue;	
 			}
+			if (cas.size() > 1) {
+				dto.put("Message", "ICCID was duplicated!");
+				continue;	
+			}
+			CARequestLog ca = cas.get(0);
 			
 			CARequestLog existsCA = caRequestLogRepository.findByMsiSdn(msisdn);
 			if (existsCA != null && !eid.endsWith(existsCA.getCid())) {

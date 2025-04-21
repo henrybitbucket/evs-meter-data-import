@@ -46,6 +46,8 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	
 	List<CARequestLog> findByCidIn(java.util.Collection<String> cids);
 	
+	List<CARequestLog> findByCidFirst18In(java.util.Collection<String> cids);
+	
 	List<CARequestLog> findByMsiSdnIn(java.util.Collection<String> msisdns);
 	
 	CARequestLog findByMsiSdn(String msisdn);
