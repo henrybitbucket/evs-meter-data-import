@@ -1820,13 +1820,13 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				continue;	
 			}
 			if (cas.size() > 1) {
-				dto.put("Message", "ICCID was duplicated!");
+				dto.put("Message", "ICCID has been duplicated!");
 				continue;	
 			}
 			CARequestLog ca = cas.get(0);
 			
 			CARequestLog existsCA = caRequestLogRepository.findByMsiSdn(msisdn);
-			if (existsCA != null && !eid.endsWith(existsCA.getCid())) {
+			if (existsCA != null && !ca.getCid().equalsIgnoreCase(existsCA.getCid())) {
 				dto.put("Message", "MSISDN already link to other ICCID!");
 				continue;				
 			}
