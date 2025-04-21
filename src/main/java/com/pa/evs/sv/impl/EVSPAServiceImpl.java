@@ -799,6 +799,7 @@ public class EVSPAServiceImpl implements EVSPAService {
 	public void saveMDTMessage(Map<String, Object> data, String type, Log subscribeLog, int status, final Map<String, Object> dataRes) throws Exception {
 		
 		logRepository.save(subscribeLog);
+		subscribeLog.setTimeMDT(System.currentTimeMillis());
 		updatePublishStatus(subscribeLog);
 		//
 		if (status == 0) {

@@ -1051,6 +1051,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Boolean deactivationDate = BooleanUtils.toBoolean((String) options.get("queryDeactivationDate"));
             Boolean lastSubscribeDatetime = BooleanUtils.toBoolean((String) options.get("queryLastSubscribeDatetime"));
             
+            Boolean queryMeterDataYes = BooleanUtils.toBoolean((String) options.get("queryMeterDataYes"));
+            Boolean queryMeterDataNo = BooleanUtils.toBoolean((String) options.get("queryMeterDataNo"));
+            
             Boolean onboardingDate = BooleanUtils.toBoolean((String) options.get("onboardingDate"));
             Boolean allDate = BooleanUtils.toBoolean((String) options.get("queryAllDate"));
             
@@ -1151,6 +1154,24 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                         sqlCommonBuilder.append(" AND ( ca.lastOBRDate >= " + fromDate);
                         sqlCommonBuilder.append(" AND ca.lastOBRDate <= " + toDate + ") ");
                     }
+                }
+                if (BooleanUtils.isTrue(queryMeterDataYes) && !BooleanUtils.isTrue(queryMeterDataNo)) {
+                    if (fromDate != null && toDate == null) {
+                        sqlCommonBuilder.append(" AND (exists (select 1 from Log mL where mL.uid = ca.uid and mL.timeMDT > 0 and mL.timeMDT >= " + fromDate + ")) ");
+                    } else if (fromDate == null && toDate != null) {
+                    	sqlCommonBuilder.append(" AND (exists (select 1 from Log mL where mL.uid = ca.uid and mL.timeMDT > 0 and mL.timeMDT <= " + toDate + ")) ");
+                    } else if (fromDate != null && toDate != null) {
+                    	sqlCommonBuilder.append(" AND (exists (select 1 from Log mL where mL.uid = ca.uid and mL.timeMDT > 0 and mL.timeMDT >= " + fromDate + " and mL.timeMDT <= " + toDate + ")) ");
+                    }
+                }
+                if (BooleanUtils.isTrue(queryMeterDataNo) && !BooleanUtils.isTrue(queryMeterDataYes)) {
+                    if (fromDate != null && toDate == null) {
+                        sqlCommonBuilder.append(" AND (not exists (select 1 from Log mL where mL.uid = ca.uid and mL.timeMDT > 0 and mL.timeMDT >= " + fromDate + ")) ");
+                    } else if (fromDate == null && toDate != null) {
+                    	sqlCommonBuilder.append(" AND (not exists (select 1 from Log mL where mL.uid = ca.uid and mL.timeMDT > 0 and mL.timeMDT <= " + toDate + ")) ");
+                    } else if (fromDate != null && toDate != null) {
+                    	sqlCommonBuilder.append(" AND (not exists (select 1 from Log mL where mL.uid = ca.uid and mL.timeMDT > 0 and mL.timeMDT >= " + fromDate + " and mL.timeMDT <= " + toDate + ")) ");
+                    }                	
                 }
 
             }

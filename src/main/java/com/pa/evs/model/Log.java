@@ -107,6 +107,8 @@ public class Log extends BaseEntity {
     
 	@Column(name = "rls_batch_uuid")
 	private String rlsBatchUuid;
+	
+	private Long timeMDT;
     
     @JsonIgnore
     public String getRepStatusDesc() {
