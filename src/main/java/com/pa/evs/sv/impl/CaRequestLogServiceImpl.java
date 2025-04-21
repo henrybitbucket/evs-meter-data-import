@@ -1774,6 +1774,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		
 		List<String> statusList = Arrays.asList("Activate", "Suspend", "NA", "Expired");
 		
+		SimpleDateFormat sf1 = new SimpleDateFormat("yyyy-MM-dd");
+		SimpleDateFormat sf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		
 		for (Map<String, Object> dto : dtos) {
 			String message = (String) dto.get("message");
 			String status = (String) dto.get("Status");
@@ -1786,38 +1789,58 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			}
 			
 			if (StringUtils.isBlank(eid)) {
-				dto.put("message", "ICCID invalid!");
+				dto.put("Message", "ICCID invalid!");
 				continue;
 			}
 			eid = eid.toUpperCase().trim();
 			
 			
 			if (StringUtils.isBlank(msisdn)) {
-				dto.put("message", "MSISDN invalid!");
+				dto.put("Message", "MSISDN invalid!");
 				continue;
 			}
 			msisdn = msisdn.toUpperCase().trim();
 			
 			if (StringUtils.isBlank(status) || statusList.indexOf(status.trim()) < 0) {
-				dto.put("message", "Status invalid! (Activate/Suspend/NA/Expired)");
+				dto.put("Message", "Status invalid! (Activate/Suspend/NA/Expired)");
 				continue;
 			}
 			
 			CARequestLog ca = mapCidCA.get(eid);
 			if (ca == null) {
-				dto.put("message", "ICCID notfound!");
+				dto.put("Message", "ICCID notfound!");
 				continue;				
 			}
 			
 			CARequestLog existsCA = caRequestLogRepository.findByMsiSdn(msisdn);
 			if (existsCA != null && !eid.endsWith(existsCA.getCid())) {
-				dto.put("message", "MSISDN already link to other ICCID!");
+				dto.put("Message", "MSISDN already link to other ICCID!");
 				continue;				
 			}
 			
 			ca.setMsiSdn(msisdn);
 			ca.setMSISDNStatus(status.trim());
-			ca.setMSISDNStateChangeTime(stateChangeTime.trim());
+			
+			if (StringUtils.isNotBlank(stateChangeTime) && stateChangeTime.trim().length() == 10 || stateChangeTime.trim().length() == 19) {
+				Exception ex = null;
+				try {
+					sf1.parse(stateChangeTime.trim());
+					ca.setMSISDNStateChangeTime(stateChangeTime.trim());
+				} catch (Exception e) {
+					ex = e;
+				}
+				
+				if (ex != null) {
+					try {
+						sf2.parse(stateChangeTime.trim());
+						ca.setMSISDNStateChangeTime(stateChangeTime.trim());
+					} catch (Exception e) {
+					}
+				}				
+			} else {
+				ca.setMSISDNStateChangeTime("");
+			}
+			
 			caRequestLogRepository.save(ca);
 			caRequestLogRepository.flush();
 		}
