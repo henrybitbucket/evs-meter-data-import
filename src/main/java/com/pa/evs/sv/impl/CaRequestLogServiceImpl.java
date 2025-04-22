@@ -1801,10 +1801,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			cas.add(ca);
 		});
 		
-		List<String> statusList = Arrays.asList("Activate", "Suspend", "NA", "Expired");
-		
-		SimpleDateFormat sf1 = new SimpleDateFormat("yyyy-MM-dd");
-		SimpleDateFormat sf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		List<String> statusList = Arrays.asList(
+				"ACTIVE", 
+				"PREACTIVE",
+				"SUSPENDED", 
+				"NA", 
+				"DORMANT",
+				"TESTREADY"
+				);
 		
 		for (Map<String, Object> dto : dtos) {
 			String message = (String) dto.get("message");
@@ -1831,7 +1835,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			msisdn = msisdn.toUpperCase().trim();
 			
 			if (StringUtils.isBlank(status) || statusList.indexOf(status.trim()) < 0) {
-				dto.put("Message", "Status invalid! (Activate/Suspend/NA/Expired)");
+				dto.put("Message", "Status invalid! (" + statusList.toString() + ")");
 				continue;
 			}
 			
@@ -1855,22 +1859,12 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			ca.setMsiSdn(msisdn);
 			ca.setMSISDNStatus(status.trim());
 			
-			if (StringUtils.isNotBlank(stateChangeTime) && stateChangeTime.trim().length() == 10 || stateChangeTime.trim().length() == 19) {
-				Exception ex = null;
-				try {
-					sf1.parse(stateChangeTime.trim());
-					ca.setMSISDNStateChangeTime(stateChangeTime.trim());
-				} catch (Exception e) {
-					ex = e;
-				}
-				
-				if (ex != null) {
-					try {
-						sf2.parse(stateChangeTime.trim());
-						ca.setMSISDNStateChangeTime(stateChangeTime.trim());
-					} catch (Exception e) {
-					}
-				}				
+			if (stateChangeTime == null) {
+				stateChangeTime = "";
+			}
+			stateChangeTime = stateChangeTime.trim();
+			if ((stateChangeTime.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") || stateChangeTime.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+){0,1}$"))) {
+				ca.setMSISDNStateChangeTime(stateChangeTime);			
 			} else {
 				ca.setMSISDNStateChangeTime("");
 			}
@@ -2675,6 +2669,8 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	}
 	
 	public static void main(String[] args) {
+		
+		System.out.println(new File("C://hiberfil.sys").getUsableSpace() / (1024 * 1024 * 1024));
 		
 	}
 }
