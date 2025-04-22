@@ -54,4 +54,7 @@ public interface DMSLockService {
 	Object getLocks(LockRequestDto dto);
 
 	List<Map<String, Object>> handleUploadLocks(MultipartFile file) throws IOException;
+
+	@SuppressWarnings("rawtypes")
+	PaginDto searchLogEventLogs(PaginDto pagin);
 }

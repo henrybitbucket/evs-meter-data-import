@@ -94,6 +94,16 @@ public class AppPASController {
         }
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
 	}
+	
+	@PostMapping("/api/pas_lock_event_logs")
+	public ResponseEntity<Object> searchEventLogs(HttpServletResponse response, @RequestBody PaginDto pagin) {
+		try {
+			dmsLockService.searchLogEventLogs(pagin);
+    	} catch (Exception e) {
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+	}
 
 	@PostMapping("/api/sync_lock/{vendorId}")
 	public ResponseEntity<Object> syncLock(@PathVariable Long vendorId) {

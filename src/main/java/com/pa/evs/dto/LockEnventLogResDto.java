@@ -31,6 +31,9 @@ public class LockEnventLogResDto {
 	@JsonProperty(value = "lock_name")
 	private String lockName;
 	
+	@JsonProperty(value = "lock_number")
+	private String lockNumber;
+	
 	@JsonProperty(value = "user_name")
 	private String username;
 	
@@ -72,6 +75,7 @@ public class LockEnventLogResDto {
 				.mobile(fr.getCreatedBy())
 				.offlineMode(fr.getOfflineMode())
 				.lockName(lock == null ? null : lock.getLockName())
+				.lockNumber(lock == null ? null : lock.getLockNumber())
 				.lockId(lock == null ? null : lock.getOriginalId())
 				.locationName(fr.getLocationName())
 				.id(fr.getId())

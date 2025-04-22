@@ -256,6 +256,118 @@ public class DMSLockServiceImpl implements DMSLockService {
 		return pagin;
 	}
 	
+	@Transactional(readOnly = true)
+	@Override
+	public PaginDto searchLogEventLogs(PaginDto pagin) {
+		
+		Number from = (Number) pagin.getOptions().get("from");
+		Number to = (Number) pagin.getOptions().get("to");
+		String mobile = (String) pagin.getOptions().get("mobile");
+		String lockName = (String) pagin.getOptions().get("lockName");
+		String lockBid = (String) pagin.getOptions().get("lockBid");
+		String lockNumber = (String) pagin.getOptions().get("lockNumber");
+		String offlineMode = (String) pagin.getOptions().get("offlineMode");
+		String resultCode = (String) pagin.getOptions().get("resultCode");
+		String typeCode = (String) pagin.getOptions().get("typeCode");
+				
+		
+		StringBuilder sqlBuilder = new StringBuilder(" ");
+		StringBuilder sqlCountBuilder = new StringBuilder("");
+		StringBuilder sqlCommonBuilder = new StringBuilder();
+		
+		sqlBuilder.append(" SELECT log, lock, ");
+		sqlBuilder.append(" (select u.email from Users u where u.phoneNumber = log.createdBy) as email ");
+		
+		sqlCountBuilder.append(" SELECT count(log)  ");
+		
+		sqlCommonBuilder.append(" FROM DMSLockEventLog log ");
+		sqlCommonBuilder.append(" left join DMSLock lock on (log.bid = lock.lockBid) ");
+		sqlCommonBuilder.append(" WHERE 1=1 ");
+		
+		
+		if (from != null && from.longValue() > 0) {
+			sqlCommonBuilder.append(" AND log.createDate >= :from ");
+		}
+
+		if (to != null && to.longValue() > 0) {
+			sqlCommonBuilder.append(" AND log.createDate <= :to ");
+		}
+		
+		if (StringUtils.isNotBlank(mobile)) {
+			sqlCommonBuilder.append(" AND lower(log.mobile) like '%" + mobile.trim().toLowerCase() + "%' ");
+		}
+		
+		if (StringUtils.isNotBlank(lockName)) {
+			sqlCommonBuilder.append(" AND lower(lock.lockName) like '%" + lockName.trim().toLowerCase() + "%' ");
+		}
+		
+		if (StringUtils.isNotBlank(lockBid)) {
+			sqlCommonBuilder.append(" AND lower(log.bid) like '%" + lockBid.trim().toLowerCase() + "%' ");
+		}
+		
+		if (StringUtils.isNotBlank(lockNumber)) {
+			sqlCommonBuilder.append(" AND lower(lock.lockNumber) like '%" + lockNumber.trim().toLowerCase() + "%' ");
+		}
+
+		if (offlineMode != null) {
+			sqlCommonBuilder.append(" AND log.offlineMode = " + offlineMode + " ");
+		}
+		
+		if (StringUtils.isNotBlank(resultCode)) {
+			sqlCommonBuilder.append(" AND log.resultCode = '" + resultCode.trim() + "' ");
+		}
+		
+		if (StringUtils.isNotBlank(typeCode)) {
+			sqlCommonBuilder.append(" AND log.typeCode = '" + typeCode.trim() + "' ");
+		}
+		
+		sqlBuilder.append(sqlCommonBuilder);
+		sqlCountBuilder.append(sqlCommonBuilder);
+		
+		sqlBuilder.append(" ORDER BY log.id DESC ");
+		
+		Query q = em.createQuery(sqlBuilder.toString());
+		Query queryCount = em.createQuery(sqlCountBuilder.toString());
+
+		
+		if (from != null && from.longValue() > 0) {
+			q.setParameter("from", new Date(from.longValue()));
+			queryCount.setParameter("from", new Date(from.longValue()));
+		}
+		
+		if (to != null && to.longValue() > 0) {
+			q.setParameter("to", new Date(to.longValue()));
+			queryCount.setParameter("to", new Date(to.longValue()));
+		}
+		
+		q.setFirstResult(pagin.getOffset());
+		q.setMaxResults(pagin.getLimit());
+		
+		Long count = ((Number) queryCount.getSingleResult()).longValue();
+		pagin.setTotalRows(count);
+		pagin.setResults(new ArrayList<>());
+		if (count == 0l) {
+			return pagin;
+		}
+		
+		List<Object[]> arr = q.getResultList();
+		
+		List<LockEnventLogResDto> res = new ArrayList<>();
+		for (Object[] objs : arr) {
+			DMSLockEventLog log = (DMSLockEventLog) objs[0];
+			DMSLock lock = (DMSLock) objs[1];
+			LockEnventLogResDto evt = LockEnventLogResDto.from(log, lock);
+			evt.setUsername((String) objs[2]);
+			if (StringUtils.isBlank(evt.getUsername())) {
+				evt.setUsername(evt.getMobile());
+			}
+			res.add(evt);
+		}
+		
+		pagin.setResults(res);
+		return pagin;
+	}
+	
 	public Object getChinaLockPadLock() {
 		try {
 			
