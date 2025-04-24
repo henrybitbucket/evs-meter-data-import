@@ -74,8 +74,10 @@ import com.pa.evs.repository.DMSLockEventLogRepository;
 import com.pa.evs.repository.DMSLockRepository;
 import com.pa.evs.repository.DMSLockVendorRepository;
 import com.pa.evs.repository.GroupUserRepository;
+import com.pa.evs.repository.LoginRepository;
 import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.repository.UserRepository;
+import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.DMSLockService;
 import com.pa.evs.utils.ApiUtils;
@@ -145,6 +147,9 @@ public class DMSLockServiceImpl implements DMSLockService {
 	
 	@Autowired
 	PlatformUserLoginRepository platformUserLoginRepository;
+	
+	@Autowired
+	LoginRepository loginRepository;
 
 	@Override
 	public Object getLocks(LockRequestDto dto) {
@@ -361,6 +366,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 			if (StringUtils.isBlank(evt.getUsername())) {
 				evt.setUsername(evt.getMobile());
 			}
+			evt.setSession(log.getSession());
 			res.add(evt);
 		}
 		
@@ -1069,6 +1075,11 @@ public class DMSLockServiceImpl implements DMSLockService {
 			if (StringUtils.isBlank(entity.getCreatedBy())) {
 				entity.setCreatedBy(SecurityUtils.getEmail());
 			}
+		}
+		
+		JwtUser jwtUser = SecurityUtils.getUser();
+		if (jwtUser != null) {
+			entity.setSession('[' + jwtUser.getTokenCreatedDate() + "][" + jwtUser.getEmail() + "][" + jwtUser.getTokenId() + "]");			
 		}
 		
 		DMSLocationLock locationLock = dmsLocationLockRepository.findByLockId(lock.getId()).orElse(null);

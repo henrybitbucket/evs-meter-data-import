@@ -52,6 +52,9 @@ public class DMSLockEventLog extends BaseEntity {
 	
 	@Column(name = "location_name")
     private String locationName;
+	
+	@Column(name = "session", columnDefinition = "TEXT")
+	private String session;
 
 	public static DMSLockEventLog from(SaveLogReq fr) {
 		return builder()

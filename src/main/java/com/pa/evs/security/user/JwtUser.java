@@ -75,6 +75,12 @@ public class JwtUser implements UserDetails {
     
     @JsonIgnore
     private  Date tokenExpireDate;
+    
+    @JsonIgnore
+    private String tokenId;
+    
+    @JsonIgnore
+    private Long tokenCreatedDate;
 
 //    public JwtUser(
 //          Long id,
@@ -163,6 +169,13 @@ public class JwtUser implements UserDetails {
 	public void setTokenExpireDate(Date tokenExpireDate) {
 		this.tokenExpireDate = tokenExpireDate;
 	}
-	
-	
+
+	public void setTokenId(String tokenId) {
+		this.tokenId = tokenId;
+	}
+
+	public void setTokenCreatedDate(Long tokenCreatedDate) {
+		this.tokenCreatedDate = tokenCreatedDate;
+	}
+
 }

@@ -2,6 +2,7 @@ package com.pa.evs.dto;
 
 import java.time.Instant;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pa.evs.model.DMSLock;
 import com.pa.evs.model.DMSLockEventLog;
@@ -58,6 +59,10 @@ public class LockEnventLogResDto {
 	
 	@JsonProperty(value = "location_name")
     private String locationName;
+	
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(value = "session")
+    private String session;
 	
 	public static LockEnventLogResDto from(DMSLockEventLog fr) {
 		return from(fr, null);

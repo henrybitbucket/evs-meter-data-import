@@ -117,6 +117,7 @@ public class JwtTokenUtil implements Serializable {
         
         claims.put("tokenId", tokenId);
         claims.put("subject", subject);
+        claims.put("timestamp", login.getStartTime());
         
         return Jwts.builder()
                 .claims(claims)
@@ -152,7 +153,8 @@ public class JwtTokenUtil implements Serializable {
         JwtUser user = (JwtUser) userDetails;
         final String username = getUsernameFromToken(token);
         Claims claims = getAllClaimsFromToken(token);
-        final String tokenId = new ArrayList<>(claims.getAudience()).get(0);
+        final String tokenId =  (String) claims.get("tokenId");
+        final Long timestamp =  (Long) claims.get("timestamp");
         
         Optional<Login> loginOpt = loginRepository.findByTokenIdAndUserName(tokenId, username);
         
@@ -162,8 +164,12 @@ public class JwtTokenUtil implements Serializable {
         
         Login login = loginOpt.get();
         Boolean isTokenExpr = login.getEndTime() <= System.currentTimeMillis() || isTokenExpired(token);
-        
-        return (user != null && tokenId != null && username.equals(user.getUsername()) && !isTokenExpr);
+        boolean rs = (user != null && tokenId != null && username.equals(user.getUsername()) && !isTokenExpr);
+        if (userDetails instanceof JwtUser) {
+        	((JwtUser) userDetails).setTokenId(tokenId);
+        	((JwtUser) userDetails).setTokenCreatedDate(timestamp);
+        }
+        return rs;
     }
 
     private Date calculateExpirationDate(Date createdDate) {
