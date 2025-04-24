@@ -367,6 +367,9 @@ public class DMSLockServiceImpl implements DMSLockService {
 				evt.setUsername(evt.getMobile());
 			}
 			evt.setSession(log.getSession());
+			if (log.getCreateDate() != null) {
+				evt.setCreatedDate(Instant.ofEpochMilli(log.getCreateDate().getTime()));
+			}
 			res.add(evt);
 		}
 		
@@ -1088,11 +1091,13 @@ public class DMSLockServiceImpl implements DMSLockService {
 		}
 		
 		dmsLockEventLogRepository.save(entity);
+		dmsLockEventLogRepository.flush();
 		if (dto.isOfflineMode()) {
-			dmsLockEventLogRepository.flush();
-			entity.setCreateDate(new Date(dto.getTimestamp().toEpochMilli()));
-			dmsLockEventLogRepository.save(entity);
+			entity.setActionDate(new Date(dto.getTimestamp().toEpochMilli()));
+		} else {
+			entity.setActionDate(entity.getCreateDate());
 		}
+		dmsLockEventLogRepository.save(entity);
 		
 		if (StringUtils.isNotBlank(entity.getBattery())) {
 			lock.setBattery(entity.getBattery());

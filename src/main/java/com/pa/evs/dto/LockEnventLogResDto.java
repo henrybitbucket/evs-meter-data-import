@@ -64,13 +64,17 @@ public class LockEnventLogResDto {
 	@JsonProperty(value = "session")
     private String session;
 	
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(value = "log_created_date")
+	private Instant createdDate;
+	
 	public static LockEnventLogResDto from(DMSLockEventLog fr) {
 		return from(fr, null);
 	}
 	
 	public static LockEnventLogResDto from(DMSLockEventLog fr, DMSLock lock) {
 		return builder()
-				.time(Instant.ofEpochMilli(fr.getCreateDate().getTime()))
+				.time(Instant.ofEpochMilli(fr.getActionDate() != null ? fr.getActionDate().getTime() : fr.getCreateDate().getTime()))
 				.bid(fr.getBid())
 				.typeCode(fr.getTypeCode())
 				.resultCode(fr.getResultCode())

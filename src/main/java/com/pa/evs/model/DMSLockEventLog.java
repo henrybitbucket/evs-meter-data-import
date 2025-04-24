@@ -3,6 +3,10 @@ package com.pa.evs.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+
+import java.util.Date;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pa.evs.dto.SaveLogReq;
@@ -55,6 +59,10 @@ public class DMSLockEventLog extends BaseEntity {
 	
 	@Column(name = "session", columnDefinition = "TEXT")
 	private String session;
+	
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "action_date")
+    private Date actionDate;
 
 	public static DMSLockEventLog from(SaveLogReq fr) {
 		return builder()
