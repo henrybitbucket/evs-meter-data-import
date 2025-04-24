@@ -1082,7 +1082,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 		
 		JwtUser jwtUser = SecurityUtils.getUser();
 		if (jwtUser != null) {
-			entity.setSession('[' + jwtUser.getTokenCreatedDate() + "][" + jwtUser.getEmail() + "][" + jwtUser.getTokenId() + "]");			
+			entity.setSession("[" + jwtUser.getTokenCreatedDate() + "][" + jwtUser.getEmail() + "][" + jwtUser.getTokenId() + "]");			
 		}
 		
 		DMSLocationLock locationLock = dmsLocationLockRepository.findByLockId(lock.getId()).orElse(null);
