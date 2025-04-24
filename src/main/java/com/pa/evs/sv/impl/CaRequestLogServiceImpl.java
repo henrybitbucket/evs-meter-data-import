@@ -1044,6 +1044,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             List<String> cids = (List<String>) options.get("selectedCids");
             String queryUuid = (String) options.get("queryUuid");
             String queryEsimId = (String) options.get("queryEsimId");
+            String queryMsiSdn = (String) options.get("queryMsiSdn");
             Integer queryGroup = StringUtils.isNotBlank((String) options.get("queryGroup")) ? Integer.valueOf((String) options.get("queryGroup")) : null;
             Boolean enrollmentDate = BooleanUtils.toBoolean((String) options.get("queryEnrollmentDate"));
             Boolean coupledDate = BooleanUtils.toBoolean((String) options.get("queryCoupledDate"));
@@ -1224,6 +1225,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (StringUtils.isNotBlank(queryEsimId)) {
                 sqlCommonBuilder.append(" AND upper(ca.cid) like '%" + queryEsimId.toUpperCase() + "%' ");
             }
+    		if (StringUtils.isNotBlank(queryMsiSdn)) {
+    			sqlCommonBuilder.append(" AND upper(ca.msiSdn) like '%" + queryMsiSdn.toUpperCase() + "%' ");
+    		}	
             if (queryGroup != null) {
                 sqlCommonBuilder.append(" AND ca.group = " + queryGroup + " ");
             }
@@ -1852,7 +1856,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			
 			CARequestLog existsCA = caRequestLogRepository.findByMsiSdn(msisdn);
 			if (existsCA != null && !ca.getCid().equalsIgnoreCase(existsCA.getCid())) {
-				dto.put("Message", "MSISDN already link to other ICCID!");
+				dto.put("Message", "MSISDN already link to other ICCID! (" + existsCA.getCid() + ")");
 				continue;				
 			}
 			

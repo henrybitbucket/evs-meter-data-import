@@ -1164,8 +1164,8 @@ public class CommonController {
     				"ICCID","MSISDN","Status","StateChangeTime"
     				);
     		List<List<String>> src = Arrays.asList(
-    				Arrays.asList("893107122132681408", "3197030339057", "Suspend", "2021-08-14 10:02"), 
-    				Arrays.asList("893107042131441155", "3197030309481", "Activate", "2022-07-04 12:12")
+    				Arrays.asList("893107122132681408", "3197030339057", "SUSPENDED", "2021-08-14 10:02"), 
+    				Arrays.asList("893107042131441155", "3197030309481", "ACTIVE", "2022-07-04 12:12")
     				);
     		File csv = CsvUtils.toCsv(headers, src, (idx, it, l) -> {
             	
