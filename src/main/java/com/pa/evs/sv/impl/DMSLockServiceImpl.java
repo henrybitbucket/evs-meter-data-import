@@ -265,8 +265,10 @@ public class DMSLockServiceImpl implements DMSLockService {
 	@Override
 	public PaginDto searchLogEventLogs(PaginDto pagin) {
 		
-		Number from = (Number) pagin.getOptions().get("from");
-		Number to = (Number) pagin.getOptions().get("to");
+		boolean searchCreatedDate = Boolean.valueOf(pagin.getOptions().get("queryCreationDate") + "");
+		boolean searchOperationTime = Boolean.valueOf(pagin.getOptions().get("queryOperationDate") + "");
+		Number from = (Number) pagin.getOptions().get("fromDate");
+		Number to = (Number) pagin.getOptions().get("toDate");
 		String mobile = (String) pagin.getOptions().get("mobile");
 		String lockName = (String) pagin.getOptions().get("lockName");
 		String lockBid = (String) pagin.getOptions().get("lockBid");
@@ -290,12 +292,24 @@ public class DMSLockServiceImpl implements DMSLockService {
 		sqlCommonBuilder.append(" WHERE 1=1 ");
 		
 		
-		if (from != null && from.longValue() > 0) {
-			sqlCommonBuilder.append(" AND log.createDate >= :from ");
-		}
+		if (searchCreatedDate) {
+			if (from != null && from.longValue() > 0) {
+				sqlCommonBuilder.append(" AND log.createDate >= :from ");
+			}
 
-		if (to != null && to.longValue() > 0) {
-			sqlCommonBuilder.append(" AND log.createDate <= :to ");
+			if (to != null && to.longValue() > 0) {
+				sqlCommonBuilder.append(" AND log.createDate <= :to ");
+			}			
+		}
+		
+		if (searchOperationTime) {
+			if (from != null && from.longValue() > 0) {
+				sqlCommonBuilder.append(" AND log.actionDate >= :from ");
+			}
+
+			if (to != null && to.longValue() > 0) {
+				sqlCommonBuilder.append(" AND log.actionDate <= :to ");
+			}			
 		}
 		
 		if (StringUtils.isNotBlank(mobile)) {
@@ -1095,7 +1109,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 		if (dto.isOfflineMode()) {
 			entity.setActionDate(new Date(dto.getTimestamp().toEpochMilli()));
 		} else {
-			entity.setActionDate(entity.getCreateDate());
+			entity.setActionDate(dto.getTimestamp() != null ? new Date(dto.getTimestamp().toEpochMilli()) : entity.getCreateDate());
 		}
 		dmsLockEventLogRepository.save(entity);
 		

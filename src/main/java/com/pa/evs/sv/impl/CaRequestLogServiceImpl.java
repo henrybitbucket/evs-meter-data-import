@@ -1849,7 +1849,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				continue;	
 			}
 			if (cas.size() > 1) {
-				dto.put("Message", "ICCID has been duplicated! (" + cas.stream().map(ca -> ca.getCid()).toList() + ")");
+				dto.put("Message", "ICCID has been duplicated! (" + cas.stream().map(ca -> ca.getCid()).collect(Collectors.toList()) + ")");
 				continue;	
 			}
 			CARequestLog ca = cas.get(0);

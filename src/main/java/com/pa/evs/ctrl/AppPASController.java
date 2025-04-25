@@ -5,16 +5,15 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.slf4j.Logger;
@@ -44,6 +43,7 @@ import com.pa.evs.dto.DMSLockDto;
 import com.pa.evs.dto.EcodeReq;
 import com.pa.evs.dto.LockAddressReq;
 import com.pa.evs.dto.LockDto;
+import com.pa.evs.dto.LockEnventLogResDto;
 import com.pa.evs.dto.LockEventLogSearchReq;
 import com.pa.evs.dto.LockRequestDto;
 import com.pa.evs.dto.LockWorkOrderReq;
@@ -58,6 +58,9 @@ import com.pa.evs.utils.AppCodeSelectedHolder;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.TimeZoneHolder;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @DependsOn(value = "settingsController")
 @RestController
@@ -95,14 +98,78 @@ public class AppPASController {
     	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
 	}
 	
+	@SuppressWarnings("unchecked")
 	@PostMapping("/api/pas_lock_event_logs")
-	public ResponseEntity<Object> searchEventLogs(HttpServletResponse response, @RequestBody PaginDto pagin) {
-		try {
-			dmsLockService.searchLogEventLogs(pagin);
-    	} catch (Exception e) {
-            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
-        }
-    	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+	public ResponseEntity<Object> searchEventLogs(HttpServletResponse response, @RequestBody PaginDto pagin) throws Exception {
+    	try {
+    		if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
+        		pagin.setLimit(10000);
+        	}
+            PaginDto result = dmsLockService.searchLogEventLogs(pagin);
+            if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))) {
+                File file = null;
+        		List<String> headers = Arrays.asList(
+        				"ID",
+        				"LOCK NAME",
+        				"LOCK NUMBER",
+        				"LOCK BID",
+        				"MOBILE",
+        				"USER",
+        				"OPERATION RESULT",
+        				"OPERATION TYPE",
+        				"BATTERY",
+        				"LONG",
+        				"LAT",
+        				"OFFLINE MODE",
+        				"OPERATION TIME",
+        				"CREATE DATE"
+        				);
+        		
+        		List<LockEnventLogResDto> dtos = result.getResults();
+        		file = CsvUtils.toCsv(headers, dtos, (idx, it, l) -> {
+                	
+                    List<String> record = new ArrayList<>();
+                    record.add(it.getId() + "");
+                    record.add(StringUtils.isNotBlank(it.getLockName()) ? it.getLockName() : "");
+                    record.add(StringUtils.isNotBlank(it.getLockNumber()) ? it.getLockNumber() : "");
+                    record.add(StringUtils.isNotBlank(it.getLockId()) ? it.getLockId() : "");
+                    record.add(StringUtils.isNotBlank(it.getMobile()) ? it.getMobile() : "");
+                    
+                    String user = it.getUsername() != null ? it.getUsername() : "";
+                    if (it.getSession() != null && it.getSession().matches("^\\[*([0-9]{10,})]\\[(.*)$")) {
+                    	Long loginAt = Long.parseLong(it.getSession().replaceAll("^\\[*([0-9]{10,})]\\[(.*)$", "$1"));
+                    	user += " Login at: " + Instant.ofEpochMilli(loginAt).toString();
+                    }
+                    record.add(user);
+                    
+                    record.add(it.getResultCode() != null ? getEventLogOperationResultDesc(it.getResultCode()) : "");
+                    record.add(it.getTypeCode() != null ? getEventLogOperationTypeDesc(it.getTypeCode()) : "");
+                    record.add(StringUtils.isNotBlank(it.getBattery()) ? it.getBattery() : "");
+                    record.add(it.getLng() != null ? it.getLng() : "");
+                    record.add(it.getLat() != null ? it.getLat() : "");
+                    record.add(it.getOfflineMode() == Boolean.TRUE ? "TRUE" : "FALSE");
+                    record.add(it.getTime() != null ? it.getTime().toString() : "");
+                    record.add(it.getCreatedDate() != null ? it.getCreatedDate().toString() : "");
+                    return CsvUtils.postProcessCsv(record);
+                }, CsvUtils.buildPathFile("DMS-LOCK-EVENT-LOGS-Export-" + System.currentTimeMillis() + ".csv"), 1l);
+                String fileName = file.getName();
+                
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    response.setContentLengthLong(file.length());
+                    response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                    response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                    response.setHeader("name", fileName);
+                    response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                    IOUtils.copy(fis, response.getOutputStream());
+                } finally {
+                    FileUtils.deleteDirectory(file.getParentFile());
+                }
+            }
+            
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
+		} catch (Exception e) {
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+		}
 	}
 
 	@PostMapping("/api/sync_lock/{vendorId}")
@@ -524,5 +591,22 @@ public class AppPASController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    String getEventLogOperationResultDesc(String code) {
+    	if ("5".equalsIgnoreCase(code)) {
+    		return "Operation successful";
+    	}
+    	return "Unknow";
+    }
+    String getEventLogOperationTypeDesc(String code) {
+    	if ("0".equalsIgnoreCase(code)) {
+    		return "Bluetooth unlock";
+    	}
+    	
+    	if ("3".equalsIgnoreCase(code)) {
+    		return "Bluetooth lock";
+    	}    	
+    	return "Unknow";
     }
 }
