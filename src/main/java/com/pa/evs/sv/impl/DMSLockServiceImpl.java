@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -1341,4 +1342,7 @@ public class DMSLockServiceImpl implements DMSLockService {
 		return rs;
 	}
 	
+	public static void main(String[] args) {
+		System.out.println(UUID.randomUUID());
+	}
 }

@@ -10,7 +10,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -126,6 +128,11 @@ public class AppPASController {
         				);
         		
         		List<LockEnventLogResDto> dtos = result.getResults();
+        		
+            	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+            	TimeZone tz = TimeZone.getTimeZone("Asia/Singapore"); 
+            	sdf.setTimeZone(tz);
+        		
         		file = CsvUtils.toCsv(headers, dtos, (idx, it, l) -> {
                 	
                     List<String> record = new ArrayList<>();
@@ -138,7 +145,7 @@ public class AppPASController {
                     String user = it.getUsername() != null ? it.getUsername() : "";
                     if (it.getSession() != null && it.getSession().matches("^\\[*([0-9]{10,})]\\[(.*)$")) {
                     	Long loginAt = Long.parseLong(it.getSession().replaceAll("^\\[*([0-9]{10,})]\\[(.*)$", "$1"));
-                    	user += " Login at: " + Instant.ofEpochMilli(loginAt).toString();
+                    	user += " Login at: " + sdf.format(new Date(loginAt));
                     }
                     record.add(user);
                     
@@ -148,8 +155,8 @@ public class AppPASController {
                     record.add(it.getLng() != null ? it.getLng() : "");
                     record.add(it.getLat() != null ? it.getLat() : "");
                     record.add(it.getOfflineMode() == Boolean.TRUE ? "TRUE" : "FALSE");
-                    record.add(it.getTime() != null ? it.getTime().toString() : "");
-                    record.add(it.getCreatedDate() != null ? it.getCreatedDate().toString() : "");
+                    record.add(it.getTime() != null ? sdf.format(new Date(it.getTime().toEpochMilli())) : "");
+                    record.add(it.getCreatedDate() != null ? sdf.format(new Date(it.getCreatedDate().toEpochMilli())) : "");
                     return CsvUtils.postProcessCsv(record);
                 }, CsvUtils.buildPathFile("DMS-LOCK-EVENT-LOGS-Export-" + System.currentTimeMillis() + ".csv"), 1l);
                 String fileName = file.getName();
@@ -609,4 +616,11 @@ public class AppPASController {
     	}    	
     	return "Unknow";
     }
+    
+    public static void main(String[] args) {
+    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+    	TimeZone tz = TimeZone.getTimeZone("Asia/Singapore"); 
+    	sdf.setTimeZone(tz); 
+    	System.out.println(sdf.format(new Date()));
+	}
 }
