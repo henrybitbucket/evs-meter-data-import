@@ -18,6 +18,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.CaRequestLogDto;
@@ -92,7 +94,7 @@ public class CaRequestLogController {
             
             } else if ("fullMCU".equals(pagin.getOptions().get("downloadType"))) {
         		List<String> headers = Arrays.asList(
-        				"MCU SN", "MCU UUID", "eSIM ICCID", "MSISDN", "MSN", "P2Couple State", "P3Couple State", "Version", "MCU Vendor", "Last Seen"
+        				"MCU SN", "MCU UUID", "eSIM ICCID", "MSISDN", "eSIM Status", "MSN", "P2Couple State", "P3Couple State", "Online Status", "Version", "MCU Vendor", "Last Seen"
         				);
         		
         		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -103,9 +105,11 @@ public class CaRequestLogController {
                     record.add(StringUtils.isNotBlank(it.getUid()) ? it.getUid() : "");
                     record.add(StringUtils.isNotBlank(it.getCid()) ? it.getCid() : "");
                     record.add(StringUtils.isNotBlank(it.getMsiSdn()) ? it.getMsiSdn() : "");
+                    record.add(StringUtils.isNotBlank(it.getMSISDNStatus()) ? it.getMSISDNStatus() : "");
                     record.add(StringUtils.isNotBlank(it.getMsn()) ? it.getMsn() : "");
                     record.add(it.getType() != null ? it.getType().toString() : "");
                     record.add(it.getTypeP3() != null ? it.getTypeP3().toString() : "");
+                    record.add(it.getStatus() != null ? it.getStatus().toString() : "");
                     record.add(StringUtils.isNotBlank(it.getVer()) ? it.getVer() : "");
                     record.add(it.getVendor() != null ? it.getVendor().getName() : "");
                     record.add(it.getLastSubscribeDatetime() != null ? sdf.format(new Date(it.getLastSubscribeDatetime())) : "");

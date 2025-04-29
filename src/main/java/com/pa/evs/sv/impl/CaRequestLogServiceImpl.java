@@ -1032,6 +1032,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             Long fromDate = (Long) options.get("fromDate");
             Long toDate = (Long) options.get("toDate");
             String status = (String) options.get("status");
+            String mSISDNStatus = (String) options.get("mSISDNStatus");
             String type = (String) options.get("type");
             String typeP2 = (String) options.get("typeP2");
             String typeP3 = (String) options.get("typeP3");
@@ -1197,6 +1198,13 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             }
             if (StringUtils.isNotBlank(status)) {
                 sqlCommonBuilder.append(" AND ca.status = '" + status + "' ");
+            }
+            if (StringUtils.isNotBlank(mSISDNStatus)) {
+                if (!"NA".equals(mSISDNStatus)) {
+                	sqlCommonBuilder.append(" AND lower(ca.mSISDNStatus) = '" + mSISDNStatus.toLowerCase() + "' ");
+                } else {
+                	sqlCommonBuilder.append(" AND (lower(ca.mSISDNStatus) = '" + mSISDNStatus.toLowerCase() + "') OR ca.mSISDNStatus is null OR ca.mSISDNStatus = '' ");
+                }
             }
             if (StringUtils.isNotBlank(typeP2)) {
             	if (searchMeter) {
@@ -1371,7 +1379,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         }
         
         pagin.setResults(rp);
-        if (!BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv")) 
+        if (!BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv"))
     			&& !"true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "") ) {
         	getRLSLog(rp);	
         }
