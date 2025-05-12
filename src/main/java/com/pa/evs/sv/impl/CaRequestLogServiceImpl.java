@@ -1682,13 +1682,13 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		result.put("DISK_FreeSpace", String.format("%.1f", new File("/").getFreeSpace() / (1024.0 * 1024 * 1024)));
 		result.put("DISK_TotalSpace", String.format("%.1f", new File("/").getTotalSpace() / (1024.0 * 1024 * 1024)));
 		
-		if (cpuLoad > 80) {
-			alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "CPU > 80%", AppProps.get("SYSTEM_ALERTS", "henry.bitbucket@gmail.com")});
+		if (cpuLoad > 80 && !CMD.isWindow()) {
+			alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "CPU > 80%", AppProps.get("SYSTEM_ALERTS")});
 			
 		}
 		
-		if (new File("/").getFreeSpace() / new File("/").getTotalSpace() < 0.1 && !CMD.isWindow()) {
-			alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "Disk space alert!", AppProps.get("SYSTEM_ALERTS", "henry.bitbucket@gmail.com")});
+		if ((new File("/").getFreeSpace() / new File("/").getTotalSpace()) < 0.1 && !CMD.isWindow()) {
+			alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "Disk space alert! (" + result.get("DISK_FreeSpace") + " / " + result.get("DISK_FreeSpace") + " GB " + ")", AppProps.get("SYSTEM_ALERTS")});
 		}
 		
 		return result;
@@ -1704,7 +1704,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			String emails = content[2];
 			if (StringUtils.isNotBlank(emails)) {
 				emails = emails.trim();
-				notificationService.sendEmails(content[0], emails.split(" *, *"), content[1]);	
+				notificationService.sendEmails(content[1], emails.split(" *, *"), content[0]);	
 			}
 		}
 	}
