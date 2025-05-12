@@ -28,4 +28,7 @@ public interface MMSMeterRepository extends JpaRepository<MMSMeter, Long> {
     
     @Query(value = "SELECT * from {h-schema}mms_meter where building_id = ?1 and floor_level_id is null and building_unit_id is null", nativeQuery = true)
 	List<MMSMeter> findByBuilding(Long buildingId);
+    
+    @Query(value = "SELECT count(*) from {h-schema}mms_meter where building_unit_id is not null ", nativeQuery = true)
+    Number countMeterP3Couple();
 }

@@ -73,6 +73,8 @@ public class CaRequestLogController {
 	
 	Map<String, Integer> countDevices;
 	
+	Map<String, Object> appServerCheck;
+	
 	List<ScreenMonitoring> systemInformation;
 
     @Autowired
@@ -289,6 +291,7 @@ public class CaRequestLogController {
         		.more("mqttStatus", mqttStatus)
         		.more("mqttAddress", evsPAMQTTAddress)
         		.more("countDevices", countDevices)
+        		.more("appServerCheck", appServerCheck)
         		.more("systemInformation", systemInformation)
         		).build());
     }
@@ -425,13 +428,21 @@ public class CaRequestLogController {
     
     @PostConstruct
     public void init() {
-    	SchedulerHelper.scheduleJob("0/10 * * * * ? *", () -> {
+    	SchedulerHelper.scheduleJob("0/15 * * * * ? *", () -> {
     		
     		countAlarms = caRequestLogService.countAlarms();
     		mqttStatus = caRequestLogService.mqttStatusCheck();
     		countDevices = caRequestLogService.getCountDevices();
     		systemInformation = caRequestLogService.getDashboard();
     		
+    		appServerCheck = caRequestLogService.getAppServerCheck();
+    		
     	}, "GET_SYSTEM_PROPERTIES");
+    	
+    	SchedulerHelper.scheduleJob("0/30 * * * * ? *", () -> {
+    		
+    		caRequestLogService.sendSystemAlert();
+    		
+    	}, "SEN_SYSTEM_ALERT");
     }
 }

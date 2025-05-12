@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -618,9 +619,6 @@ public class AppPASController {
     }
     
     public static void main(String[] args) {
-    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-    	TimeZone tz = TimeZone.getTimeZone("Asia/Singapore"); 
-    	sdf.setTimeZone(tz); 
-    	System.out.println(sdf.format(new Date()));
+    	System.out.println(UUID.randomUUID());
 	}
 }

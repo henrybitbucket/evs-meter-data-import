@@ -36,10 +36,15 @@ public class NotificationServiceImpl implements NotificationService {
 	
 	@Override
 	public String sendEmail(String message, String email, String subject) {
+		return this.sendEmails(message, new String[] {email}, subject);
+	}
+	
+	@Override
+	public String sendEmails(String message, String[] emails, String subject) {
 		
 		try {
 			com.amazonaws.services.simpleemail.model.SendEmailRequest request = new com.amazonaws.services.simpleemail.model.SendEmailRequest()
-					.withDestination(new com.amazonaws.services.simpleemail.model.Destination().withToAddresses(email))
+					.withDestination(new com.amazonaws.services.simpleemail.model.Destination().withToAddresses(emails))
 					.withMessage(new com.amazonaws.services.simpleemail.model.Message()
 							.withBody(new com.amazonaws.services.simpleemail.model.Body().withHtml(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(message)))
 //			                  .withText(new com.amazonaws.services.simpleemail.model.Content().withCharset("UTF-8").withData(TEXTBODY)))
@@ -47,14 +52,16 @@ public class NotificationServiceImpl implements NotificationService {
 			.withSource(AppProps.get("AWS_SES_FROM", "evs2ops@evs.com.sg"))
 			;
 			String res = sesClient.sendEmail(request).getSdkResponseMetadata().getRequestId();
-			AppProps.getContext().getBean(this.getClass()).saveLog(
-					NotificationLog.builder()
-					.type("EMAIL")
-					.content(message)
-					.to(email)
-					.track(res)
-					.build()
-					);
+			for (String email: emails) {
+				AppProps.getContext().getBean(this.getClass()).saveLog(
+						NotificationLog.builder()
+						.type("EMAIL")
+						.content(message)
+						.to(email)
+						.track(res)
+						.build()
+						);
+			}
 			return res;
 
 		} catch (Exception e) {

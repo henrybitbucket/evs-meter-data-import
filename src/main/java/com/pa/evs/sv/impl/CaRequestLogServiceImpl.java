@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -19,6 +20,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import javax.management.Attribute;
+import javax.management.AttributeList;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -91,7 +97,9 @@ import com.pa.evs.sv.AuthenticationService;
 import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FileService;
+import com.pa.evs.sv.NotificationService;
 import com.pa.evs.utils.AppProps;
+import com.pa.evs.utils.CMD;
 import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.Mqtt;
 import com.pa.evs.utils.RSAUtil;
@@ -124,6 +132,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	
 	@Autowired
 	private CARequestLogRepository caRequestLogRepository;
+	
+	@Autowired
+	private NotificationService notificationService;
 	
 	@Autowired
 	private MMSMeterRepository mmsMeterRepository;
@@ -1635,8 +1646,19 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     @Override
     public Map<String, Integer> getCountDevices() {
         Map<String, Integer> result = new LinkedHashMap<>();
-        Integer totalDevices = caRequestLogRepository.findAll().size();
+        Integer totalDevices = ((Number) caRequestLogRepository.count()).intValue();
+        
+        Integer totalMeters = ((Number) mmsMeterRepository.count()).intValue();
+        
+        Integer totalMcuP2Couples = caRequestLogRepository.countMcuP2Couple().intValue();
+        
+        Integer totalMeterP3Couples = mmsMeterRepository.countMeterP3Couple().intValue();
+        
         result.put("totalDevices", totalDevices);
+        result.put("totalMeters", totalMeters);
+        result.put("totalMcuP2Couples", totalMcuP2Couples);
+        result.put("totalMeterP3Couples", totalMeterP3Couples);
+        
         Arrays.asList(DeviceStatus.values()).forEach(status -> {
             Integer count = caRequestLogRepository.getCountDevicesByStatus(status);
             result.put(status.name(), count);
@@ -1647,6 +1669,68 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         });
         return result;
     }
+    Map<String, String[]> alerts = new LinkedHashMap<>();
+    
+	@Override
+	public Map<String, Object> getAppServerCheck() {
+		Map<String, Object> result = new LinkedHashMap<>();
+		result.put("ipAddress1", CMD.ip);
+		result.put("ipAddress2", CMD.publicIp);
+		double cpuLoad = getProcessCpuLoad();
+		result.put("cpuLoad", cpuLoad);
+		result.put("DB_IP", AppProps.get("DB_IP", "127.0.0.1"));
+		result.put("DISK_FreeSpace", String.format("%.1f", new File("/").getFreeSpace() / (1024.0 * 1024 * 1024)));
+		result.put("DISK_TotalSpace", String.format("%.1f", new File("/").getTotalSpace() / (1024.0 * 1024 * 1024)));
+		
+		if (cpuLoad > 80) {
+			alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "CPU > 80%", AppProps.get("SYSTEM_ALERTS", "henry.bitbucket@gmail.com")});
+			
+		}
+		
+		if (new File("/").getFreeSpace() / new File("/").getTotalSpace() < 0.1 && !CMD.isWindow()) {
+			alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "Disk space alert!", AppProps.get("SYSTEM_ALERTS", "henry.bitbucket@gmail.com")});
+		}
+		
+		return result;
+	}
+	
+	@Override
+	public void sendSystemAlert() {
+		List<String> keys = new ArrayList<>(alerts.keySet());
+		if (!keys.isEmpty()) {
+			String key = keys.get(0);
+			String[] content = alerts.get(key);
+			alerts.remove(key);
+			String emails = content[2];
+			if (StringUtils.isNotBlank(emails)) {
+				emails = emails.trim();
+				notificationService.sendEmails(content[0], emails.split(" *, *"), content[1]);	
+			}
+		}
+	}
+	
+	public static double getProcessCpuLoad() {
+
+		try {
+			MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+			ObjectName name = ObjectName.getInstance("java.lang:type=OperatingSystem");
+			AttributeList list = mbs.getAttributes(name, new String[] { "ProcessCpuLoad" });
+
+			if (list.isEmpty())
+				return Double.NaN;
+
+			Attribute att = (Attribute) list.get(0);
+			Double value = (Double) att.getValue();
+
+			// usually takes a couple of seconds before we get real values
+			if (value == -1.0)
+				return Double.NaN;
+			// returns a percentage value with 1 decimal point precision
+			return ((int) (value * 1000) / 10.0);
+		} catch (Exception e) {
+			return 0;
+		}
+	}
 
     @Override
     public void checkDatabase() {
@@ -1658,7 +1742,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         try {
             caRequestLogRepository.checkDatabase();
             if (dbSize != null) {
-                checkAndSaveScreenMonitoring(opt, dbSize.toString(), ScreenMonitorStatus.OK, ScreenMonitorKey.DB_CHECK);
+            	checkAndSaveScreenMonitoring(opt, dbSize.toString(), ScreenMonitorStatus.OK, ScreenMonitorKey.DB_CHECK);
             } else {
                 checkAndSaveScreenMonitoring(opt, "N/A", ScreenMonitorStatus.OK, ScreenMonitorKey.DB_CHECK);
             }

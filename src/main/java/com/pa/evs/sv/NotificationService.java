@@ -9,4 +9,6 @@ public interface NotificationService {
 	String sendSMS(String message, String phoneNumber);
 
 	void sendSMS(Map<String, Object> payload);
+
+	String sendEmails(String message, String[] emails, String subject);
 }

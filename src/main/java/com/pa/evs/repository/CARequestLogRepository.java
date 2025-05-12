@@ -83,6 +83,9 @@ public interface CARequestLogRepository extends JpaRepository<CARequestLog, Long
 	// @Query(value = "select count(id) from {h-schema}log where msn <> '' and mid is not null and topic <> 'evs/pa/local/data/send' and (rep_status = -999 or (rep_status is not null and rep_status <> 0)) and type = 'PUBLISH' and (mark_view is null or mark_view <> 1)", nativeQuery = true)
 	@Query(value = "select count(id) from {h-schema}log where mid is not null and topic <> 'evs/pa/local/data/send' and (rep_status = -999 or (rep_status is not null and rep_status <> 0)) and type = 'PUBLISH' and (mark_view is null or mark_view <> 1)", nativeQuery = true)
 	Number countAlarms();
+	
+	@Query(value = "select count(*) from {h-schema}ca_request_log where msn is not null and msn <> '' ", nativeQuery = true)
+	Number countMcuP2Couple();
 
 	@Query("SELECT COUNT(*) FROM CARequestLog WHERE status = ?1")
     Integer getCountDevicesByStatus(DeviceStatus status);
