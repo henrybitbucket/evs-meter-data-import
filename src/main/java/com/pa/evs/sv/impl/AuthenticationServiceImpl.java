@@ -3245,7 +3245,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			LOGGER.info("Opening chromedriver...");
 			ChromeOptions options = new ChromeOptions();
 			options.addArguments("--headless");
-			System.setProperty("webdriver.chrome.driver", System.getProperty("user.dir") + "/chromedriver");
+			System.setProperty("webdriver.chrome.driver", System.getProperty("user.dir") + "/chromedriver-linux64/chromedriver");
 			Map<String, Object> prefs = new HashMap<>();
 			prefs.put("profile.default_content_settings.popups", 0);
 
