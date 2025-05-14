@@ -10,6 +10,7 @@ import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.CompanyDto;
 import com.pa.evs.dto.CreateDMSAppUserDto;
 import com.pa.evs.dto.GroupUserDto;
+import com.pa.evs.dto.LocksAccessPermisisonDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.LoginResponseDto;
 import com.pa.evs.dto.PaginDto;
@@ -77,4 +78,6 @@ public interface AuthenticationService {
 	void syncAccess(String fromUsername, String toUsername);
 	List<Map<String, Object>> handleUploadDMSUsers(MultipartFile file) throws IOException;
 	void saveNewTx(UserDto dto);
+	String createAccessPermission(LocksAccessPermisisonDto dto) throws Exception;
+	void getAccessPermissions(PaginDto<LocksAccessPermisisonDto> pagin);
 }

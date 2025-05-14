@@ -28,6 +28,8 @@ public interface RestPath {
 	String UPDATECOMPANY = API + "/update/company";
 	String WHOAMI1 = API + "/whoami";
 	String CREATE_NEW_USER = API + "/user/save";
+	String CREATE_NEW_ACCESS_PERMISSION = API + "/dms/nus-access-key";
+	String GET_ACCESS_PERMISSIONS = API + "/dms/nus-access-keys";
 	
 	String GET_CA_REQUEST_LOG = API + "/ca-request-logs";
 	String CA_REQUEST_LOG = API + "/ca-request-log";

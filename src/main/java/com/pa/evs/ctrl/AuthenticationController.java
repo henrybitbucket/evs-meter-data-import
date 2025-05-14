@@ -42,6 +42,7 @@ import com.pa.evs.dto.CompanyDto;
 import com.pa.evs.dto.CreateDMSAppUserDto;
 import com.pa.evs.dto.DMSApplicationUserDto;
 import com.pa.evs.dto.GroupUserDto;
+import com.pa.evs.dto.LocksAccessPermisisonDto;
 import com.pa.evs.dto.LoginRequestDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PermissionDto;
@@ -52,6 +53,7 @@ import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.ApiException;
+import com.pa.evs.model.LocksAccessPermisison;
 import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
@@ -60,7 +62,6 @@ import com.pa.evs.utils.CsvUtils;
 import com.pa.evs.utils.SecurityUtils;
 
 import io.swagger.v3.oas.annotations.Hidden;
-import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -476,5 +477,25 @@ public class AuthenticationController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @PostMapping(value = {RestPath.CREATE_NEW_ACCESS_PERMISSION})
+    public Object createAccessPermission(@RequestBody LocksAccessPermisisonDto dto, HttpServletRequest request) {
+        try {
+        	String url = authenticationService.createAccessPermission(dto);
+        	if (StringUtils.isNotBlank(url)) {
+        		return ResponseDto.<Object>builder().success(true).response(url).build();
+        	} else {
+        		return ResponseEntity.ok(ResponseDto.builder().success(false).build());
+        	}
+		} catch (Exception e) {
+			return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+		}
+    }
+    
+    @PostMapping(value = {RestPath.GET_ACCESS_PERMISSIONS})
+    public Object getAccessPermission(@RequestBody PaginDto<LocksAccessPermisisonDto> pagin) {
+        authenticationService.getAccessPermissions(pagin);
+        return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
 }
