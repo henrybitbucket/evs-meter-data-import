@@ -58,6 +58,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.amazonaws.util.CollectionUtils;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.http.HttpRequestInitializer;
@@ -2853,6 +2854,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			List<com.google.api.services.gmail.model.Message> messageIdList = messagesResponse.getMessages();
 			List<com.google.api.services.gmail.model.Message> resultList = new ArrayList<>();
 
+			if (!CollectionUtils.isNullOrEmpty(messageIdList)) {
+				LOGGER.info("No emails found!");
+				return;
+			}
+			
 			messageIdList.forEach(id -> {
 				try {
 					com.google.api.services.gmail.model.Message fullMessage = service.users().messages().get("me", id.getId()).setFormat("full").execute();
@@ -2861,7 +2867,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					LOGGER.error("Error on get full message: messageId = " + id + "Error: " + e.getMessage());
 				}
 			});
-			processToSaveMessage(resultList);
+			if (!CollectionUtils.isNullOrEmpty(resultList)) {
+				processToSaveMessage(resultList);
+			}
 		} catch (Exception e) {
 			LOGGER.error("Error on getting list message:" + e.getMessage());
 			e.printStackTrace();
