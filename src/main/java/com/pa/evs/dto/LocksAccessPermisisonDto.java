@@ -52,4 +52,7 @@ public class LocksAccessPermisisonDto {
     @Schema(hidden = true)
     private String url;
     
+    @Schema(hidden = true)
+    private String messageId;
+    
 }

@@ -53,4 +53,7 @@ public class LocksAccessPermisison extends BaseEntity {
     
 	@Column(name = "url")
     private String url;
+	
+	@Column(name = "message_id")
+	private String messageId;
 }

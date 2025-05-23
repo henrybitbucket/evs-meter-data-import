@@ -80,4 +80,6 @@ public interface AuthenticationService {
 	void saveNewTx(UserDto dto);
 	String createAccessPermission(LocksAccessPermisisonDto dto) throws Exception;
 	void getAccessPermissions(PaginDto<LocksAccessPermisisonDto> pagin);
+	void accessEmailAndProcessEmail();
+	void processToCreateAccessPermission();
 }

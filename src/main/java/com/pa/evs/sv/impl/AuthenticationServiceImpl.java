@@ -4,11 +4,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -22,6 +26,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.BooleanUtils;
@@ -52,6 +58,17 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.google.api.client.auth.oauth2.TokenResponse;
+import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.ListMessagesResponse;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.AccessToken;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.pa.evs.TopFilter.HttpServletRequestHolder;
 import com.pa.evs.constant.Message;
 import com.pa.evs.constant.ValueConstant;
@@ -77,6 +94,7 @@ import com.pa.evs.exception.customException.DuplicateUserException;
 import com.pa.evs.model.AppCode;
 import com.pa.evs.model.Company;
 import com.pa.evs.model.DMSUserProfile;
+import com.pa.evs.model.EmailToCreateAccessPermission;
 import com.pa.evs.model.GroupUser;
 import com.pa.evs.model.LocksAccessPermisison;
 import com.pa.evs.model.Login;
@@ -101,6 +119,7 @@ import com.pa.evs.repository.AppCodeRepository;
 import com.pa.evs.repository.CompanyRepository;
 import com.pa.evs.repository.CountryCodeRepository;
 import com.pa.evs.repository.DMSUserProfileRepository;
+import com.pa.evs.repository.EmailToCreateAccessPermissionRepository;
 import com.pa.evs.repository.GroupUserRepository;
 import com.pa.evs.repository.LocksAccessPermissionRepository;
 import com.pa.evs.repository.LoginRepository;
@@ -238,18 +257,46 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 	@Autowired
 	CountryCodeRepository countryCodeRepository;
-	
+
 	@Autowired
 	LocksAccessPermissionRepository locksAccessPermissionRepository;
 
+	@Autowired
+	EmailToCreateAccessPermissionRepository emailToCreateAccessPermissionRepository;
+
 	@Value("${jwt.header}")
 	private String tokenHeader;
+
+	@Value("${evs.nus.refresh.token}")
+	private String nusRefreshToken;
+
+	@Value("${evs.nus.client.id}")
+	private String nusClientId;
+
+	@Value("${evs.nus.client.secret}")
+	private String nusClientSecret;
+
+	private Long nusAccessTokenExpiredAt = 0L;
+
+	private String nusAccessToken = null;
 
 	static final String MSG_USER_NOT_FOUND = "User not found!";
 
 	static final String EMAIL = "email";
 
 	static final String USER_PRINCIPAL_NAME = "userPrincipalName";
+
+	private static final String APPLICATION_NAME = "LOCKS RESERVATION";
+
+	private final GsonFactory gsonFactory = GsonFactory.getDefaultInstance();
+
+	private HttpTransport httpTransport = new NetHttpTransport();
+	
+	private GoogleCredentials credentials = GoogleCredentials.create(new AccessToken(nusAccessToken, null));
+	
+	private HttpRequestInitializer requestInitializer = new HttpCredentialsAdapter(credentials);
+	
+	private Gmail service = new Gmail.Builder(httpTransport, gsonFactory, requestInitializer).setApplicationName(APPLICATION_NAME).build();
 
 	static Map<String, List<Permission>> map = new HashMap<String, List<Permission>>();
 
@@ -2750,6 +2797,181 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}).start();
 	}
 
+	public void processToSaveMessage(List<com.google.api.services.gmail.model.Message> messages) {
+		for (com.google.api.services.gmail.model.Message message : messages) {
+			String messageId = message.getId();
+			String subject = message.getPayload().getHeaders().stream()
+					.filter(header -> header.getName().equalsIgnoreCase("Subject")).findFirst()
+					.map(header -> header.getValue()).orElse("No Subject");
+			String emailBody = new String(Base64.getUrlDecoder().decode(
+				    message.getPayload().getParts().get(0).getBody().getData()), StandardCharsets.UTF_8);
+			String sender = message.getPayload().getHeaders().stream()
+				    .filter(header -> header.getName().equalsIgnoreCase("From"))
+				    .findFirst()
+				    .map(header -> header.getValue())
+				    .orElse("Unknown Sender");
+
+			// Check if this message is saved
+			Optional<EmailToCreateAccessPermission> emailToProcessOpt = emailToCreateAccessPermissionRepository.findByMessageId(messageId);
+
+			if (emailToProcessOpt.isPresent() || !subject.contains("Create Key Access for NUS")) {
+				// This email is already saved or wrong format--> skip
+				continue;
+			}
+
+			EmailToCreateAccessPermission emailToProcess = new EmailToCreateAccessPermission();
+			emailToProcess.setBody(emailBody);
+			emailToProcess.setMessageId(messageId);
+			emailToProcess.setSender(sender);;
+			emailToProcess.setIsProcessed(false);
+			emailToProcess.setStatus("");
+			emailToProcess.setRetry(0);
+			emailToCreateAccessPermissionRepository.save(emailToProcess);
+		}
+	}
+	
+	@Override
+	public void accessEmailAndProcessEmail() {
+		try {
+			LOGGER.info("Getting list message");
+			String accessToken = nusAccessToken;
+			
+			// Checking for access token is expired
+			if (StringUtils.isBlank(accessToken) || System.currentTimeMillis() >= nusAccessTokenExpiredAt) {
+				// Access token is expired. Create new one from refresh token
+				accessToken = createAccessTokenFromRefreshToken();
+				if (StringUtils.isBlank(accessToken)) {
+					LOGGER.error("Error while creating new access token from refresh token");
+					return;
+				}
+				credentials = GoogleCredentials.create(new AccessToken(accessToken, null));
+				requestInitializer = new HttpCredentialsAdapter(credentials);
+				service = new Gmail.Builder(httpTransport, gsonFactory, requestInitializer).setApplicationName(APPLICATION_NAME).build();
+			}
+
+			ListMessagesResponse messagesResponse = service.users().messages().list("me").execute();
+			List<com.google.api.services.gmail.model.Message> messageIdList = messagesResponse.getMessages();
+			List<com.google.api.services.gmail.model.Message> resultList = new ArrayList<>();
+
+			messageIdList.forEach(id -> {
+				try {
+					com.google.api.services.gmail.model.Message fullMessage = service.users().messages().get("me", id.getId()).setFormat("full").execute();
+					resultList.add(fullMessage);
+				} catch (IOException e) {
+					LOGGER.error("Error on get full message: messageId = " + id + "Error: " + e.getMessage());
+				}
+			});
+			processToSaveMessage(resultList);
+		} catch (Exception e) {
+			LOGGER.error("Error on getting list message:" + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	public String createAccessTokenFromRefreshToken() {
+		try {
+			LOGGER.info("Starting create new access token from refresh token...");
+
+			GoogleRefreshTokenRequest refreshRequest = new GoogleRefreshTokenRequest(httpTransport, gsonFactory, nusRefreshToken, nusClientId, nusClientSecret);
+			TokenResponse newToken = refreshRequest.execute();
+			String newAccessToken = newToken.getAccessToken();
+			nusAccessToken = newAccessToken;
+			nusAccessTokenExpiredAt = Instant.now().plusSeconds(newToken.getExpiresInSeconds()).toEpochMilli();
+
+			return newAccessToken;
+		} catch (Exception e) {
+			LOGGER.info("Error while creating new access token from refresh token: " + e.getMessage());
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	public LocksAccessPermisisonDto extractDataFromEmail(String emailBody) {
+		LocksAccessPermisisonDto dto = new LocksAccessPermisisonDto();
+
+		String studyPodRegex = "Study Pod: (.+)";
+		String startTimeRegex = "Start Time: (.+)";
+		String endTimeRegex = "End Time: (.+)";
+		String customerNameRegex = "Customer Name: (.+)";
+		String customerEmailRegex = "Customer Email: (.+)";
+		String mobileNumberRegex = "Mobile Number\\s+(\\d+)";
+
+		// Extracting data
+		String studyPod = extractData(emailBody, studyPodRegex);
+		String startDateTime = extractData(emailBody, startTimeRegex);
+		String endDateTime = extractData(emailBody, endTimeRegex);
+		String customerName = extractData(emailBody, customerNameRegex);
+		String customerEmail = extractData(emailBody, customerEmailRegex);
+		String mobileNumber = extractData(emailBody, mobileNumberRegex);
+
+		extractDateTime(startDateTime, dto, "start");
+		extractDateTime(endDateTime, dto, "end");
+
+		dto.setEmail(customerEmail);
+		dto.setFullName(customerName);
+		dto.setPhoneNumber(mobileNumber);
+		dto.setGroupName(studyPod);
+
+		return dto;
+	}
+
+	private static String extractData(String input, String regex) {
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(input);
+		if (matcher.find()) {
+			return matcher.group(1).trim();
+		}
+		return null;
+	}
+
+	private static void extractDateTime(String dateTime, LocksAccessPermisisonDto dto, String label) {
+		ZonedDateTime zonedDateTime = ZonedDateTime.parse(dateTime);
+		int year = zonedDateTime.getYear();
+		int month = zonedDateTime.getMonthValue();
+		int day = zonedDateTime.getDayOfMonth();
+		int hour = zonedDateTime.get(ChronoField.HOUR_OF_DAY);
+		int minute = zonedDateTime.getMinute();
+
+		String dateStr = (month > 9 ? month : "0" + month) + "/" + (day > 9 ? day : "0" + day) + "/" + year;
+
+		if ("start".equalsIgnoreCase(label)) {
+			dto.setStartDate(dateStr);
+			dto.setStartHour(hour);
+			dto.setStartMinute(minute);
+		}
+		if ("end".equalsIgnoreCase(label)) {
+			dto.setEndDate(dateStr);
+			dto.setEndHour(hour);
+			dto.setEndMinute(minute);
+		}
+	}
+	
+	@Override
+	public void processToCreateAccessPermission() {
+		// We only find not processed emails and retry < 3 times
+		List<EmailToCreateAccessPermission> emailToProcessList = emailToCreateAccessPermissionRepository.findByRetryIsNullOrRetryLessThanAndIsProcessed(3, false);
+		for (EmailToCreateAccessPermission emailToProcess : emailToProcessList) {
+			LocksAccessPermisisonDto dto = extractDataFromEmail(emailToProcess.getBody());
+			dto.setMessageId(emailToProcess.getMessageId());
+			try {
+				String url = createAccessPermission(dto);
+				
+				if (StringUtils.isNotBlank(url) && url.startsWith("https://")) {
+					// Create access permission successfully --> update status and processed
+					emailToProcess.setIsProcessed(true);
+					emailToProcess.setStatus("Access permission created successfully");
+					emailToCreateAccessPermissionRepository.save(emailToProcess);
+				}
+			} catch (Exception e) {
+				// Create access permission failed --> update status and retry
+				LOGGER.error("ERROR on process email to create access permission: " + e.getMessage());
+				emailToProcess.setRetry(emailToProcess.getRetry() != null ? emailToProcess.getRetry() + 1 : 1);
+				emailToProcess.setStatus(emailToProcess.getStatus() + "\n" + "ERROR: " + e.getMessage());
+				emailToCreateAccessPermissionRepository.save(emailToProcess);
+			}
+		}
+	}
+
 	@Override
 	public String createAccessPermission(LocksAccessPermisisonDto dto) throws Exception {
 		String url = null;
@@ -2766,7 +2988,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				if (!checkIfUserExists(dto.getPhoneNumber()) && !createLockUserViaUI(dto)) {
 					throw new Exception("Error while creating new user");
 				}
-				
+
 				// Check if access permission is not exists then create new otherwise link it to user and group
 				if (!checkIfAccessPermissionExistsAndLinkToUserAndGroup(dto)) {
 					CreateAccessPermissionDto accessPermissionDto = new CreateAccessPermissionDto();
@@ -2779,14 +3001,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					accessPermissionDto.setEndHour(dto.getEndHour());
 					accessPermissionDto.setEndMinute(dto.getEndMinute());
 					createAccessPermissionViaUI(accessPermissionDto);
-					
+
 					// Checking again for new access permission
 					if (!checkIfAccessPermissionExistsAndLinkToUserAndGroup(dto)) {
 						throw new Exception("Error while checking and creating access permission");
 					} else {
 						LOGGER.info("Finish create access key: Success!");
 						url = driver.getCurrentUrl();
-						
+
 						LocksAccessPermisison lap = new LocksAccessPermisison();
 						lap.setEmail(dto.getEmail());
 						lap.setEndDate(dto.getEndDate());
@@ -2799,13 +3021,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 						lap.setStartDate(dto.getStartDate());
 						lap.setStartHour(dto.getStartHour());
 						lap.setStartMinute(dto.getStartMinute());
-						lap.setUrl(url);;
+						lap.setUrl(url);
+						lap.setMessageId(dto.getMessageId());
 						locksAccessPermissionRepository.save(lap);
 					}
 				} else {
 					LOGGER.info("Finish create access key: Success!");
 					url = driver.getCurrentUrl();
-					
+
 					LocksAccessPermisison lap = new LocksAccessPermisison();
 					lap.setEmail(dto.getEmail());
 					lap.setEndDate(dto.getEndDate());
@@ -2819,6 +3042,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					lap.setStartHour(dto.getStartHour());
 					lap.setStartMinute(dto.getStartMinute());
 					lap.setUrl(url);
+					lap.setMessageId(dto.getMessageId());
 					locksAccessPermissionRepository.save(lap);
 				}
 			}
@@ -2830,7 +3054,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			throw new Exception("Error while creating access key: " + e.getMessage());
 		}
 	}
-	
+
 	public boolean isValidInputData(LocksAccessPermisisonDto dto) {
 		return (isValidDate(dto.getStartDate()) && isValidDate(dto.getEndDate()) && dto.getStartHour() >= 0
 				&& dto.getStartHour() <= 23 && dto.getEndHour() >= 0 && dto.getEndHour() <= 23
@@ -2869,7 +3093,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		LOGGER.info("Falied to login to locks server...");
 		return false;
 	}
-	
+
 	public boolean checkIfGroupExists(String podName) throws Exception {
 		LOGGER.info("Checking if group is exists - " + podName);
 		String groupUrl = "https://locks.evs.com.sg/IntegCore/Default.aspx#ViewID=Group_ListView&ObjectClassName=LNLi.Module.BusinessObjects.Group";
@@ -2882,7 +3106,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				searchGroupNameEle.sendKeys(podName);
 				searchGroupNameEle.sendKeys(Keys.ENTER);
 				TimeUnit.SECONDS.sleep(2);
-				
+
 				List<WebElement> tdGroupElement = driver.findElements(By.xpath("//*[contains(@id, 'DXDataRow')]"));
 				if (tdGroupElement.isEmpty()) {
 					throw new Exception("There's no group with name: " + podName);
@@ -2906,32 +3130,32 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		String fullName = "nus " + dto.getFullName();
 		String username = dto.getPhoneNumber();
 		String password = generatePassword(dto.getFullName(), dto.getPhoneNumber());
-		
+
 		String homeUrl = "https://locks.evs.com.sg/IntegCore/Default.aspx#ViewID=Device_ListView&ObjectClassName=LNLi.Module.BusinessObjects.Device";
 		try {
 			driver.get(homeUrl);
 			TimeUnit.SECONDS.sleep(5);
-			
+
 			if (driver.getCurrentUrl().contains(homeUrl)) {
 				WebElement createUserEle = driver.findElement(By.id("Vertical_mainMenu_Menu_DXI0_T"));
 				if (createUserEle != null) {
 					createUserEle.click();
 					TimeUnit.SECONDS.sleep(2);
-					
+
 					WebElement countrySelectEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviCountry_Edit_find_Edit_B0Img')]"));
-					
+
 					if (countrySelectEle != null) {
 						countrySelectEle.click();
 						TimeUnit.SECONDS.sleep(2);
-						
+
 						WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 						wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("iframe")));
 						WebElement iframe = driver.findElement(By.tagName("iframe"));
 						driver.switchTo().frame(iframe);
-						
+
 						WebElement textToSearchEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_a0_Ed_I')]"));
 						WebElement searchButtonEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_a0_Ed_B1Img')]"));
-						
+
 						textToSearchEle.sendKeys("Singapore");
 						searchButtonEle.click();
 						TimeUnit.SECONDS.sleep(2);
@@ -2947,7 +3171,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 							mobileNumbersEle.sendKeys(dto.getPhoneNumber());
 						}
 					}
-					
+
 					WebElement fullNameEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviPersonName_Edit_I')]"));
 					WebElement userNameEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviUserName_Edit_I')]"));
 					WebElement passwordEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviPassword_Edit_I')]"));
@@ -2956,28 +3180,28 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					WebElement remarksEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviRemarks_Edit_I')]"));
 					WebElement multipleDevicesCheckboxEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviAllowMultipleDevices_Edit_S_D')]"));
 					WebElement saveAndCloseEle = driver.findElement(By.xpath("//*[contains(@id, 'Vertical_mainMenu_Menu_DXI1_T')]"));
-					
+
 					if (fullNameEle != null && userNameEle != null && passwordEle != null && confirmPasswordEle != null && saveAndCloseEle != null) {
 						fullNameEle.sendKeys(fullName);
 						userNameEle.sendKeys(username);
 						passwordEle.sendKeys(password);
 						confirmPasswordEle.sendKeys(password);
-						
+
 						if (multipleDevicesCheckboxEle != null) {
 							multipleDevicesCheckboxEle.click();
 						}
-						
+
 						if (emailEle != null && StringUtils.isNotBlank(dto.getEmail())) {
 							emailEle.sendKeys(dto.getEmail());
 						}
-						
+
 						if (remarksEle != null) {
 							remarksEle.sendKeys(username + "/" + password);
 						}
-						
+
 						saveAndCloseEle.click();
 						TimeUnit.SECONDS.sleep(2);
-						
+
 						WebElement deleteButtonEle = driver.findElement(By.id("Vertical_mainMenu_Menu_DXI2_T"));
 						if (deleteButtonEle != null && !deleteButtonEle.getAttribute("class").contains("dxm-disabled")) {
 							//Click on refresh button to see groups and permissions
@@ -3003,23 +3227,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		LOGGER.error("Failed to create user");
 		return false;
 	}
-	
+
 	public boolean checkIfUserExists(String phoneNumber) throws Exception {
 		LOGGER.info("Checking if user exists...");
 		String userListUrl = "https://locks.evs.com.sg/IntegCore/Default.aspx#ViewID=Device_ListView&ObjectClassName=LNLi.Module.BusinessObjects.Device";
 		try {
 			driver.get(userListUrl);
 			TimeUnit.SECONDS.sleep(5);
-			
+
 			if (driver.getCurrentUrl().contains(userListUrl)) {
 				WebElement mobileSearchEle = driver.findElement(By.xpath("//*[contains(@id, 'DXFREditorcol14_I')]"));
 				if (mobileSearchEle != null) {
 					mobileSearchEle.sendKeys(phoneNumber);
 					mobileSearchEle.sendKeys(Keys.ENTER);
 					TimeUnit.SECONDS.sleep(2);
-					
+
 					List<WebElement> tdElements = driver.findElements(By.xpath("//*[contains(@id, 'DXDataRow')]"));
-					
+
 					if (tdElements.isEmpty()) {
 						LOGGER.info("Finish checking exists user. User doesn't exist");
 						return false;
@@ -3038,14 +3262,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		LOGGER.error("Failed to check exists user");
 		return false;
 	}
-	
+
 	public boolean checkIfAccessPermissionExistsAndLinkToUserAndGroup(LocksAccessPermisisonDto dto) throws Exception {
 		LOGGER.info("Checking access permission and link to user and group...");
 		String accessPermissionsListUrl = "https://locks.evs.com.sg/IntegCore/Default.aspx#ViewID=BLEWorkOrder_ListView&ObjectClassName=LNLi.Module.BusinessObjects.BLEWorkOrder";
 		try {
 			driver.get(accessPermissionsListUrl);
 			TimeUnit.SECONDS.sleep(5);
-			
+
 			if (driver.getCurrentUrl().contains(accessPermissionsListUrl)) {
 				WebElement startDateSearchEle = driver.findElement(By.xpath("//*[contains(@id, 'DXFREditorcol21_I')]"));
 				WebElement endDateSearchEle = driver.findElement(By.xpath("//*[contains(@id, 'DXFREditorcol6_I')]"));
@@ -3053,7 +3277,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				WebElement startMinuteSearchEle = driver.findElement(By.xpath("//*[contains(@id, 'DXFREditorcol23_I')]"));
 				WebElement endHourSearchEle = driver.findElement(By.xpath("//*[contains(@id, 'DXFREditorcol7_I')]"));
 				WebElement endMinuteSearchEle = driver.findElement(By.xpath("//*[contains(@id, 'DXFREditorcol8_I')]"));
-				
+
 				if (startDateSearchEle != null && endDateSearchEle != null && startHourSearchEle != null && startMinuteSearchEle != null && endHourSearchEle != null && endMinuteSearchEle != null) {
 					startDateSearchEle.sendKeys(dto.getStartDate());
 					endDateSearchEle.sendKeys(dto.getEndDate());
@@ -3062,38 +3286,38 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					endHourSearchEle.sendKeys(dto.getEndHour() < 10 ? "0" + dto.getEndHour().toString() : dto.getEndHour().toString());
 					endMinuteSearchEle.sendKeys(dto.getEndMinute() < 10 ? "0" + dto.getEndMinute().toString() : dto.getEndMinute().toString());
 					endMinuteSearchEle.sendKeys(Keys.ENTER);
-					
+
 					TimeUnit.SECONDS.sleep(2);
-					
+
 					List<WebElement> tdElements = driver.findElements(By.xpath("//*[contains(@id, 'DXDataRow')]"));
-					
+
 					if (tdElements.isEmpty()) {
 						return false;
 					}
 					if (tdElements.size() > 1) {
 						throw new Exception("Error while checking access permission: Input start date, end date, start hour, start minute, end hour and end minute has more than 1 access permission");
 					}
-					
+
 					LOGGER.info("Access permission exists. Go to link this access to user and group");
-					
+
 					WebElement selectedAccessPermissionEle = tdElements.get(0);
 					selectedAccessPermissionEle.click();
 					TimeUnit.SECONDS.sleep(2);
-					
+
 					// Link this access permission to user
 					LOGGER.info("Linking access permission to user...");
 					WebElement appUserTabEle = driver.findElement(By.xpath("//*[contains(@id, 'MainLayoutView_xaf_l136_pg_T1')]"));
 					appUserTabEle.click();
-					
+
 					WebElement linkUserButtonEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviDevices_ObjectsCreation_Menu_DXI0_T')]"));
 					linkUserButtonEle.click();
 					TimeUnit.SECONDS.sleep(2);
-					
+
 					WebDriverWait waitForUserModal = new WebDriverWait(driver, Duration.ofSeconds(10));
 					waitForUserModal.until(ExpectedConditions.presenceOfElementLocated(By.tagName("iframe")));
 					WebElement userModalIframe = driver.findElement(By.tagName("iframe"));
 					driver.switchTo().frame(userModalIframe);
-					
+
 					WebElement searchUserEle = driver.findElement(By.xpath("//*[contains(@id, 'ITCNT0_xaf_a0_Ed_I')]"));
 					searchUserEle.sendKeys("nus " + dto.getFullName());
 					searchUserEle.sendKeys(Keys.ENTER);
@@ -3103,21 +3327,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					TimeUnit.SECONDS.sleep(2);
 					LOGGER.info("Linking access permission to user: Success!");
 					driver.switchTo().defaultContent();
-					
+
 					// Link this access to group
 					LOGGER.info("Linking access permission to group...");
 					WebElement groupTabEle = driver.findElement(By.xpath("//*[contains(@id, 'MainLayoutView_xaf_l136_pg_T2')]"));
 					groupTabEle.click();
-					
+
 					WebElement linkGroupButtonEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviGroup_ObjectsCreation_Menu_DXI0_T')]"));
 					linkGroupButtonEle.click();
 					TimeUnit.SECONDS.sleep(2);
-					
+
 					WebDriverWait waitForGroupModal = new WebDriverWait(driver, Duration.ofSeconds(10));
 					waitForGroupModal.until(ExpectedConditions.presenceOfElementLocated(By.tagName("iframe")));
 					WebElement groupModalIframe = driver.findElement(By.tagName("iframe"));
 					driver.switchTo().frame(groupModalIframe);
-					
+
 					WebElement searchGroupEle = driver.findElement(By.xpath("//*[contains(@id, 'ITCNT0_xaf_a0_Ed_I')]"));
 					searchGroupEle.sendKeys(dto.getGroupName());
 					searchGroupEle.sendKeys(Keys.ENTER);
@@ -3127,7 +3351,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					TimeUnit.SECONDS.sleep(2);
 					LOGGER.info("Linking access permission to group: Success!");
 					driver.switchTo().defaultContent();
-					
+
 					LOGGER.info("Finish link access permisison to user and group");
 					return true;
 				}
@@ -3138,23 +3362,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		}
 		return false;
 	}
-	
-	public static boolean isValidDate(String dateStr) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-        try {
-            LocalDate.parse(dateStr, formatter);
-            return true;
-        } catch (DateTimeParseException e) {
-            return false;
-        }
-    }
 
-    public static String generatePassword(String name, String phoneNumber) {
-        String lastFourDigits = phoneNumber.substring(phoneNumber.length() - 4); // Get last 4 digits
-        String firstThreeChars = name.substring(0, 3); // Get first 3 characters of the name
-        return lastFourDigits + firstThreeChars + "!"; // Concatenate and add "!"
-    }
-	
+	public static boolean isValidDate(String dateStr) {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+		try {
+			LocalDate.parse(dateStr, formatter);
+			return true;
+		} catch (DateTimeParseException e) {
+			return false;
+		}
+	}
+
+	public static String generatePassword(String name, String phoneNumber) {
+		String lastFourDigits = phoneNumber.substring(phoneNumber.length() - 4); // Get last 4 digits
+		String firstThreeChars = name.substring(0, 3); // Get first 3 characters of the name
+		return lastFourDigits + firstThreeChars + "!"; // Concatenate and add "!"
+	}
+
 	public boolean createAccessPermissionViaUI(CreateAccessPermissionDto dto) throws Exception {
 		if (!isValidDate(dto.getStartDate()) || !isValidDate(dto.getEndDate())) {
 			throw new Exception(
@@ -3170,7 +3394,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 				if (createAccessPermissionEle != null) {
 					createAccessPermissionEle.click();
 					TimeUnit.SECONDS.sleep(2);
-					
+
 					WebElement nameEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviName_Edit_I')]"));
 					WebElement startDateEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviStartDate_Edit_I')]"));
 					WebElement endDateEle = driver.findElement(By.xpath("//*[contains(@id, 'xaf_dviEndDate_Edit_I')]"));
@@ -3265,13 +3489,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 		LOGGER.error("Failed to opening chromedriver");
 		return false;
 	}
-	
-    public void closePhantomJsBr() {
-        if (driver != null) {
-        	LOGGER.info("Goodbye!");
-            driver.close();
-        }
-    }
+
+	public void closePhantomJsBr() {
+		if (driver != null) {
+			LOGGER.info("Goodbye!");
+			driver.close();
+		}
+	}
 
 	@Override
 	public void getAccessPermissions(PaginDto<LocksAccessPermisisonDto> pagin) {
@@ -3339,7 +3563,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 					.startMinute(lap.getStartMinute())
 					.url(lap.getUrl())
 					.build();
-			
+
 			pagin.getResults().add(dto);
 		});
 	}

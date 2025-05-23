@@ -30,6 +30,7 @@ public interface RestPath {
 	String CREATE_NEW_USER = API + "/user/save";
 	String CREATE_NEW_ACCESS_PERMISSION = API + "/dms/nus-access-key";
 	String GET_ACCESS_PERMISSIONS = API + "/dms/nus-access-keys";
+	String CREATE_NEW_ACCESS_PERMISSION_FROM_EMAIL = API + "/dms/nus-access-keys-email";
 	
 	String GET_CA_REQUEST_LOG = API + "/ca-request-logs";
 	String CA_REQUEST_LOG = API + "/ca-request-log";

@@ -480,6 +480,7 @@ public class AuthenticationController {
     }
     
     @PostMapping(value = {RestPath.CREATE_NEW_ACCESS_PERMISSION})
+    @Hidden
     public Object createAccessPermission(@RequestBody LocksAccessPermisisonDto dto, HttpServletRequest request) {
         try {
         	String url = authenticationService.createAccessPermission(dto);
@@ -497,5 +498,16 @@ public class AuthenticationController {
     public Object getAccessPermission(@RequestBody PaginDto<LocksAccessPermisisonDto> pagin) {
         authenticationService.getAccessPermissions(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
+    }
+    
+    @PostMapping(value = {RestPath.CREATE_NEW_ACCESS_PERMISSION_FROM_EMAIL})
+    @Hidden
+    public Object createAccessPermissionFromEmail(HttpServletRequest request) {
+        try {
+        	authenticationService.accessEmailAndProcessEmail();
+        	return ResponseDto.<Object>builder().success(true).build();
+		} catch (Exception e) {
+			return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+		}
     }
 }
