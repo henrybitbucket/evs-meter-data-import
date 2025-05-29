@@ -1066,6 +1066,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             
             Boolean queryMeterDataYes = BooleanUtils.toBoolean((String) options.get("queryMeterDataYes"));
             Boolean queryMeterDataNo = BooleanUtils.toBoolean((String) options.get("queryMeterDataNo"));
+            boolean hasLogError = "true".equalsIgnoreCase(options.get("hasLogError") + "");
             
             Boolean onboardingDate = BooleanUtils.toBoolean((String) options.get("onboardingDate"));
             Boolean allDate = BooleanUtils.toBoolean((String) options.get("queryAllDate"));
@@ -1185,6 +1186,16 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
                     } else if (fromDate != null && toDate != null) {
                     	sqlCommonBuilder.append(" AND (not exists (select 1 from Log mL where mL.uid = ca.uid and mL.timeMDT > 0 and mL.timeMDT >= " + fromDate + " and mL.timeMDT <= " + toDate + ")) ");
                     }                	
+                }
+                
+                if (hasLogError) {
+                	if (fromDate != null && toDate == null) {
+                        sqlCommonBuilder.append(" AND (exists (select 1 from Log mL where mL.uid = ca.uid and mL.status is not null and mL.status <> 0 and EXTRACT(EPOCH FROM mL.createDate) * 1000 >= " + fromDate + ")) ");
+                    } else if (fromDate == null && toDate != null) {
+                    	sqlCommonBuilder.append(" AND (exists (select 1 from Log mL where mL.uid = ca.uid and mL.status is not null and mL.status <> 0 and EXTRACT(EPOCH FROM mL.createDate) * 1000 <= " + toDate + ")) ");
+                    } else if (fromDate != null && toDate != null) {
+                    	sqlCommonBuilder.append(" AND (exists (select 1 from Log mL where mL.uid = ca.uid and mL.status is not null and mL.status <> 0 and EXTRACT(EPOCH FROM mL.createDate) * 1000 >= " + fromDate + " and EXTRACT(EPOCH FROM mL.createDate) * 1000 <= " + toDate + ")) ");
+                    }
                 }
 
             }

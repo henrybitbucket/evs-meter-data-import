@@ -68,6 +68,8 @@ public class LogServiceImpl implements LogService {
         Number repStatus = (Number) map.get("repStatus");
         String rlsBatchUuid = (String) map.get("rlsBatchUuid");
         
+        boolean isError = "true".equalsIgnoreCase(map.get("isError") + "");
+        
         StringBuilder sqlBuilder = new StringBuilder(piId != null ? " Select l, pl, cl " : " Select l, true, cl ");
         
         StringBuilder sqlCountBuilder = new StringBuilder("SELECT count(l.id) ");
@@ -100,6 +102,9 @@ public class LogServiceImpl implements LogService {
         if (StringUtils.isNotBlank(topic)) {
         	sqlCommonBuilder.append(" AND l.topic = '" + topic + "'");
         } 
+        if (isError) {
+        	sqlCommonBuilder.append(" AND l.status <> 0");
+        }
         if (StringUtils.isNotBlank(ftpStatus)) {
         	sqlCommonBuilder.append(" AND pl.ftpResStatus = '" + ftpStatus + "'");
         }         
