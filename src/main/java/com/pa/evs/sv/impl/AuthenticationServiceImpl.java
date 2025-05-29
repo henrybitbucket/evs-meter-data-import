@@ -2854,7 +2854,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 			List<com.google.api.services.gmail.model.Message> messageIdList = messagesResponse.getMessages();
 			List<com.google.api.services.gmail.model.Message> resultList = new ArrayList<>();
 
-			if (!CollectionUtils.isNullOrEmpty(messageIdList)) {
+			if (CollectionUtils.isNullOrEmpty(messageIdList)) {
 				LOGGER.info("No emails found!");
 				return;
 			}

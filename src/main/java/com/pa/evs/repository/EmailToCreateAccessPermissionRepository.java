@@ -19,7 +19,7 @@ public interface EmailToCreateAccessPermissionRepository extends JpaRepository<E
 
 	Optional<EmailToCreateAccessPermission> findByMessageId(String messageId);
 
-	@Query("SELECT e FROM EmailToCreateAccessPermission e WHERE (e.retry IS NULL OR e.retry < :retryTimes) AND e.isProcessed = :isProcessed")
+	@Query(value = "SELECT * FROM {h-schema}email_create_access_permission e WHERE (retry IS NULL OR retry < :retryTimes) AND is_processed = :isProcessed limit 1", nativeQuery = true)
 	List<EmailToCreateAccessPermission> findByRetryIsNullOrRetryLessThanAndIsProcessed(@Param("retryTimes") int retryTimes, @Param("isProcessed") boolean isProcessed);
 
 }
