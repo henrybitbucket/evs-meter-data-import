@@ -1898,6 +1898,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 									caLog.setSendMDTToPi(sendMDTToPi); // default not send
 								}
 								
+								if (caLog.getEnrollmentDatetime() == null) {
+									caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
+								}
 								caLog.setUid(uuid);
 								caLog.setSn(details[0]);
 								caLog.setCid(details[2]);
