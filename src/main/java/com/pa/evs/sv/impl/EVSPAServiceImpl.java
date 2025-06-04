@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -235,22 +238,152 @@ public class EVSPAServiceImpl implements EVSPAService {
 	
 	private AmazonS3Client s3Client = null;
 	
+//	@Override
+//	public Object uploadDeviceCsr(MultipartFile file, Long vendor) {
+//		
+//		// validate
+//		Set<String> snSet = new LinkedHashSet<>();
+//		Set<String> uidSet = new LinkedHashSet<>();
+//		Set<String> cidSet = new LinkedHashSet<>();
+//		List<Map<String, Object>> reads = new ArrayList<>();
+//		try (ZipInputStream zipFile = new ZipInputStream(file.getInputStream())) {
+//		    ZipEntry entry = null;
+//	        while ((entry = zipFile.getNextEntry()) != null) {
+//	            String currentName = entry.getName();
+//	            if (currentName.endsWith(".csv")) {
+//	            	String[] lines = null;
+//	            	try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+//	            		IOUtils.copy(zipFile, bos);
+//						lines = new String(bos.toByteArray(), StandardCharsets.UTF_8).split("\r*\n");
+//						if (StringUtils.isBlank(lines[0]) || !lines[0].toUpperCase().startsWith("SN,UUID,CID")) {
+//							LOG.info("Headers should start with: SN UUID CID");
+//							throw new RuntimeException("Headers should start with: SN UUID CID");
+//						}
+//	            	}
+//					for (int i = 1; i < lines.length; i++) {
+//						String[] details = lines[i].split(" *, *");
+//						if (details.length > 2) {
+//							
+//							String sn = details[0];
+//							String uid = details[1];
+//							String cid = details[2];
+//							Map<String, Object> map = SimpleMap.init("sn", sn)
+//									.more("uid", uid)
+//									.more("cid", cid);
+//							reads.add(map);
+//							
+//							String message = (String) map.computeIfAbsent("message", k -> "");
+//							
+//							if (StringUtils.isBlank(uid) || StringUtils.isBlank(details[0]) || StringUtils.isBlank(details[2])) {
+//								LOG.info("UUID, SN, CID are required!");
+//								message += "UUID, SN, CID are required!\n";
+//							}
+//							
+//							if (snSet.contains(sn)) {
+//								message += "Duplicate SN\n";
+//							}
+//							if (uidSet.contains(uid)) {
+//								message += "Duplicate UUID\n";
+//							}
+//							if (cidSet.contains(cid)) {
+//								message += "Duplicate CID\n";
+//							}
+//							snSet.add(sn);
+//							uidSet.add(uid);
+//							cidSet.add(cid);
+//							map.put("message", message);
+//							
+//						}
+//					}
+//	            }
+//	        }
+//		} catch (Exception e) {
+//			LOG.error(e.getMessage(), e);
+//			throw new RuntimeException(e.getMessage());
+//		}
+//		
+//		Set<String> existSn = caRequestLogRepository.findSnBySnIn(snSet);
+//		Set<String> existUid = caRequestLogRepository.findUidByUidIn(uidSet);
+//		Set<String> existCid = caRequestLogRepository.findCidByCidIn(cidSet);
+//		
+//		boolean hasError = false;
+//		for (Map<String, Object> item : reads) {
+//			String sn = (String) item.get("sn");
+//			String uid = (String) item.get("uid");
+//			String cid = (String) item.get("cid");
+//			String message = (String) item.computeIfAbsent("message", k -> "");
+//			if (existSn.contains(sn)) {
+//				message = message + "SN exists!\n"; 
+//			}
+//			if (existUid.contains(uid)) {
+//				message = message + "UUID exists!\n"; 
+//			}
+//			if (existCid.contains(cid)) {
+//				message = message + "CID exists!\n"; 
+//			}
+//			item.put("message", message);
+//			hasError = hasError || StringUtils.isNotBlank(message);
+//		}
+//		
+//		if (hasError) {
+//			return reads;
+//		}
+//		
+//		// end validate
+//		
+//		File f = new File(evsDataFolder + "/" + vendor + "-" + file.getOriginalFilename());
+//		try {
+//			Files.deleteIfExists(f.toPath());
+//			Files.createFile(f.toPath());
+//			IOUtils.copy(file.getInputStream(), new FileOutputStream(f));
+//		} catch (IOException e) {
+//			LOG.error(e.getMessage(), e);
+//		}
+//		
+//		return null;
+//	}
+	
 	@Override
 	public Object uploadDeviceCsr(MultipartFile file, Long vendor) {
 		
-		// validate
-		Set<String> snSet = new LinkedHashSet<>();
-		Set<String> uidSet = new LinkedHashSet<>();
-		Set<String> cidSet = new LinkedHashSet<>();
-		List<Map<String, Object>> reads = new ArrayList<>();
-		try (ZipInputStream zipFile = new ZipInputStream(file.getInputStream())) {
-		    ZipEntry entry = null;
-	        while ((entry = zipFile.getNextEntry()) != null) {
-	            String currentName = entry.getName();
-	            if (currentName.endsWith(".csv")) {
+		try {
+			Set<String> snSet = new LinkedHashSet<>();
+			Set<String> uidSet = new LinkedHashSet<>();
+			Set<String> cidSet = new LinkedHashSet<>();
+			List<Map<String, Object>> reads = new ArrayList<>();
+			
+			List<String> vendors = vendorRepository.findAll().stream().map(v -> v.getName()).toList();
+			Vendor vendorD = null;
+			
+			if (vendor != null) {
+				Optional<Vendor> vendorOpt = vendorRepository.findById(vendor);
+				if (vendorOpt.isPresent()) {
+					vendorD = vendorOpt.get();
+				} else {
+					LOG.error("Vendor not found!");
+					throw new RuntimeException("Vendor not found!");
+				}
+			}
+			
+			File tempFile = File.createTempFile("temp", ".zip");
+			Path tempDir = Files.createTempDirectory("temp-data");
+			
+			file.transferTo(tempFile);
+			ZipUtils.unzip(tempFile.getAbsolutePath(), tempDir.toString());
+
+			File f = new File(tempDir.toString());
+			if (f.listFiles() == null) {
+				throw new RuntimeException("File is empty!");
+			}
+			
+			// First, process on CSV file
+			for (File fileF : f.listFiles()) {
+				String currentName = fileF.getName();
+				
+				if (currentName.endsWith(".csv")) {
 	            	String[] lines = null;
 	            	try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-	            		IOUtils.copy(zipFile, bos);
+	            		IOUtils.copy(new FileInputStream(fileF.getAbsolutePath()), bos);
 						lines = new String(bos.toByteArray(), StandardCharsets.UTF_8).split("\r*\n");
 						if (StringUtils.isBlank(lines[0]) || !lines[0].toUpperCase().startsWith("SN,UUID,CID")) {
 							LOG.info("Headers should start with: SN UUID CID");
@@ -264,18 +397,24 @@ public class EVSPAServiceImpl implements EVSPAService {
 							String sn = details[0];
 							String uid = details[1];
 							String cid = details[2];
+							String vendorF = details[4];
+							
+							if (vendorD != null) {
+								vendorF = vendorD.getName();
+							}
+							
 							Map<String, Object> map = SimpleMap.init("sn", sn)
 									.more("uid", uid)
-									.more("cid", cid);
-							reads.add(map);
+									.more("cid", cid)
+									.more("vendor", vendorF);
 							
+							reads.add(map);
 							String message = (String) map.computeIfAbsent("message", k -> "");
 							
 							if (StringUtils.isBlank(uid) || StringUtils.isBlank(details[0]) || StringUtils.isBlank(details[2])) {
 								LOG.info("UUID, SN, CID are required!");
 								message += "UUID, SN, CID are required!\n";
 							}
-							
 							if (snSet.contains(sn)) {
 								message += "Duplicate SN\n";
 							}
@@ -285,59 +424,161 @@ public class EVSPAServiceImpl implements EVSPAService {
 							if (cidSet.contains(cid)) {
 								message += "Duplicate CID\n";
 							}
+							if (StringUtils.isBlank(vendorF)) {
+								message += "Vendor is empty\n";
+							} else if (!vendors.contains(vendorF)) {
+								message += "Vendor doesn't exists\n";
+							}
+							
 							snSet.add(sn);
 							uidSet.add(uid);
 							cidSet.add(cid);
 							map.put("message", message);
-							
 						}
 					}
 	            }
-	        }
+			}
+			
+			// Then process on CSR files
+			for (File fileF : f.listFiles()) {
+				String currentName = fileF.getName();
+				
+				if (currentName.endsWith(".csr")) {
+	            	String uid = currentName.replaceAll("\\.csr$", "").replaceAll("(^[0-9]+-)", "");
+					
+					// Check if uid is in CSV file --> update for signature and key type. If not in CSV file --> create new line
+					Boolean exists = false;
+					for (Map<String, Object> map : reads) {
+					    if (uid.equals(map.get("uid"))) {
+					        // uid is in CSV file --> update for signature and key type
+					    	map.put("signature", RSAUtil.getSignatureAlgorithm(fileF.getAbsolutePath()));
+					    	map.put("deviceKey", RSAUtil.getKeyType(fileF.getAbsolutePath()));
+					    	exists = true;
+					        break;
+					    }
+					}
+					
+					// uid not in CSV file --> create new line
+					if (exists == false) {
+						Map<String, Object> map = SimpleMap.init("sn", "")
+								.more("uid", uid)
+								.more("cid", "");
+						
+						if (vendorD == null) {
+							map.put("message", "Vendor is empty\n");
+						} else {
+							map.put("vendor", vendorD.getName());
+						}
+						uidSet.add(uid);
+						reads.add(map);
+					}
+				}
+			}
+			
+			Set<String> existSn = caRequestLogRepository.findSnBySnIn(snSet);
+			Set<String> existUid = caRequestLogRepository.findUidByUidIn(uidSet);
+			Set<String> existCid = caRequestLogRepository.findCidByCidIn(cidSet);
+			
+			for (Map<String, Object> item : reads) {
+				String sn = (String) item.get("sn");
+				String uid = (String) item.get("uid");
+				String cid = (String) item.get("cid");
+				String message = (String) item.computeIfAbsent("message", k -> "");
+				if (existSn.contains(sn)) {
+					message = message + "SN exists!\n"; 
+				}
+				if (existUid.contains(uid)) {
+					message = message + "UUID exists!\n"; 
+				}
+				if (existCid.contains(cid)) {
+					message = message + "CID exists!\n"; 
+				}
+				item.put("message", message);
+			}
+			
+			return processCsr(reads);
 		} catch (Exception e) {
-			LOG.error(e.getMessage(), e);
 			throw new RuntimeException(e.getMessage());
 		}
+	}
+	
+	public List<Map<String, Object>> processCsr(List<Map<String, Object>> reads ) {
 		
-		Set<String> existSn = caRequestLogRepository.findSnBySnIn(snSet);
-		Set<String> existUid = caRequestLogRepository.findUidByUidIn(uidSet);
-		Set<String> existCid = caRequestLogRepository.findCidByCidIn(cidSet);
-		
-		boolean hasError = false;
 		for (Map<String, Object> item : reads) {
-			String sn = (String) item.get("sn");
-			String uid = (String) item.get("uid");
-			String cid = (String) item.get("cid");
 			String message = (String) item.computeIfAbsent("message", k -> "");
-			if (existSn.contains(sn)) {
-				message = message + "SN exists!\n"; 
+			
+			if (StringUtils.isBlank(message)) {
+				String sn = (String) item.get("sn");
+				String uid = (String) item.get("uid");
+				String cid = (String) item.get("cid");
+				String vendorStr = (String) item.get("vendor");
+				String signature = (String) item.get("signature");
+				String deviceKey = (String) item.get("deviceKey");
+
+				try {
+					Vendor vendor = vendorRepository.findByName(vendorStr);
+					Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uid);
+					CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
+					
+					if (caLog.getStatus() == null) {
+						caLog.setStatus(DeviceStatus.OFFLINE);	
+					}
+					if (caLog.getType() == null) {
+						caLog.setType(DeviceType.NOT_COUPLED);	
+					}
+					
+					if (caLog.getId() == null) {
+						
+						int sendMDTToPi = 2; // default not send
+						try {
+							if ("true".equalsIgnoreCase(AppProps.get("SEND_MDT_TO_PI", "false"))) {
+								sendMDTToPi = 1;
+							}
+						} catch (Exception e) {
+							//
+						}
+						if (sendMDTToPi != 1 && sendMDTToPi != 2) {
+							sendMDTToPi = 2;
+						}
+						caLog.setSendMDTToPi(sendMDTToPi); // default not send
+					}
+					
+					if (caLog.getEnrollmentDatetime() == null) {
+						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
+					}
+					
+					if (StringUtils.isNotBlank(uid)) {
+						caLog.setUid(uid);
+					}
+					if (StringUtils.isNotBlank(sn)) {
+						caLog.setSn(sn);
+					}
+					if (StringUtils.isNotBlank(cid)) {
+						caLog.setCid(cid);
+					}
+					if (StringUtils.isNotBlank(signature)) {
+						caLog.setDeviceCsrSignatureAlgorithm(signature);
+					}
+					if (StringUtils.isNotBlank(deviceKey)) {
+						caLog.setDeviceKeyType(deviceKey);
+					}
+					
+					caLog.setRequireRefresh(false);
+					caLog.setVendor(vendor);
+					caRequestLogRepository.save(caLog);
+					caRequestLogRepository.flush();
+					if (StringUtils.isNotBlank(caLog.getMsn())) {
+						AppProps.getContext().getBean(CaRequestLogService.class).updateMMSMeter(caLog, caLog.getMsn());
+					}
+					caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
+				} catch (Exception e) {
+					message = message + e.getMessage() + "\n"; 
+					item.put("message", message);
+				}	
 			}
-			if (existUid.contains(uid)) {
-				message = message + "UUID exists!\n"; 
-			}
-			if (existCid.contains(cid)) {
-				message = message + "CID exists!\n"; 
-			}
-			item.put("message", message);
-			hasError = hasError || StringUtils.isNotBlank(message);
 		}
 		
-		if (hasError) {
-			return reads;
-		}
-		
-		// end validate
-		
-		File f = new File(evsDataFolder + "/" + vendor + "-" + file.getOriginalFilename());
-		try {
-			Files.deleteIfExists(f.toPath());
-			Files.createFile(f.toPath());
-			IOUtils.copy(file.getInputStream(), new FileOutputStream(f));
-		} catch (IOException e) {
-			LOG.error(e.getMessage(), e);
-		}
-		
-		return null;
+		return reads;
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -1785,213 +2026,213 @@ public class EVSPAServiceImpl implements EVSPAService {
 			}
 		}, "Server.csr");
 		
-		SchedulerHelper.scheduleJob("0/1 * * * * ? *", () -> {
-			File[] fs = new File(evsDataFolder).listFiles();
-			if (fs == null) return;
-			for (File f : fs) {
-				if (f.exists() && f.isFile() && f.getName().endsWith(".zip")) {
-					File tempFile = null;
-					try {
-						tempFile = File.createTempFile("temp", ".zip");
-					} catch (IOException e2) {
-						e2.printStackTrace();
-					}
-					String name = f.getName();
-					String vendor = name.substring(0, name.indexOf("-"));
-					
-					try (ZipFile zipFile = new ZipFile(f.getAbsolutePath())) {
-					    Enumeration<? extends ZipEntry> entries = zipFile.entries();
-					    try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(tempFile.getAbsolutePath()))) {
-					        while (entries.hasMoreElements()) {
-					            ZipEntry entry = entries.nextElement();
-					            ZipEntry newEntry = null;
-					            String currentName = entry.getName();
-					            
-					            if (currentName.endsWith(".csv")) {
-					            	String uploadedZipRealName = name.substring(name.indexOf("-") + 1, name.length());
-					            	newEntry = new ZipEntry(vendor + "-" + uploadedZipRealName + "---" + currentName);
-					            } else {
-					            	newEntry = new ZipEntry(vendor + "-" + currentName);
-					            }
-					            
-				                InputStream in = zipFile.getInputStream(entry);
-				                out.putNextEntry(newEntry);
-				                byte[] buffer = new byte[1024];
-				                int len;
-				                while ((len = in.read(buffer)) > 0) {
-				                    out.write(buffer, 0, len);
-				                }
-				                in.close();
-					        }
-					    } catch (IOException e) {
-							e.printStackTrace();
-						}
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-					
-					ZipUtils.unzip(tempFile.getAbsolutePath(), evsDataFolder + "/IN_CSR");
-					File out = new File(evsDataFolder + "/OUT_CSR/" + f.getName() + '.' + System.currentTimeMillis());
-					f.renameTo(out);
-				}
-			}
-		}, "UNZIP");
-		
-		SchedulerHelper.scheduleJob("0/1 * * * * ? *", () -> {
-			File f = new File(evsDataFolder + "/IN_CSR");
-			if (f.listFiles() == null) return;
-			for (File ful : f.listFiles()) {
-				if (ful.isFile() && ful.getName().endsWith(".csv")) {
-					String name = ful.getName();						
-					Long vId = Long.parseLong(name.substring(0, name.indexOf("-")));
-					Optional<Vendor> vendorOpt = vendorRepository.findById(vId);
-					
-					if (!vendorOpt.isPresent()) {
-						continue;
-					}
-					try {
-						String zipFileName = name.substring(name.indexOf("-") + 1, name.indexOf("---"));
-						String csvFileName = name.substring(name.indexOf("---") + 3, name.length());
-						String[] lines = new String(Files.readAllBytes(ful.toPath()), StandardCharsets.UTF_8).split("\r*\n");
-						if (StringUtils.isBlank(lines[0]) || !lines[0].toUpperCase().startsWith("SN,UUID,CID")) {
-							LOG.info("Uploaded file has wrong format. Headers should start with: SN UUID CID. Uploaded zip file: {}, CSV file: {}, Headers: {}", zipFileName, csvFileName, lines[0]);
-							Files.delete(ful.toPath());
-							continue;
-						}
-						for (int i = 1; i < lines.length; i++) {
-							String[] details = lines[i].split(" *, *");
-							if (details.length > 2) {
-								String uuid = details[1];
-								
-								if (StringUtils.isBlank(uuid) || StringUtils.isBlank(details[0]) || StringUtils.isBlank(details[2])) {
-									LOG.info("UUID, SN, CID are required. Zip file: {}, CSV file: {}, UUID: {}, SN: {}, CID: {}.", zipFileName, csvFileName, uuid, details[0], details[2]);
-									continue;
-								}
-								
-								Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
-								CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
-								
-								if (caLog.getId() == null && caRequestLogRepository.findByCid(details[2]).isPresent()) {
-									LOG.info("eSIM Id exists: " + details[2] + " where insert new UID: " + uuid);
-									continue;
-								}
-								if (caLog.getStatus() == null) {
-									caLog.setStatus(DeviceStatus.OFFLINE);	
-								}
-								if (caLog.getType() == null) {
-									caLog.setType(DeviceType.NOT_COUPLED);	
-								}
-								
-								if (caLog.getId() == null) {
-									
-									int sendMDTToPi = 2; // default not send
-									try {
-										if ("true".equalsIgnoreCase(AppProps.get("SEND_MDT_TO_PI", "false"))) {
-											sendMDTToPi = 1;
-										}
-									} catch (Exception e) {
-										//
-									}
-									if (sendMDTToPi != 1 && sendMDTToPi != 2) {
-										sendMDTToPi = 2;
-									}
-									caLog.setSendMDTToPi(sendMDTToPi); // default not send
-								}
-								
-								if (caLog.getEnrollmentDatetime() == null) {
-									caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
-								}
-								caLog.setUid(uuid);
-								caLog.setSn(details[0]);
-								caLog.setCid(details[2]);
-								caLog.setRequireRefresh(false);
-								caLog.setVendor(vendorOpt.get());
-								caRequestLogRepository.save(caLog);
-								caRequestLogRepository.flush();
-								if (StringUtils.isNotBlank(caLog.getMsn())) {
-									AppProps.getContext().getBean(CaRequestLogService.class).updateMMSMeter(caLog, caLog.getMsn());
-								}
-								caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
-							}
-						}
-						Files.delete(ful.toPath());
-					} catch (Exception e) {
-						LOG.error(e.getMessage(), e);
-					}
-					
-				}
-				if (ful.isFile() && ful.getName().endsWith(".csr")) {
-					String name = ful.getName();						
-					Long vId = Long.parseLong(name.substring(0, name.indexOf("-")));
-					Optional<Vendor> vendorOpt = vendorRepository.findById(vId);
-					
-					if (!vendorOpt.isPresent()) {
-						continue;
-					}
-					try {
-						String uuid = ful.getName().replaceAll("\\.csr$", "").replaceAll("(^[0-9]+-)", "");
-						
-						Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
-						CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
-						//Map<String, Object> data = requestCA(caRequestUrl, new FileSystemResource(ful), uuid);
-						caLog.setUid(uuid);
-						//caLog.setCertificate((String)data.get("pemBase64"));
-						//caLog.setRaw((String)data.get("cas"));
-						//caLog.setStartDate((Long)data.get("startDate"));
-						//caLog.setEndDate((Long)data.get("endDate"));
-//						caLog.setMsn(null);
-						if (caLog.getStatus() == null) {
-							caLog.setStatus(DeviceStatus.OFFLINE);	
-						}
-						if (caLog.getType() == null) {
-							caLog.setType(DeviceType.NOT_COUPLED);	
-						}
-						
-						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
-						caLog.setRequireRefresh(false);
-						caLog.setVendor(vendorOpt.get());
-						caLog.setDeviceCsrSignatureAlgorithm(RSAUtil.getSignatureAlgorithm(ful.getAbsolutePath()));
-						caLog.setDeviceKeyType(RSAUtil.getKeyType(ful.getAbsolutePath()));
-						
-						if (caLog.getId() == null) {
-							int sendMDTToPi = 2; // default not send
-							try {
-								if ("true".equalsIgnoreCase(AppProps.get("SEND_MDT_TO_PI", "false"))) {
-									sendMDTToPi = 1;
-								}
-							} catch (Exception e) {
-								//
-							}
-							if (sendMDTToPi != 1 && sendMDTToPi != 2) {
-								sendMDTToPi = 2;
-							}
-							caLog.setSendMDTToPi(sendMDTToPi); // default not send
-						}
-						
-						caRequestLogRepository.save(caLog);
-						caRequestLogRepository.flush();
-						if (StringUtils.isNotBlank(caLog.getMsn())) {
-							AppProps.getContext().getBean(CaRequestLogService.class).updateMMSMeter(caLog, caLog.getMsn());
-						}
-						caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
-						File out = new File(ful.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));
-						Files.deleteIfExists(out.toPath());
-						ful.renameTo(out);
-						LOG.info("Done request CA {}", ful.getName());
-					} catch (Exception e) {
-						File error = new File(ful.getAbsolutePath().replace("IN_CSR", "ERR_CSR"));
-						try {
-							Files.deleteIfExists(error.toPath());
-						} catch (IOException e1) {/**/}
-						ful.renameTo(error);
-						LOG.error("Error request CA {}", ful.getName());
-						LOG.error(e.getMessage(), e);
-					}
-					
-				}
-			}
-
-		}, "REQUEST_CA");
+//		SchedulerHelper.scheduleJob("0/1 * * * * ? *", () -> {
+//			File[] fs = new File(evsDataFolder).listFiles();
+//			if (fs == null) return;
+//			for (File f : fs) {
+//				if (f.exists() && f.isFile() && f.getName().endsWith(".zip")) {
+//					File tempFile = null;
+//					try {
+//						tempFile = File.createTempFile("temp", ".zip");
+//					} catch (IOException e2) {
+//						e2.printStackTrace();
+//					}
+//					String name = f.getName();
+//					String vendor = name.substring(0, name.indexOf("-"));
+//					
+//					try (ZipFile zipFile = new ZipFile(f.getAbsolutePath())) {
+//					    Enumeration<? extends ZipEntry> entries = zipFile.entries();
+//					    try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(tempFile.getAbsolutePath()))) {
+//					        while (entries.hasMoreElements()) {
+//					            ZipEntry entry = entries.nextElement();
+//					            ZipEntry newEntry = null;
+//					            String currentName = entry.getName();
+//					            
+//					            if (currentName.endsWith(".csv")) {
+//					            	String uploadedZipRealName = name.substring(name.indexOf("-") + 1, name.length());
+//					            	newEntry = new ZipEntry(vendor + "-" + uploadedZipRealName + "---" + currentName);
+//					            } else {
+//					            	newEntry = new ZipEntry(vendor + "-" + currentName);
+//					            }
+//					            
+//				                InputStream in = zipFile.getInputStream(entry);
+//				                out.putNextEntry(newEntry);
+//				                byte[] buffer = new byte[1024];
+//				                int len;
+//				                while ((len = in.read(buffer)) > 0) {
+//				                    out.write(buffer, 0, len);
+//				                }
+//				                in.close();
+//					        }
+//					    } catch (IOException e) {
+//							e.printStackTrace();
+//						}
+//					} catch (IOException e1) {
+//						e1.printStackTrace();
+//					}
+//					
+//					ZipUtils.unzip(tempFile.getAbsolutePath(), evsDataFolder + "/IN_CSR");
+//					File out = new File(evsDataFolder + "/OUT_CSR/" + f.getName() + '.' + System.currentTimeMillis());
+//					f.renameTo(out);
+//				}
+//			}
+//		}, "UNZIP");
+//		
+//		SchedulerHelper.scheduleJob("0/1 * * * * ? *", () -> {
+//			File f = new File(evsDataFolder + "/IN_CSR");
+//			if (f.listFiles() == null) return;
+//			for (File ful : f.listFiles()) {
+//				if (ful.isFile() && ful.getName().endsWith(".csv")) {
+//					String name = ful.getName();						
+//					Long vId = Long.parseLong(name.substring(0, name.indexOf("-")));
+//					Optional<Vendor> vendorOpt = vendorRepository.findById(vId);
+//					
+//					if (!vendorOpt.isPresent()) {
+//						continue;
+//					}
+//					try {
+//						String zipFileName = name.substring(name.indexOf("-") + 1, name.indexOf("---"));
+//						String csvFileName = name.substring(name.indexOf("---") + 3, name.length());
+//						String[] lines = new String(Files.readAllBytes(ful.toPath()), StandardCharsets.UTF_8).split("\r*\n");
+//						if (StringUtils.isBlank(lines[0]) || !lines[0].toUpperCase().startsWith("SN,UUID,CID")) {
+//							LOG.info("Uploaded file has wrong format. Headers should start with: SN UUID CID. Uploaded zip file: {}, CSV file: {}, Headers: {}", zipFileName, csvFileName, lines[0]);
+//							Files.delete(ful.toPath());
+//							continue;
+//						}
+//						for (int i = 1; i < lines.length; i++) {
+//							String[] details = lines[i].split(" *, *");
+//							if (details.length > 2) {
+//								String uuid = details[1];
+//								
+//								if (StringUtils.isBlank(uuid) || StringUtils.isBlank(details[0]) || StringUtils.isBlank(details[2])) {
+//									LOG.info("UUID, SN, CID are required. Zip file: {}, CSV file: {}, UUID: {}, SN: {}, CID: {}.", zipFileName, csvFileName, uuid, details[0], details[2]);
+//									continue;
+//								}
+//								
+//								Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
+//								CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
+//								
+//								if (caLog.getId() == null && caRequestLogRepository.findByCid(details[2]).isPresent()) {
+//									LOG.info("eSIM Id exists: " + details[2] + " where insert new UID: " + uuid);
+//									continue;
+//								}
+//								if (caLog.getStatus() == null) {
+//									caLog.setStatus(DeviceStatus.OFFLINE);	
+//								}
+//								if (caLog.getType() == null) {
+//									caLog.setType(DeviceType.NOT_COUPLED);	
+//								}
+//								
+//								if (caLog.getId() == null) {
+//									
+//									int sendMDTToPi = 2; // default not send
+//									try {
+//										if ("true".equalsIgnoreCase(AppProps.get("SEND_MDT_TO_PI", "false"))) {
+//											sendMDTToPi = 1;
+//										}
+//									} catch (Exception e) {
+//										//
+//									}
+//									if (sendMDTToPi != 1 && sendMDTToPi != 2) {
+//										sendMDTToPi = 2;
+//									}
+//									caLog.setSendMDTToPi(sendMDTToPi); // default not send
+//								}
+//								
+//								if (caLog.getEnrollmentDatetime() == null) {
+//									caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
+//								}
+//								caLog.setUid(uuid);
+//								caLog.setSn(details[0]);
+//								caLog.setCid(details[2]);
+//								caLog.setRequireRefresh(false);
+//								caLog.setVendor(vendorOpt.get());
+//								caRequestLogRepository.save(caLog);
+//								caRequestLogRepository.flush();
+//								if (StringUtils.isNotBlank(caLog.getMsn())) {
+//									AppProps.getContext().getBean(CaRequestLogService.class).updateMMSMeter(caLog, caLog.getMsn());
+//								}
+//								caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
+//							}
+//						}
+//						Files.delete(ful.toPath());
+//					} catch (Exception e) {
+//						LOG.error(e.getMessage(), e);
+//					}
+//					
+//				}
+//				if (ful.isFile() && ful.getName().endsWith(".csr")) {
+//					String name = ful.getName();						
+//					Long vId = Long.parseLong(name.substring(0, name.indexOf("-")));
+//					Optional<Vendor> vendorOpt = vendorRepository.findById(vId);
+//					
+//					if (!vendorOpt.isPresent()) {
+//						continue;
+//					}
+//					try {
+//						String uuid = ful.getName().replaceAll("\\.csr$", "").replaceAll("(^[0-9]+-)", "");
+//						
+//						Optional<CARequestLog> opt = caRequestLogRepository.findByUid(uuid);
+//						CARequestLog caLog = !opt.isPresent() ? new CARequestLog() : opt.get();
+//						//Map<String, Object> data = requestCA(caRequestUrl, new FileSystemResource(ful), uuid);
+//						caLog.setUid(uuid);
+//						//caLog.setCertificate((String)data.get("pemBase64"));
+//						//caLog.setRaw((String)data.get("cas"));
+//						//caLog.setStartDate((Long)data.get("startDate"));
+//						//caLog.setEndDate((Long)data.get("endDate"));
+////						caLog.setMsn(null);
+//						if (caLog.getStatus() == null) {
+//							caLog.setStatus(DeviceStatus.OFFLINE);	
+//						}
+//						if (caLog.getType() == null) {
+//							caLog.setType(DeviceType.NOT_COUPLED);	
+//						}
+//						
+//						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
+//						caLog.setRequireRefresh(false);
+//						caLog.setVendor(vendorOpt.get());
+//						caLog.setDeviceCsrSignatureAlgorithm(RSAUtil.getSignatureAlgorithm(ful.getAbsolutePath()));
+//						caLog.setDeviceKeyType(RSAUtil.getKeyType(ful.getAbsolutePath()));
+//						
+//						if (caLog.getId() == null) {
+//							int sendMDTToPi = 2; // default not send
+//							try {
+//								if ("true".equalsIgnoreCase(AppProps.get("SEND_MDT_TO_PI", "false"))) {
+//									sendMDTToPi = 1;
+//								}
+//							} catch (Exception e) {
+//								//
+//							}
+//							if (sendMDTToPi != 1 && sendMDTToPi != 2) {
+//								sendMDTToPi = 2;
+//							}
+//							caLog.setSendMDTToPi(sendMDTToPi); // default not send
+//						}
+//						
+//						caRequestLogRepository.save(caLog);
+//						caRequestLogRepository.flush();
+//						if (StringUtils.isNotBlank(caLog.getMsn())) {
+//							AppProps.getContext().getBean(CaRequestLogService.class).updateMMSMeter(caLog, caLog.getMsn());
+//						}
+//						caRequestLogService.updateCacheUidMsnDevice(caLog.getUid(), "update");
+//						File out = new File(ful.getAbsolutePath().replace("IN_CSR", "OUT_CSR"));
+//						Files.deleteIfExists(out.toPath());
+//						ful.renameTo(out);
+//						LOG.info("Done request CA {}", ful.getName());
+//					} catch (Exception e) {
+//						File error = new File(ful.getAbsolutePath().replace("IN_CSR", "ERR_CSR"));
+//						try {
+//							Files.deleteIfExists(error.toPath());
+//						} catch (IOException e1) {/**/}
+//						ful.renameTo(error);
+//						LOG.error("Error request CA {}", ful.getName());
+//						LOG.error(e.getMessage(), e);
+//					}
+//					
+//				}
+//			}
+//
+//		}, "REQUEST_CA");
 		
 		SchedulerHelper.scheduleJob("0/5 * * * * ? *", () -> {
 			//refresh CID

@@ -516,10 +516,10 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
 
-    @PostMapping("/api/device-csr/upload/{vendor}")
+    @PostMapping("/api/device-csr/upload")
     public ResponseEntity<Object> uploadDeviceCsr(
             HttpServletRequest httpServletRequest,
-            @PathVariable final Long vendor,
+            @RequestParam(value = "vendor", required = false) final Long vendor,
             @RequestParam(value = "file") final MultipartFile file) throws Exception {
 
         try {
