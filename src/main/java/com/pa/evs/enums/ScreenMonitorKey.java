@@ -4,5 +4,6 @@ public enum ScreenMonitorKey {
     SYSTEM_START,
     DB_CHECK,
     SERVER_CERTIFICATE,
-    MQTT_STATUS
+    MQTT_STATUS,
+    APP_SERVER_STATUS
 }

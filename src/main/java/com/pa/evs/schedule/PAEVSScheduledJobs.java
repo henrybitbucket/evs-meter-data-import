@@ -1,6 +1,8 @@
 package com.pa.evs.schedule;
 
 import com.pa.evs.sv.CaRequestLogService;
+import com.pa.evs.utils.CMD;
+
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -35,7 +37,6 @@ public class PAEVSScheduledJobs {
         } catch (Exception e) {
             //
         }
-        
     }
     
     @Scheduled(fixedRate = 5*60*1000)
@@ -47,6 +48,17 @@ public class PAEVSScheduledJobs {
         } catch (Exception e) {
             //
         }
-        
+    }
+    
+    @Scheduled(fixedRate = 15*1000)
+    public void checkAppServerStatus() {
+    	try {
+            LOG.debug("start checking app server status at: {}", dateFormat.format(new Date()));
+            caRequestLogService.checkAppServerStatus();
+            LOG.debug("end checking app server status at: {}", dateFormat.format(new Date()));
+        } catch (Exception e) {
+        	LOG.debug("Error on checking app server status: {}", e.getMessage());
+        	e.printStackTrace();
+        }
     }
 }

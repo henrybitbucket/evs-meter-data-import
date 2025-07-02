@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,6 +23,7 @@ import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -78,6 +81,12 @@ public class AuthenticationController {
 	PasswordEncoder passwordEncoder;
 	
 	static final String RGX = "^(.*\\.)([^\\.]+\\.[^\\.]+)$";
+	
+	@Value("${evs.nus.client.id}")
+	private String nusClientId;
+
+	@Value("${evs.nus.client.secret}")
+	private String nusClientSecret;
 
     @Autowired
     private AuthenticationService authenticationService;
@@ -510,4 +519,21 @@ public class AuthenticationController {
 			return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
 		}
     }
+    
+    @GetMapping("/api/google/oauth/get-code")
+    @Hidden
+    public void redirectToGoogle(HttpServletResponse response) throws IOException {
+    	String redirectUri = "http://localhost:8080/oauth/callback";
+        String scope = "https://www.googleapis.com/auth/userinfo.profile";
+
+        String authUrl = "https://accounts.google.com/o/oauth2/v2/auth"
+                + "?client_id=" + nusClientId
+                + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
+                + "&response_type=code"
+                + "&scope=" + URLEncoder.encode(scope, StandardCharsets.UTF_8)
+                + "&access_type=offline";
+
+        response.sendRedirect(authUrl);
+    }
+
 }

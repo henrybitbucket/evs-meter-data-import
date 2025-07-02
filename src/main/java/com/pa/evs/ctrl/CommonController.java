@@ -524,13 +524,10 @@ public class CommonController {
 
         try {
             Object error = evsPAService.uploadDeviceCsr(file, vendor);
-            if (error != null) {
-            	return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message("Device validation error!").response(error).build());
-            }
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(error).build());
         } catch (Exception e) {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
-        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
     @PostMapping("/api/device-msisdn/upload")
@@ -1767,6 +1764,20 @@ public class CommonController {
 		}
 		return SimpleMap.init("error", ex.getMessage());
 	}
+	
+    @PostMapping("/api/update-device-csr-info")
+    public ResponseEntity<Object> updateDeviceCsrInfo(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response,
+            @RequestParam(value = "file") final MultipartFile file) throws Exception {
+    	
+    	try {
+			evsPAService.updateDeviceCsr(file);
+			return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+		} catch (Exception e) {
+			return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
+		}
+    }
 	
 	@SuppressWarnings("unchecked")
 	private static Map<String, Object> requestAwsCA(String caRequestUrl, Resource resource) {

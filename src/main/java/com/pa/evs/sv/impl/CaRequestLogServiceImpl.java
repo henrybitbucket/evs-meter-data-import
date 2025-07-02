@@ -2,12 +2,20 @@ package com.pa.evs.sv.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Year;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -16,9 +24,12 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.management.Attribute;
@@ -29,6 +40,7 @@ import javax.management.ObjectName;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.joda.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -1695,7 +1707,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		
 		if (cpuLoad > 80 && !CMD.isWindow()) {
 			alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "CPU > 80%", AppProps.get("SYSTEM_ALERTS")});
-			
 		}
 		
 		if ((new File("/").getFreeSpace() / new File("/").getTotalSpace()) < 0.1 && !CMD.isWindow()) {
@@ -1742,6 +1753,85 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			return 0;
 		}
 	}
+	
+    @Override
+    public void checkAppServerStatus() {
+        Optional<ScreenMonitoring> opt = screenMonitoringRepository.findByKey(ScreenMonitorKey.APP_SERVER_STATUS);
+        
+        Long freeDiskSpace = new File("/").getFreeSpace();
+        Long totalDiskSpace = new File("/").getTotalSpace();
+		double cpuLoad = getProcessCpuLoad();
+		String value = String.format("%.1f", freeDiskSpace / (1024.0 * 1024 * 1024)) + "/" + String.format("%.1f", totalDiskSpace / (1024.0 * 1024 * 1024));
+		LocalDate today = LocalDate.now();
+        boolean isFirstDayOfYear = today.getDayOfYear() == 1;
+        Long lastReboot = getSystemLastReboot();
+        
+		if (opt.isPresent()) {
+            ScreenMonitoring sm = opt.get();
+            
+            sm.setValue(value);
+            sm.setValueCpu(cpuLoad);
+            sm.setIpAddress(CMD.publicIp);
+            sm.setLastUpTime(lastReboot);
+            sm.setLastDownTime(lastReboot);
+            
+            if (isFirstDayOfYear) {
+            	sm.setPrevValue(value);
+            }
+            
+            if (cpuLoad > 80 || (totalDiskSpace / freeDiskSpace) < 0.1) {
+            	if (cpuLoad > 80) {
+                	if (!CMD.isWindow() && !alerts.containsKey("CPU_LOAD")) {
+                		alerts.put("CPU_LOAD", new String[] {"MMS-System alert!", "CPU > 80%", AppProps.get("SYSTEM_ALERTS")});
+                		sendSystemAlert(); // Immediately send alert when cpu > 80%
+                	}
+            	} else {
+            		alerts.remove("CPU_LOAD"); // Remove alert to prevent 1 hour job check and send loop
+        		}
+            	if ((totalDiskSpace / freeDiskSpace) < 0.1) {
+        			if (!CMD.isWindow() && !alerts.containsKey("DISK_FULL")) {
+        				alerts.put("DISK_FULL", new String[] {"MMS-System alert!", "Disk space alert! (" + value + " GB " + ")", AppProps.get("SYSTEM_ALERTS")});
+        				sendSystemAlert(); // Immediately send alert when disk full	
+        			}
+        		} else {
+            		alerts.remove("DISK_FULL"); // Remove alert to prevent 1 hour job check and send loop
+        		}
+            	sm.setStatus(ScreenMonitorStatus.NOT_OK);
+    		} else {
+    			sm.setStatus(ScreenMonitorStatus.OK);
+    		}
+            
+            screenMonitoringRepository.save(sm);
+        } else {
+            ScreenMonitoring sm = new ScreenMonitoring();
+            sm.setKey(ScreenMonitorKey.APP_SERVER_STATUS);
+            sm.setValue(value);
+            sm.setValueCpu(cpuLoad);
+            sm.setIpAddress(CMD.publicIp);
+            sm.setLastUpTime(lastReboot);
+            sm.setLastDownTime(lastReboot);
+            
+            if (isFirstDayOfYear) {
+            	sm.setPrevValue(value);
+            }
+            
+            if (cpuLoad > 80) {
+            	sm.setStatus(ScreenMonitorStatus.NOT_OK);
+            	if (!CMD.isWindow()) {
+            		alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "CPU > 80%", AppProps.get("SYSTEM_ALERTS")});	
+            	}
+    		} else if ((totalDiskSpace / freeDiskSpace) < 0.1) {
+    			sm.setStatus(ScreenMonitorStatus.NOT_OK);
+    			if (!CMD.isWindow()) {
+    				alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "Disk space alert! (" + value + " GB " + ")", AppProps.get("SYSTEM_ALERTS")});	
+    			}
+    		} else {
+    			sm.setStatus(ScreenMonitorStatus.OK);
+    		}
+            
+            screenMonitoringRepository.save(sm);
+        }
+    }
 
     @Override
     public void checkDatabase() {
@@ -1763,18 +1853,82 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     }
 
     private void checkAndSaveScreenMonitoring (Optional<ScreenMonitoring> smOpt, String value, ScreenMonitorStatus status, ScreenMonitorKey key) {
-        if (smOpt.isPresent()) {
+    	LocalDate today = LocalDate.now();
+        boolean isFirstDayOfMonth = today.getDayOfMonth() == 1;
+        Long lastReboot = getSystemLastReboot();
+        double cpuLoad = getProcessCpuLoad();
+        String diskValue = String.format("%.1f", new File("/").getFreeSpace() / (1024.0 * 1024 * 1024)) + "/" + String.format("%.1f", new File("/").getTotalSpace() / (1024.0 * 1024 * 1024));
+        
+    	if (smOpt.isPresent()) {
             ScreenMonitoring sm = smOpt.get();
             sm.setStatus(status);
             sm.setValue(value);
+            sm.setLastUpTime(lastReboot);
+            sm.setLastDownTime(lastReboot);
+            
+            if (key.compareTo(ScreenMonitorKey.DB_CHECK) == 0) {
+            	sm.setIpAddress(AppProps.get("DB_IP", "127.0.0.1"));
+            	sm.setValueCpu(cpuLoad);
+            	
+            	if (isFirstDayOfMonth) {
+                	sm.setPrevValue(diskValue);
+                }
+            }
+            
             screenMonitoringRepository.save(sm);
         } else {
             ScreenMonitoring sm = new ScreenMonitoring();
-            sm.setKey(ScreenMonitorKey.DB_CHECK);
+            sm.setKey(key);
             sm.setStatus(status);
             sm.setValue(value);
+            sm.setValueCpu(cpuLoad);
+            sm.setIpAddress(CMD.publicIp);
+            sm.setLastUpTime(lastReboot);
+            sm.setLastDownTime(lastReboot);
+            
+            if (key.compareTo(ScreenMonitorKey.DB_CHECK) == 0) {
+            	sm.setIpAddress(AppProps.get("DB_IP", "127.0.0.1"));
+            	sm.setValueCpu(cpuLoad);
+            	
+            	if (isFirstDayOfMonth) {
+                	sm.setPrevValue(diskValue);
+                }
+            }
+            
             screenMonitoringRepository.save(sm);
         }
+    }
+    
+    public Long getSystemLastReboot() {
+    	if (!CMD.isWindow()) {
+    		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    		CMD.exec("last reboot -1", null, bos);
+    		String rs = new String(bos.toByteArray(), StandardCharsets.UTF_8).replaceAll("[\n\r]", "").replaceAll("\\s{2,}", " ");
+    		try {
+    			bos.close();
+    		} catch (IOException e) {
+    			LOG.error(e.getMessage(), e);
+    		}
+    		
+    		String currentYear = Year.now().toString();
+    		Pattern pattern = Pattern.compile("(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\s+\\w+\\s+\\d+\\s+\\d{2}:\\d{2}");
+            Matcher matcher = pattern.matcher(rs);
+
+            if (matcher.find()) {
+                String datePart = matcher.group();
+                String fullDate = datePart + " " + currentYear;
+
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE MMM d HH:mm yyyy", Locale.getDefault());
+                LocalDateTime rebootTime = LocalDateTime.parse(fullDate, formatter);
+
+                return rebootTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            } else {
+            	LOG.error("Could not extract date-time from input.");
+                return null;
+            }
+    	} else {
+    		return null;
+    	}
     }
 
     @Override
@@ -1970,7 +2124,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 				stateChangeTime = "";
 			}
 			stateChangeTime = stateChangeTime.trim();
-			if ((stateChangeTime.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") || stateChangeTime.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+){0,1}$"))) {
+			if ((stateChangeTime.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$") || stateChangeTime.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") || stateChangeTime.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+){0,1}$"))) {
 				ca.setMSISDNStateChangeTime(stateChangeTime);			
 			} else {
 				ca.setMSISDNStateChangeTime("");

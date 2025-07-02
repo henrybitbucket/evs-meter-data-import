@@ -1,5 +1,8 @@
 package com.pa.evs.model;
 
+import com.pa.evs.enums.ScreenMonitorKey;
+import com.pa.evs.enums.ScreenMonitorStatus;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -8,10 +11,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-
-import com.pa.evs.enums.ScreenMonitorKey;
-import com.pa.evs.enums.ScreenMonitorStatus;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,8 +34,17 @@ public class ScreenMonitoring {
     @Enumerated(EnumType.STRING)
     private ScreenMonitorKey key;
 
+    @Column(name = "ip_address")
+    private String ipAddress;
+    
     @Column(name = "value")
     private String value;
+    
+    @Column(name = "value_cpu")
+    private Double valueCpu;
+    
+    @Column(name = "prev_value")
+    private String prevValue;
     
     @Column(name = "status")
     @Enumerated(EnumType.STRING)

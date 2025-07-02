@@ -191,12 +191,22 @@ public class CaRequestLogController {
     		List<String> headers = Arrays.asList(
     				"MSN","Remark for meter","City","Postal","Building","Street","Block","Level","Unit"
     				);
+    		
+    		if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("includeMcuSn"))) {
+    			headers = Arrays.asList(
+        				"MSN","Remark for meter","MCU SN(QR Code)","City","Postal","Building","Street","Block","Level","Unit"
+        				);
+        	}
+    		
     		File file = CsvUtils.toCsv(headers, result.getResults(), (idx, it, l) -> {
             	
                 List<String> record = new ArrayList<>();
 
                 record.add(StringUtils.isNotBlank(it.getMsn()) ? it.getMsn() : "");
                 record.add(StringUtils.isNotBlank(it.getRemarkMeter()) ? it.getRemarkMeter() : "");
+                if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("includeMcuSn"))) {
+                	record.add(StringUtils.isNotBlank(it.getSn()) ? it.getSn() : "");
+            	}
                 record.add(it.getBuilding() != null && StringUtils.isNotBlank(it.getBuilding().getAddress().getCity()) ? it.getBuilding().getAddress().getCity() : "");
                 record.add(it.getBuilding() != null && StringUtils.isNotBlank(it.getBuilding().getAddress().getPostalCode()) ? it.getBuilding().getAddress().getPostalCode() : "");
                 record.add(it.getBuilding() != null && StringUtils.isNotBlank(it.getBuilding().getName()) ? it.getBuilding().getName() : "");
@@ -425,6 +435,31 @@ public class CaRequestLogController {
 			return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
 		}
 	}
+	
+    @PostMapping("/api/export-by-upload-meters")
+    public ResponseEntity<?> exportMeters(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response,
+            @RequestParam(value = "file") final MultipartFile file) throws Exception {
+    	
+    	PaginDto<CARequestLog> pagin = new PaginDto<>();
+    	try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+			IOUtils.copy(file.getInputStream(), bos);
+			List<String> sns = new ArrayList<>();
+			for (String l : new String(bos.toByteArray()).split("\r*\n")) {
+				if (!l.trim().startsWith("//")) {
+					sns.add(l.replaceAll("[^a-zA-Z0-9]", "").trim());
+				}
+			}
+			pagin.getOptions().put("sns", sns);
+		} catch (Exception e) {
+			//
+		}
+    	pagin.getOptions().put("includeMcuSn", true);
+    	pagin.getOptions().put("downloadCsv", true);
+    	
+    	return getMeters(response, pagin);
+    }
     
     @PostConstruct
     public void init() {
@@ -435,11 +470,9 @@ public class CaRequestLogController {
     		countDevices = caRequestLogService.getCountDevices();
     		systemInformation = caRequestLogService.getDashboard();
     		
-    		appServerCheck = caRequestLogService.getAppServerCheck();
-    		
     	}, "GET_SYSTEM_PROPERTIES");
     	
-    	SchedulerHelper.scheduleJob("0/30 * * * * ? *", () -> {
+    	SchedulerHelper.scheduleJob("0 0 * * * ? *", () -> {
     		
     		caRequestLogService.sendSystemAlert();
     		

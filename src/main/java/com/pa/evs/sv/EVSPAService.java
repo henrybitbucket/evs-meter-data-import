@@ -57,4 +57,6 @@ public interface EVSPAService {
 
 	boolean deleteFileInS3(String fileName, String bucketName);
 
+	void updateDeviceCsr(MultipartFile file);
+
 }

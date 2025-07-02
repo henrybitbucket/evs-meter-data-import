@@ -74,7 +74,7 @@ public class CsvUtils {
     public static File writeMCUCsv(List<CARequestLog> listInput, String fileName, List<String> sns) throws IOException{
         listInput = listInput.stream().filter(input -> !input.getUid().equals("server.csr")).collect(Collectors.toList());
         List<String> headers = Arrays.asList(
-                "MCU SN", "MCU UUID", "eSIM ID", "MSN", "Status", "P2 CoupleState", "Version", "Vendor", "Last Seen", "Group", "EnrollTime");
+                "MCU SN", "MCU UUID", "eSIM ID", "MSN", "Status", "P2 CoupleState", "Version", "Vendor", "Last Seen", "Group", "EnrollTime", "Building", "Block", "Floor", "Unit");
         
         List<CARequestLog> tmp = new ArrayList<>();
         for (String sn : sns) {
@@ -102,9 +102,13 @@ public class CsvUtils {
 	            record.add(mcu.getVer() != null ? mcu.getVer().toString() : "");
 	            record.add(mcu.getVendor() != null ? mcu.getVendor().getName() : "");
 	            record.add(mcu.getLastSubscribeDatetime() != null ? sdf.format(new Date(mcu.getLastSubscribeDatetime())) : "");
-	            
 	            record.add(mcu.getGroup() != null ? mcu.getGroup().getId().toString() : "");
 	            record.add(mcu.getEnrollmentDatetime() != null ? sdf.format(new Date(mcu.getEnrollmentDatetime())) : "");
+	            
+	            record.add(mcu.getBuilding() != null ? mcu.getBuilding().getName() : "");
+	            record.add(mcu.getBlock() != null ? mcu.getBlock().getName() : "");
+	            record.add(mcu.getFloorLevel() != null ? mcu.getFloorLevel().getName() : "");
+	            record.add(mcu.getBuildingUnit() != null ? mcu.getBuildingUnit().getName() : "");
             } else {
             	record.add("unfind");
             }

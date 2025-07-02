@@ -97,4 +97,6 @@ public interface CaRequestLogService {
 	Map<String, Object> getAppServerCheck();
 
 	void sendSystemAlert();
+
+	void checkAppServerStatus();
 }
