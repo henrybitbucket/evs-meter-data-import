@@ -43,9 +43,6 @@ public class ScreenMonitoring {
     @Column(name = "value_cpu")
     private Double valueCpu;
     
-    @Column(name = "prev_value")
-    private String prevValue;
-    
     @Column(name = "status")
     @Enumerated(EnumType.STRING)
     private ScreenMonitorStatus status;
@@ -55,5 +52,11 @@ public class ScreenMonitoring {
     
     @Column(name = "last_down_time")
     private Long lastDownTime;
+    
+    @Column(name = "last_month_value")
+    private String lastMonthValue;
+    
+    @Column(name = "last_2month_value")
+    private String last2MonthValue;
 
 }

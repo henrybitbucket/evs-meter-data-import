@@ -5,11 +5,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +42,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
+import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
+import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
+import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.pa.evs.constant.RestPath;
 import com.pa.evs.dto.ChangePasswordDto;
 import com.pa.evs.dto.CompanyDto;
@@ -82,11 +93,8 @@ public class AuthenticationController {
 	
 	static final String RGX = "^(.*\\.)([^\\.]+\\.[^\\.]+)$";
 	
-	@Value("${evs.nus.client.id}")
-	private String nusClientId;
-
-	@Value("${evs.nus.client.secret}")
-	private String nusClientSecret;
+	@Value("${evs.nus.callback}")
+	private String callBackUrl;
 
     @Autowired
     private AuthenticationService authenticationService;
@@ -519,21 +527,45 @@ public class AuthenticationController {
 			return ResponseEntity.ok(ResponseDto.builder().success(false).message(e.getMessage()).build());
 		}
     }
-    
+
     @GetMapping("/api/google/oauth/get-code")
-    @Hidden
     public void redirectToGoogle(HttpServletResponse response) throws IOException {
-    	String redirectUri = "http://localhost:8080/oauth/callback";
-        String scope = "https://www.googleapis.com/auth/userinfo.profile";
+        ClassPathResource resource = new ClassPathResource("client_secret.json");
+        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(GsonFactory.getDefaultInstance(), new InputStreamReader(resource.getInputStream()));
+        List<String> scopes = Collections.singletonList("https://mail.google.com/");
 
-        String authUrl = "https://accounts.google.com/o/oauth2/v2/auth"
-                + "?client_id=" + nusClientId
-                + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
-                + "&response_type=code"
-                + "&scope=" + URLEncoder.encode(scope, StandardCharsets.UTF_8)
-                + "&access_type=offline";
+        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
+                new NetHttpTransport(),
+                GsonFactory.getDefaultInstance(),
+                clientSecrets,
+                scopes)
+                .setAccessType("offline")
+                .build();
 
-        response.sendRedirect(authUrl);
+        String url = flow.newAuthorizationUrl()
+                .setRedirectUri(callBackUrl)
+                .build();
+
+        response.sendRedirect(url);
+    }
+
+    @GetMapping("/callback")
+    public String handleGoogleCallback(@RequestParam("code") String code) throws IOException {
+        ClassPathResource resource = new ClassPathResource("client_secret.json");
+        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(GsonFactory.getDefaultInstance(), new InputStreamReader(resource.getInputStream()));
+
+        GoogleAuthorizationCodeTokenRequest tokenRequest = new GoogleAuthorizationCodeTokenRequest(
+                new NetHttpTransport(),
+                GsonFactory.getDefaultInstance(),
+                "https://oauth2.googleapis.com/token",
+                clientSecrets.getDetails().getClientId(),
+                clientSecrets.getDetails().getClientSecret(),
+                code,
+                callBackUrl
+        );
+
+        var tokenResponse = tokenRequest.execute();
+        return tokenResponse.getRefreshToken();
     }
 
 }

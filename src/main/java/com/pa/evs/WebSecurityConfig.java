@@ -146,7 +146,8 @@ class SecurityConfig {
             .requestMatchers(HttpMethod.POST, "/api/lock/*/code2**").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/lock/*/save-log").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/dms/project/*/application-guest").permitAll()
-            .requestMatchers(HttpMethod.GET, "/google/oauth/get-code").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/google/oauth/get-code").permitAll()
+            .requestMatchers(HttpMethod.GET, "/callback").permitAll()
 			.anyRequest().authenticated();
 		});
 

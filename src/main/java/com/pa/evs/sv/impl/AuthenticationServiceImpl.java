@@ -2817,6 +2817,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
 			if (emailToProcessOpt.isPresent() || !subject.contains("Create Key Access for NUS")) {
 				// This email is already saved or wrong format--> skip
+				LOGGER.info("This email: {} , sender: {} is already saved or wrong format--> skip", subject, sender);
 				continue;
 			}
 

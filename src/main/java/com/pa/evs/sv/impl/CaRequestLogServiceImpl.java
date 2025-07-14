@@ -2,14 +2,11 @@ package com.pa.evs.sv.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -28,6 +25,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -40,7 +38,6 @@ import javax.management.ObjectName;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
-import org.joda.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -1763,7 +1760,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		double cpuLoad = getProcessCpuLoad();
 		String value = String.format("%.1f", freeDiskSpace / (1024.0 * 1024 * 1024)) + "/" + String.format("%.1f", totalDiskSpace / (1024.0 * 1024 * 1024));
 		LocalDate today = LocalDate.now();
-        boolean isFirstDayOfYear = today.getDayOfYear() == 1;
+        boolean isFirstDayOfMonth = today.getDayOfMonth() == 1;
         Long lastReboot = getSystemLastReboot();
         
 		if (opt.isPresent()) {
@@ -1775,9 +1772,15 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             sm.setLastUpTime(lastReboot);
             sm.setLastDownTime(lastReboot);
             
-            if (isFirstDayOfYear) {
-            	sm.setPrevValue(value);
-            }
+            if (isFirstDayOfMonth) {
+            	if (StringUtils.isBlank(sm.getLastMonthValue())) {
+					sm.setLastMonthValue(value);
+				} else {
+					String lastMonthValue = sm.getLastMonthValue();
+					sm.setLast2MonthValue(lastMonthValue);
+					sm.setLastMonthValue(value);
+				}
+        	}
             
             if (cpuLoad > 80 || (totalDiskSpace / freeDiskSpace) < 0.1) {
             	if (cpuLoad > 80) {
@@ -1810,10 +1813,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             sm.setIpAddress(CMD.publicIp);
             sm.setLastUpTime(lastReboot);
             sm.setLastDownTime(lastReboot);
-            
-            if (isFirstDayOfYear) {
-            	sm.setPrevValue(value);
-            }
             
             if (cpuLoad > 80) {
             	sm.setStatus(ScreenMonitorStatus.NOT_OK);
@@ -1857,7 +1856,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         boolean isFirstDayOfMonth = today.getDayOfMonth() == 1;
         Long lastReboot = getSystemLastReboot();
         double cpuLoad = getProcessCpuLoad();
-        String diskValue = String.format("%.1f", new File("/").getFreeSpace() / (1024.0 * 1024 * 1024)) + "/" + String.format("%.1f", new File("/").getTotalSpace() / (1024.0 * 1024 * 1024));
         
     	if (smOpt.isPresent()) {
             ScreenMonitoring sm = smOpt.get();
@@ -1871,8 +1869,14 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             	sm.setValueCpu(cpuLoad);
             	
             	if (isFirstDayOfMonth) {
-                	sm.setPrevValue(diskValue);
-                }
+					if (StringUtils.isBlank(sm.getLastMonthValue())) {
+						sm.setLastMonthValue(value);
+					} else {
+						String lastMonthValue = sm.getLastMonthValue();
+						sm.setLast2MonthValue(lastMonthValue);
+						sm.setLastMonthValue(value);
+					}
+            	}
             }
             
             screenMonitoringRepository.save(sm);
@@ -1889,10 +1893,6 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             if (key.compareTo(ScreenMonitorKey.DB_CHECK) == 0) {
             	sm.setIpAddress(AppProps.get("DB_IP", "127.0.0.1"));
             	sm.setValueCpu(cpuLoad);
-            	
-            	if (isFirstDayOfMonth) {
-                	sm.setPrevValue(diskValue);
-                }
             }
             
             screenMonitoringRepository.save(sm);
@@ -2927,11 +2927,5 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		}
 		
 		return null;
-	}
-	
-	public static void main(String[] args) {
-		
-		System.out.println(new File("C://hiberfil.sys").getUsableSpace() / (1024 * 1024 * 1024));
-		
 	}
 }
