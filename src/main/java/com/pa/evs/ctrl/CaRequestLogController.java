@@ -14,11 +14,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -36,9 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pa.evs.constant.RestPath;
-import com.pa.evs.dto.AddressDto;
 import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.DeviceSettingDto;
 import com.pa.evs.dto.PaginDto;
@@ -56,6 +49,9 @@ import com.pa.evs.utils.SecurityUtils;
 import com.pa.evs.utils.SimpleMap;
 
 import io.swagger.v3.oas.annotations.Hidden;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @Hidden
@@ -81,7 +77,7 @@ public class CaRequestLogController {
     CaRequestLogService caRequestLogService;
     
     @SuppressWarnings("unchecked")
-	@PostMapping(RestPath.GET_CA_REQUEST_LOG)
+	@PostMapping(RestPath.CA_REQUEST_LOG_GET)
     public ResponseEntity<?> getMCUs(HttpServletResponse response, @RequestBody PaginDto<CARequestLog> pagin) throws IOException {
         
     	if (BooleanUtils.isTrue((Boolean) pagin.getOptions().get("downloadCsv")) || "true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "")) {
@@ -92,7 +88,12 @@ public class CaRequestLogController {
         	result.getResults().forEach(o -> o.setProfile((String)pagin.getOptions().get("profile")));
             File file = null;
             if ("true".equalsIgnoreCase(pagin.getOptions().get("downloadFullMCU") + "")) {
-            	file = caRequestLogService.downloadCsvFullMCUs(result.getResults(), (List<String>) pagin.getOptions().get("sns"));
+            	if (pagin.getOptions().get("sns") != null) {
+            		file = caRequestLogService.downloadCsvFullMCUs(result.getResults(), (List<String>) pagin.getOptions().get("sns"), "MCU_SN");
+            	} else if (pagin.getOptions().get("msns") != null) {
+            		file = caRequestLogService.downloadCsvFullMCUs(result.getResults(), (List<String>) pagin.getOptions().get("msns"), "METER_SN");
+            	}
+            	
             
             } else if ("fullMCU".equals(pagin.getOptions().get("downloadType"))) {
         		List<String> headers = Arrays.asList(
@@ -148,6 +149,14 @@ public class CaRequestLogController {
                 installer.setUsername(user.getUsername());
                 li.setInstaller(installer);
             }
+            
+            user = li.getAccount();
+            Users account = new Users();
+            if (user != null) {
+            	account.setUserId(user.getUserId());
+            	account.setUsername(user.getUsername());
+                li.setAccount(account);
+            }
         });
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
@@ -156,7 +165,8 @@ public class CaRequestLogController {
     public ResponseEntity<?> exportMCUs(
             HttpServletRequest httpServletRequest,
             HttpServletResponse response,
-            @RequestParam(value = "file") final MultipartFile file) throws Exception {
+            @RequestParam(value = "file") final MultipartFile file,
+            @RequestParam final String type) throws Exception {
     	
     	PaginDto<CARequestLog> pagin = new PaginDto<>();
     	try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
@@ -167,7 +177,12 @@ public class CaRequestLogController {
 					sns.add(l.replaceAll("[^a-zA-Z0-9]", "").trim());
 				}
 			}
-			pagin.getOptions().put("sns", sns);
+			if ("MCU_SN".equalsIgnoreCase(type)) {
+				pagin.getOptions().put("sns", sns);
+			} else if ("METER_SN".equalsIgnoreCase(type)) {
+				pagin.getOptions().put("msns", sns);
+			}
+			
 		} catch (Exception e) {
 			//
 		}
@@ -244,6 +259,14 @@ public class CaRequestLogController {
                 installer.setUsername(user.getUsername());
                 li.setInstaller(installer);
             }
+            
+            user = li.getAccount();
+            Users account = new Users();
+            if (user != null) {
+            	account.setUserId(user.getUserId());
+            	account.setUsername(user.getUsername());
+                li.setAccount(account);
+            }
         });
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(pagin).build());
     }
@@ -292,7 +315,7 @@ public class CaRequestLogController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(cids).build());
     }
     
-    @GetMapping(RestPath.CA_CAL_DASHBOARD)
+    @GetMapping(RestPath.DASHBOARD_CA_CAL)
     public ResponseEntity<?> calDashboard(HttpServletRequest httpServletRequest) {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(
         		SimpleMap.init("countAlarms", countAlarms)
@@ -306,7 +329,7 @@ public class CaRequestLogController {
         		).build());
     }
     
-    @PostMapping(RestPath.CA_ALARM_MARK_VIEW_ALL)
+    @PostMapping(RestPath.DASHBOARD_CA_ALARM_MARK_VIEW_ALL)
     public ResponseEntity<?> markViewAll(HttpServletRequest httpServletRequest) {
         caRequestLogService.markViewAll();
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
@@ -318,7 +341,7 @@ public class CaRequestLogController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(result).build());
     }
 
-    @GetMapping(RestPath.GET_DASHBOARD)
+    @GetMapping(RestPath.DASHBOARD_GET)
     public ResponseEntity<?> getDashboard(HttpServletRequest httpServletRequest) {
         List<ScreenMonitoring> result = caRequestLogService.getDashboard();
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).response(result).build());

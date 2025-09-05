@@ -61,6 +61,7 @@ import com.pa.evs.dto.CoupleDeCoupleMSNDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.FirmwareDto;
 import com.pa.evs.dto.GroupDto;
+import com.pa.evs.dto.ImportAccountDto;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.LogDto;
 import com.pa.evs.dto.MeterCommissioningReportDto;
@@ -1195,6 +1196,85 @@ public class CommonController {
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
     }
     
+    @GetMapping("/api/mcu-sn/template")
+    public ResponseEntity<Object> mcuSnTemplate(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response) throws Exception {
+        
+        try {
+    		List<String> headers = Arrays.asList("MCU SN");
+    		List<List<String>> src = Arrays.asList(
+    				Arrays.asList("SM02AMX21AAA00AAA004"), 
+    				Arrays.asList("SM02AMX21AAA01AA0390")
+    				);
+    		File csv = CsvUtils.toCsv(headers, src, (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add(it.get(0));
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("mcu-sn-template_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+    		String fileName = "mcu-sn-template.csv";
+    		
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
+    @GetMapping("/api/account/template")
+    public ResponseEntity<Object> accountTemplate(
+            HttpServletRequest httpServletRequest,
+            HttpServletResponse response) throws Exception {
+        
+        try {
+    		List<String> headers = Arrays.asList("MSN", "Account");
+    		List<List<String>> src = Arrays.asList(
+    				Arrays.asList("201906099032", "1"),
+    				Arrays.asList("202708100001", "1")
+    				);
+    		
+    		File csv = CsvUtils.toCsv(headers, src, (idx, it, l) -> {
+                List<String> record = new ArrayList<>();
+
+                record.add(it.get(0));
+                record.add(it.get(1));
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("account-template_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+    		String fileName = "account-template.csv";
+    		
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
+    
     @PostMapping("/api/couple-decouple-msn/upload")
     public ResponseEntity<Object> coupleDeCoupleMSNUpload(
             HttpServletRequest httpServletRequest,
@@ -1243,7 +1323,55 @@ public class CommonController {
             return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
         }
         return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
-    }    
+    }
+    
+    @PostMapping("/api/import-account/upload")
+    public ResponseEntity<Object> importAccountUpload(
+            HttpServletRequest httpServletRequest,
+            @RequestParam(value = "file") final MultipartFile file,
+            HttpServletResponse response) throws Exception {
+        
+        try {
+    		List<String> headers = Arrays.asList(
+    				"MSN","Account","Message"
+    				);
+    		List<ImportAccountDto> dtos = caRequestLogService.handleImportAccount(file);
+    		File csv = CsvUtils.toCsv(headers, dtos, (idx, it, l) -> {
+            	
+                List<String> record = new ArrayList<>();
+
+                record.add(StringUtils.isNotBlank(it.getMsn()) ? it.getMsn() : "");
+                record.add(StringUtils.isNotBlank(it.getAccount()) ? it.getAccount() : "");
+                record.add(StringUtils.isNotBlank(it.getMessage()) ? it.getMessage() : "Success");
+                
+                return CsvUtils.postProcessCsv(record);
+            }, CsvUtils.buildPathFile("import_account_result_" + System.currentTimeMillis() + ".csv"), 1l);
+        	
+        	String fileName = file.getName();
+            
+        	SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
+        	
+        	try (FileOutputStream logFileFos = new FileOutputStream(CsvUtils.EXPORT_TEMP + "/logs/import_account_" + sf.format(new Date()) + "_" + System.currentTimeMillis() + ".csv"); 
+        			FileInputStream fis = new FileInputStream(csv)) {
+        		IOUtils.copy(fis, logFileFos);
+        	}
+        	
+            try (FileInputStream fis = new FileInputStream(csv)) {
+                response.setContentLengthLong(csv.length());
+                response.setHeader(HttpHeaders.CONTENT_TYPE, "application/csv");
+                response.setHeader(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS, "name");
+                response.setHeader("name", fileName);
+                response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
+                IOUtils.copy(fis, response.getOutputStream());
+            } finally {
+                FileUtils.deleteDirectory(csv.getParentFile());
+            }
+        } catch (Exception e) {
+        	LOG.error(e.getMessage(), e);
+            return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(false).message(e.getMessage()).build());
+        }
+        return ResponseEntity.<Object>ok(ResponseDto.<Object>builder().success(true).build());
+    }
     
     @GetMapping("/api/vendors")
     public ResponseEntity<Object> getVendors(HttpServletRequest httpServletRequest) throws Exception {

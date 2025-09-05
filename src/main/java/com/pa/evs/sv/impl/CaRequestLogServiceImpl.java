@@ -54,6 +54,7 @@ import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.CoupleDeCoupleMSNDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.DeviceSettingDto;
+import com.pa.evs.dto.ImportAccountDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.ProjectTagDto;
 import com.pa.evs.dto.RelayStatusLogDto;
@@ -136,6 +137,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 	@Value("${evs.pa.privatekey.path}") private String pkPath;
 	
 	@Value("S{s3.device.settings.bucket.name}") private String deviceSettingsBucketName;
+	
+	@Value("${evs.pa.mqtt.health.check.subscribe.req.topic}") private String evsMqttHealthCheckReqTopic;
+
+	@Value("${evs.pa.mqtt.health.check.subscribe.resp.topic}") private String evsMqttHealthCheckRespTopic;
 	
 	static final ObjectMapper mapper = new ObjectMapper();
 	
@@ -581,6 +586,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 			addrLog = AddressLog.build(ca);
 			addrLog.setType(DeviceType.NOT_COUPLED);
 			addressLogRepository.save(addrLog);
+			addressLogRepository.flush();
 			isSetAddress = true;
     	}
         
@@ -670,6 +676,16 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         } else {
             ca.setInstaller(null);
         }
+        
+        if (dto.getAccount() != null) {
+            Optional<Users> account = userRepository.findById(dto.getAccount().longValue());
+            if (account.isPresent()) {
+                ca.setAccount(account.get());
+            }
+        } else {
+            ca.setAccount(null);
+        }
+        
         if (dto.getGroup() != null) {
             Optional<Group> group = groupRepository.findById(dto.getGroup().longValue());
             if (group.isPresent()) {
@@ -831,6 +847,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     		addrLog = AddressLog.build(ca);
     		addrLog.setType(DeviceType.COUPLED);
     		addressLogRepository.save(addrLog);
+    		addressLogRepository.flush();
     		isSetAddress = true;
         }
 
@@ -1089,6 +1106,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             String queryRemarkMeter = (String) options.get("queryRemarkMeter");
             
             Object sns = options.get("sns");
+            Object msns = options.get("msns");
             
             String queryTagTypes = (String) options.get("queryTagTypes");
             if (StringUtils.isBlank(queryTagTypes)) {
@@ -1330,6 +1348,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         	if (sns != null && sns instanceof List && !((List<String>) sns).isEmpty()) {
         		sqlCommonBuilder.append(" AND ca.sn in (" + sns.toString().replaceAll(" *, *", "','").replaceAll("\\[", "'").replaceAll("]", "'") + ") ");
         	}
+        	
+        	if (msns != null && msns instanceof List && !((List<String>) msns).isEmpty()) {
+        		sqlCommonBuilder.append(" AND ca.msn in (" + msns.toString().replaceAll(" *, *", "','").replaceAll("\\[", "'").replaceAll("]", "'") + ") ");
+        	}
         }
         
         if (Boolean.parseBoolean(pagin.getOptions().get("cidIsNotNull") + "")) {
@@ -1549,11 +1571,11 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
     
 	@Override
     @Transactional(readOnly = true)
-    public File downloadCsvFullMCUs(List<CARequestLog> listInput, List<String> sns) throws IOException {
+    public File downloadCsvFullMCUs(List<CARequestLog> listInput, List<String> fields, String type) throws IOException {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd-HHmmss");
         String tag = sdf.format(new Date());
         String fileName = "mcu-" + tag + ".csv";
-        return CsvUtils.writeMCUCsv(listInput, fileName, sns);
+        return CsvUtils.writeMCUCsv(listInput, fileName, fields, type);
     }
     
     @Override
@@ -1761,6 +1783,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		String value = String.format("%.1f", freeDiskSpace / (1024.0 * 1024 * 1024)) + "/" + String.format("%.1f", totalDiskSpace / (1024.0 * 1024 * 1024));
 		LocalDate today = LocalDate.now();
         boolean isFirstDayOfMonth = today.getDayOfMonth() == 1;
+        boolean isFirstDayOfYear = today.getDayOfYear() == 1;
         Long lastReboot = getSystemLastReboot();
         
 		if (opt.isPresent()) {
@@ -1781,6 +1804,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 					sm.setLastMonthValue(value);
 				}
         	}
+            
+            if (isFirstDayOfYear) {
+            	sm.setJan1Value(value);
+            }
             
             if (cpuLoad > 80 || (totalDiskSpace / freeDiskSpace) < 0.1) {
             	if (cpuLoad > 80) {
@@ -1849,6 +1876,23 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
         } catch (Exception e) {
             checkAndSaveScreenMonitoring(opt, "N/A", ScreenMonitorStatus.NOT_OK, ScreenMonitorKey.DB_CHECK);
         }
+    }
+    
+    @Override
+    public void checkMqttServer() {
+    	try {
+    		Map<String, Object> data = new LinkedHashMap<>();
+			Map<String, Object> header = new LinkedHashMap<>();
+			data.put("header", header);
+			header.put("id", UUID.randomUUID());
+			
+			Map<String, Object> payload = new LinkedHashMap<>();
+			data.put("payload", payload);
+			payload.put("type", "MQTT_HEALTH_CHECK");
+			evsPAService.publish(evsMqttHealthCheckReqTopic, data, "MQTT_HEALTH_CHECK");
+		} catch (Exception e) {
+			LOG.error("Error on checking MQTT server: ", e.getMessage());
+		}
     }
 
     private void checkAndSaveScreenMonitoring (Optional<ScreenMonitoring> smOpt, String value, ScreenMonitorStatus status, ScreenMonitorKey key) {
@@ -2273,7 +2317,7 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		mmsMeterRepository.delete(meter);
 	}
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void updateDeviceLogs(DeviceRemoveLog log, String reason, String operation, AddressLog addrLog) {
     	try {
 			log.setId(null);
@@ -2896,6 +2940,10 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 						dto.put("Status", StringUtils.isBlank(it) ? "" : it);
 					} else if (head.computeIfAbsent("StateChangeTime", k->-1) == count) {
 						dto.put("StateChangeTime", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("MSN", k->-1) == count) {
+						dto.put("MSN", StringUtils.isBlank(it) ? "" : it);
+					} else if (head.computeIfAbsent("Account", k->-1) == count) {
+						dto.put("Account", StringUtils.isBlank(it) ? "" : it);
 					}
 				}
 				count++;
@@ -2927,5 +2975,62 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
 		}
 		
 		return null;
+	}
+
+	@Override
+	@Transactional
+	public List<ImportAccountDto> handleImportAccount(MultipartFile file) throws IOException {
+		
+		List<ImportAccountDto> result = new ArrayList<>();
+		List<Map<String, Object>> dtos = parseCsv(file.getInputStream());
+		
+		dtos.forEach(dto -> {
+			
+			ImportAccountDto iad = new ImportAccountDto();
+			iad.setMsn(dto.get("MSN") != null ? (String) dto.get("MSN") : null);
+			iad.setAccount(dto.get("Account") != null ? (String) dto.get("Account") : null);
+			
+			String msn = dto.get("MSN") != null ? (String) dto.get("MSN") : null;
+			
+			if (StringUtils.isBlank(msn)) {
+				iad.setMessage("MSN is required!");
+				result.add(iad);
+				return;
+			}
+			Optional<CARequestLog> caOpt = caRequestLogRepository.findByMsn(msn);
+			
+			if (!caOpt.isPresent()) {
+				iad.setMessage("Device not found!");
+				result.add(iad);
+				return;
+			}
+			
+			if (dto.get("Account") != null) {
+				Long account = Long.parseLong((String) dto.get("Account"));
+				Optional<Users> userOpt = userRepository.findById(account);
+				
+				if (!userOpt.isPresent()) {
+					iad.setMessage("User account not found!");
+					result.add(iad);
+					return;
+				}
+				caOpt.get().setAccount(userOpt.get());
+				caRequestLogRepository.save(caOpt.get());
+				caRequestLogRepository.flush();
+				
+				iad.setMessage("SUCCESS!");
+				result.add(iad);
+				return;
+			} else {
+				caOpt.get().setAccount(null);
+				caRequestLogRepository.save(caOpt.get());
+				caRequestLogRepository.flush();
+				
+				iad.setMessage("SUCCESS!");
+				result.add(iad);
+				return;
+			}
+		});
+		return result;
 	}
 }

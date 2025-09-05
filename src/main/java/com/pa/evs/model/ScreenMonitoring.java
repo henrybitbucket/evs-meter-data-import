@@ -53,6 +53,9 @@ public class ScreenMonitoring {
     @Column(name = "last_down_time")
     private Long lastDownTime;
     
+    @Column(name = "jan_1_value")
+    private String jan1Value;
+    
     @Column(name = "last_month_value")
     private String lastMonthValue;
     

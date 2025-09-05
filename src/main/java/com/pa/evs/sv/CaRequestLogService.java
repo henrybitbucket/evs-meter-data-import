@@ -13,6 +13,7 @@ import com.pa.evs.dto.CaRequestLogDto;
 import com.pa.evs.dto.CoupleDeCoupleMSNDto;
 import com.pa.evs.dto.DeviceRemoveLogDto;
 import com.pa.evs.dto.DeviceSettingDto;
+import com.pa.evs.dto.ImportAccountDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.RelayStatusLogDto;
 import com.pa.evs.dto.ScreenMonitoringDto;
@@ -86,17 +87,21 @@ public interface CaRequestLogService {
 
 	File downloadCsvMeter(List<CARequestLog> listInput, Long activateDate) throws IOException;
 
-	File downloadCsvFullMCUs(List<CARequestLog> listInput, List<String> sns) throws IOException;
+	File downloadCsvFullMCUs(List<CARequestLog> listInput, List<String> fields, String type) throws IOException;
 
 	void removeMeter(String msn);
 
 	List<CoupleDeCoupleMSNDto> handleCoupleDeCoupleMSNUpload(MultipartFile file, String importType) throws IOException;
 
 	List<Map<String, Object>> handleUploadMSISDN(MultipartFile file) throws IOException;
+	
+	List<ImportAccountDto> handleImportAccount(MultipartFile file) throws IOException;
 
 	Map<String, Object> getAppServerCheck();
 
 	void sendSystemAlert();
 
 	void checkAppServerStatus();
+
+	void checkMqttServer();
 }

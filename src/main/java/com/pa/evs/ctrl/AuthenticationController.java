@@ -6,8 +6,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,9 +40,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
@@ -67,7 +62,6 @@ import com.pa.evs.dto.ResponseDto;
 import com.pa.evs.dto.RoleDto;
 import com.pa.evs.dto.UserDto;
 import com.pa.evs.exception.ApiException;
-import com.pa.evs.model.LocksAccessPermisison;
 import com.pa.evs.repository.PlatformUserLoginRepository;
 import com.pa.evs.security.user.JwtUser;
 import com.pa.evs.sv.AuthenticationService;
@@ -154,21 +148,21 @@ public class AuthenticationController {
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
-    @PostMapping(value = {RestPath.USERPERMISSION})
+    @PostMapping(value = {RestPath.USER_PERMISSION})
     @Hidden
     public Object getPermissionsOfUser(@RequestBody PaginDto<UserDto> pagin) {
         authenticationService.getPermissionsOfUser(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
-    @PostMapping(value = {RestPath.USERROLELOGGING})
+    @PostMapping(value = {RestPath.USER_ROLE_LOGGING})
     @Hidden
     public Object getRoleOfUserLogin(@RequestBody PaginDto<RoleDto> pagin) {
         authenticationService.getRoleOfUserLogin(pagin);
         return ResponseDto.<Object>builder().success(true).response(pagin).build();
     }
     
-    @PostMapping(value = {RestPath.USERROLE})
+    @PostMapping(value = {RestPath.USER_ROLE})
     @Hidden
     public Object getRoleOfUser(@RequestBody PaginDto<RoleDto> pagin) {
         authenticationService.getRoleOfUser(pagin);
@@ -209,7 +203,7 @@ public class AuthenticationController {
     }
     
     
-    @GetMapping(value = {RestPath.USERPLATFORM})
+    @GetMapping(value = {RestPath.USER_PLATFORM})
     @Hidden
     public Object getPfOfUser(@RequestParam(required = true) String email) {
     	try {
@@ -220,7 +214,7 @@ public class AuthenticationController {
 		}
     }
     
-    @PostMapping(value = {RestPath.USERPLATFORM})
+    @PostMapping(value = {RestPath.USER_PLATFORM})
     @Hidden
     public Object savePfOfUser(@RequestBody PlatformUserLoginDto dto) {
         try {
@@ -234,7 +228,7 @@ public class AuthenticationController {
         return ResponseDto.<Object>builder().success(true).build();
     }
     
-    @PostMapping(value = {RestPath.USERGROUP})
+    @PostMapping(value = {RestPath.USER_GROUP})
     @Hidden
     public Object getGroupOfUser(@RequestBody PaginDto<GroupUserDto> pagin) {
         authenticationService.getGroupOfUser(pagin);

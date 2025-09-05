@@ -61,4 +61,15 @@ public class PAEVSScheduledJobs {
         	e.printStackTrace();
         }
     }
+    
+    @Scheduled(fixedRate = 5*60*1000)
+    public void checkMqttServer() {
+        try {
+            LOG.debug("start checking checkMqttServer at: {}", dateFormat.format(new Date()));
+            caRequestLogService.checkMqttServer();
+            LOG.debug("end checking checkMqttServer at: {}", dateFormat.format(new Date()));
+        } catch (Exception e) {
+            //
+        }
+    }
 }

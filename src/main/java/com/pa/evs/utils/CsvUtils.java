@@ -71,18 +71,28 @@ public class CsvUtils {
         return toCsv(headers, listInput, (idx, it, l) -> CsvUtils.toCSVRecord(idx, it), buildPathFile(fileName), activateDate);
     }
     
-    public static File writeMCUCsv(List<CARequestLog> listInput, String fileName, List<String> sns) throws IOException{
+    public static File writeMCUCsv(List<CARequestLog> listInput, String fileName, List<String> fields, String type) throws IOException{
         listInput = listInput.stream().filter(input -> !input.getUid().equals("server.csr")).collect(Collectors.toList());
         List<String> headers = Arrays.asList(
                 "MCU SN", "MCU UUID", "eSIM ID", "MSN", "Status", "P2 CoupleState", "Version", "Vendor", "Last Seen", "Group", "EnrollTime", "Building", "Block", "Floor", "Unit");
         
         List<CARequestLog> tmp = new ArrayList<>();
-        for (String sn : sns) {
-        	CARequestLog mcu = listInput.stream().filter(c -> c.getSn().equalsIgnoreCase(sn)).findFirst().orElse(new CARequestLog());
-        	if (mcu.getSn() == null) {
-        		mcu.setSn(sn);
-        	}
-        	tmp.add(mcu);
+        if ("MCU_SN".equalsIgnoreCase(type)) {
+        	for (String sn : fields) {
+            	CARequestLog mcu = listInput.stream().filter(c -> c.getSn().equalsIgnoreCase(sn)).findFirst().orElse(new CARequestLog());
+            	if (mcu.getSn() == null) {
+            		mcu.setSn(sn);
+            	}
+            	tmp.add(mcu);
+            }
+        } else if ("METER_SN".equalsIgnoreCase(type)) {
+        	for (String msn : fields) {
+            	CARequestLog mcu = listInput.stream().filter(c -> c.getMsn().equalsIgnoreCase(msn)).findFirst().orElse(new CARequestLog());
+            	if (mcu.getMsn() == null) {
+            		mcu.setMsn(msn);
+            	}
+            	tmp.add(mcu);
+            }
         }
         return toCsv(headers, tmp, (idx, it, l) -> {
         	

@@ -20,89 +20,95 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CaRequestLogDto {
-    
-    private Long id;
 
-    private String uid;
-    
-    private String msn;
-    
-    private String sn;
-    
-    private String certificate;
-    
-    private String raw;
-    
-    private Long startDate;
-    
-    private Long endDate;
-    
-    private Boolean requireRefresh;
-    
-    private Long installer;
-    
-    private String installerName;
-    
-    private String installerEmail;
-    
-    private Long group;
-    
+	private Long id;
+
+	private String uid;
+
+	private String msn;
+
+	private String sn;
+
+	private String certificate;
+
+	private String raw;
+
+	private Long startDate;
+
+	private Long endDate;
+
+	private Boolean requireRefresh;
+
+	private Long installer;
+
+	private String installerName;
+
+	private String installerEmail;
+
+	private Long group;
+
 	private String homeAddress;
 
-    private Long buildingId;
-    
-    private Long floorLevelId;
-    
-    private Long buildingUnitId;
-    
-    private DeviceStatus status;
-    
-    private DeviceType type;
-    
+	private Long buildingId;
+
+	private Long floorLevelId;
+
+	private Long buildingUnitId;
+
+	private DeviceStatus status;
+
+	private DeviceType type;
+
 	private String coupledUser;
-    
-    private BuildingDto building;
-    
-    private FloorLevelDto floorLevel;
-    
-    private BuildingUnitDto buildingUnit;
-    
-    private AddressDto address;
-    
-    private Long vendor;
-    
-    @Builder.Default
-    private List<Long> projectTags = new ArrayList<>();
-    
-    @Builder.Default
-    private List<Long> mcuProjectTags = new ArrayList<>();
-    
-    @Builder.Default
-    private List<Long> meterProjectTags = new ArrayList<>();
-    
-    @Builder.Default
-    private List<Long> addressProjectTags = new ArrayList<>();
-    
-    @Builder.Default
-    private List<String> ieiNodes = new ArrayList<>();
-    
-    @Builder.Default
-    private Boolean unCoupleAddress = false;
-    
-    private Boolean isReplaced;
-    
-    private String replaceReason;
-    
-    private Integer sendMDTToPi;
-    
-    private String remark;
-    
-    private String message;
-    
-    @Builder.Default
-    private boolean updateMeter = false;
-    
+
+	private BuildingDto building;
+
+	private FloorLevelDto floorLevel;
+
+	private BuildingUnitDto buildingUnit;
+
+	private AddressDto address;
+
+	private Long vendor;
+
+	@Builder.Default
+	private List<Long> projectTags = new ArrayList<>();
+
+	@Builder.Default
+	private List<Long> mcuProjectTags = new ArrayList<>();
+
+	@Builder.Default
+	private List<Long> meterProjectTags = new ArrayList<>();
+
+	@Builder.Default
+	private List<Long> addressProjectTags = new ArrayList<>();
+
+	@Builder.Default
+	private List<String> ieiNodes = new ArrayList<>();
+
+	@Builder.Default
+	private Boolean unCoupleAddress = false;
+
+	private Boolean isReplaced;
+
+	private String replaceReason;
+
+	private Integer sendMDTToPi;
+
+	private String remark;
+
+	private String message;
+
+	@Builder.Default
+	private boolean updateMeter = false;
+
 	private String remarkMCU;
-	
+
 	private String remarkMeter;
+
+	private Long account;
+
+	private String accountName;
+
+	private String accountEmail;
 }

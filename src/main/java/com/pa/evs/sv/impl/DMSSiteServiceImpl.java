@@ -124,16 +124,16 @@ public class DMSSiteServiceImpl implements DMSSiteService {
 		}
 		
         if (StringUtils.isNotBlank(queryBuilding)) {
-        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.building.id= '" + queryBuilding + "') ");	
+        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.building.id= " + queryBuilding + ") ");	
         }
         if (StringUtils.isNotBlank(queryBlock)) {
-        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.block.id= '" + queryBlock + "') ");	
+        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.block.id= " + queryBlock + ") ");	
         }
         if (StringUtils.isNotBlank(queryFloorLevel)) {
-        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.floorLevel.id= '" + queryFloorLevel + "') ");
+        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.floorLevel.id= " + queryFloorLevel + ") ");
         }
         if (StringUtils.isNotBlank(queryBuildingUnit)) {
-        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.buildingUnit.id= '" + queryBuildingUnit + "') ");
+        	cmmBuilder.append(" AND exists (select 1 from DMSLocationSite ls where ls.site.id = fl.id and ls.buildingUnit.id= " + queryBuildingUnit + ") ");
         }
         
 		if (pagin.getOptions().get("projectId") != null) {

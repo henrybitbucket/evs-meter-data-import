@@ -259,6 +259,10 @@ public class CARequestLog extends BaseEntity {
     @Builder.Default
     private Integer midResetTime = 0;
 	
+	@ManyToOne(fetch = FetchType.LAZY, cascade = {CascadeType.MERGE})
+	@JoinColumn(name = "account")
+	private Users account;
+	
 	@Transient
     private Long lastestDecoupleTime;
     

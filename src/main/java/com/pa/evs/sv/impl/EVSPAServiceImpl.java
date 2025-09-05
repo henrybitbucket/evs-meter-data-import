@@ -3,6 +3,7 @@ package com.pa.evs.sv.impl;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -116,6 +118,7 @@ import com.pa.evs.sv.CaRequestLogService;
 import com.pa.evs.sv.EVSPAService;
 import com.pa.evs.sv.FirmwareService;
 import com.pa.evs.sv.LogService;
+import com.pa.evs.sv.NotificationService;
 import com.pa.evs.sv.StarfishCAService;
 import com.pa.evs.utils.ApiUtils;
 import com.pa.evs.utils.AppProps;
@@ -190,6 +193,8 @@ public class EVSPAServiceImpl implements EVSPAService {
     
 	@Autowired private RelayStatusLogRepository relayStatusLogRepository;
 	
+	@Autowired private NotificationService notificationService;
+	
 	@Autowired StarfishCAService starfishCAService;
     
 	@Value("${evs.pa.data.folder}") private String evsDataFolder;
@@ -203,6 +208,10 @@ public class EVSPAServiceImpl implements EVSPAService {
     @Value("${evs.pa.local.subscribe.resp.topic}") private String evsMeterLocalRespSubscribeTopic;
 
 	@Value("${evs.pa.local.data.send.topic}") private String evsMeterLocalDataSendTopic;
+	
+	@Value("${evs.pa.mqtt.health.check.subscribe.req.topic}") private String evsMqttHealthCheckReqTopic;
+
+	@Value("${evs.pa.mqtt.health.check.subscribe.resp.topic}") private String evsMqttHealthCheckRespTopic;
 
 	//@Value("${evs.pa.local.data.resp.topic}") private String evsMeterLocalDataRespTopic;
 
@@ -235,6 +244,8 @@ public class EVSPAServiceImpl implements EVSPAService {
 	private static final ExecutorService EX_POOL_SDB = Executors.newFixedThreadPool(500);
 	
 	private AmazonS3Client s3Client = null;
+	
+	Map<String, String[]> alerts = new LinkedHashMap<>();
 	
 //	@Override
 //	public Object uploadDeviceCsr(MultipartFile file, Long vendor) {
@@ -375,67 +386,16 @@ public class EVSPAServiceImpl implements EVSPAService {
 				throw new RuntimeException("File is empty!");
 			}
 			
-			// First, process on CSV file
+			// First, process on CSV file or folder contains list file
 			for (File fileF : f.listFiles()) {
-				String currentName = fileF.getName();
 				
-				if (currentName.endsWith(".csv")) {
-	            	String[] lines = null;
-	            	try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-	            		IOUtils.copy(new FileInputStream(fileF.getAbsolutePath()), bos);
-						lines = new String(bos.toByteArray(), StandardCharsets.UTF_8).split("\r*\n");
-						if (StringUtils.isBlank(lines[0]) || !lines[0].toUpperCase().startsWith("SN,UUID,CID")) {
-							LOG.info("Headers should start with: SN UUID CID");
-							throw new RuntimeException("Headers should start with: SN UUID CID");
-						}
-	            	}
-					for (int i = 1; i < lines.length; i++) {
-						String[] details = lines[i].split(" *, *");
-						if (details.length > 2) {
-							
-							String sn = details[0];
-							String uid = details[1];
-							String cid = details[2];
-							String vendorF = details[4];
-							
-							if (vendorD != null) {
-								vendorF = vendorD.getName();
-							}
-							
-							Map<String, Object> map = SimpleMap.init("sn", sn)
-									.more("uid", uid)
-									.more("cid", cid)
-									.more("vendor", vendorF);
-							
-							reads.add(map);
-							String message = (String) map.computeIfAbsent("message", k -> "");
-							
-							if (StringUtils.isBlank(uid) || StringUtils.isBlank(details[0]) || StringUtils.isBlank(details[2])) {
-								LOG.info("UUID, SN, CID are required!");
-								message += "UUID, SN, CID are required!\n";
-							}
-							if (snSet.contains(sn)) {
-								message += "Duplicate SN\n";
-							}
-							if (uidSet.contains(uid)) {
-								message += "Duplicate UUID\n";
-							}
-							if (cidSet.contains(cid)) {
-								message += "Duplicate CID\n";
-							}
-							if (StringUtils.isBlank(vendorF)) {
-								message += "Vendor is empty\n";
-							} else if (!vendors.contains(vendorF)) {
-								message += "Vendor doesn't exists\n";
-							}
-							
-							snSet.add(sn);
-							uidSet.add(uid);
-							cidSet.add(cid);
-							map.put("message", message);
-						}
+				if (fileF.isDirectory()) {
+					for (File fileFF : fileF.listFiles()) {
+						processOnFile(fileFF, vendorD, snSet, uidSet, cidSet, reads, vendors);
 					}
-	            }
+				} else {
+					processOnFile(fileF, vendorD, snSet, uidSet, cidSet, reads, vendors);
+				}
 			}
 			
 			// Then process on CSR files
@@ -514,6 +474,75 @@ public class EVSPAServiceImpl implements EVSPAService {
 				//
 			}
 		}
+	}
+	
+	private void processOnFile(
+			File fileF,
+			Vendor vendorD,
+			Set<String> snSet,
+			Set<String> uidSet,
+			Set<String> cidSet,
+			List<Map<String, Object>> reads,
+			List<String> vendors) throws FileNotFoundException, IOException {
+		String currentName = fileF.getName();
+		
+		if (currentName.endsWith(".csv")) {
+        	String[] lines = null;
+        	try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+        		IOUtils.copy(new FileInputStream(fileF.getAbsolutePath()), bos);
+				lines = new String(bos.toByteArray(), StandardCharsets.UTF_8).split("\r*\n");
+				if (StringUtils.isBlank(lines[0]) || !lines[0].toUpperCase().startsWith("SN,UUID,CID")) {
+					LOG.info("Headers should start with: SN UUID CID");
+					throw new RuntimeException("Headers should start with: SN UUID CID");
+				}
+        	}
+			for (int i = 1; i < lines.length; i++) {
+				String[] details = lines[i].split(" *, *");
+				if (details.length > 2) {
+					
+					String sn = details[0];
+					String uid = details[1];
+					String cid = details[2];
+					String vendorF = details[4];
+					
+					if (vendorD != null) {
+						vendorF = vendorD.getName();
+					}
+					
+					Map<String, Object> map = SimpleMap.init("sn", sn)
+							.more("uid", uid)
+							.more("cid", cid)
+							.more("vendor", vendorF);
+					
+					reads.add(map);
+					String message = (String) map.computeIfAbsent("message", k -> "");
+					
+					if (StringUtils.isBlank(uid) || StringUtils.isBlank(details[0]) || StringUtils.isBlank(details[2])) {
+						LOG.info("UUID, SN, CID are required!");
+						message += "UUID, SN, CID are required!\n";
+					}
+					if (snSet.contains(sn)) {
+						message += "Duplicate SN\n";
+					}
+					if (uidSet.contains(uid)) {
+						message += "Duplicate UUID\n";
+					}
+					if (cidSet.contains(cid)) {
+						message += "Duplicate CID\n";
+					}
+					if (StringUtils.isBlank(vendorF)) {
+						message += "Vendor is empty\n";
+					} else if (!vendors.contains(vendorF)) {
+						message += "Vendor doesn't exists\n";
+					}
+					
+					snSet.add(sn);
+					uidSet.add(uid);
+					cidSet.add(cid);
+					map.put("message", message);
+				}
+			}
+        }
 	}
 	
 	public List<Map<String, Object>> processCsr(List<Map<String, Object>> reads ) {
@@ -1865,6 +1894,121 @@ public class EVSPAServiceImpl implements EVSPAService {
 			));
 		}
 	}
+	
+	private void handleSubscribeOnMqttHealCheckSubscribe(MqttMessage mqttMessage) {
+		
+		try {
+			Map<String, Object> data = MAPPER.readValue(mqttMessage.getPayload(), Map.class);
+			if (data != null) {
+				Map<String, Object> header = (Map<String, Object>) data.get("header");
+				Map<String, Object> payload = (Map<String, Object>) data.get("payload");
+				
+				if (payload != null) {
+					String diskFreeTotal = payload.get("diskFreeTotal") != null ? (String) payload.get("diskFreeTotal") : "";
+					double cpuLoad = payload.get("cpuLoad") != null ? (double) payload.get("cpuLoad") : 0;
+					String ipAddress = payload.get("ipAddress") != null ? (String) payload.get("ipAddress") : "";
+					Long lastUpTime = payload.get("lastUpTime") != null ? (Long) payload.get("lastUpTime") : null;
+					Long lastDownTime = payload.get("lastDownTime") != null ? (Long) payload.get("lastDownTime") : null;
+					Long freeDiskSpace = payload.get("freeDiskSpace") != null ? (Long) payload.get("freeDiskSpace") : null;
+					Long totalDiskSpace = payload.get("totalDiskSpace") != null ? (Long) payload.get("totalDiskSpace") : null;
+					LocalDate today = LocalDate.now();
+			        boolean isFirstDayOfMonth = today.getDayOfMonth() == 1;
+			        boolean isFirstDayOfYear = today.getDayOfYear() == 1;
+					
+					Optional<ScreenMonitoring> opt = screenMonitoringRepository.findByKey(ScreenMonitorKey.MQTT_STATUS);
+					
+					if (opt.isPresent()) {
+			            ScreenMonitoring sm = opt.get();
+			            
+			            sm.setValue(diskFreeTotal);
+			            sm.setValueCpu(cpuLoad);
+			            sm.setIpAddress(ipAddress);
+			            sm.setLastUpTime(lastUpTime);
+			            sm.setLastDownTime(lastDownTime);
+			            
+			            if (isFirstDayOfMonth) {
+			            	if (StringUtils.isBlank(sm.getLastMonthValue())) {
+								sm.setLastMonthValue(diskFreeTotal);
+							} else {
+								String lastMonthValue = sm.getLastMonthValue();
+								sm.setLast2MonthValue(lastMonthValue);
+								sm.setLastMonthValue(diskFreeTotal);
+							}
+			        	}
+			            
+			            if (isFirstDayOfYear) {
+			            	sm.setJan1Value(diskFreeTotal);
+			            }
+			            
+			            if (cpuLoad > 80 || (totalDiskSpace / freeDiskSpace) < 0.1) {
+			            	if (cpuLoad > 80) {
+			                	if (!CMD.isWindow() && !alerts.containsKey("CPU_LOAD")) {
+			                		alerts.put("CPU_LOAD", new String[] {"MMS-System alert!", "CPU > 80%", AppProps.get("SYSTEM_ALERTS")});
+			                		sendSystemAlert(); // Immediately send alert when cpu > 80%
+			                	}
+			            	} else {
+			            		alerts.remove("CPU_LOAD"); // Remove alert to prevent 1 hour job check and send loop
+			        		}
+			            	if ((totalDiskSpace / freeDiskSpace) < 0.1) {
+			        			if (!CMD.isWindow() && !alerts.containsKey("DISK_FULL")) {
+			        				alerts.put("DISK_FULL", new String[] {"MMS-System alert!", "Disk space alert! (" + diskFreeTotal + " GB " + ")", AppProps.get("SYSTEM_ALERTS")});
+			        				sendSystemAlert(); // Immediately send alert when disk full	
+			        			}
+			        		} else {
+			            		alerts.remove("DISK_FULL"); // Remove alert to prevent 1 hour job check and send loop
+			        		}
+			            	sm.setStatus(ScreenMonitorStatus.NOT_OK);
+			    		} else {
+			    			sm.setStatus(ScreenMonitorStatus.OK);
+			    		}
+			            
+			            screenMonitoringRepository.save(sm);
+			        } else {
+			            ScreenMonitoring sm = new ScreenMonitoring();
+			            sm.setKey(ScreenMonitorKey.MQTT_STATUS);
+			            sm.setValue(diskFreeTotal);
+			            sm.setValueCpu(cpuLoad);
+			            sm.setIpAddress(ipAddress);
+			            sm.setLastUpTime(lastUpTime);
+			            sm.setLastDownTime(lastDownTime);
+			            
+			            if (cpuLoad > 80) {
+			            	sm.setStatus(ScreenMonitorStatus.NOT_OK);
+			            	if (!CMD.isWindow()) {
+			            		alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "CPU > 80%", AppProps.get("SYSTEM_ALERTS")});	
+			            	}
+			    		} else if ((totalDiskSpace / freeDiskSpace) < 0.1) {
+			    			sm.setStatus(ScreenMonitorStatus.NOT_OK);
+			    			if (!CMD.isWindow()) {
+			    				alerts.put((System.currentTimeMillis() / (1000l * 30)) + "", new String[] {"MMS-System alert!", "Disk space alert! (" + diskFreeTotal + " GB " + ")", AppProps.get("SYSTEM_ALERTS")});	
+			    			}
+			    		} else {
+			    			sm.setStatus(ScreenMonitorStatus.OK);
+			    		}
+			            
+			            screenMonitoringRepository.save(sm);
+			        }	
+				}
+			}
+		} catch (Exception e) {
+			LOG.error("Error on handleSubscribeOnMqttHealCheckSubscribe: ", e.getMessage());
+		}
+		
+	}
+	
+	public void sendSystemAlert() {
+		List<String> keys = new ArrayList<>(alerts.keySet());
+		if (!keys.isEmpty()) {
+			String key = keys.get(0);
+			String[] content = alerts.get(key);
+			alerts.remove(key);
+			String emails = content[2];
+			if (StringUtils.isNotBlank(emails)) {
+				emails = emails.trim();
+				notificationService.sendEmails(content[1], emails.split(" *, *"), content[0]);	
+			}
+		}
+	}
 
 	private void subscribe() {
 		//request
@@ -1977,6 +2121,22 @@ public class EVSPAServiceImpl implements EVSPAService {
 					EX.submit(() -> handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage));
 				} else {
 					new Thread(() -> {handleOnM3ModuleRequestSubscribe((String) topic, msn, mqttMessage);}).start();
+				}
+				return null;
+			});
+		} catch (Exception e) {
+			LOG.error(e.getMessage(), e);
+		}
+		
+		// MQTT Health check
+		try {
+			Mqtt.subscribe(Mqtt.getInstance(evsPAMQTTAddress, mqttClientId), evsMqttHealthCheckRespTopic, QUALITY_OF_SERVICE, (o, topic) -> {
+				final MqttMessage mqttMessage = (MqttMessage) o;
+				LOG.info(topic + " -> " + new String(mqttMessage.getPayload()));
+				if ("true".equalsIgnoreCase(AppProps.get("mqtt.subscribe.use.threadpool", "false"))) {
+					EX.submit(() -> handleSubscribeOnMqttHealCheckSubscribe(mqttMessage));
+				} else {
+					new Thread(() -> {handleSubscribeOnMqttHealCheckSubscribe(mqttMessage);}).start();
 				}
 				return null;
 			});
