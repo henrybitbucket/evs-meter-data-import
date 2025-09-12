@@ -9,6 +9,7 @@ import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pa.evs.dto.ProjectTagDto;
+import com.pa.evs.enums.DeviceEnrollType;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 
@@ -68,6 +69,14 @@ public class CARequestLog extends BaseEntity {
     @Column(name = "d_type")
 	@Enumerated(EnumType.STRING)
 	private DeviceType type;
+    
+    @Column(name = "enroll_type")
+	@Enumerated(EnumType.STRING)
+	private DeviceEnrollType enrollType;
+    
+    private String p1Enroll; // the type =BLESave or BLEMaster, the P1 is the MAC address of the MCU BLE.
+    private String p2Enroll;
+    private String invoiceTimeStamp;
 
     @Column(name = "certificate", length = 20000)
     private String certificate;

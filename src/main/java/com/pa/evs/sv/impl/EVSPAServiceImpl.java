@@ -78,6 +78,7 @@ import com.pa.evs.ctrl.CommonController;
 import com.pa.evs.dto.LogBatchDto;
 import com.pa.evs.dto.PaginDto;
 import com.pa.evs.dto.PiLogDto;
+import com.pa.evs.enums.DeviceEnrollType;
 import com.pa.evs.enums.DeviceStatus;
 import com.pa.evs.enums.DeviceType;
 import com.pa.evs.enums.MqttCmdStatus;
@@ -419,19 +420,29 @@ public class EVSPAServiceImpl implements EVSPAService {
 					
 					// uid not in CSV file --> create new line
 					if (!exists) {
-						Map<String, Object> map = SimpleMap.init("sn", "")
-								.more("uid", uid)
-								.more("cid", "")
-								.more("signature", RSAUtil.getSignatureAlgorithm(fileF.getAbsolutePath()))
-								.more("deviceKey", RSAUtil.getKeyType(fileF.getAbsolutePath()));
+						Optional<CARequestLog> caOpt = caRequestLogRepository.findByUid(uid);
 						
-						if (vendorD == null) {
-							map.put("message", "Vendor is empty\n");
+						// If device exist --> update signature
+						if (caOpt.isPresent()) {
+							Map<String, Object> map = SimpleMap.init("sn", caOpt.get().getSn())
+									.more("uid", uid)
+									.more("cid", caOpt.get().getCid())
+									.more("vendor", caOpt.get().getVendor().getName())
+									.more("signature", RSAUtil.getSignatureAlgorithm(fileF.getAbsolutePath()))
+									.more("deviceKey", RSAUtil.getKeyType(fileF.getAbsolutePath()));
+							
+							reads.add(map);
 						} else {
-							map.put("vendor", vendorD.getName());
+							String message = "CSR: UID not found!\n";
+							Map<String, Object> map = SimpleMap.init("sn", "")
+									.more("uid", uid)
+									.more("cid", "")
+									.more("signature", "")
+									.more("deviceKey", "");
+							
+							map.put("message", message);
+							reads.add(map);
 						}
-						uidSet.add(uid);
-						reads.add(map);
 					}
 					
 					File csrOut = new File(evsDataFolder + "/OUT_CSR/" + currentName);
@@ -504,6 +515,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 					String uid = details[1];
 					String cid = details[2];
 					String vendorF = details[4];
+					String type = details[5];
+					String p1 = details[6];
+					String p2 = details[7];
+					String invoiceTimeStamp = details[8];
 					
 					if (vendorD != null) {
 						vendorF = vendorD.getName();
@@ -512,7 +527,11 @@ public class EVSPAServiceImpl implements EVSPAService {
 					Map<String, Object> map = SimpleMap.init("sn", sn)
 							.more("uid", uid)
 							.more("cid", cid)
-							.more("vendor", vendorF);
+							.more("vendor", vendorF)
+							.more("type", type)
+							.more("p1", p1)
+							.more("p2", p2)
+							.more("invoiceTimeStamp", invoiceTimeStamp);
 					
 					reads.add(map);
 					String message = (String) map.computeIfAbsent("message", k -> "");
@@ -555,6 +574,10 @@ public class EVSPAServiceImpl implements EVSPAService {
 				String uid = (String) item.get("uid");
 				String cid = (String) item.get("cid");
 				String vendorStr = (String) item.get("vendor");
+				String type = (String) item.get("type");
+				String p1 = (String) item.get("p1");
+				String p2 = (String) item.get("p2");
+				String invoiceTimeStamp = (String) item.get("invoiceTimeStamp");
 				String signature = (String) item.get("signature");
 				String deviceKey = (String) item.get("deviceKey");
 
@@ -589,7 +612,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 					if (caLog.getEnrollmentDatetime() == null) {
 						caLog.setEnrollmentDatetime(Calendar.getInstance().getTimeInMillis());
 					}
-					
 					if (StringUtils.isNotBlank(uid)) {
 						caLog.setUid(uid);
 					}
@@ -604,6 +626,18 @@ public class EVSPAServiceImpl implements EVSPAService {
 					}
 					if (StringUtils.isNotBlank(deviceKey)) {
 						caLog.setDeviceKeyType(deviceKey);
+					}
+					if (StringUtils.isNotBlank(type)) {
+						caLog.setEnrollType(DeviceEnrollType.from(type));
+					}
+					if (StringUtils.isNotBlank(p1)) {
+						caLog.setP1Enroll(p1);
+					}
+					if (StringUtils.isNotBlank(p2)) {
+						caLog.setP1Enroll(p2);
+					}
+					if (StringUtils.isNotBlank(invoiceTimeStamp)) {
+						caLog.setInvoiceTimeStamp(invoiceTimeStamp);
 					}
 					
 					caLog.setRequireRefresh(false);
@@ -628,7 +662,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 	@Override
 	public Log publish(String topic, Object message, String type, String batchId) throws Exception {
 		
-		
 		Log log = null;
 		if ("OTA".equals(type) && CommonController.CMD_OPTIONS.get() != null && CommonController.CMD_OPTIONS.get().get("selectVersion") != null) {
 			
@@ -649,7 +682,6 @@ public class EVSPAServiceImpl implements EVSPAService {
 		} else {
 			log = publish(topic, message, type);
 		}
-		
 		
     	Users user = userRepository.findByEmail(SecurityUtils.getEmail());
 		if (log != null && StringUtils.isNotBlank(batchId)) {
