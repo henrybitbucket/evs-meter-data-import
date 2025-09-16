@@ -419,31 +419,31 @@ public class EVSPAServiceImpl implements EVSPAService {
 					}
 					
 					// uid not in CSV file --> create new line
-					if (!exists) {
-						Optional<CARequestLog> caOpt = caRequestLogRepository.findByUid(uid);
-						
-						// If device exist --> update signature
-						if (caOpt.isPresent()) {
-							Map<String, Object> map = SimpleMap.init("sn", caOpt.get().getSn())
-									.more("uid", uid)
-									.more("cid", caOpt.get().getCid())
-									.more("vendor", caOpt.get().getVendor().getName())
-									.more("signature", RSAUtil.getSignatureAlgorithm(fileF.getAbsolutePath()))
-									.more("deviceKey", RSAUtil.getKeyType(fileF.getAbsolutePath()));
-							
-							reads.add(map);
-						} else {
-							String message = "CSR: UID not found!\n";
-							Map<String, Object> map = SimpleMap.init("sn", "")
-									.more("uid", uid)
-									.more("cid", "")
-									.more("signature", "")
-									.more("deviceKey", "");
-							
-							map.put("message", message);
-							reads.add(map);
-						}
-					}
+//					if (!exists) {
+//						Optional<CARequestLog> caOpt = caRequestLogRepository.findByUid(uid);
+//						
+//						// If device exist --> update signature
+//						if (caOpt.isPresent()) {
+//							Map<String, Object> map = SimpleMap.init("sn", caOpt.get().getSn())
+//									.more("uid", uid)
+//									.more("cid", caOpt.get().getCid())
+//									.more("vendor", caOpt.get().getVendor().getName())
+//									.more("signature", RSAUtil.getSignatureAlgorithm(fileF.getAbsolutePath()))
+//									.more("deviceKey", RSAUtil.getKeyType(fileF.getAbsolutePath()));
+//							
+//							reads.add(map);
+//						} else {
+//							String message = "CSR: UID not found!\n";
+//							Map<String, Object> map = SimpleMap.init("sn", "")
+//									.more("uid", uid)
+//									.more("cid", "")
+//									.more("signature", "")
+//									.more("deviceKey", "");
+//							
+//							map.put("message", message);
+//							reads.add(map);
+//						}
+//					}
 					
 					File csrOut = new File(evsDataFolder + "/OUT_CSR/" + currentName);
 					Files.deleteIfExists(csrOut.toPath());
