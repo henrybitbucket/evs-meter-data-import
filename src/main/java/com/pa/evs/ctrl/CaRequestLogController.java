@@ -489,7 +489,7 @@ public class CaRequestLogController {
     	SchedulerHelper.scheduleJob("0/15 * * * * ? *", () -> {
     		
     		countAlarms = caRequestLogService.countAlarms();
-    		mqttStatus = caRequestLogService.mqttStatusCheck();
+//    		mqttStatus = caRequestLogService.mqttStatusCheck();
     		countDevices = caRequestLogService.getCountDevices();
     		systemInformation = caRequestLogService.getDashboard();
     		
