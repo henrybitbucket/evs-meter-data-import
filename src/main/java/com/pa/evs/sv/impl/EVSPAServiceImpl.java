@@ -1957,6 +1957,9 @@ public class EVSPAServiceImpl implements EVSPAService {
 			            sm.setIpAddress(ipAddress);
 			            sm.setLastUpTime(lastUpTime);
 			            sm.setLastDownTime(lastDownTime);
+			            sm.setJan1Value("N/A/" + String.format("%.1f", totalDiskSpace / (1024.0 * 1024 * 1024)));
+			            sm.setLastMonthValue("N/A/" + String.format("%.1f", totalDiskSpace / (1024.0 * 1024 * 1024)));
+			            sm.setLast2MonthValue("N/A/" + String.format("%.1f", totalDiskSpace / (1024.0 * 1024 * 1024)));
 			            
 			            if (isFirstDayOfMonth) {
 			            	if (StringUtils.isBlank(sm.getLastMonthValue())) {

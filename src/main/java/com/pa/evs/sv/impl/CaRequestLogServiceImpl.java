@@ -1794,6 +1794,9 @@ public class CaRequestLogServiceImpl implements CaRequestLogService {
             sm.setIpAddress(CMD.publicIp);
             sm.setLastUpTime(lastReboot);
             sm.setLastDownTime(lastReboot);
+            sm.setJan1Value("N/A/" + String.format("%.1f", totalDiskSpace / (1024.0 * 1024 * 1024)));
+            sm.setLastMonthValue("N/A/" + String.format("%.1f", totalDiskSpace / (1024.0 * 1024 * 1024)));
+            sm.setLast2MonthValue("N/A/" + String.format("%.1f", totalDiskSpace / (1024.0 * 1024 * 1024)));
             
             if (isFirstDayOfMonth) {
             	if (StringUtils.isBlank(sm.getLastMonthValue())) {
